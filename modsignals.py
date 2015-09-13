@@ -53,12 +53,12 @@ def create_NRZQPSK(t, Nsymbols, f_carrier=0., rdn_seed=None):
     data_Q = np.dot(dQ, np.ones((1,samplesperbit))).flatten()
     return (data_I+1.j*data_Q)*np.exp(1.j*2*np.pi*f_carrier*t)/np.sqrt(2),(bits_I, bits_Q)
 
-def calculate_qam_symbols(M):
+def calculate_qam_symbols(M, normalise=False):
     """Calculates the symbols of M-QAM"""
-    x = np.linspace(-(2*np.sqrt(N)/2-1),2*np.sqrt(N)/2-1, np.sqrt(N))
-    qam = np.mgrid[-(2*np.sqrt(N)/2-1):2*np.sqrt(N)/2-1:1.j*np.sqrt(N),
-            -(2*np.sqrt(N)/2-1):2*np.sqrt(N)/2-1:1.j*np.sqrt(N)]
-    return qam[0]+1.j*qam[1]
-
-
-
+    x = np.linspace(-(2*np.sqrt(M)/2-1),2*np.sqrt(M)/2-1, np.sqrt(M))
+    qam = np.mgrid[-(2*np.sqrt(M)/2-1):2*np.sqrt(M)/2-1:1.j*np.sqrt(M),
+            -(2*np.sqrt(M)/2-1):2*np.sqrt(M)/2-1:1.j*np.sqrt(M)]
+    qam = qam[0]+1.j*qam[1]
+    if normalise:
+        qam /= np.sqrt(2/3.*(M-1))
+    return qam
