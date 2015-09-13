@@ -3,6 +3,7 @@ import numpy as np
 """ a number of mathematical convenience functions"""
 
 def cabssquared(x):
+    """Calculate the absolute squared of a complex number"""
     return x.real**2 + x.imag**2
 
 def tanh(x,p):
