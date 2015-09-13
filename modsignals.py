@@ -1,6 +1,6 @@
 from scipy.signal import sawtooth
 import numpy as np
-from mathfcts import gauss
+#from mathfcts import gauss
 
 
 def create_random_RZOOK(t, reprate, t0):
@@ -34,13 +34,31 @@ def create_random_NRZDPSK(t, reprate):
         field[np.where((abs(abs(t)-(i+1)/reprate)<=1)&(abs(t)-
             (i+1)/reprate<0))] *= np.exp(1.j*np.pi*rtmp[i])
     return field
- 
-def create_NRZQPSK(t, reprate, f_car=2.e3, N=10., fs=16.e3):
-    Fn=fs/2.
-    Ts=1./fs
-    T=1./N
-    td = np.arange(0,(N*T), Ts)
-    data = np.transpose(np.sign(np.random.randn(N,1)))
-    data1 = np.ones((T/Ts,1))*data
-    data2 = data1[:]
-    return data, data1, data2
+
+def create_NRZQPSK(t, Nsymbols, f_carrier=0., rdn_seed=None):
+    if len(t)%Nsymbols:
+        raise Error("Length of t must be a multiple of the number of"
+                " symbols")
+    if len(t)/Nsymbols < 2:
+        raise Error("We need at least two samples per symbol")
+    if rdn_seed is not None:
+        np.random.seed(rdn_seed)
+    samplesperbit = len(t)/Nsymbols
+    data = np.sign(np.random.randn(2*Nsymbols,1))
+    dI = data[::2]
+    dQ = data[1::2]
+    bits_I = (dI>0)*1
+    bits_Q = (dQ>0)*1
+    data_I = np.dot(dI, np.ones((1,samplesperbit))).flatten()
+    data_Q = np.dot(dQ, np.ones((1,samplesperbit))).flatten()
+    return (data_I+1.j*data_Q)*np.exp(1.j*2*np.pi*f_carrier*t)/np.sqrt(2),(bits_I, bits_Q)
+
+def calculate_qam_symbols(M):
+    """Calculates the symbols of M-QAM"""
+    x = np.linspace(-(2*np.sqrt(N)/2-1),2*np.sqrt(N)/2-1, np.sqrt(N))
+    qam = np.mgrid[-(2*np.sqrt(N)/2-1):2*np.sqrt(N)/2-1:1.j*np.sqrt(N),
+            -(2*np.sqrt(N)/2-1):2*np.sqrt(N)/2-1:1.j*np.sqrt(N)]
+    return qam[0]+1.j*qam[1]
+
+
+
