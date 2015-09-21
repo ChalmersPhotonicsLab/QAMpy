@@ -5,7 +5,8 @@ from scipy.special import erfc
 
 def MQAM_SERvsEsN0(snr, M):
     """Calculate the symbol error rate (SER) of an M-QAM signal as a function
-    of Es/N0 (Symbol energy over noise energy, given in linear units"""
+    of Es/N0 (Symbol energy over noise energy, given in linear units. Works
+    only correctly for M > 4"""
     return 2*(1-1/np.sqrt(M))*erfc(np.sqrt(3*snr/(2*(M-1)))) -\
             (1-2/np.sqrt(M)+1/M)*erfc(np.sqrt(3*snr/(2*(M-1))))**2
 
