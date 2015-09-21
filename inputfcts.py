@@ -1,9 +1,9 @@
 from __future__ import division
 import numpy as np
-#from .dsp import resample
+from scipy.special import erfc
 
 # local imports
-from pyOMAqt.dsp import resample, make_prbs_extXOR
+from dsp import resample, make_prbs_extXOR
 
 
 def generateRandomQPSKData(N, snr, carrier_f, baudrate,
@@ -18,11 +18,8 @@ def generateRandomQPSKData(N, snr, carrier_f, baudrate,
         dataI = np.random.randint(0, high=2, size=N)
         dataQ = np.random.randint(0, high=2, size=N)
     data = 2*(dataI+1.j*dataQ-0.5-0.5j)
-    # the below SNR calculations are still somewhat off, need to check this
-    Es = np.sum(abs(data)**2)/len(data)
-    #Eb = Es/2.
-    data = data/np.sqrt(Es)
-    sigma = np.sqrt(1/(2*snr))
-    data += np.random.randn(len(data))*sigma*np.exp(1.j*np.pi*np.random.randn(len(data)))
-    data = resample(baudrate, samplingrate, data)
-    return data*np.exp(1.j*np.arange(len(data))*carrier_f)
+    data /= np.sqrt(2) # normalise Energy per symbol to 1
+    noise = (np.random.randn(N)+1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because N/2 = sigma
+    outdata = data+noise*10**(-snr/20) #the 20 here is so we don't have to take the sqrt
+    outdata = resample(baudrate, samplingrate, outdata)
+    return outdata*np.exp(1.j*np.arange(len(data))*carrier_f), data
