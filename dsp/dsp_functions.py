@@ -1,12 +1,11 @@
 from __future__ import division
 import numpy as np
 import scipy.signal as scisig
-#from ..segmentaxis import segment_axis
-#from ..mathfcts import cabssquared
 import numexpr as ne
 
 from . segmentaxis import segment_axis
 from . import mathfcts
+
 
 class DataSyncError(Exception):
     pass
