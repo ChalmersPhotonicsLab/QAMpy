@@ -3,7 +3,8 @@ import numpy as np
 from scipy.special import erfc
 
 # local imports
-from . dsp import resample, make_prbs_extXOR
+from dsp import resample, make_prbs_extXOR, QAMdemod
+import theory
 
 
 def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
@@ -61,3 +62,28 @@ def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
     outdata = data+noise*10**(-snr/20) #the 20 here is so we don't have to take the sqrt
     outdata = resample(baudrate, samplingrate, outdata)
     return outdata*np.exp(1.j*np.arange(len(data))*carrier_f), dataI, dataQ
+
+def cal_ser_qpsk(data_rx, data_tx):
+    data_demod = QAMdemod(4, data_rx)[0]
+    return np.count_nonzero(data_demod-data_tx)/len(data_rx)
+
+if __name__ == "__main__":
+    import theory
+    import pylab as plt
+    snr = np.arange(2, 25, 1)
+    ser = []
+    for sr in snr:
+        data_rx, dataI, dataQ = generateRandomQPSKData(10**5, sr)
+        data_tx = 2*(dataI+1.j*dataQ-0.5-0.5j)
+        ser.append(cal_ser_qpsk(data_rx, data_tx))
+    plt.figure()
+    plt.plot(snr, 10*np.log10(theory.MPSK_SERvsEsN0(10**(snr/10.), 4)), label='theory')
+    plt.plot(snr, 10*np.log10(ser), label='calculation')
+    plt.xlabel('SNR [dB]')
+    plt.ylabel('SER [dB]')
+    plt.legend()
+    plt.show()
+
+
+
+
