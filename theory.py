@@ -2,6 +2,8 @@ from __future__ import division
 import numpy as np
 from scipy.special import erfc
 
+# All the formulas below are taken from dsplog.com
+
 
 def MQAM_SERvsEsN0(snr, M):
     """Calculate the symbol error rate (SER) of an M-QAM signal as a function
