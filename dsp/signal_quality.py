@@ -1,7 +1,8 @@
 import numpy as np
 from theory import CalculateMQAMSymbols
 
-def normalize_sig(sig):
+def normalise_sig(sig):
+    """Normalise signal to average power"""
     norm = np.sqrt(np.mean(abs(sig)**2))
     return 1/norm, sig/norm
 
@@ -9,8 +10,8 @@ def cal_blind_evm(sig, M):
     """Blind calculation of the linear Error Vector Magnitude for an M-QAM
     signal. Does not consider Symbol errors."""
     ideal = CalculateMQAMSymbols(M).flatten()
-    Ai, Pi = normalize_sig(ideal)
-    Am, Pm = normalize_sig(sig)
+    Ai, Pi = normalise_sig(ideal)
+    Am, Pm = normalise_sig(sig)
     evm = np.mean(np.min(abs(Pm[:,np.newaxis].real-Pi.real)**2 +\
             abs(Pm[:,np.newaxis].imag-Pi.imag)**2, axis=1))
     evm /= np.mean(abs(Pi)**2)
