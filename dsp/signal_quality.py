@@ -53,3 +53,14 @@ def calS0(E, gamma):
     S1 = 1-2*r2**2/r4-np.sqrt((2-gamma)*(2*r2**4/r4**2-r2**2/r4))
     S2 = gamma*r2**2/r4-1
     return r2/(1+S2/S1)
+
+def SNR_QPSK_blind(E):
+    ''' calculates the SNR from the constellation assmuing no symbol errors'''
+    E4 = -E**4
+    Eref = E4**(1./4)
+    #P = np.mean(abs(Eref**2))
+    P = np.mean(mathfcts.cabssquared(Eref))
+    var = np.var(Eref)
+    SNR = 10*np.log10(P/var)
+    return SNR
+
