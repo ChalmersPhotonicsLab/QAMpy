@@ -70,7 +70,7 @@ def adjust_data_length(data_tx, data_rx):
     else:
         return data_tx
 
- def _cal_BER_only(data_rx, data_tx, threshold=0.2):
+def _cal_BER_only(data_rx, data_tx, threshold=0.2):
     """Calculate the BER between two synchronised binary data signals"""
     errs = np.count_nonzero(data_rx-data_tx)
     N = len(data_tx)
