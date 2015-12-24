@@ -62,7 +62,7 @@ def ML_phase_16QAM(X, Y, pix, piy, cfactor):
             X[k-cfactor:k]))
         pcoeY[k] = np.angle(np.sum(np.conj(pilotY[k-cfactor:k])*
             Y[k-cfactor:k]))
-        pilotX[k] = findmax_16QAM(X[k], SYMBOLS_16QAM,\
+        pilotX[k] = __findmax_16QAM(X[k], SYMBOLS_16QAM,\
                     np.sum(np.conj(pilotX[k-cfactor:k])*X[k-cfactor:k])/\
                     np.sum(np.abs(pilotX[k-cfactor:k])**2))
         pilotY[k] = __findmax_16QAM(Y[k], SYMBOLS_16QAM,
