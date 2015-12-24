@@ -70,3 +70,54 @@ def ML_phase_16QAM(X, Y, pix, piy, cfactor):
                     np.sum(np.abs(pilotY[k-cfactor:k])**2))
     return X*np.exp(-1.j*pcoeX), Y*np.exp(-1.j*pcoeY)
 
+def calS0(E, gamma):
+    N = len(E)
+    r2 = np.sum(abs(E)**2)/N
+    r4 = np.sum(abs(E)**4)/N
+    S1 = 1-2*r2**2/r4-np.sqrt((2-gamma)*(2*r2**4/r4**2-r2**2/r4))
+    S2 = gamma*r2**2/r4-1
+    return r2/(1+S2/S1)
+
+
+def partition_16QAM(E):
+    S0 = calS0(E, 1.32)
+    inner = (np.sqrt(S0/5)+np.sqrt(S0))/2.
+    outer = (np.sqrt(9*S0/5)+np.sqrt(S0))/2.
+    Ea = abs(E)
+    class1_mask = (Ea< inner)|(Ea > outer)
+    class2_mask = ~class1_mask
+    return class1_mask, class2_mask
+
+
+def ff_Phase_recovery_16QAM(E, Nangles, Nsymbols):
+    phi = np.linspace(0, np.pi, Nangles)
+    N = len(E)
+    d = (abs(E[:, np.newaxis, np.newaxis]*np.exp(1.j*phi)[:, np.newaxis] -
+             SYMBOLS_16QAM)**2).min(axis=2)
+    phinew = np.zeros(N-Nsymbols, dtype=np.float)
+    for k in range(Nsymbols, N-Nsymbols):
+        phinew[k] = phi[np.sum(d[k-Nsymbols:k+Nsymbols],axis=0).argmin()]
+    return E[Nsymbols:]*np.exp(1.j*phinew)
+
+
+def QPSK_partition_phase_16QAM(Nblock, E):
+    dphi = np.pi/4+np.arctan(1/3)
+    L = len(E)
+    # partition QPSK signal into qpsk constellation and non-qpsk const
+    c1_m, c2_m = partition_16QAM(E)
+    Sx = np.zeros(len(E), dtype=np.complex128)
+    Sx[c2_m] = (E[c2_m]*np.exp(1.j*dphi))**4
+    So = np.zeros(len(E), dtype=np.complex128)
+    So[c2_m] = (E[c2_m]*np.exp(1.j*-dphi))**4
+    S1 = np.zeros(len(E), dtype=np.complex128)
+    S1[c1_m] = (E[c1_m])**4
+    E_n = np.zeros(len(E), dtype=np.complex128)
+    phi_est = np.zeros(len(E), dtype=np.float64)
+    for i in range(0, L, Nblock):
+        S1_sum = np.sum(S1[i:i+Nblock])
+        Sx_tmp = np.min([S1_sum-Sx[i:i+Nblock],S1_sum-So[i:i+Nblock]],
+                axis=0)[c2_m[i:i+Nblock]]
+        phi_est[i:i+Nblock] = np.angle(S1_sum+Sx_tmp.sum())
+    phi_est = np.unwrap(phi_est)/4-np.pi/4
+    return (E*np.exp(-1.j*phi_est))[:(L//Nblock)*Nblock]
+
