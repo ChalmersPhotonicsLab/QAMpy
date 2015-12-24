@@ -109,4 +109,16 @@ def rolling_window(data, size):
      strides = data.strides + (data. strides[-1],)
      return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
 
+def resample(Fold, Fnew, E, window=None):
+    ''' resamples the signal from Fold to Fnew'''
+    E = E.flatten()
+    L = len(E)
+    num = Fnew/Fold*L
+    if window is None:
+        E = scisig.resample(E, num)
+    else:
+        E = scisig.resample(E, num, window=window)
+    return E
+
+
 

@@ -93,16 +93,6 @@ def QPSK_partition_phase_16QAM(Nblock, E):
     return (E*np.exp(-1.j*phi_est))[:(L//Nblock)*Nblock]
 
 
-def resample(Fold, Fnew, E, window=None):
-    ''' resamples the signal from Fold to Fnew'''
-    E = E.flatten()
-    L = len(E)
-    num = Fnew/Fold*L
-    if window is None:
-        E = scisig.resample(E, num)
-    else:
-        E = scisig.resample(E, num, window=window)
-    return E
 
 def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
     '''performs PMD equalization using CMA algorithm
