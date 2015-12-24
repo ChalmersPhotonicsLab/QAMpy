@@ -1,10 +1,9 @@
 from __future__ import division, print_function
 import numpy as np
 from . segmentaxis import segment_axis
+from . theory import CalculateMQAMSymbols
 
-SYMBOLS_16QAM =  np.array([1+1.j, 1-1.j, -1+1.j, -1-1.j, 1+3.j, 1-3.j, -1-3.j,
-        3+1.j, 3-1.j, -3+1.j, -3,-1.j, 3+3.j, 3-3.j, -3.+3.j, -3-3.j])
-
+SYMBOLS_16QAM = CalculateMQAMSymbols(16)
 
 def viterbiviterbi_gen(N, E, M):
     """Viterbi-Viterbi blind phase recovery for an M-PSK signal"""
