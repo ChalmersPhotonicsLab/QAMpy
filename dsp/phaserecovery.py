@@ -101,6 +101,32 @@ def ff_Phase_recovery_16QAM(E, Nangles, Nsymbols):
 
 
 def QPSK_partition_phase_16QAM(Nblock, E):
+    r"""16-QAM blind phase recovery using QPSK partitioning.
+
+    A blind phase estimator for 16-QAM signals based on partitioning the signal
+    into 3 rings, which are then phase estimated using traditional V-V phase
+    estimation after Fatadin et al _[1].
+
+    Parameters
+    ----------
+        Nblock : int
+            number of samples in an averaging block
+        E : array_like
+            electric field of the signal
+
+    Returns
+    -------
+        E_rec : array_like
+            electric field of the signal with recovered phase.
+
+    References
+    ----------
+    .. [1] [1] I. Fatadin, D. Ives, and S. Savory, “Laser linewidth tolerance
+       for 16-QAM coherent optical systems using QPSK partitioning,”
+       Photonics Technol. Lett. IEEE, vol. 22, no. 9, pp. 631–633, May 2010.
+
+    """
+
     dphi = np.pi/4+np.arctan(1/3)
     L = len(E)
     # partition QPSK signal into qpsk constellation and non-qpsk const
