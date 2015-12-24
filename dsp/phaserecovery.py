@@ -79,7 +79,33 @@ def ML_phase_16QAM(X, Y, pix, piy, cfactor):
                     np.sum(np.abs(pilotY[k-cfactor:k])**2))
     return X*np.exp(-1.j*pcoeX), Y*np.exp(-1.j*pcoeY)
 
+
 def partition_16QAM(E):
+    r"""Partition a 16-QAM signal into the inner and outer circles.
+
+    Separates a 16-QAM signal into the inner and outer rings, which have
+    different phase orientations. Detailed in _[1].
+
+    Parameters
+    ----------
+        E : array_like
+            electric field of the signal
+
+    Returns
+    -------
+        class1_mask : array_like
+            A mask designating the class 1 symbols which are the smallest and
+            largest rings.
+        class2_mask : array_like
+            A mask designating the class 2 symbols which lie on the middle ring
+
+    References
+    ----------
+    .. [1] R. Muller and D. D. A. Mello, “Phase-offset estimation for
+       joint-polarization phase-recovery in DP-16-QAM systems,” Photonics
+       Technol. Lett. …, vol. 22, no. 20, pp. 1515–1517, 2010.
+    """
+
     S0 = calS0(E, 1.32)
     inner = (np.sqrt(S0/5)+np.sqrt(S0))/2.
     outer = (np.sqrt(9*S0/5)+np.sqrt(S0))/2.
@@ -121,12 +147,11 @@ def QPSK_partition_phase_16QAM(Nblock, E):
 
     References
     ----------
-    .. [1] [1] I. Fatadin, D. Ives, and S. Savory, “Laser linewidth tolerance
+    .. [1] I. Fatadin, D. Ives, and S. Savory, “Laser linewidth tolerance
        for 16-QAM coherent optical systems using QPSK partitioning,”
        Photonics Technol. Lett. IEEE, vol. 22, no. 9, pp. 631–633, May 2010.
 
     """
-
     dphi = np.pi/4+np.arctan(1/3)
     L = len(E)
     # partition QPSK signal into qpsk constellation and non-qpsk const
