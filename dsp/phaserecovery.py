@@ -1,6 +1,5 @@
 from __future__ import division, print_function
 import numpy as np
-import numexpr as ne
 from . segmentaxis import segment_axis
 
 def viterbiviterbi_gen(N, E, M):
@@ -26,15 +25,3 @@ def viterbiviterbi_bpsk(N, E):
     """Viterbi-Viterbi for BPSK"""
     return viterbiviterbi_gen(N, E, 2)
 
-def viterbiviterbi_ne(N, E, M):
-    """Viterbi-Viterbi blind phase recovery using numexpression"""
-    E = E.flatten()
-    L = len(E)
-    phi = np.angle(E)
-    E_raised = ne.evaluate('exp(1.j*phi)**M')
-    sa = segment_axis(E_raised, 2*N, 2*N-1)
-    phase_est = np.sum(sa[:L-2*N], axis=1)
-    phase_est = np.unwrap(np.angle(phase_est))
-    E = E[N:L-N]
-    phase_est = phase_est - np.pi    # shifts by pi/M to make it M QAM
-    return ne.evaluate('E*exp(-1.j*(phase_est/M))')
