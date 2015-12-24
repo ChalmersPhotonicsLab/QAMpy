@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 
 def FS_CMA_training_2(TrSyms, Ntaps, os, mu, E, wx):
@@ -11,4 +11,4 @@ def FS_CMA_training_2(TrSyms, Ntaps, os, mu, E, wx):
         wx = wx-mu*err[i]*Xest*np.conj(X)
     return err, wx
 
- 
+
