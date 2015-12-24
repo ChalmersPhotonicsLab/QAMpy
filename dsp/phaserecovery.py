@@ -18,13 +18,16 @@ def viterbiviterbi_gen(N, E, M):
     phase_est = phase_est - np.pi
     return E*np.exp(-1.j*phase_est/M)
 
-def viterbiviterbi(N, E):
+def viterbiviterbi_qpsk(N, E):
+    """Viterbi-Viterbi blind phase recovery for QPSK signal"""
     return viterbiviterbi_gen(N, E, 4)
 
-def viterbiviterbi_BPSK(N, E):
+def viterbiviterbi_bpsk(N, E):
+    """Viterbi-Viterbi for BPSK"""
     return viterbiviterbi_gen(N, E, 2)
 
-def viterbiviterbi_ne(N, E):
+def viterbiviterbi_ne(N, E, M):
+    """Viterbi-Viterbi blind phase recovery using numexpression"""
     E = E.flatten()
     L = len(E)
     phi = np.angle(E)
@@ -35,4 +38,3 @@ def viterbiviterbi_ne(N, E):
     E = E[N:L-N]
     phase_est = phase_est - np.pi    # shifts by pi/M to make it M QAM
     return ne.evaluate('E*exp(-1.j*(phase_est/M))')
-
