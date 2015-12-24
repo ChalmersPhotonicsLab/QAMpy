@@ -1,5 +1,5 @@
 import numpy as np
-from . import mathfunctions
+from . import mathfcts
 
 def make_prbs_extXOR(order, nbits, seed=None):
     """Create Pseudo Random Bit Sequence using a Linear Feedback
@@ -23,7 +23,7 @@ def make_prbs_extXOR(order, nbits, seed=None):
         except TypeError:
             seed = seed
     out = np.zeros(nbits, dtype=bool)
-    lfsr = lfsr_ext(seed, tapdict[order], order)
+    lfsr = mathfcts.lfsr_ext(seed, tapdict[order], order)
     for i in xrange(nbits):
         out[i] = lfsr.next()[0]
     return out
@@ -51,7 +51,7 @@ def make_prbs_intXOR(order, nbits, seed=None):
         except TypeError:
             seed = seed
     out = np.empty(nbits, dtype=bool)
-    lfsr = lfsr_int(seed, masks[order])
+    lfsr = mathfcts.lfsr_int(seed, masks[order])
     for i in xrange(nbits):
         out[i] = lfsr.next()[0]
     return out
