@@ -30,7 +30,7 @@ def cal_evm_known_data(sig, ideal):
     return np.sqrt(evm)
 
 def cal_Q_16QAM(E, gamma=1.32):
-    """Calculate the signal power S0 according to formula given in
+    """Calculate the signal to noise ratio SNR according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
     pg 865 (2005).
 
@@ -39,7 +39,7 @@ def cal_Q_16QAM(E, gamma=1.32):
         gamma:  constant dependent on modulation format [default=1.32 for 16 QAM]
 
     Returns:
-        S0/N: OSNR estimate
+        S0/N: SNR estimate
     """
     N = len(E)
     r2 = np.sum(abs(E)**2)/N
@@ -49,6 +49,17 @@ def cal_Q_16QAM(E, gamma=1.32):
     return S1/S2
 
 def calS0(E, gamma):
+    """Calculate the signal power S0 according to formula given in
+    Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
+    pg 865 (2005).
+
+    Parameters:
+        E:      input field
+        gamma:  constant dependent on modulation format [default=1.32 for 16 QAM]
+
+    Returns:
+        S0: signal power estimate
+    """
     N = len(E)
     r2 = np.sum(abs(E)**2)/N
     r4 = np.sum(abs(E)**4)/N
