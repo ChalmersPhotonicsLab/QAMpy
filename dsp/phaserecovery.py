@@ -6,7 +6,13 @@ from . theory import CalculateMQAMSymbols
 SYMBOLS_16QAM = CalculateMQAMSymbols(16)
 
 def viterbiviterbi_gen(N, E, M):
-    """Viterbi-Viterbi blind phase recovery for an M-PSK signal"""
+    """Viterbi-Viterbi blind phase recovery for an M-PSK signal
+
+    Parameters:
+        N: number of samples to average over
+        E: electric field of the signal
+        M: order of the M-PSK
+    """
     E = E.flatten()
     L = len(E)
     phi = np.angle(E)
