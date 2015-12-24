@@ -1,4 +1,6 @@
 import numpy as np
+from . import prbs
+from . import mathfcts
 
 class DataSyncError(Exception):
     pass
@@ -47,13 +49,13 @@ def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
         if i+Lsync > len(data_rx):
             break
         datablock = data_rx[i:i+Lsync]
-        prbsseq = make_prbs_extXOR(order, Lsync-order, datablock[:order])
+        prbsseq = prbs.make_prbs_extXOR(order, Lsync-order, datablock[:order])
         if np.all(datablock[order:] == prbsseq):
-            prbs = np.hstack([datablock,
-                make_prbs_extXOR(order,
+            prbsval = np.hstack([datablock,
+                prbs.make_prbs_extXOR(order,
                     len(data_rx)-i-len(datablock),
                     datablock[-order:])])
-            return i, prbs
+            return i, prbsval
     raise DataSyncError("maximum iterations exceeded")
 
 def adjust_data_length(data_tx, data_rx):
@@ -114,13 +116,13 @@ def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
     """
     inverted = False
     try:
-        idx, prbs = sync_PRBS2Rx(data_rx, order, Lsync, imax)
+        idx, prbsval = sync_PRBS2Rx(data_rx, order, Lsync, imax)
     except DataSyncError:
         inverted = True
         # if we cannot sync try to use inverted data
         data_rx = -data_rx
-        idx, prbs = sync_PRBS2Rx(data_rx, order, Lsync, imax)
-    return _cal_BER_only(data_rx[idx:], prbs), inverted
+        idx, prbsval = sync_PRBS2Rx(data_rx, order, Lsync, imax)
+    return _cal_BER_only(data_rx[idx:], prbsval), inverted
 
 def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
     """Calculate the BER between data_tx and data_rx. If data_tx is shorter
