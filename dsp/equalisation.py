@@ -7,10 +7,6 @@ from . segmentaxis import segment_axis
 from . import mathfcts
 
 
-class DataSyncError(Exception):
-    pass
-
-
 def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
     err = np.zeros(TrSyms, dtype=np.float)
     for i in xrange(0, TrSyms):
@@ -43,18 +39,7 @@ except:
     #use python code if cython code is not available
     FS_CMA_training = FS_CMA_training_python
 
-try:
-    from dsp_cython import lfsr_ext
-except:
-    from mathfcts import lfsr_ext
 
-try:
-    from dsp_cython import lfsr_int
-except:
-    from mathfcts import lfsr_int
-
-SYMBOLS_16QAM =  np.array([1+1.j, 1-1.j, -1+1.j, -1-1.j, 1+3.j, 1-3.j, -1-3.j,
-        3+1.j, 3-1.j, -3+1.j, -3,-1.j, 3+3.j, 3-3.j, -3.+3.j, -3-3.j])
 
 def calS0(E, gamma):
     N = len(E)
@@ -64,10 +49,6 @@ def calS0(E, gamma):
     S2 = gamma*r2**2/r4-1
     return r2/(1+S2/S1)
 
-def findmax_16QAM(rk, ci, vk):
-    mkk = np.real(rk*np.conj(ci)*np.conj(vk)-abs(ci)**2/2)
-    pk = np.argmax(mkk)
-    return ci[pk]
 
 def partition_16QAM(E):
     S0 = calS0(E, 1.32)
@@ -111,73 +92,6 @@ def QPSK_partition_phase_16QAM(Nblock, E):
     phi_est = np.unwrap(phi_est)/4-np.pi/4
     return (E*np.exp(-1.j*phi_est))[:(L//Nblock)*Nblock]
 
-
-def ML_phase_16QAM(X, Y, pix, piy, cfactor):
-    """ML_phase_16QAM phase recovery using pilots for starting the estimator
-    on a dual-pol 16 QAM signal.
-
-    Parameters:
-        X:      input signal X polarisation
-        Y:      input signal Y polarisation
-        pix :   the known data signal pilot (X polarisation)
-        piy:    the known data signal pilot (Y polarisation)
-        cfactor:cfactor length of pilots
-
-    Return:
-        RecoveredX, RecoveredY recovered X and Y polarisation signals
-    """
-    N = len(X)
-    pilotX = np.zeros(N, dtype=np.complex)
-    pilotY = np.zeros(N, dtype=np.complex)
-    pilotX[:cfactor] = pix
-    pilotY[:cfactor] = piy
-    pcoeX = np.zeros(N, dtype=np.complex)
-    pcoeY = np.zeros(N, dtype=np.complex)
-    pcoeX[:cfactor] = np.angle(np.conj(pilotX[:cfactor])*X[:cfactor])
-    pcoeY[:cfactor] = np.angle(np.conj(pilotY[:cfactor])*Y[:cfactor])
-    for k in range(cfactor, N):
-        pcoeX[k] = np.angle(np.sum(np.conj(pilotX[k-cfactor:k])*
-            X[k-cfactor:k]))
-        pcoeY[k] = np.angle(np.sum(np.conj(pilotY[k-cfactor:k])*
-            Y[k-cfactor:k]))
-        pilotX[k] = findmax_16QAM(X[k], SYMBOLS_16QAM,\
-                    np.sum(np.conj(pilotX[k-cfactor:k])*X[k-cfactor:k])/\
-                    np.sum(np.abs(pilotX[k-cfactor:k])**2))
-        pilotY[k] = findmax_16QAM(Y[k], SYMBOLS_16QAM,
-                    np.sum(np.conj(pilotY[k-cfactor:k])*Y[k-cfactor:k])/\
-                    np.sum(np.abs(pilotY[k-cfactor:k])**2))
-    return X*np.exp(-1.j*pcoeX), Y*np.exp(-1.j*pcoeY)
-
-def viterbiviterbi(N, E):
-    return viterbiviterbi_gen(N, E, 4)
-
-def viterbiviterbi_BPSK(N, E):
-    return viterbiviterbi_gen(N, E, 2)
-
-def viterbiviterbi_gen(N, E, M):
-    E = E.flatten()
-    L = len(E)
-    phi = np.angle(E)
-    E_raised = np.exp(1.j*phi)**M
-    sa = segment_axis(E_raised, 2*N, 2*N-1)
-    phase_est = np.sum(sa[:L-2*N], axis=1)
-    phase_est = np.unwrap(np.angle(phase_est))
-    E = E[N:L-N]
-    if M == 4: # QPSK needs pi/4 shift
-        phase_est = phase_est - np.pi
-    return E*np.exp(-1.j*phase_est/M)
-
-
-def viterbiviterbi_ne(N, E):
-    E = E.flatten()
-    L = len(E)
-    E_raised = ne.evaluate('exp(1.j*phi)**4')
-    sa = segment_axis(E_raised, 2*N, 2*N-1)
-    phase_est = np.sum(sa[:L-2*N], axis=1)
-    phase_est = np.unwrap(np.angle(phase_est))
-    E = E[N:L-N]
-    phase_est = phase_est - np.pi    # shifts by pi/4 to make it 4 QAM
-    return ne.evaluate('E*exp(-1.j*(phase_est/4.))')
 
 def resample(Fold, Fnew, E, window=None):
     ''' resamples the signal from Fold to Fnew'''
