@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from . segmentaxis import segment_axis
 from . theory import CalculateMQAMSymbols
+from . signal_quality import calS0
 
 SYMBOLS_16QAM = CalculateMQAMSymbols(16)
 
@@ -77,15 +78,6 @@ def ML_phase_16QAM(X, Y, pix, piy, cfactor):
                     np.sum(np.conj(pilotY[k-cfactor:k])*Y[k-cfactor:k])/\
                     np.sum(np.abs(pilotY[k-cfactor:k])**2))
     return X*np.exp(-1.j*pcoeX), Y*np.exp(-1.j*pcoeY)
-
-def calS0(E, gamma):
-    N = len(E)
-    r2 = np.sum(abs(E)**2)/N
-    r4 = np.sum(abs(E)**4)/N
-    S1 = 1-2*r2**2/r4-np.sqrt((2-gamma)*(2*r2**4/r4**2-r2**2/r4))
-    S2 = gamma*r2**2/r4-1
-    return r2/(1+S2/S1)
-
 
 def partition_16QAM(E):
     S0 = calS0(E, 1.32)
