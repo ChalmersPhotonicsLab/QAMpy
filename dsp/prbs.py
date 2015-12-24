@@ -2,6 +2,16 @@ from __future__ import division, print_function
 import numpy as np
 from . import mathfcts
 
+try:
+    from dsp_cython import lfsr_ext
+except:
+    from mathfcts import lfsr_ext
+
+try:
+    from dsp_cython import lfsr_int
+except:
+    from mathfcts import lfsr_int
+
 def make_prbs_extXOR(order, nbits, seed=None):
     """Create Pseudo Random Bit Sequence using a Linear Feedback
     Shift Register.
@@ -24,7 +34,7 @@ def make_prbs_extXOR(order, nbits, seed=None):
         except TypeError:
             seed = seed
     out = np.zeros(nbits, dtype=bool)
-    lfsr = mathfcts.lfsr_ext(seed, tapdict[order], order)
+    lfsr = lfsr_ext(seed, tapdict[order], order)
     for i in xrange(nbits):
         out[i] = lfsr.next()[0]
     return out
@@ -52,7 +62,7 @@ def make_prbs_intXOR(order, nbits, seed=None):
         except TypeError:
             seed = seed
     out = np.empty(nbits, dtype=bool)
-    lfsr = mathfcts.lfsr_int(seed, masks[order])
+    lfsr = lfsr_int(seed, masks[order])
     for i in xrange(nbits):
         out[i] = lfsr.next()[0]
     return out
