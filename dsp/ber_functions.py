@@ -189,3 +189,21 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
         return np.nan, np.nan, np.nan
 
     return (ber_I+ber_Q)/2., err_Q+err_I, N_Q+N_I
+
+def QAMdemod(M, sig):
+    ''' demodulates QAM symbols assuming Grey coding where possible
+    uses ML: calculates distance to ideal points
+    only works for vectors (1D array), not for M-D arrays
+    currently only for 4-QAM'''
+    L = len(sig)
+    sym = np.zeros(L, dtype=np.complex128)
+    data = np.zeros(L, dtype='int')
+    if M == 4:
+        E = 2
+        cons = np.array([1+1.j, 1-1.j, -1-1.j, -1+1.j])
+        P = np.mean(mathfcts.cabssquared(sig))
+        sig = sig*np.sqrt(E/P)
+        data = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
+        sym = cons[data]
+    return sym, data
+
