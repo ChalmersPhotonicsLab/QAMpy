@@ -28,11 +28,11 @@ def viterbiviterbi_ne(N, E):
     E = E.flatten()
     L = len(E)
     phi = np.angle(E)
-    E_raised = ne.evaluate('exp(1.j*phi)**:')
+    E_raised = ne.evaluate('exp(1.j*phi)**M')
     sa = segment_axis(E_raised, 2*N, 2*N-1)
     phase_est = np.sum(sa[:L-2*N], axis=1)
     phase_est = np.unwrap(np.angle(phase_est))
     E = E[N:L-N]
-    phase_est = phase_est - np.pi    # shifts by pi/4 to make it 4 QAM
-    return ne.evaluate('E*exp(-1.j*(phase_est/4.))')
+    phase_est = phase_est - np.pi    # shifts by pi/M to make it M QAM
+    return ne.evaluate('E*exp(-1.j*(phase_est/M))')
 
