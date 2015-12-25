@@ -1,3 +1,4 @@
+#vim:fileencoding=utf-8
 from __future__ import division, print_function
 import numpy as np
 from . segmentaxis import segment_axis
