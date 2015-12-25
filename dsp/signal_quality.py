@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 import mathfcts
-from theory import CalculateMQAMSymbols
+from theory import CalculateMQAMSymbols, MQAMScalingFactor
 
 def normalise_sig(sig):
     """Normalise signal to average power"""
@@ -29,40 +29,60 @@ def cal_evm_known_data(sig, ideal):
     evm /= np.mean(abs(Pi)**2)
     return np.sqrt(evm)
 
-def cal_Q_16QAM(E, gamma=1.32):
+def cal_SNR_QAM(E, M):
     """Calculate the signal to noise ratio SNR according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
     pg 865 (2005).
 
     Parameters:
         E:      input field
-        gamma:  constant dependent on modulation format [default=1.32 for 16 QAM]
+        M:      order of the QAM constallation
 
     Returns:
         S0/N: SNR estimate
     """
-    N = len(E)
-    r2 = np.sum(abs(E)**2)/N
-    r4 = np.sum(abs(E)**4)/N
+    gamma = _cal_gamma(M)
+    r2 = np.mean(abs(E)**2)
+    r4 = np.mean(abs(E)**4)
     S1 = 1-2*r2**2/r4-np.sqrt((2-gamma)*(2*r2**4/r4**2-r2**2/r4))
     S2 = gamma*r2**2/r4-1
     return S1/S2
 
-def calS0(E, gamma):
+def _cal_gamma(M):
+    """Calculate the gamma factor for SNR estimation."""
+    A = abs(CalculateMQAMSymbols(M))/sqrt(MQAMScalingFactor(M))
+    uniq, counts = np.unique(A, return_counts=True)
+    return np.sum(uniq**4*counts/M)
+
+def cal_Q_16QAM(E):
+    """Calculate the signal to noise ratio SNR according to formula given in
+    Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
+    pg 865 (2005).
+
+    Parameters:
+        E:      input field
+
+    Returns:
+        S0/N: SNR estimate
+    """
+    return cal_SNR_QAM(E, 16)
+
+def calS0(E, M):
     """Calculate the signal power S0 according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
     pg 865 (2005).
 
     Parameters:
         E:      input field
-        gamma:  constant dependent on modulation format [default=1.32 for 16 QAM]
+        M:      order of the QAM constellation
 
     Returns:
         S0: signal power estimate
     """
     N = len(E)
-    r2 = np.sum(abs(E)**2)/N
-    r4 = np.sum(abs(E)**4)/N
+    gamma = _cal_gamma(M)
+    r2 = np.mean(abs(E)**2)
+    r4 = np.mean(abs(E)**4)
     S1 = 1-2*r2**2/r4-np.sqrt((2-gamma)*(2*r2**4/r4**2-r2**2/r4))
     S2 = gamma*r2**2/r4-1
     return r2/(1+S2/S1)
