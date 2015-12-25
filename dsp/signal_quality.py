@@ -3,27 +3,27 @@ import numpy as np
 import mathfcts
 from theory import CalculateMQAMSymbols, MQAMScalingFactor
 
-def normalise_sig(sig):
+def normalise_sig(sig, M):
     """Normalise signal to average power"""
-    norm = np.sqrt(np.mean(abs(sig)**2))
+    norm = np.sqrt(calS0(sig, M))
     return 1/norm, sig/norm
 
 def cal_blind_evm(sig, M):
     """Blind calculation of the linear Error Vector Magnitude for an M-QAM
     signal. Does not consider Symbol errors."""
     ideal = CalculateMQAMSymbols(M).flatten()
-    Ai, Pi = normalise_sig(ideal)
-    Am, Pm = normalise_sig(sig)
+    Ai, Pi = normalise_sig(ideal, M)
+    Am, Pm = normalise_sig(sig, M)
     evm = np.mean(np.min(abs(Pm[:,np.newaxis].real-Pi.real)**2 +\
             abs(Pm[:,np.newaxis].imag-Pi.imag)**2, axis=1))
     evm /= np.mean(abs(Pi)**2)
     return np.sqrt(evm)
 
-def cal_evm_known_data(sig, ideal):
+def cal_evm_known_data(sig, ideal, M):
     """Calculation of the linear Error Vector Magnitude for a signal against
     the ideal signal"""
-    Ai, Pi = normalize_sig(ideal)
-    As, Ps = normalize_sig(sig)
+    Ai, Pi = normalise_sig(ideal, M)
+    As, Ps = normalise_sig(sig, M)
     evm = np.mean(abs(Pi.real - Ps.real)**2 + \
                   abs(Pi.imag - Ps.imag)**2)
     evm /= np.mean(abs(Pi)**2)
@@ -50,7 +50,7 @@ def cal_SNR_QAM(E, M):
 
 def _cal_gamma(M):
     """Calculate the gamma factor for SNR estimation."""
-    A = abs(CalculateMQAMSymbols(M))/sqrt(MQAMScalingFactor(M))
+    A = abs(CalculateMQAMSymbols(M))/np.sqrt(MQAMScalingFactor(M))
     uniq, counts = np.unique(A, return_counts=True)
     return np.sum(uniq**4*counts/M)
 
@@ -85,6 +85,7 @@ def calS0(E, M):
     r4 = np.mean(abs(E)**4)
     S1 = 1-2*r2**2/r4-np.sqrt((2-gamma)*(2*r2**4/r4**2-r2**2/r4))
     S2 = gamma*r2**2/r4-1
+    # S0 = r2/(1+S2/S1) because r2=S0+N and S1/S2=S0/N
     return r2/(1+S2/S1)
 
 def SNR_QPSK_blind(E):
