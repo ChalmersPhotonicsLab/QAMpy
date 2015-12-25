@@ -3,7 +3,9 @@ import numpy as np
 from scipy.special import erfc
 
 # local imports
-from dsp import resample, make_prbs_extXOR, QAMdemod
+from . mathfcts import resample
+from . prbs import make_prbs_extXOR
+from . ber_functions import QAMdemod
 import theory
 
 
