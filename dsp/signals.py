@@ -6,7 +6,7 @@ from scipy.special import erfc
 from . mathfcts import resample
 from . prbs import make_prbs_extXOR
 from . ber_functions import QAMdemod
-import theory
+from . import  theory
 
 
 def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
@@ -70,8 +70,7 @@ def cal_ser_qpsk(data_rx, data_tx):
     return np.count_nonzero(data_demod-data_tx)/len(data_rx)
 
 if __name__ == "__main__":
-    import theory
-    import pylab as plt
+    import matplotlib.pyplot as plt
     snr = np.arange(2, 25, 1)
     ser = []
     for sr in snr:
