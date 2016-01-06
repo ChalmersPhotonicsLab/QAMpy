@@ -302,6 +302,7 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
 
     return (ber_I+ber_Q)/2., err_Q+err_I, N_Q+N_I
 
+# TODO: update to allow other orders
 def QAMdemod(M, sig):
     """Demodulates QAM symbols assuming Grey coding where possible
     using maximum likelyhood. Calculates distance to ideal points.
