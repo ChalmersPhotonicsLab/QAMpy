@@ -13,12 +13,22 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     or imax is reached.
 
     Parameters:
-        data_tx:    the known input data sequence [np.array]
-        data_rx:    the received data sequence which might contain errors [np.array]
-        Lsync:      the number of elements to use for syncing [int]
-        imax:       maximum number of tries before giving up [int]
+    ----------
+    data_tx : array_like
+            the known input data sequence.
+    data_rx : array_like
+        the received data sequence which might contain errors.
+    Lsync : int
+        the number of elements to use for syncing.
+    imax : imax
+        maximum number of tries before giving up.
 
-    returns offset index, data_tx_sync which is synchronized to data_rx
+    Returns
+    -------
+    offset index : int
+        the index where data_rx starts in data_tx
+    data_tx_sync : array_like
+        data_tx which is synchronized to data_rx
     """
     for i in xrange(imax):
         try:
