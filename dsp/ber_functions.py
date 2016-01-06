@@ -12,7 +12,7 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     the offset it will iterate through data[i:Lsync+i] until offset is found
     or imax is reached.
 
-    Parameters:
+    Parameters
     ----------
     data_tx : array_like
             the known input data sequence.
@@ -20,8 +20,8 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
         the received data sequence which might contain errors.
     Lsync : int
         the number of elements to use for syncing.
-    imax : imax
-        maximum number of tries before giving up.
+    imax : imax, optional
+        maximum number of tries before giving up (the default is 200).
 
     Returns
     -------
@@ -29,6 +29,11 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
         the index where data_rx starts in data_tx
     data_tx_sync : array_like
         data_tx which is synchronized to data_rx
+
+    Raises
+    ------
+    DataSyncError
+        If no position can be found.
     """
     for i in xrange(imax):
         try:
@@ -43,18 +48,31 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
 
 def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
     """
-    Synchronise a prbs sequence to a possibly noisy received data stream.
+    Synchronise a PRBS sequence to a possibly noisy received data stream.
     This is different to the general sync code, because in general the data
     array will be much shorter than the prbs sequence, which takes a long
     time to compute for lengths of > 2**23-1.
 
-    Parameters:
-        data_rx:    the received data signal [np.ndarray]
-        order:      the order of the prbs sequence [int]
-        Lsync:      the length of the bits to test for equality [int]
-        imax:       the maximum number of iterations to test with [int]
+    Parameters
+    ----------
+    data_rx : array_like
+        the received data signal stream
+    order : int
+        the order of the PRBS sequence.
+    Lsync : int
+        the number of bits to use to test for equality.
+    imax : int, optional
+        the maximum number of iterations to test with (default is 200).
 
-    returns prbs sequence that it synchronized to the data stream
+    Returns
+    -------
+    prbs_tx_sync : array_like
+        prbs sequence that it synchronized to the data stream
+
+    Raises
+    ------
+    DataSyncError
+        If no position can be found.
     """
     for i in range(imax):
         if i+Lsync > len(data_rx):
@@ -71,7 +89,18 @@ def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
 
 def adjust_data_length(data_tx, data_rx):
     """Adjust the length of data_tx to match data_rx, either by truncation
-    or repeating the data"""
+    or repeating the data.
+
+    Parameters
+    ----------
+    data_tx, data_rx : array_like
+        known input data sequence, received data sequence
+
+    Returns
+    -------
+    data_tx_new : array_like
+        input data sequence truncated or repeated to the same length as data_rx
+    """
     if len(data_tx) > len(data_rx):
         return data_tx[:len(data_rx)]
     elif len(data_tx) < len(data_rx):
@@ -84,7 +113,33 @@ def adjust_data_length(data_tx, data_rx):
         return data_tx
 
 def _cal_BER_only(data_rx, data_tx, threshold=0.2):
-    """Calculate the BER between two synchronised binary data signals"""
+    """Calculate the bit-error rate (BER) between two synchronised binary data
+    signals in linear units.
+
+    Parameters
+    ----------
+    data_tx : array_like
+            the known input data sequence.
+    data_rx : array_like
+        the received data signal stream
+    threshold : float, optional
+       threshold BER value. If calculated BER is larger than the threshold, an
+       error is return as this likely indicates a wrong sync (default is 0.2).
+
+    Returns
+    -------
+    ber : float
+        bit-error rate in linear units
+    errs : int
+        number of counted errors.
+    N : int
+        length of data_tx
+
+    Raises
+    ------
+    ValueError
+        if ber>threshold, as this indicates a sync error.
+    """
     errs = np.count_nonzero(data_rx-data_tx)
     N = len(data_tx)
     ber = errs/N
@@ -92,18 +147,29 @@ def _cal_BER_only(data_rx, data_tx, threshold=0.2):
         raise ValueError("BER is over %.1f, this is probably a wrong sync"%threshold)
     return ber, errs, N
 
+# TODO: the parameters of this function should really be changed to
+# (data_rx, data_tx, Lsync, order=None, imax=200)
 def cal_BER(data_rx, Lsync, order=None, data_tx=None, imax=200):
-    """Calculate the BER between data_tx and data_rx. If data_tx is shorter
-    than data_rx it is assumed that data_rx is repetitive.
+    """Calculate the BER between an received binary data stream and a given bit
+    sequence or a PRBS. If data_tx is shorter than data_rx it is assumed that
+    data_rx is repetitive.
 
     Parameters:
-    data_rx:    measured receiver data [np.ndarray]
-    Lsync:      number of bits to use for synchronisation [np.int]
-    order:      order of PRBS if no data_tx is given [default:None]
-    data_tx:    known input data if none assume PRBS [default:None]
-    imax:       number of iterations to try for sync [np.int]
+    data_rx : array_like
+        received binary data stream.
+    Lsync : int
+        number of bits to use for synchronisation
+    order : int, optional
+        order of PRBS if no data_tx is given (default:None)
+    data_tx : array_like
+        known input bit sequence (if none assume PRBS (default:None))
+    imax : int, optional
+        number of iterations to try for sync (default is 200).
 
-    returns ber
+    Returns
+    -------
+    ber : float
+        linear bit error rate
     """
     if data_tx is None and order is not None:
         return cal_BER_PRBS(data_rx.astype(np.bool), order, Lsync, imax)
@@ -114,16 +180,28 @@ def cal_BER(data_rx, Lsync, order=None, data_tx=None, imax=200):
         raise ValueError("data_tx and order must not both be None")
 
 def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
-    """Calculate the BER between data_tx and a prbs signal with a given
-    order.
+    """Calculate the BER between data_tx and a PRBS signal with a given
+    order. This function automatically tries the inverted data if it fails
+    to sync.
 
-    Parameters:
-    data_rx:    measured receiver data [np.ndarray]
-    order:      order of the PRBS [np.int]
-    Lsync:      number of bits to use for synchronisation [np.int]
-    imax:       number of iterations to try for sync [np.int]
+    Parameters
+    data_rx: array_like
+        measured receiver bit stream
+    order : int
+        order of the PRBS
+    Lsync : int
+        number of bits to use for synchronisation.
+    imax : int, optional
+        number of iterations to try for sync (default is 200).
 
-    returns ber, number of errors, length of data
+    Returns
+    -------
+    ber : float
+        bit error rate in linear units
+    errs : int
+        number of counted errors
+    N : int
+        length of data
     """
     inverted = False
     try:
@@ -136,16 +214,30 @@ def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
     return _cal_BER_only(data_rx[idx:], prbsval), inverted
 
 def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
-    """Calculate the BER between data_tx and data_rx. If data_tx is shorter
-    than data_rx it is assumed that data_rx is repetitive.
+    """Calculate the BER between a received bit stream and a known
+    bit sequence. If data_tx is shorter than data_rx it is assumed
+    that data_rx is repetitive. This function automatically inverts the data if
+    it fails to sync.
 
-    Parameters:
-    data_rx:    measured receiver data [np.ndarray]
-    data_tx:    known input data [np.ndarray]
-    Lsync:      number of bits to use for synchronisation [np.int]
-    imax:       number of iterations to try for sync [np.int]
+    Parameters
+    ----------
+    data_tx : array_like
+        the known input data sequence.
+    data_rx : array_like
+        the received data sequence which might contain errors.
+    Lsync : int
+        the number of elements to use for syncing.
+    imax : imax, optional
+        maximum number of tries before giving up (the default is 200).
 
-    returns ber, number of errors, length of data
+    Returns
+    -------
+    ber : float
+        bit error rate in linear units
+    errs : int
+        number of counted errors
+    N : int
+        length of data
     """
     try:
         idx, data_tx_sync = sync_Tx2Rx(data_tx, data_rx, Lsync, imax)
@@ -162,16 +254,26 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     the same or different orders.
 
     Parameters:
-    data_rx:    measured receiver data [np.ndarray(dtype=np.complex)]
-    order_I:    the PRBS order of the in-phase component [int]
-    order_Q:    the PRBS order of the quadrature component [int]
-    Lsync:      the length of bits to use for syncing, if None use double
-                the longer order [int, default=None]
-    imax:       maximum number of tries for syncing before giving up [int,
-                default=200]
+    data_rx : array_like
+        received bit stream
+    order_I : int
+        PRBS order of the in-phase component
+    order_Q : int
+        PRBS order of the quadrature component.
+    Lsync : int, optional
+        the length of bits to use for syncing, if None use twice the length of
+        the longer order (default=None)
+    imax : int, optional
+        maximum number of tries for syncing before giving up (default=200)
 
-    Returns:
-        BER, No. of errors, length of data
+    Returns
+    -------
+    ber : float
+        bit error rate in linear units (np.nan if failed to sync)
+    errs : int
+        number of counted errors (np.nan if failed to sync)
+    N : int
+        length of data (np.nan if failed to sync)
     """
     #TODO implement offset parameter
     data_demod = QAMdemod(4, data_rx)[0]
@@ -201,10 +303,25 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     return (ber_I+ber_Q)/2., err_Q+err_I, N_Q+N_I
 
 def QAMdemod(M, sig):
-    ''' demodulates QAM symbols assuming Grey coding where possible
-    uses ML: calculates distance to ideal points
-    only works for vectors (1D array), not for M-D arrays
-    currently only for 4-QAM'''
+    """Demodulates QAM symbols assuming Grey coding where possible
+    using maximum likelyhood. Calculates distance to ideal points.
+    Only works for vectors (1D array), not for M-D arrays
+    currently only for 4-QAM
+
+    Parameters
+    ----------
+    M : int
+        QAM order (currently has to be 4)
+    sig : array_like
+        signal data
+
+    Returns
+    -------
+    sym : array_like
+        symbols after demodulation (complex numbers)
+    data : array_like
+        indices of the data items in the constellation diagram
+    """
     L = len(sig)
     sym = np.zeros(L, dtype=np.complex128)
     data = np.zeros(L, dtype='int')
