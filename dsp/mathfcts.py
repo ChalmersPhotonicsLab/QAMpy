@@ -186,16 +186,34 @@ def rolling_window(data, size):
     strides = data.strides + (data. strides[-1],)
     return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
 
-def resample(Fold, Fnew, E, window=None):
-    ''' resamples the signal from Fold to Fnew'''
-    E = E.flatten()
+def resample(fold, fnew, signal, window=None):
+    """
+    Resamples a signal from an old frequency to a new. Preserves the whole data
+    but adjusts the length of the array in the process.
+
+    Parameters
+    ----------
+    fold : float
+        Sampling frequency of the signal
+    fnew : float
+        New desired sampling frequency.
+    window : array_like, optional
+        sampling windowing function
+
+    Returns
+    -------
+    out : array_like
+        resampled signal of length fnew/fold*len(signal)
+
+    """
+    signal = signal.flatten()
     L = len(E)
-    num = Fnew/Fold*L
+    num = fnew/fold*L
     if window is None:
-        E = scisig.resample(E, num)
+        signal = scisig.resample(signal, num)
     else:
-        E = scisig.resample(E, num, window=window)
-    return E
+        signal = scisig.resample(signal, num, window=window)
+    return signal
 
 
 
