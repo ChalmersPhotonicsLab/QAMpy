@@ -35,7 +35,24 @@ def factorial(n):
     return n * factorial(n-1)
 
 def linspacestep(start, step, N):
-    """Return an array with N values starting at start and increasing the next value by step"""
+    """
+    Create an array of given length for a given start and step
+    value.
+
+    Parameters
+    ----------
+    start : float
+        first value to start with
+    step : float
+        size of the step
+    N : int
+        number of steps
+
+    Returns
+    -------
+    out : array_like
+        array of length N from start to start+N*step (not included)
+    """
     return np.arange(start,start+N*step, step=step)
 
 def lfsr_int(seed, mask):
@@ -98,8 +115,10 @@ def lfsr_ext(seed, taps, nbits):
         yield xor, sr
 
 def bool2bin(x):
-    """Convert an array of boolean values into a binary number. If the input
-    array is not a array of booleans it will be converted."""
+    """
+    Convert an array of boolean values into a binary number. If the input
+    array is not a array of booleans it will be converted.
+    """
     assert len(x)<64, "array must not be longer than 63"
     x = np.asarray(x, dtype=bool)
     y = 0
