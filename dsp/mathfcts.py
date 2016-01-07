@@ -127,15 +127,22 @@ def bool2bin(x):
     return y
 
 def find_offset(sequence, data):
-    """Find index where sequence occurs in the data array
+    """
+    Find index where binary sequence occurs fist in the binary data array
 
-    Parameters:
-        sequence: sequence to find in data [array]
-        data: the data array in which to find the sequence [array]
+    Parameters
+    ----------
+    sequence : array_like
+        sequence to search for inside the data
+    data : array_like
+        data array in which to find the sequence
 
     It is required that len(data) > sequence
 
-    returns index where sequence starts within data
+    Returns
+    -------
+    idx : int
+        index where sequence first occurs in data
     """
     assert len(data)>len(sequence), "data has to be longer than sequence"
     if not data.dtype==sequence.dtype:
@@ -147,9 +154,37 @@ def find_offset(sequence, data):
     return data.tostring().index(sequence.tostring())//data.itemsize
 
 def rolling_window(data, size):
-     shape = data.shape[:-1] + (data.shape[-1] - size + 1, size)
-     strides = data.strides + (data. strides[-1],)
-     return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
+    """
+    Reshapes a 1D array into a 2D array with overlapping frames. Stops when the
+    last value of data is reached.
+
+    Parameters
+    ----------
+    data : array_like
+        Data array to segment
+    size : int
+        The frame size
+
+    Returns
+    -------
+    out : array_like
+        output segmented 2D array
+
+
+    Examples
+    >>> mathfcts.rolling_window(np.arange(10), 3)
+    array([[0, 1, 2],
+            [1, 2, 3],
+            [2, 3, 4],
+            [3, 4, 5],
+            [4, 5, 6],
+            [5, 6, 7],
+            [6, 7, 8],
+            [7, 8, 9]])
+    """
+    shape = data.shape[:-1] + (data.shape[-1] - size + 1, size)
+    strides = data.strides + (data. strides[-1],)
+    return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
 
 def resample(Fold, Fnew, E, window=None):
     ''' resamples the signal from Fold to Fnew'''
