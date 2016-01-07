@@ -13,15 +13,24 @@ except:
     from mathfcts import lfsr_int
 
 def make_prbs_extXOR(order, nbits, seed=None):
-    """Create Pseudo Random Bit Sequence using a Linear Feedback
-    Shift Register.
+    """
+    Create Pseudo Random Bit Sequence using
+    Linear Feedback Shift Register with a Fibonacci or external XOR
+    implementation.
 
-    Parameters:
-        order: the order of the sequence [can be 7, 15, 23, 31]
-        nbits: the number of bits in the sequence
-        seed: seed for the LFSR [default:None] None corresponds to all ones
+    Parameters
+    ----------:
+    order : int
+        Order of the bit sequence (must be one of 7, 15, 23, 31)
+    nbits : int
+        The length or number of bits in the sequence
+    seed : int, optional
+        Seed for the LFSR, None corresponds to all bits one (default is None)
 
-    Returns array of length nbits dtype=bool
+    Returns
+    -------
+    prbs : array_like
+        Array of nbits, dtype=bool, len=nbits
     """
     assert order in [7, 15, 23, 31], """Only orders 7, 15, 23, 31 are
     implemented"""
@@ -41,14 +50,21 @@ def make_prbs_extXOR(order, nbits, seed=None):
 
 def make_prbs_intXOR(order, nbits, seed=None):
     """Create Pseudo Random Bit Sequence using a Linear Feedback
-    Shift Register with internal XOR.
+    Shift Register with Galois internal XOR implementation.
 
-    Parameters:
-        order: the order of the sequence [can be 7, 15, 23, 31]
-        nbits: the number of bits in the sequence
-        seed: seed for the LFSR [default:None] None corresponds to all ones
+    Parameters
+    ----------:
+    order : int
+        Order of the bit sequence (must be one of 7, 15, 23, 31)
+    nbits : int
+        The length or number of bits in the sequence
+    seed : int, optional
+        Seed for the LFSR, None corresponds to all bits one (default is None)
 
-    Returns array of length nbits dtype=bool
+    Returns
+    -------
+    prbs : array_like
+        Array of nbits, dtype=bool, len=nbits
     """
     assert order in [7, 15, 23, 31], """Only orders 7, 15, 23, 31 are
     implemented"""
