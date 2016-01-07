@@ -8,12 +8,22 @@ from . signal_quality import calS0
 SYMBOLS_16QAM = CalculateMQAMSymbols(16)
 
 def viterbiviterbi_gen(N, E, M):
-    """Viterbi-Viterbi blind phase recovery for an M-PSK signal
+    """
+    Viterbi-Viterbi blind phase recovery for an M-PSK signal
 
-    Parameters:
-        N: number of samples to average over
-        E: electric field of the signal
-        M: order of the M-PSK
+    Parameters
+    ----------
+    N : int
+        number of samples to average over
+    E : array_like
+        the electric field of the signal
+    M : int
+        order of the M-PSK
+
+    Returns
+    -------
+    Eout : array_like
+        Field with compensated phases
     """
     E = E.flatten()
     L = len(E)
@@ -32,11 +42,39 @@ def viterbiviterbi_gen(N, E, M):
     return E*np.exp(-1.j*phase_est/M)
 
 def viterbiviterbi_qpsk(N, E):
-    """Viterbi-Viterbi blind phase recovery for QPSK signal"""
+    """
+    Viterbi-Viterbi blind phase recovery for QPSK signal
+
+    Parameters
+    ----------
+    N : int
+        number of samples to average over
+    E : array_like
+        the electric field of the signal
+
+    Returns
+    -------
+    Eout : array_like
+        Field with compensated phases
+    """
     return viterbiviterbi_gen(N, E, 4)
 
 def viterbiviterbi_bpsk(N, E):
-    """Viterbi-Viterbi for BPSK"""
+    """
+    Viterbi-Viterbi for BPSK signal
+
+    Parameters
+    ----------
+    N : int
+        number of samples to average over
+    E : array_like
+        the electric field of the signal
+
+    Returns
+    -------
+    Eout : array_like
+        Field with compensated phases
+    """
     return viterbiviterbi_gen(N, E, 2)
 
 def __findmax_16QAM(rk, ci, vk):
@@ -45,20 +83,30 @@ def __findmax_16QAM(rk, ci, vk):
     return ci[pk]
 
 def ML_phase_16QAM(X, Y, pix, piy, cfactor):
-    """ML_phase_16QAM phase recovery using pilots for starting the estimator
-    on a dual-pol 16 QAM signal.
+    """
+    Maximum-likelihood phase recovery for 16-QAM signal
+    using pilots for starting the estimator on a dual-pol 16 QAM signal.
 
-    Parameters:
-        X:      input signal X polarisation
-        Y:      input signal Y polarisation
-        pix :   the known data signal pilot (X polarisation)
-        piy:    the known data signal pilot (Y polarisation)
-        cfactor:cfactor length of pilots
+    Parameters
+    ----------
+    X : array_like
+        X polarisation of the input signal field
+    Y : array_like
+        Y polarisation of the input signal field
+    pix : array_like
+        Known pilot data (X polarisation)
+    piy : array_like
+        Known pilot data (Y polarisation)
 
-    Return:
-        RecoveredX, RecoveredY recovered X and Y polarisation signals
+    Returns
+    -------
+    RecoveredX : array_like
+        Phase recovered signal field (X polarisation)
+    RecoveredY : array_like
+        Phase recovered signal field (Y polarisation)
     """
     N = len(X)
+    cfactor = len(pix)
     pilotX = np.zeros(N, dtype=np.complex)
     pilotY = np.zeros(N, dtype=np.complex)
     pilotX[:cfactor] = pix
