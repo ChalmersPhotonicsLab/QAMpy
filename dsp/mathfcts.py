@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
+import scipy.signal as scisig
 
 """ a number of mathematical convenience functions"""
 
