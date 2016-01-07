@@ -39,11 +39,26 @@ def linspacestep(start, step, N):
     return np.arange(start,start+N*step, step=step)
 
 def lfsr_int(seed, mask):
-    """A linear feedback shift register, using Galois or internal XOR implementation,
-    the seed is a binary number with the bit length N. The mask determines
-    the polynomial and has length N+1, also the first and last bit of the
-    mask need to be 1.
-    Returns a generator which yields the bit and the register state"""
+    """
+    A linear feedback shift register, using Galois or internal XOR
+    implementation.
+
+    Parameters
+    ----------
+    seed : int
+        an integer representing the list of bits as the starting point of the
+        register. Length N
+    mask : int
+        Determines the polynomial of the shift register (length N+1). The
+        first and last bit of the mask must be 1.
+
+    Yields
+    ------
+    xor : int
+        output bit of the register
+    state : int
+        state of the register
+    """
     state = seed
     nbits = mask.bit_length()-1
     while True:
@@ -57,13 +72,21 @@ def lfsr_int(seed, mask):
 def lfsr_ext(seed, taps, nbits):
     """A Fibonacci or external XOR linear feedback shift register.
 
-    Parameters:
-        seed  -- binary number denoting the state registers
-        taps  -- list of registers that are input to the XOR
-        nbits -- number of registers
+    Parameters
+    ----------
+    seed : int
+        binary number denoting the input state registers
+    taps  : list
+        list of registers that are input to the XOR (length 2)
+    nbits : int
+        number of registers
 
-    yields (xor, state) where xor is the output of the registers and state is
-    the register state at every step
+    Yields
+    ------
+    xor : int
+        output bit of the registers
+    state : int
+        state of the register
     """
     sr = seed
     while 1:
