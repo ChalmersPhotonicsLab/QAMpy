@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
+import scipy.signal as scisig
 
 """ a number of mathematical convenience functions"""
 
@@ -7,27 +8,99 @@ def cabssquared(x):
     """Calculate the absolute squared of a complex number"""
     return x.real**2 + x.imag**2
 
-def tanh(x,p):
-    """Calculate the hyperbolic tangent t = p[0]*tanh((x-p[1])/p[2])
+def ttanh(x, A, x0, w):
     """
-    return p[0]*tanh((x-p[1])/p[2])
+    Calculate the hyperbolic tangent with a given amplitude, zero offset and
+    width.
 
-def gauss(x, p):
-    """Calculate the Gaussian function g = p[0]*exp(-((x-p[1])/p[2])**2/2)
-    """
-    return p[0]*np.exp(- ((x - p[1])/p[2])**2 /2.)
+    Parameters
+    ----------
+    x : array_like
+        Input array variable
+    A : float
+        Amplitude
+    x0 : float
+        Zero-offset
+    w : float
+        Width
 
-def supergauss(x, p):
+    Returns
+    -------
+    array_like
+        calculated array
     """
-    Calculate the Supergaussian functions g =
-    p[0]*exp(-((x-p[1])/p[2])**(2*p[3])/2)
-    """
-    return p[0]*np.exp(- ((x-p[1])/p[2])**(2*p[3])/2.)
+    return A*tanh((x-x0)/w)
 
-def sech(x, p):
-    """Calculate the sech function s = p[0]/cosh((x-p[1])/p[2])
+def gauss(x, A, x0, w):
     """
-    return p[0]/np.cosh((x-p[1])/p[2])
+    Calculate the Gaussian function with a given amplitude, zero offset and
+    width.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array variable
+    A : float
+        Amplitude
+    x0 : float
+        Zero offset
+    w : float
+        Width
+
+    Returns
+    -------
+    array_like
+        calculated array
+    """
+    return A*np.exp(- ((x - x0)/w)**2 /2.)
+
+def supergauss(x, A, x0, w, o):
+    """
+    Calculate the Supergaussian functions with a given amplitude,
+    zero offset, width and order.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array variable
+    A : float
+        Amplitude
+    x0 : float
+        Zero offset
+    w : float
+        Width
+    o : float
+        order of the supergaussian
+
+    Returns
+    -------
+    array_like
+        calculated array
+    """
+    return A*np.exp(- ((x-x0)/w)**(2*o)/2.)
+
+def sech(x, A, x0, w):
+    """
+    Calculate the hyperbolic secant function with a given
+    amplitude, zero offset and width.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array variable
+    A : float
+        Amplitude
+    x0 : float
+        Zero offset
+    w : float
+        Width
+
+    Returns
+    -------
+    array_like
+        calculated array
+    """
+    return A/np.cosh((x-x0)/w)
 
 def factorial(n):
     """The factorial of n, i.e. n!"""
@@ -214,6 +287,10 @@ def resample(fold, fnew, signal, window=None):
     else:
         signal = scisig.resample(signal, num, window=window)
     return signal
+
+def raisedcos(t, alpha, T=1):
+    return np.sinc(t/T)*np.cos(t/T*pi*alpha)/(1-4*(alpha*t/T)**2)
+
 
 
 
