@@ -121,5 +121,9 @@ def resample(Fold, Fnew, E, window=None):
         E = scisig.resample(E, num, window=window)
     return E
 
+def raisedcos(t, alpha, T=1):
+    return np.sinc(t/T)*np.cos(t/T*pi*alpha)/(1-4*(alpha*t/T)**2)
+
+
 
 
