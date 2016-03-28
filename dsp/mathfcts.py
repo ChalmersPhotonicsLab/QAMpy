@@ -8,8 +8,26 @@ def cabssquared(x):
     """Calculate the absolute squared of a complex number"""
     return x.real**2 + x.imag**2
 
-def tanh(x,p):
-    """Calculate the hyperbolic tangent t = p[0]*tanh((x-p[1])/p[2])
+def ttanh(x, A, x0, W):
+    """
+    Calculate the hyperbolic tangent with a given amplitude, zero offset and
+    width.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array
+    A : float
+        Amplitude
+    x0 : float
+        Zero-offset
+    W : float
+        Width
+
+    Returns
+    -------
+    array_like
+        calculated array
     """
     return p[0]*tanh((x-p[1])/p[2])
 
