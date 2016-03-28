@@ -289,7 +289,7 @@ def resample(fold, fnew, signal, window=None):
     return signal
 
 def raisedcos(t, alpha, T=1):
-    return np.sinc(t/T)*np.cos(t/T*pi*alpha)/(1-4*(alpha*t/T)**2)
+    return np.sinc(t/T)*np.cos(t/T*np.pi*alpha)/(1-4*(alpha*t/T)**2)
 
 
 
