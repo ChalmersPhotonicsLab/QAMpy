@@ -42,9 +42,9 @@ def segment_axis(a, length, overlap=0, axis=None, end='cut', endvalue=0):
     l = a.shape[axis]
 
     if overlap >= length:
-        raise ValueError, "frames cannot overlap by more than 100%"
+        raise ValueError( "frames cannot overlap by more than 100%")
     if overlap < 0 or length <= 0:
-        raise ValueError, "overlap must be nonnegative and length must be positive"
+        raise ValueError( "overlap must be nonnegative and length must be positive")
 
     if l < length or (l-length)%(length-overlap):
         if l > length:
@@ -76,7 +76,7 @@ def segment_axis(a, length, overlap=0, axis=None, end='cut', endvalue=0):
 
     l = a.shape[axis]
     if l==0:
-        raise ValueError, "Not enough data points to segment array in 'cut' mode; try 'pad' or 'wrap'"
+        raise ValueError("Not enough data points to segment array in 'cut' mode; try 'pad' or 'wrap'")
     assert l>=length
     assert (l-length)%(length-overlap) == 0
     n = 1+(l-length)//(length-overlap)
