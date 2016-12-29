@@ -280,7 +280,7 @@ def resample(fold, fnew, signal, window=None):
 
     """
     signal = signal.flatten()
-    L = len(E)
+    L = len(signal)
     num = fnew/fold*L
     if window is None:
         signal = scisig.resample(signal, num)
