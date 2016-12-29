@@ -13,7 +13,7 @@ class DataSyncError(Exception):
 
 def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
     err = np.zeros(TrSyms, dtype=np.float)
-    for i in xrange(0, TrSyms):
+    for i in range(0, TrSyms):
         X = E[:, i*os:i*os+Ntaps]
         Xest = np.sum(wx*X)
         err[i] = abs(Xest)-1
@@ -22,7 +22,7 @@ def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
 
 def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
     err = np.zeros(TrRDE, dtype=np.float)
-    for i in xrange(TrCMA, TrCMA+TrRDE):
+    for i in range(TrCMA, TrCMA+TrRDE):
         X = E[:, i*os:i*os+Ntaps]
         Xest = np.sum(wx*X)
         Ssq = abs(Xest)**2
@@ -404,7 +404,7 @@ def CDcomp(fs, N, L, D, sig, wl):
         sigB = np.zeros(N, dtype=np.complex128)
         sigEQ = np.zeros(n*(B+1), dtype=np.complex128)
         sB = np.zeros((B, N), dtype=np.complex128)
-        for i in xrange(0, B):
+        for i in range(0, B):
             sigB = np.zeros(N, dtype=np.complex128)
             sigB[zp:-zp] = sig[i*n:i*n+n]
             sigB = np.fft.fft(sigB)
@@ -467,7 +467,7 @@ def make_prbs_extXOR(order, nbits, seed=None):
             seed = seed
     out = np.zeros(nbits, dtype=bool)
     lfsr = lfsr_ext(seed, tapdict[order], order)
-    for i in xrange(nbits):
+    for i in range(nbits):
         out[i] = lfsr.next()[0]
     return out
 
@@ -495,7 +495,7 @@ def make_prbs_intXOR(order, nbits, seed=None):
             seed = seed
     out = np.empty(nbits, dtype=bool)
     lfsr = lfsr_int(seed, masks[order])
-    for i in xrange(nbits):
+    for i in range(nbits):
         out[i] = lfsr.next()[0]
     return out
 
@@ -513,7 +513,7 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
 
     returns offset index, data_tx_sync which is synchronized to data_rx
     """
-    for i in xrange(imax):
+    for i in range(imax):
         try:
             sequence = data_rx[i:i+Lsync]
             idx_offs = mathfcts.find_offset(sequence, data_tx)

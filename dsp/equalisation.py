@@ -9,7 +9,7 @@ from . import mathfcts
 
 def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
     err = np.zeros(TrSyms, dtype=np.float)
-    for i in xrange(0, TrSyms):
+    for i in range(0, TrSyms):
         X = E[:, i*os:i*os+Ntaps]
         Xest = np.sum(wx*X)
         err[i] = abs(Xest)-1
@@ -18,7 +18,7 @@ def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
 
 def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
     err = np.zeros(TrRDE, dtype=np.float)
-    for i in xrange(TrCMA, TrCMA+TrRDE):
+    for i in range(TrCMA, TrCMA+TrRDE):
         X = E[:, i*os:i*os+Ntaps]
         Xest = np.sum(wx*X)
         Ssq = abs(Xest)**2
@@ -210,7 +210,7 @@ def CDcomp(fs, N, L, D, sig, wl):
         sigB = np.zeros(N, dtype=np.complex128)
         sigEQ = np.zeros(n*(B+1), dtype=np.complex128)
         sB = np.zeros((B, N), dtype=np.complex128)
-        for i in xrange(0, B):
+        for i in range(0, B):
             sigB = np.zeros(N, dtype=np.complex128)
             sigB[zp:-zp] = sig[i*n:i*n+n]
             sigB = np.fft.fft(sigB)

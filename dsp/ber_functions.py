@@ -35,7 +35,7 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     DataSyncError
         If no position can be found.
     """
-    for i in xrange(imax):
+    for i in range(imax):
         try:
             sequence = data_rx[i:i+Lsync]
             idx_offs = mathfcts.find_offset(sequence, data_tx)
