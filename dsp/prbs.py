@@ -45,7 +45,7 @@ def make_prbs_extXOR(order, nbits, seed=None):
     out = np.zeros(nbits, dtype=bool)
     lfsr = lfsr_ext(seed, tapdict[order], order)
     for i in range(nbits):
-        out[i] = lfsr.next()[0]
+        out[i] = next(lfsr)[0]
     return out
 
 def make_prbs_intXOR(order, nbits, seed=None):
@@ -80,6 +80,6 @@ def make_prbs_intXOR(order, nbits, seed=None):
     out = np.empty(nbits, dtype=bool)
     lfsr = lfsr_int(seed, masks[order])
     for i in range(nbits):
-        out[i] = lfsr.next()[0]
+        out[i] = next(lfsr)[0]
     return out
 
