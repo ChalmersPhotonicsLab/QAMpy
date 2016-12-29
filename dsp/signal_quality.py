@@ -98,3 +98,20 @@ def SNR_QPSK_blind(E):
     SNR = 10*np.log10(P/var)
     return SNR
 
+def cal_ser_QAM(data_rx, data_tx, M):
+    """
+    Calculate the symbol error rate
+
+    Parameters
+    ----------
+
+    data_rx : array_like
+            received signal
+    data_tx : array_like
+            original signal
+    M       : int
+            QAM order
+    """
+    data_demod = QAMdemod(M, data_rx)[0]
+    return np.count_nonzero(data_demod-data_tx)/len(data_rx)
+
