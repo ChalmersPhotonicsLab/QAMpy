@@ -15,7 +15,7 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version='0.0.1',
 
-    description='A python based package of communications dsp tools",
+    description='A python based package of communications dsp tools',
     long_description=None,
 
     # The project's main homepage.
