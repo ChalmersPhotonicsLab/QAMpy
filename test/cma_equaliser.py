@@ -35,6 +35,7 @@ SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 Ex, Ey, wx, wy, err = equalisation.FS_CMA(10000, 40, 2, 0.1, SS[0,:], SS[1,:])
 
 
+#sys.exit()
 plt.figure()
 plt.subplot(121)
 plt.title('Recovered')
@@ -47,15 +48,15 @@ plt.plot(Y[::2].real, Y[::2].imag, 'go')
 
 plt.figure()
 plt.subplot(211)
-plt.plot(wx[0,:], color='r')
+plt.title('Taps')
+plt.plot(wx[0,:], 'r')
 plt.plot(wx[1,:], '--r')
-plt.plot(wy[0,:], color='g')
-plt.plot(wy[1,:], color='g')
+plt.plot(wy[0,:], 'g')
+plt.plot(wy[1,:], '--g')
 plt.subplot(212)
+plt.title('error')
 plt.plot(err[0], color='r')
 plt.plot(err[1], color='g')
-
-
 plt.show()
 
 
