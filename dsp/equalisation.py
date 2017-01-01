@@ -70,11 +70,9 @@ def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
     wy[0, :] = -wx[1, ::-1]
     wy = np.conj(wy)
     # centering the taps
-    wR = np.abs(wx)
-    wXmax = np.where(np.max(wR) == wR)
-    wR = np.abs(wy)
-    wYmax = np.where(np.max(wR) == wR)
-    delay = abs(wYmax[1]-wXmax[1])
+    wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
+    wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
+    welay = abs(wYmaxidx[1]-wXmaxidx[1])
     pad = np.zeros((2, delay), dtype=np.complex128)
     if delay > 0:
         wy = wy[:, delay:]
