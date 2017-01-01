@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
-import mathfcts
-from theory import CalculateMQAMSymbols, MQAMScalingFactor
+from . import  mathfcts
+from . theory import CalculateMQAMSymbols, MQAMScalingFactor
 
 def normalise_sig(sig, M):
     """Normalise signal to average power"""
