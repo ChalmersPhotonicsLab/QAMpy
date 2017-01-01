@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
 from dsp import signals, equalisation
+from dsp.signal_quality import cal_blind_evm
 
 
 
@@ -35,16 +36,22 @@ SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 Ex, Ey, wx, wy, err = equalisation.FS_CMA(10000, 40, 2, 0.1, SS[0,:], SS[1,:])
 
 
+evmX = cal_blind_evm(X[::2], 4)
+evmY = cal_blind_evm(Y[::2], 4)
+evmEx = cal_blind_evm(Ex, 4)
+evmEy = cal_blind_evm(Ey, 4)
 #sys.exit()
 plt.figure()
 plt.subplot(121)
 plt.title('Recovered')
-plt.plot(Ex.real, Ex.imag, 'ro')
-plt.plot(Ey.real, Ey.imag, 'go')
+plt.plot(Ex.real, Ex.imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx))
+plt.plot(Ey.real, Ey.imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
+plt.legend()
 plt.subplot(122)
 plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'ro')
-plt.plot(Y[::2].real, Y[::2].imag, 'go')
+plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.legend()
 
 plt.figure()
 plt.subplot(211)
