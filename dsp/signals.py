@@ -50,7 +50,7 @@ def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
         dataQ: ndarray
             data array used for the quadrature channel
     """
-    Ntmp = N*baudrate/samplingrate # we will upsample later
+    Ntmp = np.round(N*baudrate/samplingrate) # we will upsample later
     if PRBS == True:
         seedI = np.random.randint(0, high=2, size=orderI)
         seedQ = np.random.randint(0, high=2, size=orderQ)
