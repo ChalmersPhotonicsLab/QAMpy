@@ -302,12 +302,10 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
 
     return (ber_I+ber_Q)/2., err_Q+err_I, N_Q+N_I
 
-# TODO: update to allow other orders
 def QAMquantize(sig, M):
     """Quantize a QAM signal assuming Grey coding where possible
     using maximum likelyhood. Calculates distance to ideal points.
     Only works for vectors (1D array), not for M-D arrays
-    currently only for 4-QAM
 
     Parameters
     ----------
@@ -320,17 +318,16 @@ def QAMquantize(sig, M):
     -------
     sym : array_like
         symbols after demodulation (complex numbers)
-    data : array_like
+    idx : array_like
         indices of the data items in the constellation diagram
     """
     L = len(sig)
     sym = np.zeros(L, dtype=np.complex128)
     data = np.zeros(L, dtype='int')
-    if M == 4:
-        E = 2
-        cons = np.array([1+1.j, 1-1.j, -1-1.j, -1+1.j])
-        P = np.mean(mathfcts.cabssquared(sig))
-        sig = sig*np.sqrt(E/P)
-        data = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
-        sym = cons[data]
-    return sym, data
+    cons = theory.CalculateMQAMSymbols(M).flatten()
+    scal = theory.MQAMScalingFactor(M)
+    P = np.mean(mathfcts.cabssquared(sig))
+    sig = sig*np.sqrt(scal/P)
+    idx = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
+    sym = cons[idx]
+    return sym, idx
