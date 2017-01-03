@@ -1,7 +1,9 @@
 from __future__ import division, print_function
+
 import numpy as np
-from . import prbs
-from . import mathfcts
+
+from . import mathfcts, prbs
+
 
 class DataSyncError(Exception):
     pass
@@ -276,7 +278,7 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
         length of data (np.nan if failed to sync)
     """
     #TODO implement offset parameter
-    data_demod = QAMdemod(4, data_rx)[0]
+    data_demod = QAMquantize(data_rx, 4)[0]
     data_I = (1+data_demod.real).astype(np.bool)
     data_Q = (1+data_demod.imag).astype(np.bool)
     if Lsync is None:
@@ -303,18 +305,18 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     return (ber_I+ber_Q)/2., err_Q+err_I, N_Q+N_I
 
 # TODO: update to allow other orders
-def QAMdemod(M, sig):
-    """Demodulates QAM symbols assuming Grey coding where possible
+def QAMquantize(sig, M):
+    """Quantize a QAM signal assuming Grey coding where possible
     using maximum likelyhood. Calculates distance to ideal points.
     Only works for vectors (1D array), not for M-D arrays
     currently only for 4-QAM
 
     Parameters
     ----------
-    M : int
-        QAM order (currently has to be 4)
     sig : array_like
         signal data
+    M : int
+        QAM order (currently has to be 4)
 
     Returns
     -------
@@ -334,4 +336,3 @@ def QAMdemod(M, sig):
         data = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
         sym = cons[data]
     return sym, data
-
