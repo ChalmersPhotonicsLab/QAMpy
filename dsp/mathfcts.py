@@ -288,8 +288,14 @@ def resample(fold, fnew, signal, window=None):
         signal = scisig.resample(signal, num, window=window)
     return signal
 
-def raisedcos(t, alpha, T=1):
-    return np.sinc(t/T)*np.cos(t/T*np.pi*alpha)/(1-4*(alpha*t/T)**2)
+def rrcos_time(t, beta, T=1):
+    return np.sinc(t/T)*np.cos(t/T*np.pi*beta)/(1-4*(beta*t/T)**2)
+
+def rrcos_freq(f, beta, T=1):
+    rrc = np.zeros(len(beta), dtype=f.dtype)
+    rrc[np.where(np.abs(f)<=(1-beta)/(2*T))] = T
+    rrc[np.where((np.abs(f)>(1-beta)/(2*T))&(np.abs(f)<=(1+beta)/(2*T)))] = T/2 * (1 + np.cos(np.pi * T/beta * (np.abs(f) - (1-beta)/(2*T))))
+    return rrc
 
 
 
