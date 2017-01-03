@@ -10,7 +10,7 @@ from . import  theory
 
 
 def generateRandomQPSKData(N, snr, carrier_df=0, baudrate=1,
-                           samplingrate=1, PRBS=True, orderI=15, orderQ=23)
+                           samplingrate=1, PRBS=True, orderI=15, orderQ=23):
     """Generate a QPSK data signal array
 
     Parameters:
