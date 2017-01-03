@@ -9,8 +9,8 @@ from . ber_functions import QAMdemod
 from . import  theory
 
 
-def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
-                           samplingrate=1, PRBS=True, orderI=15, orderQ=23, offset=None):
+def generateRandomQPSKData(N, snr, carrier_df=0, baudrate=1,
+                           samplingrate=1, PRBS=True, orderI=15, orderQ=23)
     """Generate a QPSK data signal array
 
     Parameters:
@@ -19,26 +19,25 @@ def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
            Length of the array
         snr: number
            Signal to Noise Ratio (Es/N0) in logarithmic units
-        carrier_f: number
-           carrier frequency, relative to the overall window, if not given it
+        carrier_df: number, optional
+           carrier frequency offset, relative to the overall window, if not given it
            is set to 0 (baseband modulation)
-        baudrate:  number
+        baudrate:  number, optional
            symbol rate of the signal. This should be the real symbol rate, used
            for calculating the oversampling factor. If not given it is 1.
-        samplingrate: number
+        samplingrate: number, optional
            the rate at which the signal is sampled. Together with the baudrate
            this is used for calculating the oversampling factor. Default is 1.
-        PRBS: bool
+        PRBS: bool, optional
            If True the bits are generated as standard PRBS sequences, if False
            random bits are generated using numpy.random.randint.
            Default is True
-        orderI: int
+        orderI: int, optional
            The PRBS order i.e. the length 2**orderI of the PRBS to use
            for the in-phase channel. Default is 15.
-        orderQ: int
+        orderQ: int, optional
            The PRBS order i.e. the length 2**orderI of the PRBS to use
            for the quadrature channel. Default is 23..
-        offset:
 
     Returns
     -------
@@ -66,7 +65,7 @@ def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
     noise = (np.random.randn(Ntmp)+1.j*np.random.randn(Ntmp))/np.sqrt(2) # sqrt(2) because N/2 = sigma
     outdata = data+noise*10**(-snr/20) #the 20 here is so we don't have to take the sqrt
     outdata = resample(baudrate, samplingrate, outdata)
-    return outdata*np.exp(2.j*np.pi*np.arange(len(outdata))*carrier_f/samplingrate), dataI, dataQ
+    return outdata*np.exp(2.j*np.pi*np.arange(len(outdata))*carrier_df/samplingrate), dataI, dataQ
 
 def cal_ser_qpsk(data_rx, data_tx):
     data_demod = QAMdemod(4, data_rx)[0]
