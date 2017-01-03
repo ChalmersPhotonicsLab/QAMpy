@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from . import mathfcts, prbs
+from . import theory
 
 
 class DataSyncError(Exception):

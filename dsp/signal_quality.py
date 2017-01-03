@@ -4,6 +4,7 @@ from . import  mathfcts
 from . theory import CalculateMQAMSymbols, MQAMScalingFactor
 from . ber_functions import QAMquantize
 
+
 def normalise_sig(sig, M):
     """Normalise signal to average power"""
     norm = np.sqrt(calS0(sig, M))
