@@ -51,11 +51,13 @@ def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
             data array used for the quadrature channel
     """
     Ntmp = np.round(N*baudrate/samplingrate) # we will upsample later
+    orderI = np.round(orderI)
+    orderQ = np.round(orderQ)
     if PRBS == True:
         seedI = np.random.randint(0, high=2, size=orderI)
         seedQ = np.random.randint(0, high=2, size=orderQ)
-        dataI = make_prbs_extXOR(np.int(orderI), np.int(Ntmp), seedI)
-        dataQ = make_prbs_extXOR(np.int(orderQ), np.int(Ntmp), seedQ)
+        dataI = make_prbs_extXOR(orderI, Ntmp, seedI)
+        dataQ = make_prbs_extXOR(orderQ, Ntmp, seedQ)
     else:
         dataI = np.random.randint(0, high=2, size=Ntmp)
         dataQ = np.random.randint(0, high=2, size=Ntmp)
