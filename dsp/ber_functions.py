@@ -155,6 +155,7 @@ def cal_BER(data_rx, Lsync, order=None, data_tx=None, imax=200):
     data_rx is repetitive.
 
     Parameters:
+    ----------
     data_rx : array_like
         received binary data stream.
     Lsync : int
@@ -185,6 +186,7 @@ def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
     to sync.
 
     Parameters
+    ----------
     data_rx: array_like
         measured receiver bit stream
     order : int
@@ -254,6 +256,7 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     the same or different orders.
 
     Parameters:
+    ----------
     data_rx : array_like
         received bit stream
     order_I : int
@@ -334,4 +337,3 @@ def QAMdemod(M, sig):
         data = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
         sym = cons[data]
     return sym, data
-
