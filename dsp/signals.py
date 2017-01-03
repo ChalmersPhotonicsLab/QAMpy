@@ -5,7 +5,6 @@ from scipy.special import erfc
 # local imports
 from . mathfcts import resample
 from . prbs import make_prbs_extXOR
-from . ber_functions import QAMdemod
 from . import  theory
 
 
@@ -68,18 +67,15 @@ def generateRandomQPSKData(N, snr, carrier_f=0, baudrate=1,
     outdata = resample(baudrate, samplingrate, outdata)
     return outdata*np.exp(2.j*np.pi*np.arange(len(outdata))*carrier_f/samplingrate), dataI, dataQ
 
-def cal_ser_qpsk(data_rx, data_tx):
-    data_demod = QAMdemod(4, data_rx)[0]
-    return np.count_nonzero(data_demod-data_tx)/len(data_rx)
-
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    from signal_quality import cal_ser_QAM
     snr = np.arange(2, 25, 1)
     ser = []
     for sr in snr:
         data_rx, dataI, dataQ = generateRandomQPSKData(10**5, sr)
         data_tx = 2*(dataI+1.j*dataQ-0.5-0.5j)
-        ser.append(cal_ser_qpsk(data_rx, data_tx))
+        ser.append(cal_ser_QAM(data_rx, data_tx, M))
     plt.figure()
     plt.plot(snr, 10*np.log10(theory.MPSK_SERvsEsN0(10**(snr/10.), 4)), label='theory')
     plt.plot(snr, 10*np.log10(ser), label='calculation')

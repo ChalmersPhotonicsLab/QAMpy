@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from . import  mathfcts
 from . theory import CalculateMQAMSymbols, MQAMScalingFactor
+from . ber_functions import QAMquantize
 
 def normalise_sig(sig, M):
     """Normalise signal to average power"""
@@ -112,6 +113,6 @@ def cal_ser_QAM(data_rx, data_tx, M):
     M       : int
             QAM order
     """
-    data_demod = QAMdemod(M, data_rx)[0]
+    data_demod = QAMquantize(data_rx, M)[0]
     return np.count_nonzero(data_demod-data_tx)/len(data_rx)
 
