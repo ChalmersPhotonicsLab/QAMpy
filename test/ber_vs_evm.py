@@ -14,7 +14,7 @@ for sr in snr:
     print(sr)
     data_rx, dataI, dataQ = signals.generateRandomQPSKData(10**6, sr)
     data_tx = 2*(dataI+1.j*dataQ-0.5-0.5j)
-    ser.append(signals.cal_ser_qpsk(data_rx, data_tx))
+    ser.append(signal_quality.cal_ser_QAM(data_rx, data_tx, 4))
     try:
         ber.append(ber_functions.cal_BER_QPSK_prbs(data_rx,15, 23)[0])
     except:
