@@ -28,14 +28,17 @@ def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
     E      : array_like
        dual polarisation signal field
 
+    wx     : array_like
+       initial equaliser taps
+
     Returns
     -------
 
     err       : array_like
        CMA estimation error for x and y polarisation
 
-    wx, wy    : array_like
-       equaliser taps for the x and y polarisation
+    wx        : array_like
+       equaliser taps
     """
     err = np.zeros(TrSyms, dtype=np.float)
     for i in range(0, TrSyms):
@@ -69,6 +72,9 @@ def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
     E       : array_like
        dual polarisation signal field
 
+    wx     : array_like
+       initial equaliser taps
+
     part    : array_like
        partitioning vector defining the boundaries between the different QAM constellation rings
 
@@ -81,8 +87,8 @@ def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
     err       : array_like
        CMA estimation error for x and y polarisation
 
-    wx, wy    : array_like
-       equaliser taps for the x and y polarisation
+    wx    : array_like
+       equaliser taps
     """
     err = np.zeros(TrRDE, dtype=np.float)
     for i in range(TrCMA, TrCMA+TrRDE):
