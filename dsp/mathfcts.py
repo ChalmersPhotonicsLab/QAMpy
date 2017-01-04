@@ -1,12 +1,13 @@
 from __future__ import division, print_function
 import numpy as np
 import scipy.signal as scisig
-
 """ a number of mathematical convenience functions"""
+
 
 def cabssquared(x):
     """Calculate the absolute squared of a complex number"""
     return x.real**2 + x.imag**2
+
 
 def ttanh(x, A, x0, w):
     """
@@ -29,7 +30,8 @@ def ttanh(x, A, x0, w):
     array_like
         calculated array
     """
-    return A*tanh((x-x0)/w)
+    return A * tanh((x - x0) / w)
+
 
 def gauss(x, A, x0, w):
     """
@@ -52,7 +54,8 @@ def gauss(x, A, x0, w):
     array_like
         calculated array
     """
-    return A*np.exp(- ((x - x0)/w)**2 /2.)
+    return A * np.exp(-((x - x0) / w)**2 / 2.)
+
 
 def supergauss(x, A, x0, w, o):
     """
@@ -77,7 +80,8 @@ def supergauss(x, A, x0, w, o):
     array_like
         calculated array
     """
-    return A*np.exp(- ((x-x0)/w)**(2*o)/2.)
+    return A * np.exp(-((x - x0) / w)**(2 * o) / 2.)
+
 
 def sech(x, A, x0, w):
     """
@@ -100,12 +104,14 @@ def sech(x, A, x0, w):
     array_like
         calculated array
     """
-    return A/np.cosh((x-x0)/w)
+    return A / np.cosh((x - x0) / w)
+
 
 def factorial(n):
     """The factorial of n, i.e. n!"""
     if n == 0: return 1
-    return n * factorial(n-1)
+    return n * factorial(n - 1)
+
 
 def linspacestep(start, step, N):
     """
@@ -126,7 +132,8 @@ def linspacestep(start, step, N):
     out : array_like
         array of length N from start to start+N*step (not included)
     """
-    return np.arange(start,start+N*step, step=step)
+    return np.arange(start, start + N * step, step=step)
+
 
 def lfsr_int(seed, mask):
     """
@@ -150,14 +157,15 @@ def lfsr_int(seed, mask):
         state of the register
     """
     state = seed
-    nbits = mask.bit_length()-1
+    nbits = mask.bit_length() - 1
     while True:
         state = (state << 1)
         xor = state >> nbits
         #the modulus operation on has an effect if the last bit is 1
         if xor != 0:
-            state ^= mask #this performs the modulus operation
+            state ^= mask  #this performs the modulus operation
         yield xor, state
+
 
 def lfsr_ext(seed, taps, nbits):
     """A Fibonacci or external XOR linear feedback shift register.
@@ -182,22 +190,24 @@ def lfsr_ext(seed, taps, nbits):
     while 1:
         xor = 0
         for t in taps:
-            if (sr & (1<<(nbits-t))) != 0:
+            if (sr & (1 << (nbits - t))) != 0:
                 xor ^= 1
-        sr = (xor << nbits-1) + (sr >> 1)
+        sr = (xor << nbits - 1) + (sr >> 1)
         yield xor, sr
+
 
 def bool2bin(x):
     """
     Convert an array of boolean values into a binary number. If the input
     array is not a array of booleans it will be converted.
     """
-    assert len(x)<64, "array must not be longer than 63"
+    assert len(x) < 64, "array must not be longer than 63"
     x = np.asarray(x, dtype=bool)
     y = 0
     for i, j in enumerate(x):
-        y += j<<i
+        y += j << i
     return y
+
 
 def find_offset(sequence, data):
     """
@@ -217,14 +227,15 @@ def find_offset(sequence, data):
     idx : int
         index where sequence first occurs in data
     """
-    assert len(data)>len(sequence), "data has to be longer than sequence"
-    if not data.dtype==sequence.dtype:
+    assert len(data) > len(sequence), "data has to be longer than sequence"
+    if not data.dtype == sequence.dtype:
         raise Warning("""data and sequence are not the same dtype, converting
         data to dtype of sequence""")
         data = data.astype(sequence.dtype)
     # using this string conversion method is much faster than array methods,
     # however it only finds the first occurence
-    return data.tostring().index(sequence.tostring())//data.itemsize
+    return data.tostring().index(sequence.tostring()) // data.itemsize
+
 
 def rolling_window(data, size):
     """
@@ -256,8 +267,9 @@ def rolling_window(data, size):
             [7, 8, 9]])
     """
     shape = data.shape[:-1] + (data.shape[-1] - size + 1, size)
-    strides = data.strides + (data. strides[-1],)
+    strides = data.strides + (data.strides[-1], )
     return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
+
 
 def resample(fold, fnew, signal, window=None):
     """
@@ -281,24 +293,26 @@ def resample(fold, fnew, signal, window=None):
     """
     signal = signal.flatten()
     L = len(signal)
-    num = fnew/fold*L
+    num = fnew / fold * L
     if window is None:
         signal = scisig.resample(signal, num)
     else:
         signal = scisig.resample(signal, num, window=window)
     return signal
 
+
 def rrcos_time(t, beta, T):
     """Time response of a root-raised cosine filter with a given roll-off factor and width """
-    return np.sinc(t/T)*np.cos(t/T*np.pi*beta)/(1-4*(beta*t/T)**2)
+    return np.sinc(t / T) * np.cos(t / T * np.pi * beta) / (1 - 4 *
+                                                            (beta * t / T)**2)
+
 
 def rrcos_freq(f, beta, T):
     """Frequency response of a root-raised cosine filter with a given roll-off factor and width """
     rrc = np.zeros(len(beta), dtype=f.dtype)
-    rrc[np.where(np.abs(f)<=(1-beta)/(2*T))] = T
-    rrc[np.where((np.abs(f)>(1-beta)/(2*T))&(np.abs(f)<=(1+beta)/(2*T)))] = T/2 * (1 + np.cos(np.pi * T/beta * (np.abs(f) - (1-beta)/(2*T))))
+    rrc[np.where(np.abs(f) <= (1 - beta) / (2 * T))] = T
+    rrc[np.where((np.abs(f) > (1 - beta) / (2 * T)) & (np.abs(f) <= (
+        1 + beta) / (2 * T)))] = T / 2 * (1 + np.cos(np.pi * T / beta *
+                                                     (np.abs(f) - (1 - beta) /
+                                                      (2 * T))))
     return rrc
-
-
-
-

@@ -7,6 +7,7 @@ from . import theory
 class DataSyncError(Exception):
     pass
 
+
 def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     """Sync the transmitted data sequence to the received data, which
     might contain errors. Starts to with data_rx[:Lsync] if it does not find
@@ -38,7 +39,7 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     """
     for i in range(imax):
         try:
-            sequence = data_rx[i:i+Lsync]
+            sequence = data_rx[i:i + Lsync]
             idx_offs = mathfcts.find_offset(sequence, data_tx)
             idx_offs = idx_offs - i
             data_tx_synced = np.roll(data_tx, -idx_offs)
@@ -46,6 +47,7 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
         except ValueError:
             pass
     raise DataSyncError("maximum iterations exceeded")
+
 
 def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
     """
@@ -76,17 +78,20 @@ def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
         If no position can be found.
     """
     for i in range(imax):
-        if i+Lsync > len(data_rx):
+        if i + Lsync > len(data_rx):
             break
-        datablock = data_rx[i:i+Lsync]
-        prbsseq = prbs.make_prbs_extXOR(order, Lsync-order, datablock[:order])
+        datablock = data_rx[i:i + Lsync]
+        prbsseq = prbs.make_prbs_extXOR(order, Lsync - order,
+                                        datablock[:order])
         if np.all(datablock[order:] == prbsseq):
-            prbsval = np.hstack([datablock,
-                prbs.make_prbs_extXOR(order,
-                    len(data_rx)-i-len(datablock),
-                    datablock[-order:])])
+            prbsval = np.hstack([
+                datablock, prbs.make_prbs_extXOR(
+                    order,
+                    len(data_rx) - i - len(datablock), datablock[-order:])
+            ])
             return i, prbsval
     raise DataSyncError("maximum iterations exceeded")
+
 
 def adjust_data_length(data_tx, data_rx):
     """Adjust the length of data_tx to match data_rx, either by truncation
@@ -105,13 +110,13 @@ def adjust_data_length(data_tx, data_rx):
     if len(data_tx) > len(data_rx):
         return data_tx[:len(data_rx)]
     elif len(data_tx) < len(data_rx):
-        for i in range(len(data_rx)//len(data_tx)):
+        for i in range(len(data_rx) // len(data_tx)):
             data_tx = np.hstack([data_tx, data_tx])
-        data_tx = np.hstack([data_tx,
-            data_tx[len(data_rx)%len(data_tx)]])
+        data_tx = np.hstack([data_tx, data_tx[len(data_rx) % len(data_tx)]])
         return data_tx
     else:
         return data_tx
+
 
 def _cal_BER_only(data_rx, data_tx, threshold=0.2):
     """Calculate the bit-error rate (BER) between two synchronised binary data
@@ -141,12 +146,14 @@ def _cal_BER_only(data_rx, data_tx, threshold=0.2):
     ValueError
         if ber>threshold, as this indicates a sync error.
     """
-    errs = np.count_nonzero(data_rx-data_tx)
+    errs = np.count_nonzero(data_rx - data_tx)
     N = len(data_tx)
-    ber = errs/N
+    ber = errs / N
     if ber > threshold:
-        raise ValueError("BER is over %.1f, this is probably a wrong sync"%threshold)
+        raise ValueError("BER is over %.1f, this is probably a wrong sync" %
+                         threshold)
     return ber, errs, N
+
 
 # TODO: the parameters of this function should really be changed to
 # (data_rx, data_tx, Lsync, order=None, imax=200)
@@ -176,10 +183,11 @@ def cal_BER(data_rx, Lsync, order=None, data_tx=None, imax=200):
     if data_tx is None and order is not None:
         return cal_BER_PRBS(data_rx.astype(np.bool), order, Lsync, imax)
     elif order is None and data_tx is not None:
-        return cal_BER_known_seq(data_rx.astype(np.bool),
-                data_tx.astype(np.bool), Lsync, imax)
+        return cal_BER_known_seq(
+            data_rx.astype(np.bool), data_tx.astype(np.bool), Lsync, imax)
     else:
         raise ValueError("data_tx and order must not both be None")
+
 
 def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
     """Calculate the BER between data_tx and a PRBS signal with a given
@@ -215,6 +223,7 @@ def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
         data_rx = -data_rx
         idx, prbsval = sync_PRBS2Rx(data_rx, order, Lsync, imax)
     return _cal_BER_only(data_rx[idx:], prbsval), inverted
+
 
 def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
     """Calculate the BER between a received bit stream and a known
@@ -252,6 +261,7 @@ def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
     # one less error, maybe this happens in the adjust_data_length
     return _cal_BER_only(data_rx, data_tx_sync)
 
+
 def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     """Calculate the BER for a QPSK signal the I and Q channels can either have
     the same or different orders.
@@ -281,30 +291,34 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     """
     #TODO implement offset parameter
     data_demod = QAMquantize(data_rx, 4)[0]
-    data_I = (1+data_demod.real).astype(np.bool)
-    data_Q = (1+data_demod.imag).astype(np.bool)
+    data_I = (1 + data_demod.real).astype(np.bool)
+    data_Q = (1 + data_demod.imag).astype(np.bool)
     if Lsync is None:
-        Lsync = 2*max(order_I,order_Q)
+        Lsync = 2 * max(order_I, order_Q)
     try:
-        (ber_I, err_I, N_I), inverted = cal_BER_PRBS(data_I, order_I, Lsync, imax)
+        (ber_I, err_I, N_I), inverted = cal_BER_PRBS(data_I, order_I, Lsync,
+                                                     imax)
     except DataSyncError:
         tmp = order_I
         order_I = order_Q
         order_Q = tmp
         try:
-            (ber_I, err_I, N_I), inverted = cal_BER_PRBS(data_I, order_I, Lsync, imax)
+            (ber_I, err_I, N_I), inverted = cal_BER_PRBS(data_I, order_I,
+                                                         Lsync, imax)
         except DataSyncError:
             raise Warning("Could not sync PRBS to data")
             return np.nan, np.nan, np.nan
     if inverted:
         data_Q = -data_Q
     try:
-        (ber_Q, err_Q, N_Q), inverted = cal_BER_PRBS(data_Q, order_Q, Lsync, imax)
+        (ber_Q, err_Q, N_Q), inverted = cal_BER_PRBS(data_Q, order_Q, Lsync,
+                                                     imax)
     except DataSyncError:
         raise Warning("Could not sync PRBS to data")
         return np.nan, np.nan, np.nan
 
-    return (ber_I+ber_Q)/2., err_Q+err_I, N_Q+N_I
+    return (ber_I + ber_Q) / 2., err_Q + err_I, N_Q + N_I
+
 
 def QAMquantize(sig, M):
     """Quantize a QAM signal assuming Grey coding where possible
@@ -331,7 +345,7 @@ def QAMquantize(sig, M):
     cons = theory.CalculateMQAMSymbols(M).flatten()
     scal = theory.MQAMScalingFactor(M)
     P = np.mean(mathfcts.cabssquared(sig))
-    sig = sig*np.sqrt(scal/P)
+    sig = sig * np.sqrt(scal / P)
     idx = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
     sym = cons[idx]
     return sym, idx
