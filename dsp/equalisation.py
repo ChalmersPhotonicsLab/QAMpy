@@ -354,13 +354,16 @@ def FS_CMA_RDE_16QAM(TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, Ex, Ey):
     EestY = EestY[dump:-dump]
     return EestX, EestY, wx, wy, err_cma, err_rde
 
-def CDcomp(fs, N, L, D, sig, wl):
+def CDcomp(E, fs, N, L, D, wl):
     """
     Static chromatic dispersion compensation of a single polarisation signal using overlap-add.
     All units are assumed to be SI.
 
     Parameters
     ----------
+    E  : array_like
+       single polarisation signal
+
     fs   :  float
        sampling rate
 
@@ -373,9 +376,6 @@ def CDcomp(fs, N, L, D, sig, wl):
     D    :  float
        dispersion 
 
-    sig  : array_like
-       single polarisation signal
-
     wl   : float
        center wavelength
 
@@ -385,8 +385,8 @@ def CDcomp(fs, N, L, D, sig, wl):
     sigEQ : array_like
        compensated signal
     """
-    sig = sig.flatten()
-    samp = len(sig)
+    E = E.flatten()
+    samp = len(E)
     #wl *= 1e-9
     #L = L*1.e3
     c = 2.99792458e8
@@ -402,7 +402,7 @@ def CDcomp(fs, N, L, D, sig, wl):
     #H1 = H
     H = np.fft.fftshift(H)
     if N == samp:
-        sigEQ = np.fft.fft(sig)
+        sigEQ = np.fft.fft(E)
         sigEQ *= H
         sigEQ = np.fft.ifft(sigEQ)
     else:
@@ -414,7 +414,7 @@ def CDcomp(fs, N, L, D, sig, wl):
         sB = np.zeros((B, N), dtype=np.complex128)
         for i in range(0, B):
             sigB = np.zeros(N, dtype=np.complex128)
-            sigB[zp:-zp] = sig[i*n:i*n+n]
+            sigB[zp:-zp] = E[i*n:i*n+n]
             sigB = np.fft.fft(sigB)
             sigB *= H
             sigB = np.fft.ifft(sigB)
