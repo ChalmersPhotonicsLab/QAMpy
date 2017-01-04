@@ -43,9 +43,38 @@ except:
 
 
 def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
-    '''performs PMD equalization using CMA algorithm
-    taps for X initialised to [0001000]
-    taps for Y initialised to orthogonal polarization of X pol taps'''
+    """Fractionally spaced (FS) Constant Modulus Algorithm (CMA) for equalisation of PMD and residual dispersion.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
+
+    Parameters
+    ----------
+    TrSyms : int
+       number of symbols to use for training needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    Ex, Ey     : array_like
+       x and y polarisation of the signal field
+
+    Returns
+    -------
+
+    EestX, EestY : array_like
+       equalised x and y polarisation of the field
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+    """
     Ex = Ex.flatten()
     Ey = Ey.flatten()
     # if can't have more training samples than field
@@ -111,9 +140,44 @@ def quantize1(signal, partitions, codebook):
     return quanta
 
 def FS_CMA_RDE_16QAM(TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, Ex, Ey):
-    '''performs PMD equalization using CMA algorithm
-    taps for X initialised to [0001000]
-    taps for Y initialised to orthogonal polarization of X pol taps'''
+    """Radius directed equalisation (RDE) fractionally spaced Constant Modulus Algorithm (FS-CMA) for equalisation of PMD and residual dispersion of a 16 QAM signal.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
+
+    Parameters
+    ----------
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muRDE      : float
+       step size parameter for the RDE algorithm
+
+    Ex, Ey     : array_like
+       x and y polarisation of the signal field
+
+    Returns
+    -------
+
+    EestX, EestY : array_like
+       equalised x and y polarisation of the field
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+    """
     Ex = Ex.flatten()
     Ey = Ey.flatten()
     L = len(Ex)
@@ -178,9 +242,36 @@ def FS_CMA_RDE_16QAM(TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, Ex, Ey):
     return EestX, EestY, wx, wy, err_cma, err_rde
 
 def CDcomp(fs, N, L, D, sig, wl):
-    '''Compensate for CD for a single pol signal using overlap add
-    setting N=0 assumes cyclic boundary conditions and uses a single FFT/IFFT
-    All units are SI'''
+    """
+    Static chromatic dispersion compensation of a single polarisation signal using overlap-add.
+    All units are assumed to be SI.
+
+    Parameters
+    ----------
+    fs   :  float
+       sampling rate
+
+    N    :  int
+       block size (N=0, assumes cyclic boundary conditions and uses a single FFT/IFFT)
+
+    L    :  float
+       length of the compensated fibre 
+
+    D    :  float
+       dispersion 
+
+    sig  : array_like
+       single polarisation signal
+
+    wl   : float
+       center wavelength
+
+    Returns
+    -------
+
+    sigEQ : array_like
+       compensated signal
+    """
     sig = sig.flatten()
     samp = len(sig)
     #wl *= 1e-9
@@ -218,4 +309,3 @@ def CDcomp(fs, N, L, D, sig, wl):
             sigEQ[i*n:i*n+n+2*zp] = sigEQ[i*n:i*n+n+2*zp]+sigB
         sigEQ = sigEQ[zp:-zp]
     return sigEQ
-
