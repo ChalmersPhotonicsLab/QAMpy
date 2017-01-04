@@ -1,15 +1,19 @@
 from __future__ import division, print_function
+import pyximport; pyximport.install()
 import numpy as np
 from . import mathfcts
 
 try:
-    from  .dsp_cython import lfsr_ext
+    from  . dsp_cython import lfsr_ext
 except:
     from . mathfcts import lfsr_ext
+    print("can not import cython build module")
+    
 
 try:
     from  . dsp_cython import lfsr_int
 except:
+    print("can not import cython build module")
     from  . mathfcts import lfsr_int
 
 def make_prbs_extXOR(order, nbits, seed=None):

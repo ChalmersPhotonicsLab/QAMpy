@@ -1,4 +1,5 @@
 from __future__ import division
+import pyximport; pyximport.install
 import numpy as np
 import scipy.signal as scisig
 import numexpr as ne
@@ -35,22 +36,26 @@ try:
     from dsp_cython import FS_RDE_training
 except:
     #use python code if cython code is not available
+    print("can not import cython module")
     FS_RDE_training = FS_RDE_training_python
 
 try:
     from dsp_cython import FS_CMA_training
 except:
     #use python code if cython code is not available
+    print("can not import cython module")
     FS_CMA_training = FS_CMA_training_python
 
 try:
     from dsp_cython import lfsr_ext
 except:
+    print("can not import cython module")
     from mathfcts import lfsr_ext
 
 try:
     from dsp_cython import lfsr_int
 except:
+    print("can not import cython module")
     from mathfcts import lfsr_int
 
 SYMBOLS_16QAM =  np.array([1+1.j, 1-1.j, -1+1.j, -1-1.j, 1+3.j, 1-3.j, -1-3.j,

@@ -1,4 +1,5 @@
 from __future__ import division
+import pyximport; pyximport.install()
 import numpy as np
 import scipy.signal as scisig
 import numexpr as ne
