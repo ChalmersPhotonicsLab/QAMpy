@@ -28,12 +28,12 @@ t_pmd = 40e-12
 
 H = H_PMD(theta, t_pmd, omega)
 
-S = np.array([X,Y])
+S = np.vstack([X,Y])
 Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
-Ex, Ey, wx, wy, err = equalisation.FS_CMA(10000, 40, 2, 0.1, SS[0,:], SS[1,:])
+Ex, Ey, wx, wy, err = equalisation.FS_CMA(SS[0], SS[1], 10000, 40, 2, 0.1)
 
 
 evmX = cal_blind_evm(X[::2], 4)

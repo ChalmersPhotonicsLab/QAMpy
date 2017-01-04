@@ -116,13 +116,16 @@ except:
 
 
 
-def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
+def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Constant Modulus Algorithm (CMA)
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
 
     Parameters
     ----------
+    Ex, Ey     : array_like
+       x and y polarisation of the signal field
+
     TrSyms : int
        number of symbols to use for training needs to be less than len(Ex)
 
@@ -134,9 +137,6 @@ def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
 
     mu      : float
        step size parameter
-
-    Ex, Ey     : array_like
-       x and y polarisation of the signal field
 
     Returns
     -------
@@ -250,7 +250,7 @@ def partition_value(signal, partitions, codebook):
     quanta = codebook[index]
     return quanta
 
-def FS_CMA_RDE_16QAM(TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, Ex, Ey):
+def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     """
     Equalisation of PMD and residual dispersion of a 16 QAM signal based on a radius directed equalisation (RDE)
     fractionally spaced Constant Modulus Algorithm (FS-CMA)
@@ -258,6 +258,9 @@ def FS_CMA_RDE_16QAM(TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, Ex, Ey):
 
     Parameters
     ----------
+    Ex, Ey     : array_like
+       x and y polarisation of the signal field
+
     TrCMA : int
        number of symbols to use for training the initial CMA needs to be less than len(Ex)
 
@@ -275,9 +278,6 @@ def FS_CMA_RDE_16QAM(TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, Ex, Ey):
 
     muRDE      : float
        step size parameter for the RDE algorithm
-
-    Ex, Ey     : array_like
-       x and y polarisation of the signal field
 
     Returns
     -------
