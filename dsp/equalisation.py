@@ -8,6 +8,35 @@ from . import mathfcts
 
 
 def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
+    """
+    Training of the CMA algorithm to determine the equaliser taps.
+
+    Parameters
+    ----------
+    TrSyms : int
+       number of symbols to use for training needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    E      : array_like
+       dual polarisation signal field
+
+    Returns
+    -------
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+    """
     err = np.zeros(TrSyms, dtype=np.float)
     for i in range(0, TrSyms):
         X = E[:, i*os:i*os+Ntaps]
@@ -17,6 +46,44 @@ def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
     return err, wx
 
 def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
+    """
+    Training of the RDE algorithm to determine the equaliser taps.
+
+    Parameters
+    ----------
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muRDE   : float
+       step size parameter
+
+    E       : array_like
+       dual polarisation signal field
+
+    part    : array_like
+       partitioning vector defining the boundaries between the different QAM constellation rings
+
+    code    : array_like
+       code vector defining the signal powers for the different QAM constellation rings
+
+    Returns
+    -------
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+    """
     err = np.zeros(TrRDE, dtype=np.float)
     for i in range(TrCMA, TrCMA+TrRDE):
         X = E[:, i*os:i*os+Ntaps]
@@ -43,7 +110,8 @@ except:
 
 
 def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
-    """Fractionally spaced (FS) Constant Modulus Algorithm (CMA) for equalisation of PMD and residual dispersion.
+    """
+    Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Constant Modulus Algorithm (CMA)
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
 
     Parameters
@@ -140,7 +208,9 @@ def quantize1(signal, partitions, codebook):
     return quanta
 
 def FS_CMA_RDE_16QAM(TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, Ex, Ey):
-    """Radius directed equalisation (RDE) fractionally spaced Constant Modulus Algorithm (FS-CMA) for equalisation of PMD and residual dispersion of a 16 QAM signal.
+    """
+    Equalisation of PMD and residual dispersion of a 16 QAM signal based on a radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA)
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
 
     Parameters
