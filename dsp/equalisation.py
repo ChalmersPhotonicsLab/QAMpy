@@ -8,12 +8,15 @@ from . segmentaxis import segment_axis
 from . import mathfcts
 
 
-def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
+def FS_CMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
     """
     Training of the CMA algorithm to determine the equaliser taps.
 
     Parameters
     ----------
+    E      : array_like
+       dual polarisation signal field
+
     TrSyms : int
        number of symbols to use for training needs to be less than len(Ex)
 
@@ -25,9 +28,6 @@ def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
 
     mu      : float
        step size parameter
-
-    E      : array_like
-       dual polarisation signal field
 
     wx     : array_like
        initial equaliser taps
@@ -166,7 +166,7 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps//2] = 1
     # run CMA
-    err[0,:], wx = FS_CMA_training(TrSyms, Ntaps, os, mu, E, wx)
+    err[0,:], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx)
     # ** training for y polarisation **
     wy = np.zeros((2, Ntaps), dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
@@ -185,7 +185,7 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
         wy = wy[:, 0:Ntaps-delay-1]
         wy = np.hstack([pad, wy])
     # run CMA
-    err[1,:], wy = FS_CMA_training(TrSyms, Ntaps, os, mu, E, wy)
+    err[1,:], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy)
     # equalise data points. Reuse samples used for channel estimation
     syms = L//2-Ntaps//os-1
     X = segment_axis(E, Ntaps, Ntaps-os, axis=1)
@@ -312,7 +312,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps//2] = 1
     # find taps with CMA
-    err_cma[0,:], wx = FS_CMA_training(TrCMA, Ntaps, os, muCMA, E, wx)
+    err_cma[0,:], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
     # scale taps for RDE
     wx = np.sqrt(R)*wx
     # use refine taps with RDE
@@ -338,7 +338,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
         wy = wy[:, 0:Ntaps-delay-1]
         wy = np.hstack([pad, wy])
     # find taps with CMA
-    err_cma[1,:], wy = FS_CMA_training(TrCMA, Ntaps, os, muCMA, E, wy)
+    err_cma[1,:], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
     # scale taps for RDE
     wy = np.sqrt(R)*wy
     # use refine taps with RDE

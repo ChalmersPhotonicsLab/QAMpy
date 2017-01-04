@@ -5,8 +5,8 @@ cimport cython
 cimport numpy as np
 
 
-def FS_CMA_training(int TrSyms, int Ntaps, unsigned int os, double mu, np.ndarray[ndim=2,
-    dtype=np.complex128_t] E, np.ndarray[ndim=2, dtype=np.complex128_t] wx):
+def FS_CMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+    int TrSyms, int Ntaps, unsigned int os, double mu,  np.ndarray[ndim=2, dtype=np.complex128_t] wx):
     cdef np.ndarray[ndim=1, dtype=np.float64_t] err = np.zeros(TrSyms, dtype=np.float64)
     cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
