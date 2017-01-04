@@ -12,7 +12,20 @@ def normalise_sig(sig, M):
 
 def cal_blind_evm(sig, M):
     """Blind calculation of the linear Error Vector Magnitude for an M-QAM
-    signal. Does not consider Symbol errors."""
+    signal. Does not consider Symbol errors.
+
+    Parameters
+    ----------
+    sig : array_like
+        input signal
+    M : int
+       QAM order
+
+    Returns
+    -------
+    evm : float
+        Error Vector Magnitude
+    """
     ideal = CalculateMQAMSymbols(M).flatten()
     Ai, Pi = normalise_sig(ideal, M)
     Am, Pm = normalise_sig(sig, M)
@@ -22,8 +35,24 @@ def cal_blind_evm(sig, M):
     return np.sqrt(evm)
 
 def cal_evm_known_data(sig, ideal, M):
-    """Calculation of the linear Error Vector Magnitude for a signal against
-    the ideal signal"""
+    """Blind calculation of the linear Error Vector Magnitude for an M-QAM
+    signal. This function calculates the EVM while calculating longer distances if
+    there are symbol errors.
+
+    Parameters
+    ----------
+    sig : array_like
+        input signal
+    ideal : array_like
+        the error-free signal 
+    M : int
+       QAM order
+
+    Returns
+    -------
+    evm : float
+        Error Vector Magnitude
+    """
     Ai, Pi = normalise_sig(ideal, M)
     As, Ps = normalise_sig(sig, M)
     evm = np.mean(abs(Pi.real - Ps.real)**2 + \
@@ -37,11 +66,16 @@ def cal_SNR_QAM(E, M):
     pg 865 (2005).
 
     Parameters:
-        E:      input field
-        M:      order of the QAM constallation
+    ----------
+    E   : array_like
+      input field
+    M:  : int
+      order of the QAM constallation
 
     Returns:
-        S0/N: SNR estimate
+    -------
+    S0/N: : float
+        linear SNR estimate
     """
     gamma = _cal_gamma(M)
     r2 = np.mean(abs(E)**2)
@@ -62,10 +96,14 @@ def cal_Q_16QAM(E):
     pg 865 (2005).
 
     Parameters:
-        E:      input field
+    ----------
+    E  : array_like
+       input field
 
     Returns:
-        S0/N: SNR estimate
+    --------
+    S0/N   : float
+         linear SNR estimate
     """
     return cal_SNR_QAM(E, 16)
 
@@ -75,11 +113,15 @@ def calS0(E, M):
     pg 865 (2005).
 
     Parameters:
-        E:      input field
-        M:      order of the QAM constellation
+    ----------
+    E   : array_like
+      input field
+    M:  : int
 
     Returns:
-        S0: signal power estimate
+    -------
+    S0   : float
+       signal power estimate
     """
     N = len(E)
     gamma = _cal_gamma(M)
@@ -91,7 +133,9 @@ def calS0(E, M):
     return r2/(1+S2/S1)
 
 def SNR_QPSK_blind(E):
-    ''' calculates the SNR from the constellation assmuing no symbol errors'''
+    """
+    Calculates the SNR of a QPSK signal based on the variance of the constellation
+    assmuing no symbol errors"""
     E4 = -E**4
     Eref = E4**(1./4)
     #P = np.mean(abs(Eref**2))
@@ -100,7 +144,7 @@ def SNR_QPSK_blind(E):
     SNR = 10*np.log10(P/var)
     return SNR
 
-def cal_ser_QAM(data_rx, data_tx, M):
+def cal_ser_QAM(data_rx, symbol_tx, M):
     """
     Calculate the symbol error rate
 
@@ -109,11 +153,15 @@ def cal_ser_QAM(data_rx, data_tx, M):
 
     data_rx : array_like
             received signal
-    data_tx : array_like
-            original signal
+    symbols_tx : array_like
+            original symbols
     M       : int
             QAM order
+
+    Returns
+    -------
+    SER : float
+       Symbol error rate estimate
     """
     data_demod = QAMquantize(data_rx, M)[0]
     return np.count_nonzero(data_demod-data_tx)/len(data_rx)
-
