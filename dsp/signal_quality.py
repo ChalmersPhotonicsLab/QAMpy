@@ -174,4 +174,4 @@ def cal_ser_QAM(data_rx, symbol_tx, M):
        Symbol error rate estimate
     """
     data_demod = QAMquantize(data_rx, M)[0]
-    return np.count_nonzero(data_demod - data_tx) / len(data_rx)
+    return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)
