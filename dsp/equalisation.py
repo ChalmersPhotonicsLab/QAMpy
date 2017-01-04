@@ -49,12 +49,15 @@ def FS_CMA_training_python(TrSyms, Ntaps, os, mu, E, wx):
         wx -= mu*err[i]*Xest*np.conj(X)
     return err, wx
 
-def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
+def FS_RDE_training_python(E, TrCMA, TrRDE, Ntaps, os, muRDE, wx, part, code):
     """
     Training of the RDE algorithm to determine the equaliser taps.
 
     Parameters
     ----------
+    E       : array_like
+       dual polarisation signal field
+
     TrCMA : int
        number of symbols to use for training the initial CMA needs to be less than len(Ex)
 
@@ -69,9 +72,6 @@ def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
 
     muRDE   : float
        step size parameter
-
-    E       : array_like
-       dual polarisation signal field
 
     wx     : array_like
        initial equaliser taps
@@ -316,7 +316,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     # scale taps for RDE
     wx = np.sqrt(R)*wx
     # use refine taps with RDE
-    err_rde[0,:], wx = FS_RDE_training(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx,
+    err_rde[0,:], wx = FS_RDE_training(E, TrCMA, TrRDE, Ntaps, os, muRDE, wx,
             part, code)
     # ** training for y polarisation **
     wy = np.zeros((2, Ntaps), dtype=np.complex128)
@@ -342,7 +342,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     # scale taps for RDE
     wy = np.sqrt(R)*wy
     # use refine taps with RDE
-    err_rde[1, :], wy = FS_RDE_training(TrCMA, TrRDE, Ntaps, os, muRDE, E, wy,
+    err_rde[1, :], wy = FS_RDE_training(E, TrCMA, TrRDE, Ntaps, os, muRDE, wy,
             part, code)
     # equalise data points. Reuse samples used for channel estimation
     syms = L//2-Ntaps//os-1

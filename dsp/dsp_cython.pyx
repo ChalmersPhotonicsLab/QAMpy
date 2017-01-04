@@ -36,8 +36,9 @@ def partition_value(double signal, np.ndarray[ndim=1, dtype=np.float64_t] partit
         index += 1
     return codebook[index]
 
-def FS_RDE_training(int TrCMA, int TrRDE, int Ntaps, unsigned int os, 
-        double muRDE, np.ndarray[ndim=2, dtype=np.complex128_t] E, 
+def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+        int TrCMA, int TrRDE, int Ntaps, unsigned int os,
+        double muRDE,
         np.ndarray[ndim=2, dtype=np.complex128_t] wx, 
         np.ndarray[ndim=1, dtype=np.float64_t] partition, 
         np.ndarray[ndim=1, dtype=np.float64_t] codebook):
