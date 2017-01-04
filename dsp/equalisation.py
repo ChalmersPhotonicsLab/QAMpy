@@ -191,6 +191,25 @@ def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
 
 # quantization function
 def quantize(signal, partitions, codebook):
+    """
+    Partition a signal according to their power
+
+    Parameters
+    ----------
+    signal : array_like
+        input signal to partition
+
+    partitions : array_like
+        partition vector defining the boundaries between the different blocks
+
+    code   : array_like
+        the values to partition tolerance
+
+    Returns
+    -------
+    quanta : array_like
+        partitioned quanta
+    """
     quanta = []
     for datum in signal:
         index = 0
@@ -201,6 +220,25 @@ def quantize(signal, partitions, codebook):
 
 # quantization for single value
 def quantize1(signal, partitions, codebook):
+    """
+    Partition a value according to their power
+
+    Parameters
+    ----------
+    signal : float
+        input value to partition
+
+    partitions : array_like
+        partition vector defining the boundaries between the different blocks
+
+    code   : array_like
+        the values to partition tolerance
+
+    Returns
+    -------
+    quanta : float
+        partitioned quanta
+    """
     index = 0
     while index < len(partitions) and signal > partitions[index]:
         index += 1
