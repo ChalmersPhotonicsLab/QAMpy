@@ -96,7 +96,7 @@ def FS_RDE_training_python(TrCMA, TrRDE, Ntaps, os, muRDE, E, wx, part, code):
         X = E[:, i*os:i*os+Ntaps]
         Xest = np.sum(wx*X)
         Ssq = abs(Xest)**2
-        S_DD = quantize1(Ssq, part, code)
+        S_DD = partition_value(Ssq, part, code)
         err[i-TrCMA] = S_DD-Ssq
         wx += muRDE*err[i-TrCMA]*Xest*np.conj(X)
     return err, wx
@@ -196,8 +196,7 @@ def FS_CMA(TrSyms, Ntaps, os, mu, Ex, Ey):
     EestY = EestY[dump:-dump]
     return EestX, EestY, wx, wy, err
 
-# quantization function
-def quantize(signal, partitions, codebook):
+def partition_signal(signal, partitions, codebook):
     """
     Partition a signal according to their power
 
@@ -225,8 +224,7 @@ def quantize(signal, partitions, codebook):
         quanta.append(codebook[index])
     return quanta
 
-# quantization for single value
-def quantize1(signal, partitions, codebook):
+def partition_value(signal, partitions, codebook):
     """
     Partition a value according to their power
 

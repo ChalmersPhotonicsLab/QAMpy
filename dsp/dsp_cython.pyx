@@ -28,7 +28,7 @@ def FS_CMA_training(int TrSyms, int Ntaps, unsigned int os, double mu, np.ndarra
                                    <unsigned int> j].conjugate()
     return err, wx
 
-def quantize1(double signal, np.ndarray[ndim=1, dtype=np.float64_t] partitions,
+def partition_value(double signal, np.ndarray[ndim=1, dtype=np.float64_t] partitions,
         np.ndarray[ndim=1, dtype=np.float64_t] codebook):
     cdef unsigned int index = 0
     cdef unsigned int L = len(partitions)
@@ -55,7 +55,7 @@ def FS_RDE_training(int TrCMA, int TrRDE, int Ntaps, unsigned int os,
                Xest = Xest + wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
        Ssq = abs(Xest)**2
-       S_DD = quantize1(Ssq, partition, codebook)
+       S_DD = partition_value(Ssq, partition, codebook)
        err[<unsigned int> i - TrCMA] = S_DD-Ssq
        for j in range(Ntaps):
            for k in range(2):
