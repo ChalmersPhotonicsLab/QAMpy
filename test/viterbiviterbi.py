@@ -11,9 +11,9 @@ N = 2**18
 theta = np.pi/2.45
 carrier_f = 1e6
 
-X, XIdata, XQdata = signals.generateRandomQPSKData(N, 14, baudrate=fb, samplingrate=fs, carrier_f=carrier_f)
+X, XIdata, XQdata = signals.generateRandomQPSKData(N, 14, baudrate=fb, samplingrate=fs, carrier_df=carrier_f)
 
-Y = X * np.exp(-1.j*np.arange(len(X))*carrier_f/fs)
+Y = X * np.exp(-1.j*2*np.pi*np.arange(len(X))*carrier_f/fs)
 Y = Y[::2]
 
 E = phaserecovery.viterbiviterbi_qpsk(9, X[::2])
