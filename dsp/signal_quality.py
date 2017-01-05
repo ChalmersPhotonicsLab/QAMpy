@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from . import mathfcts
+from . import utils
 from .theory import CalculateMQAMSymbols, MQAMScalingFactor
 from .ber_functions import QAMquantize
 
@@ -148,7 +148,7 @@ def SNR_QPSK_blind(E):
     E4 = -E**4
     Eref = E4**(1. / 4)
     #P = np.mean(abs(Eref**2))
-    P = np.mean(mathfcts.cabssquared(Eref))
+    P = np.mean(utils.cabssquared(Eref))
     var = np.var(Eref)
     SNR = 10 * np.log10(P / var)
     return SNR

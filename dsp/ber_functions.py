@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from . import mathfcts, prbs
+from . import utils, prbs
 from . import theory
 
 
@@ -40,7 +40,7 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     for i in range(imax):
         try:
             sequence = data_rx[i:i + Lsync]
-            idx_offs = mathfcts.find_offset(sequence, data_tx)
+            idx_offs = utils.find_offset(sequence, data_tx)
             idx_offs = idx_offs - i
             data_tx_synced = np.roll(data_tx, -idx_offs)
             return idx_offs, data_tx_synced
@@ -344,7 +344,7 @@ def QAMquantize(sig, M):
     data = np.zeros(L, dtype='int')
     cons = theory.CalculateMQAMSymbols(M).flatten()
     scal = theory.MQAMScalingFactor(M)
-    P = np.mean(mathfcts.cabssquared(sig))
+    P = np.mean(utils.cabssquared(sig))
     sig = sig * np.sqrt(scal / P)
     idx = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
     sym = cons[idx]

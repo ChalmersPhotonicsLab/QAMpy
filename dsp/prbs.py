@@ -2,19 +2,19 @@ from __future__ import division, print_function
 import pyximport
 pyximport.install()
 import numpy as np
-from . import mathfcts
+from . import utils
 
 try:
     from .dsp_cython import lfsr_ext
 except:
-    from .mathfcts import lfsr_ext
+    from .utils import lfsr_ext
     print("can not import cython build module")
 
 try:
     from .dsp_cython import lfsr_int
 except:
     print("can not import cython build module")
-    from .mathfcts import lfsr_int
+    from .utils import lfsr_int
 
 
 def make_prbs_extXOR(order, nbits, seed=None):
@@ -41,10 +41,10 @@ def make_prbs_extXOR(order, nbits, seed=None):
     implemented"""
     tapdict = {7: [7, 6], 15: [15, 14], 23: [23, 18], 31: [31, 28]}
     if seed is None:
-        seed = mathfcts.bool2bin(np.ones(order))
+        seed = utils.bool2bin(np.ones(order))
     else:
         try:
-            seed = mathfcts.bool2bin(seed)
+            seed = utils.bool2bin(seed)
         except TypeError:
             seed = seed
     out = np.zeros(nbits, dtype=bool)
@@ -81,10 +81,10 @@ def make_prbs_intXOR(order, nbits, seed=None):
         31: 2**31 + 2**28 + 1
     }
     if seed is None:
-        seed = mathfcts.bool2bin(np.ones(order))
+        seed = utils.bool2bin(np.ones(order))
     else:
         try:
-            seed = mathfcts.bool2bin(seed)
+            seed = utils.bool2bin(seed)
         except TypeError:
             seed = seed
     out = np.empty(nbits, dtype=bool)

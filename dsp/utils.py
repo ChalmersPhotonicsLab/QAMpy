@@ -256,7 +256,7 @@ def rolling_window(data, size):
 
 
     Examples
-    >>> mathfcts.rolling_window(np.arange(10), 3)
+    >>> utils.rolling_window(np.arange(10), 3)
     array([[0, 1, 2],
             [1, 2, 3],
             [2, 3, 4],

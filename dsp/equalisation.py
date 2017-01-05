@@ -6,7 +6,7 @@ import scipy.signal as scisig
 import numexpr as ne
 
 from .segmentaxis import segment_axis
-from . import mathfcts
+from . import utils
 
 
 def FS_CMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
@@ -160,7 +160,7 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     mu = mu / Ntaps
     E = np.vstack([Ex, Ey])
     # scale signal
-    P = np.mean(mathfcts.cabssquared(E))
+    P = np.mean(utils.cabssquared(E))
     E = E / np.sqrt(P)
     err = np.zeros((2, TrSyms), dtype='float')
     # ** training for X polarisation **
@@ -309,7 +309,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     part = np.array([5.24, 13.71])
     E = np.vstack([Ex, Ey])
     # scale signal
-    P = np.mean(mathfcts.cabssquared(E))
+    P = np.mean(utils.cabssquared(E))
     E = E / np.sqrt(P)
     err_cma = np.zeros((2, TrCMA), dtype='float')
     err_rde = np.zeros((2, TrRDE), dtype='float')

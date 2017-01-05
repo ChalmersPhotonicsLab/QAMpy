@@ -3,7 +3,7 @@ import numpy as np
 from scipy.special import erfc
 
 # local imports
-from .mathfcts import resample
+from .utils import resample
 from .prbs import make_prbs_extXOR
 from . import theory
 
