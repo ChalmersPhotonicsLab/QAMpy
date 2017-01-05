@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 from scipy.special import erfc
+from .mathfcts import bin2gray
 
 # All the formulas below are taken from dsplog.com
 
@@ -64,3 +65,23 @@ def CalculateCrossQAMSymbols(M):
     qam[idx1] = np.sign(qam[idx1].real)*(abs(qam[idx1].real)-2*s) + 1.j*(np.sign(qam[idx1].imag)*(4*s-abs(qam[idx1].imag)))
     qam[idx2] = np.sign(qam[idx2].real)*(4*s-abs(qam[idx2].real)) + 1.j*(np.sign(qam[idx2].imag)*(abs(qam[idx2].imag)+2*s))
     return qam.flatten()
+
+def gray_code_for_qam(M):
+    """
+    Generate gray code map for M-QAM constellations
+    """
+    Nbits = int(np.log2(M))
+    if Nbits%2 == 0:
+        N = Nbits//2
+        idx = np.mgrid[
+            0 : 2**N : 1,
+            0 : 2**N : 1
+        ]
+    else:
+        N = (Nbits - 1)//2 
+        idx = np.mgrid[
+            0 : 2**(N+1): 1,
+            0 : 2**N: 1
+        ]
+    gidx = bin2gray(idx)
+    return (gidx[0] << N)| gidx[1] 
