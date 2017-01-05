@@ -84,4 +84,4 @@ def gray_code_for_qam(M):
             0 : 2**N: 1
         ]
     gidx = bin2gray(idx)
-    return (gidx[0] << N)| gidx[1] 
+    return ((gidx[0] << N)| gidx[1] ).flatten()
