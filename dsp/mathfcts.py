@@ -316,3 +316,11 @@ def rrcos_freq(f, beta, T):
                                                      (np.abs(f) - (1 - beta) /
                                                       (2 * T))))
     return rrc
+
+def bin2gray(value):
+    """
+    Convert a binary value to an gray coded value see _[1]. This also works for arrays.
+    ..[1] https://en.wikipedia.org/wiki/Gray_code#Constructing_an_n-bit_Gray_code
+    """
+    return value^(value >> 1)
+    
