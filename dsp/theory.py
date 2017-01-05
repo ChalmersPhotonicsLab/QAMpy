@@ -31,8 +31,36 @@ def MQAMScalingFactor(M):
 
 
 def CalculateMQAMSymbols(M):
-    """Genarate the symbols on the constallation diagram for M-QAM"""
+    """
+    Generate the symbols on the constellation diagram for M-QAM
+    """
+    if np.log2(M)%2 > 0.5:
+        return CalculateCrossQAMSymbols(M)
+    else:
+        return CalculateSquareQAMSymbols(M)
+
+def CalculateSquareQAMSymbols(M):
+    """
+    Generate the symbols on the constellation diagram for square M-QAM
+    """
     qam = np.mgrid[-(2 * np.sqrt(M) / 2 - 1):2 * np.sqrt(
         M) / 2 - 1:1.j * np.sqrt(M), -(2 * np.sqrt(M) / 2 - 1):2 * np.sqrt(M) /
                    2 - 1:1.j * np.sqrt(M)]
-    return qam[0] + 1.j * qam[1]
+    return (qam[0] + 1.j * qam[1]).flatten()
+
+def CalculateCrossQAMSymbols(M):
+    """
+    Generate the symbols on the constellation diagram for non-square (cross) M-QAM
+    """
+    N = (np.log2(M)-1)/2
+    s = 2**(N-1)
+    rect = np.mgrid[
+        -(2**(N+1) - 1) : 2**(N+1) - 1: 1.j*2**(N+1),
+        -(2**N - 1) : 2**N - 1: 1.j*2**N
+    ]
+    qam = rect[0] + 1.j*rect[1]
+    idx1 = np.where((abs(qam.real) > 3*s)&(abs(qam.imag) > s))
+    idx2 = np.where((abs(qam.real) > 3*s)&(abs(qam.imag) <= s))
+    qam[idx1] = np.sign(qam[idx1].real)*(abs(qam[idx1].real)-2*s) + 1.j*(np.sign(qam[idx1].imag)*(4*s-abs(qam[idx1].imag)))
+    qam[idx2] = np.sign(qam[idx2].real)*(4*s-abs(qam[idx2].real)) + 1.j*(np.sign(qam[idx2].imag)*(abs(qam[idx2].imag)+2*s))
+    return qam.flatten()
