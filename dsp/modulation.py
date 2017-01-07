@@ -1,8 +1,9 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import bin2gray
+from .utils import bin2gray, cabssquared
 from . import theory
+
 
 
 
@@ -23,10 +24,10 @@ def quantize(sig, symbols):
     idx     : array_like
         array of indices to the symbols in the symbol array
     """
-    P = np.mean(utils.cabsquared(sig))
+    P = np.mean(cabssquared(sig))
     sig /= np.sqrt(P)
     idx = abs(sig[:, np.newaxis] - symbols).argmin(axis=1)
-    sigsyms = cons[idx]
+    sigsyms = symbols[idx]
     return sigsyms, idx
 
 

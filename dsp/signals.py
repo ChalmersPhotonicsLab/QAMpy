@@ -25,8 +25,9 @@ def generate_MQAM_data_signal(N, snr, M, carrier_df=0,
            number of symbols to be generated.
         snr: number
            Signal to Noise Ratio (Es/N0) in logarithmic units
-        M  : int
-           QAM order
+        M  : int or QAMModulator instance
+           if QAMModulator instance is given use that for modulation, otherwise generate
+           a modulator of order M
         carrier_df: number, optional
            carrier frequency offset, relative to the overall window, if not given it
            is set to 0 (baseband modulation)
@@ -48,22 +49,28 @@ def generate_MQAM_data_signal(N, snr, M, carrier_df=0,
            Seed to the PRBS generator needs to be a 1D array of booleans of length order.
            (Default=None, which corresponds to a seed of all 1's)
     """
-    K = int(np.log2(M))
+    try:
+        K = M.bits
+    except:
+        K = int(np.log2(M))
     Nbits = K*N
     order = int(PRBSorder)
     if PRBS == True:
-        bits = make_prbs_extXOR(order, Nbits, PRBSseed)
+        bitsq = make_prbs_extXOR(order, Nbits, PRBSseed)
     else:
-        bits = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
-    modulator = QAMModulator(M)
-    symbols = QAMModulator.modulate(bits)
+        bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
+    try:
+        symbols = M.modulate(bitsq)
+    except:
+        modulator = QAMModulator(M)
+        symbols = modulator.modulate(bitsq)
     noise = (np.random.randn(N) + 1.j * np.random.randn(N)) / np.sqrt(
         2)  # sqrt(2) because N/2 = sigma
     outdata = symbols + noise * 10**(
         -snr / 20)  #the 20 here is so we don't have to take the sqrt
     outdata = resample(baudrate, samplingrate, outdata)
     return outdata * np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df
-                            / samplingrate), symbols, bits
+                            / samplingrate), symbols, bitsq
 
 
 def generateRandomQPSKData(N,

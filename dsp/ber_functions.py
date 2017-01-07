@@ -346,7 +346,7 @@ def QAMquantize(sig, M):
     cons = modulation.calculate_MQAM_symbols(M).flatten()
     scal = theory.MQAMScalingFactor(M)
     P = np.mean(utils.cabssquared(sig))
-    sig = sig * np.sqrt(scal / P)
+    sig = sig / np.sqrt(P)
     idx = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
     sym = cons[idx]
     return sym, idx
