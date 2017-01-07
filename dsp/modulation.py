@@ -1,8 +1,33 @@
 from __future__ import division
 import numpy as np
-from .utils import bin2gray
 from bitarray import bitarray
+from .utils import bin2gray
+from . import theory
 
+
+
+def quantize(sig, symbols):
+    """
+    Quantize signal to symbols, based on closest distance.
+
+    Parameters
+    ----------
+    sig     : array_like
+        input signal field, 1D array of complex values
+    symbols : array_like
+        symbol alphabet to quantize to (1D array, dtype=complex)
+
+    Returns:
+    sigsyms : array_like
+        array of detected symbols
+    idx     : array_like
+        array of indices to the symbols in the symbol array
+    """
+    P = np.mean(utils.cabsquared(sig))
+    sig /= np.sqrt(P)
+    idx = abs(sig[:, np.newaxis] - symbols).argmin(axis=1)
+    sigsyms = cons[idx]
+    return sigsyms, idx
 
 
 def calculate_MQAM_symbols(M):
@@ -66,6 +91,10 @@ class QAMModulator(object):
     def __init__(self, M, coding=None):
         self.M = M
         self.symbols = calculate_MQAM_symbols(M)
+        if self.bits%2:
+            self._scale = theory.MQAMScalingFactor(self.M)
+        else:
+            self._scale = (abs(self.symbols)**2).mean()
         self.coding = None
         self._graycode = gray_code_for_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
@@ -90,4 +119,5 @@ class QAMModulator(object):
         bt.encode(self._encoding, symbols.view(dtype="S16"))
         return np.fromstring(bt.unpack(), dtype=np.bool)
 
-
+    def demodulate(self, field):
+        return quantize(field, self.symbols/np.sqrt(self._scale))
