@@ -69,24 +69,25 @@ class QAMModulator(object):
         self.coding = None
         self._graycode = gray_code_for_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
-        self._encoding = dict([(s[i].tobytes(), self._graycode[i]) for i in range(len(self._graycode))])
+        bformat = "0%db"%self.bits
+        self._encoding = dict([(self.symbols[i].tobytes(), bitarray(format(self._graycode[i], bformat))) for i in range(len(self._graycode))])
 
     @property
     def bits(self):
         return int(np.log2(self.M))
 
     def modulate(self, data):
-        rem  = len(data)%M
+        rem  = len(data)%self.bits
         if rem > 0:
             data = data[:-rem]
         datab = bitarray()
         datab.pack(data.tobytes())
         # the below is not really the fastest method but easy encoding/decoding is possible
-        return np.frombytes(b''.join(datab.encode(self._encoding)), dtype=np.complex128)
+        return np.fromstring(b''.join(datab.decode(self._encoding)), dtype=np.complex128)
 
     def decode(self, symbols):
         bt = bitarray()
-        bt.encodode(self._encoding, symbols)
-        return np.frombytes(bt.unpack, dtype=np.bool)
+        bt.encode(self._encoding, symbols.view(dtype="S16"))
+        return np.fromstring(bt.unpack(), dtype=np.bool)
 
 
