@@ -87,8 +87,23 @@ def gray_code_for_qam(M):
 
 
 class QAMModulator(object):
+    """
+    A modulator object for modulating and demodulating rectangular QAM signals (without carrier frequency and equalisation). Currently only Gray coding of bits is supported.
+    """
 
     def __init__(self, M, coding=None):
+        """
+        Initialise QAM modulator
+
+        Parameters
+        ----------
+        M        :  int
+            number of constellation points, indicates QAM order
+
+        coding   : string, optional
+           coding method currently only the default gray coding is supported
+
+        """
         self.M = M
         self.symbols = calculate_MQAM_symbols(M)
         if self.bits%2:
@@ -103,9 +118,25 @@ class QAMModulator(object):
 
     @property
     def bits(self):
+        """
+        Number of bits per symbol
+        """
         return int(np.log2(self.M))
 
     def modulate(self, data):
+        """
+        Modulate a bit sequence into QAM symbols
+
+        Parameters
+        ----------
+        data     : array_like
+           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
+
+        Returns
+        -------
+        outdata  : array_like
+            1D array of complex symbol values.
+        """
         rem  = len(data)%self.bits
         if rem > 0:
             data = data[:-rem]
@@ -115,9 +146,37 @@ class QAMModulator(object):
         return np.fromstring(b''.join(datab.decode(self._encoding)), dtype=np.complex128)
 
     def decode(self, symbols):
+        """
+        Decode array of input symbols to bits according to the coding of the modulator.
+
+        Parameters
+        ----------
+        symbols   : array_like
+            1D array of complex input symbols
+
+        Returns
+        -------
+        outbits   : array_like
+            1D array of booleans representing bits
+        """
         bt = bitarray()
         bt.encode(self._encoding, symbols.view(dtype="S16"))
         return np.fromstring(bt.unpack(), dtype=np.bool)
 
-    def demodulate(self, field):
-        return quantize(field, self.symbols/np.sqrt(self._scale))
+    def quantize(self, signal):
+        """
+        Make symbol decisions based on the input field. Decision is made based on difference from constellation points
+
+        Parameters
+        ----------
+        signal   : arrray_like
+            1D array of the input signal
+
+        Returns
+        -------
+        symbols  : array_like
+            1d array of the detected symbols
+        idx      : array_like
+            1D array of indices into QAMmodulator.symbols
+        """
+        return quantize(signal, self.symbols/np.sqrt(self._scale))
