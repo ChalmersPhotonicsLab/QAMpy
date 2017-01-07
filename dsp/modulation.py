@@ -135,7 +135,7 @@ class QAMModulator(object):
         Returns
         -------
         outdata  : array_like
-            1D array of complex symbol values.
+            1D array of complex symbol values. Normalised to energy of 1
         """
         rem  = len(data)%self.bits
         if rem > 0:
@@ -143,7 +143,7 @@ class QAMModulator(object):
         datab = bitarray()
         datab.pack(data.tobytes())
         # the below is not really the fastest method but easy encoding/decoding is possible
-        return np.fromstring(b''.join(datab.decode(self._encoding)), dtype=np.complex128)
+        return np.fromstring(b''.join(datab.decode(self._encoding)), dtype=np.complex128)/np.sqrt(self._scale)
 
     def decode(self, symbols):
         """
@@ -169,7 +169,7 @@ class QAMModulator(object):
 
         Parameters
         ----------
-        signal   : arrray_like
+        signal   : array_like
             1D array of the input signal
 
         Returns

@@ -6,6 +6,64 @@ from scipy.special import erfc
 from .utils import resample
 from .prbs import make_prbs_extXOR
 from . import theory
+from . modulation import QAMModulator
+
+
+def generate_MQAM_data_signal(N, snr, M, carrier_df=0,
+                              baudrate=1,
+                              samplingrate=1,
+                              PRBS=True,
+                              PRBSorder=15,
+                              PRBSseed=None):
+
+    """
+    Generate a M-QAM data signal array
+
+    Parameters:
+    ----------
+        N :  int
+           number of symbols to be generated.
+        snr: number
+           Signal to Noise Ratio (Es/N0) in logarithmic units
+        M  : int
+           QAM order
+        carrier_df: number, optional
+           carrier frequency offset, relative to the overall window, if not given it
+           is set to 0 (baseband modulation)
+        baudrate:  number, optional
+           symbol rate of the signal. This should be the real symbol rate, used
+           for calculating the oversampling factor. If not given it is 1.
+        samplingrate: number, optional
+           the rate at which the signal is sampled. Together with the baudrate
+           this is used for calculating the oversampling factor. Note that if samplingrate is
+           different to baudrate the length of the returned array is not N. Default is 1.
+        PRBS: bool, optional
+           If True the bits are generated as standard PRBS sequences, if False
+           random bits are generated using numpy.random.randint.
+           Default is True
+        PRBSOrder: int, optional
+           The PRBS order i.e. the length 2**order of the PRBS to use
+           for the in-phase channel. Default is 15.
+        PRBSseed: array_like, optional
+           Seed to the PRBS generator needs to be a 1D array of booleans of length order.
+           (Default=None, which corresponds to a seed of all 1's)
+    """
+    K = int(np.log2(M))
+    Nbits = K*N
+    order = int(PRBSorder)
+    if PRBS == True:
+        bits = make_prbs_extXOR(order, Nbits, PRBSseed)
+    else:
+        bits = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
+    modulator = QAMModulator(M)
+    symbols = QAMModulator.modulate(bits)
+    noise = (np.random.randn(N) + 1.j * np.random.randn(N)) / np.sqrt(
+        2)  # sqrt(2) because N/2 = sigma
+    outdata = symbols + noise * 10**(
+        -snr / 20)  #the 20 here is so we don't have to take the sqrt
+    outdata = resample(baudrate, samplingrate, outdata)
+    return outdata * np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df
+                            / samplingrate), symbols, bits
 
 
 def generateRandomQPSKData(N,
