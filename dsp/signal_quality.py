@@ -1,7 +1,8 @@
 from __future__ import division, print_function
 import numpy as np
 from . import utils
-from .theory import CalculateMQAMSymbols, MQAMScalingFactor
+from .modulation import calculate_MQAM_symbols
+from .theory import  MQAMScalingFactor
 from .ber_functions import QAMquantize
 
 
@@ -27,7 +28,7 @@ def cal_blind_evm(sig, M):
     evm : float
         Error Vector Magnitude
     """
-    ideal = CalculateMQAMSymbols(M).flatten()
+    ideal = calculate_MQAM_symbols(M).flatten()
     Ai, Pi = normalise_sig(ideal, M)
     Am, Pm = normalise_sig(sig, M)
     evm = np.mean(np.min(abs(Pm[:,np.newaxis].real-Pi.real)**2 +\
@@ -91,7 +92,7 @@ def cal_SNR_QAM(E, M):
 
 def _cal_gamma(M):
     """Calculate the gamma factor for SNR estimation."""
-    A = abs(CalculateMQAMSymbols(M)) / np.sqrt(MQAMScalingFactor(M))
+    A = abs(calculate_MQAM_symbols(M)) / np.sqrt(MQAMScalingFactor(M))
     uniq, counts = np.unique(A, return_counts=True)
     return np.sum(uniq**4 * counts / M)
 
