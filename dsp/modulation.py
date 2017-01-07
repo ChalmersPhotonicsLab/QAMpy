@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 from .utils import bin2gray
+from bitarray import bitarray
 
 
 
@@ -51,7 +52,7 @@ def gray_code_for_qam(M):
             0 : 2**N : 1
         ]
     else:
-        N = (Nbits - 1)//2 
+        N = (Nbits - 1)//2
         idx = np.mgrid[
             0 : 2**(N+1): 1,
             0 : 2**N: 1
@@ -68,18 +69,24 @@ class QAMModulator(object):
         self.coding = None
         self._graycode = gray_code_for_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
+        self._encoding = dict([(s[i].tobytes(), self._graycode[i]) for i in range(len(self._graycode))])
 
     @property
     def bits(self):
         return int(np.log2(self.M))
 
     def modulate(self, data):
-        if data.ndim > 1:
-            N = len(data[0])
-            N1 = self.bits//2
-            N2 = self.bits - N1
-            nbits = int(N - max(N%N1, N%N2))
-            data1 = data[0,:nbits].reshape(N1, nbits/N2)
-            data2 = data[1,:nbits].reshape(N2, nbits/N1)
+        rem  = len(data)%M
+        if rem > 0:
+            data = data[:-rem]
+        datab = bitarray()
+        datab.pack(data.tobytes())
+        # the below is not really the fastest method but easy encoding/decoding is possible
+        return np.frombytes(b''.join(datab.encode(self._encoding)), dtype=np.complex128)
+
+    def decode(self, symbols):
+        bt = bitarray()
+        bt.encodode(self._encoding, symbols)
+        return np.frombytes(bt.unpack, dtype=np.bool)
 
 
