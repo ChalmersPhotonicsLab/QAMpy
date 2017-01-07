@@ -9,9 +9,9 @@ def calculate_MQAM_symbols(M):
     Generate the symbols on the constellation diagram for M-QAM
     """
     if np.log2(M)%2 > 0.5:
-        return CalculateCrossQAMSymbols(M)
+        return calculate_cross_QAM_symbols(M)
     else:
-        return CalculateSquareQAMSymbols(M)
+        return calculate_square_QAM_symbols(M)
 
 def calculate_square_QAM_symbols(M):
     """
