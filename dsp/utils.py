@@ -1,13 +1,24 @@
 from __future__ import division, print_function
 import numpy as np
 import scipy.signal as scisig
-""" a number of mathematical convenience functions"""
+""" a number of convenience functions"""
 
 
 def cabssquared(x):
     """Calculate the absolute squared of a complex number"""
     return x.real**2 + x.imag**2
 
+def dB2lin(x):
+    """
+    Convert input from dB(m) units to linear units
+    """
+    return 10**(x/10)
+
+def lin2dB(x):
+    """
+    Convert input from linear units to dB(m)
+    """
+    return 10*np.log10(x)
 
 def ttanh(x, A, x0, w):
     """
@@ -256,7 +267,7 @@ def rolling_window(data, size):
 
 
     Examples
-    >>> mathfcts.rolling_window(np.arange(10), 3)
+    >>> utils.rolling_window(np.arange(10), 3)
     array([[0, 1, 2],
             [1, 2, 3],
             [2, 3, 4],
@@ -316,3 +327,11 @@ def rrcos_freq(f, beta, T):
                                                      (np.abs(f) - (1 - beta) /
                                                       (2 * T))))
     return rrc
+
+def bin2gray(value):
+    """
+    Convert a binary value to an gray coded value see _[1]. This also works for arrays.
+    ..[1] https://en.wikipedia.org/wiki/Gray_code#Constructing_an_n-bit_Gray_code
+    """
+    return value^(value >> 1)
+    

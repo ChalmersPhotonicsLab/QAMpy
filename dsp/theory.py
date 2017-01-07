@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 from scipy.special import erfc
+from .utils import bin2gray
 
 # All the formulas below are taken from dsplog.com
 
@@ -28,11 +29,3 @@ def FourPAM_SERvsEsN0(snr):
 def MQAMScalingFactor(M):
     """Calculate the factor for scaling the average energy to 1"""
     return 2 / 3 * (M - 1)
-
-
-def CalculateMQAMSymbols(M):
-    """Genarate the symbols on the constallation diagram for M-QAM"""
-    qam = np.mgrid[-(2 * np.sqrt(M) / 2 - 1):2 * np.sqrt(
-        M) / 2 - 1:1.j * np.sqrt(M), -(2 * np.sqrt(M) / 2 - 1):2 * np.sqrt(M) /
-                   2 - 1:1.j * np.sqrt(M)]
-    return qam[0] + 1.j * qam[1]
