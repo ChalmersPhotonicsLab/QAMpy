@@ -107,7 +107,7 @@ class QAMModulator(object):
         """
         self.M = M
         self.symbols = calculate_MQAM_symbols(M)
-        if self.bits%2:
+        if not self.bits%2:
             self._scale = theory.MQAMScalingFactor(self.M)
         else:
             self._scale = (abs(self.symbols)**2).mean()
