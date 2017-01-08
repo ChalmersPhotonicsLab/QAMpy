@@ -334,4 +334,32 @@ def bin2gray(value):
     ..[1] https://en.wikipedia.org/wiki/Gray_code#Constructing_an_n-bit_Gray_code
     """
     return value^(value >> 1)
-    
+
+def convert_iqtosinglebitstream(idat, qdat, nbits):
+    """
+    Interleave a two bitstreams into a single bitstream with nbits per symbol. This can be used to create a combined PRBS signal from 2 PRBS sequences for I and Q channel. If nbits is odd we will use nbits//2 + 1 bits from the first stream and nbits//2 from the second.
+
+    Parameters
+    ----------
+    idat    : array_like
+        input data stream (1D array of booleans)
+    qdat    : array_like
+        input data stream (1D array of booleans)
+    nbits   : int
+        number of bits per symbol that we want after interleaving
+
+    Returns
+    -------
+    output   : array_like
+        interleaved bit stream
+    """
+    if nbits%2:
+        N = [bits//2+1, bits//2]
+    else:
+        N = [bits//2, bits//2]
+    idat_n = idat[:-len(idat)%N[0]]
+    idat_n = idat_n.reshape(N[0], len(idat_n))
+    qdat_n = qdat[:-len(idat)%N[1]]
+    qdat_n = qdat_n.reshape(N[1], len(qdat_n))
+    l = min(len(idat_n), len(qdat_n))
+    return np.hstack([idat_n[:l], qdat_n[:l]]).flatten()
