@@ -249,6 +249,37 @@ class QAMModulator(object):
         return outdata * np.exp(2.j * np.pi * np.arange(len(outdata)) *
                                 carrier_df / samplingrate), symbols, bitsq
 
+    def theoretical_SER(self, snr):
+        """
+        Return the theoretical SER for this modulation format for the given SNR (in linear units)
+        """
+        return theory.MQAM_SERvsEsN0(snr, self.M)
+
+    def calculate_SER(self, signal_rx, bits_tx=None, symbol_tx=None):
+        """
+        Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol. 
+
+        Parameters
+        ----------
+        signal_rx  : array_like
+            Received signal (1D complex array)
+        bits_tx    : array_like, optional
+            bitstream at the transmitter for comparison against signal. If set to None symbol_tx needs to be given (Default is None)
+        symbol_tx  : array_like, optional
+            symbols at the transmitter for comparison against signal. If set to None bits_tx needs to be given (Default is None)
+
+        Returns
+        -------
+        SER   : float
+            symbol error rate
+        """
+        assert symbol_tx is not None or data_tx is not None, "data_tx or symbol_tx must be given"
+        if symbol_tx is None:
+            symbol_tx = self.modulate(bits_tx)
+        data_demod = self.quantize(signal)
+        return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
+
+
 def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):
     """
     Generate a PRBS from two independent PRBS generators.
