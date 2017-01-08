@@ -105,14 +105,17 @@ def FS_RDE_training_python(E, TrCMA, TrRDE, Ntaps, os, muRDE, wx, part, code):
 
 
 try:
-    from dsp_cython import FS_RDE_training
+    from .dsp_cython import FS_RDE_training, partition_value
 except:
+    Warning("can not use cython RDE training")
     #use python code if cython code is not available
     FS_RDE_training = FS_RDE_training_python
 
+FS_RDE_training = FS_RDE_training_python
 try:
-    from dsp_cython import FS_CMA_training
+    from .dsp_cython import FS_CMA_training
 except:
+    Warning("can not use cython CMA training")
     #use python code if cython code is not available
     FS_CMA_training = FS_CMA_training_python
 
@@ -298,8 +301,8 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     Ex = Ex.flatten()
     Ey = Ey.flatten()
     L = len(Ex)
-    muCMA = muCMA / Ntaps
-    muRDE = muRDE / Ntaps
+    muCMA = muCMA/Ntaps
+    muRDE = muRDE/Ntaps
     # if can't have more training samples than field
     assert (TrCMA + TrRDE
             ) * os < L - Ntaps, "More training samples than overall samples"
@@ -330,11 +333,9 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     wy[0, :] = -wx[1, ::-1]
     wy = np.conj(wy) / np.sqrt(R)
     # centering the taps
-    wR = np.abs(wx)
-    wXmax = np.where(np.max(wR) == wR)
-    wR = np.abs(wy)
-    wYmax = np.where(np.max(wR) == wR)
-    delay = abs(wYmax[1] - wXmax[1])
+    wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
+    wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
+    delay = abs(wYmaxidx[1] - wXmaxidx[1])
     pad = np.zeros((2, delay), dtype=np.complex128)
     if delay > 0:
         wy = wy[:, delay:]
@@ -342,6 +343,18 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     elif delay < 0:
         wy = wy[:, 0:Ntaps - delay - 1]
         wy = np.hstack([pad, wy])
+ # wR = np.abs(wx)
+    # wXmax = np.where(np.max(wR) == wR)
+    # wR = np.abs(wy)
+    # wYmax = np.where(np.max(wR) == wR)
+    # delay = abs(wYmax[1] - wXmax[1])
+    # pad = np.zeros((2, delay), dtype=np.complex128)
+    # if delay > 0:
+        # wy = wy[:, delay:]
+        # wy = np.hstack([wy, pad])
+    # elif delay < 0:
+        # wy = wy[:, 0:Ntaps - delay - 1]
+        # wy = np.hstack([pad, wy])
     # find taps with CMA
     err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
     # scale taps for RDE
