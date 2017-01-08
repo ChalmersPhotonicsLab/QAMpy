@@ -19,12 +19,13 @@ os = 2
 fs = os*fb
 N = 2**18
 theta = np.pi/2.45
+theta2 = np.pi/4
 
 X, XIdata, XQdata = signals.generateRandomQPSKData(N, 14, baudrate=fb, samplingrate=fs)
 Y, YIdata, YQdata = signals.generateRandomQPSKData(N, 14, baudrate=fb, samplingrate=fs, orderI=7, orderQ=15)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N, endpoint=False)
-t_pmd = 40e-12
+t_pmd = 75e-12
 
 H = H_PMD(theta, t_pmd, omega)
 
