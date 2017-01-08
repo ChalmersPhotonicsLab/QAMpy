@@ -241,6 +241,7 @@ class QAMModulator(object):
                 bitsq = make_prbs_extXOR(PRBSorder, Nbits, PRBSseed)
             else:
                 bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
+        print(bitsq.shape)
         symbols = self.modulate(bitsq)
         noise = (np.random.randn(N) + 1.j * np.random.randn(N)) / np.sqrt(
             2)  # sqrt(2) because N/2 = sigma
@@ -303,9 +304,9 @@ def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,Non
         1D array of booleans that are the interleaved PRBS sequence
     """
     if bits % 2:
-        Nbits = (Nsyms * bits // 2, Nsyms * bits // 2)
+        Nbits = (Nsyms * (bits // 2 + 1), Nsyms * bits // 2)
     else:
-        Nbits = ((Nsyms + 1) * bits // 2, Nsyms * bits // 2)
+        Nbits = (Nsyms * bits // 2, Nsyms * bits // 2)
     if PRBS:
         bitsq1 = make_prbs_extXOR(PRBSorder[0], Nbits[0], PRBSseed[0])
         bitsq2 = make_prbs_extXOR(PRBSorder[0], Nbits[1], PRBSseed[1])

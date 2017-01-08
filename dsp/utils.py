@@ -357,9 +357,9 @@ def convert_iqtosinglebitstream(idat, qdat, nbits):
         N = [nbits//2+1, nbits//2]
     else:
         N = [nbits//2, nbits//2]
-    idat_n = idat[:-(len(idat)%N[0]+1)]
+    idat_n = idat[:len(idat)-(len(idat)%N[0])]
     idat_n = idat_n.reshape(N[0], len(idat_n)/N[0])
-    qdat_n = qdat[:-(len(idat)%N[1]+1)]
+    qdat_n = qdat[:len(qdat)-(len(qdat)%N[1])]
     qdat_n = qdat_n.reshape(N[1], len(qdat_n)/N[1])
     l = min(len(idat_n[0]), len(qdat_n[0]))
     return np.hstack([idat_n[:l], qdat_n[:l]]).flatten()
