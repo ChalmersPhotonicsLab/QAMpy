@@ -301,8 +301,8 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     Ex = Ex.flatten()
     Ey = Ey.flatten()
     L = len(Ex)
-    muCMA = muCMA/Ntaps
-    muRDE = muRDE/Ntaps
+    muCMA = muCMA
+    muRDE = muRDE
     # if can't have more training samples than field
     assert (TrCMA + TrRDE
             ) * os < L - Ntaps, "More training samples than overall samples"
