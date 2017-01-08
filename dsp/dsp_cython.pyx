@@ -66,7 +66,7 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                i]*Xest*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
     return err, wx
- 
+
 
 def lfsr_ext(int seed, taps, int nbits):
     """A Fibonacci or external XOR linear feedback shift register.
