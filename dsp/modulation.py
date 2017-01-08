@@ -273,10 +273,10 @@ class QAMModulator(object):
         SER   : float
             symbol error rate
         """
-        assert symbol_tx is not None or data_tx is not None, "data_tx or symbol_tx must be given"
+        assert symbol_tx is not None or bits_tx is not None, "data_tx or symbol_tx must be given"
         if symbol_tx is None:
             symbol_tx = self.modulate(bits_tx)
-        data_demod = self.quantize(signal)
+        data_demod = self.quantize(signal_rx)[0]
         return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
 
 
