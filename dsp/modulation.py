@@ -4,6 +4,7 @@ from bitarray import bitarray
 from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample
 from .prbs import make_prbs_extXOR
 from . import theory
+from . import ber_functions
 
 
 def quantize(sig, symbols):
@@ -278,6 +279,34 @@ class QAMModulator(object):
             symbol_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)[0]
         return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
+
+    def cal_BER(self, signal_rx, bits_tx=None, PRBS=None, Lsync=150, imax=200):
+        assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
+        bits_demod = self.decode(self.quantize(signal_rx)[0])
+        if bits_tx is None:
+            if len(PRBS)>1:
+                bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0], PRBS[1])
+            else:
+                bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0])
+        else:
+            if len(bits_demod) < len(bits_tx):
+                bits_demod = bits_demod[:len(bits_tx)]
+            else:
+                bits_tx = bits_tx[:len(bits_demod)]
+        i = 0
+        while i < 4:
+            if i == 4:
+                raise Error("could not sync data")
+            try:
+                idx, tx_synced = ber_functions.sync_Tx2Rx(bits_tx, bits_demod, Lsync, imax)
+                break
+            except:
+                signal_rx *= 1.j  # rotate by 90 degrees
+                #TODO need to adjust length again
+                bits_demod = self.decode(self.quantize(signal_rx[0]))
+            i += 1
+        return ber_functions._cal_BER_only(tx_synced, bits_demod)
+
 
 
 def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):

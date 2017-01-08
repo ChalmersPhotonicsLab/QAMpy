@@ -263,6 +263,7 @@ def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
     return _cal_BER_only(data_rx, data_tx_sync)
 
 
+
 def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     """Calculate the BER for a QPSK signal the I and Q channels can either have
     the same or different orders.
