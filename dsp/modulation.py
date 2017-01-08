@@ -1,10 +1,9 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared
+from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample
+from .prbs import make_prbs_extXOR
 from . import theory
-
-
 
 
 def quantize(sig, symbols):
@@ -35,10 +34,11 @@ def calculate_MQAM_symbols(M):
     """
     Generate the symbols on the constellation diagram for M-QAM
     """
-    if np.log2(M)%2 > 0.5:
+    if np.log2(M) % 2 > 0.5:
         return calculate_cross_QAM_symbols(M)
     else:
         return calculate_square_QAM_symbols(M)
+
 
 def calculate_square_QAM_symbols(M):
     """
@@ -49,42 +49,40 @@ def calculate_square_QAM_symbols(M):
                    2 - 1:1.j * np.sqrt(M)]
     return (qam[0] + 1.j * qam[1]).flatten()
 
+
 def calculate_cross_QAM_symbols(M):
     """
     Generate the symbols on the constellation diagram for non-square (cross) M-QAM
     """
-    N = (np.log2(M)-1)/2
-    s = 2**(N-1)
-    rect = np.mgrid[
-        -(2**(N+1) - 1) : 2**(N+1) - 1: 1.j*2**(N+1),
-        -(2**N - 1) : 2**N - 1: 1.j*2**N
-    ]
-    qam = rect[0] + 1.j*rect[1]
-    idx1 = np.where((abs(qam.real) > 3*s)&(abs(qam.imag) > s))
-    idx2 = np.where((abs(qam.real) > 3*s)&(abs(qam.imag) <= s))
-    qam[idx1] = np.sign(qam[idx1].real)*(abs(qam[idx1].real)-2*s) + 1.j*(np.sign(qam[idx1].imag)*(4*s-abs(qam[idx1].imag)))
-    qam[idx2] = np.sign(qam[idx2].real)*(4*s-abs(qam[idx2].real)) + 1.j*(np.sign(qam[idx2].imag)*(abs(qam[idx2].imag)+2*s))
+    N = (np.log2(M) - 1) / 2
+    s = 2**(N - 1)
+    rect = np.mgrid[-(2**(N + 1) - 1):2**(N + 1) - 1:1.j * 2**(N + 1), -(
+        2**N - 1):2**N - 1:1.j * 2**N]
+    qam = rect[0] + 1.j * rect[1]
+    idx1 = np.where((abs(qam.real) > 3 * s) & (abs(qam.imag) > s))
+    idx2 = np.where((abs(qam.real) > 3 * s) & (abs(qam.imag) <= s))
+    qam[idx1] = np.sign(qam[idx1].real) * (
+        abs(qam[idx1].real) - 2 * s) + 1.j * (np.sign(qam[idx1].imag) *
+                                              (4 * s - abs(qam[idx1].imag)))
+    qam[idx2] = np.sign(qam[idx2].real) * (
+        4 * s - abs(qam[idx2].real)) + 1.j * (np.sign(qam[idx2].imag) *
+                                              (abs(qam[idx2].imag) + 2 * s))
     return qam.flatten()
+
 
 def gray_code_for_qam(M):
     """
     Generate gray code map for M-QAM constellations
     """
     Nbits = int(np.log2(M))
-    if Nbits%2 == 0:
-        N = Nbits//2
-        idx = np.mgrid[
-            0 : 2**N : 1,
-            0 : 2**N : 1
-        ]
+    if Nbits % 2 == 0:
+        N = Nbits // 2
+        idx = np.mgrid[0:2**N:1, 0:2**N:1]
     else:
-        N = (Nbits - 1)//2
-        idx = np.mgrid[
-            0 : 2**(N+1): 1,
-            0 : 2**N: 1
-        ]
+        N = (Nbits - 1) // 2
+        idx = np.mgrid[0:2**(N + 1):1, 0:2**N:1]
     gidx = bin2gray(idx)
-    return ((gidx[0] << N)| gidx[1] ).flatten()
+    return ((gidx[0] << N) | gidx[1]).flatten()
 
 
 class QAMModulator(object):
@@ -107,15 +105,17 @@ class QAMModulator(object):
         """
         self.M = M
         self.symbols = calculate_MQAM_symbols(M)
-        if not self.bits%2:
+        if not self.bits % 2:
             self._scale = theory.MQAMScalingFactor(self.M)
         else:
             self._scale = (abs(self.symbols)**2).mean()
         self.coding = None
         self._graycode = gray_code_for_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
-        bformat = "0%db"%self.bits
-        self._encoding = dict([(self.symbols[i].tobytes(), bitarray(format(self._graycode[i], bformat))) for i in range(len(self._graycode))])
+        bformat = "0%db" % self.bits
+        self._encoding = dict([(self.symbols[i].tobytes(),
+                                bitarray(format(self._graycode[i], bformat)))
+                               for i in range(len(self._graycode))])
 
     @property
     def bits(self):
@@ -138,13 +138,15 @@ class QAMModulator(object):
         outdata  : array_like
             1D array of complex symbol values. Normalised to energy of 1
         """
-        rem  = len(data)%self.bits
+        rem = len(data) % self.bits
         if rem > 0:
             data = data[:-rem]
         datab = bitarray()
         datab.pack(data.tobytes())
         # the below is not really the fastest method but easy encoding/decoding is possible
-        return np.fromstring(b''.join(datab.decode(self._encoding)), dtype=np.complex128)/np.sqrt(self._scale)
+        return np.fromstring(
+            b''.join(datab.decode(self._encoding)),
+            dtype=np.complex128) / np.sqrt(self._scale)
 
     def decode(self, symbols):
         """
@@ -180,4 +182,103 @@ class QAMModulator(object):
         idx      : array_like
             1D array of indices into QAMmodulator.symbols
         """
-        return quantize(signal, self.symbols/np.sqrt(self._scale))
+        return quantize(signal, self.symbols / np.sqrt(self._scale))
+
+    def generateSignal(self,
+                       N,
+                       snr,
+                       carrier_df=0,
+                       baudrate=1,
+                       samplingrate=1,
+                       IQsep=False,
+                       PRBS=True,
+                       PRBSorder=15,
+                       PRBSseed=None):
+        """
+        Generate a M-QAM data signal array
+
+        Parameters:
+        ----------
+        N :  int
+            number of symbols to be generated.
+        snr: number
+            Signal to Noise Ratio (Es/N0) in logarithmic units
+        carrier_df: number, optional
+            carrier frequency offset, relative to the overall window, if not given it
+            is set to 0 (baseband modulation)
+        baudrate:  number, optional
+            symbol rate of the signal. This should be the real symbol rate, used
+            for calculating the oversampling factor. If not given it is 1.
+        samplingrate: number, optional
+            the rate at which the signal is sampled. Together with the baudrate
+            this is used for calculating the oversampling factor. Note that if samplingrate is
+            different to baudrate the length of the returned array is not N. (Default is 1.)
+        IQsep  : bool, optional
+            Whether to generate two independent data streams for I and Q (Default is False)
+        PRBS: bool, optional
+            If True the bits are generated as standard PRBS sequences, if False
+            random bits are generated using numpy.random.randint.
+            (Default is True)
+        PRBSOrder: int or tuple of bool, optional
+            The PRBS order i.e. the length 2**order of the PRBS to use
+            If IQsep is True this needs to be a tuple of two ints for the I and Q sequence generation.
+            (Default is 15)
+        PRBSseed: array_like, optional
+            Seed to the PRBS generator needs to be a 1D array of booleans of length order.
+          . (Default=None, which corresponds to a seed of all 1's)
+        """
+        if IQsep:
+            if np.isscalar(PRBSorder):
+                if np.isscalar(PRBSseed) or PRBSseed is None:
+                    bitsq = twostreamPRBS(N, self.bits, PRBS)
+                else:
+                    bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed)
+            else:
+                bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed, PRBSorder=PRBSorder)
+        else:
+            Nbits = N * self.bits
+            if PRBS == True:
+                bitsq = make_prbs_extXOR(PRBSorder, Nbits, PRBSseed)
+            else:
+                bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
+        symbols = self.modulate(bitsq)
+        noise = (np.random.randn(N) + 1.j * np.random.randn(N)) / np.sqrt(
+            2)  # sqrt(2) because N/2 = sigma
+        outdata = symbols + noise * 10**(-snr / 20)  #the 20 here is so we don't have to take the sqrt
+        outdata = resample(baudrate, samplingrate, outdata)
+        return outdata * np.exp(2.j * np.pi * np.arange(len(outdata)) *
+                                carrier_df / samplingrate), symbols, bitsq
+
+def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):
+    """
+    Generate a PRBS from two independent PRBS generators.
+
+    Parameters
+    ----------
+    Nsyms   : int
+        the number of symbols at the output
+    bits    : ints
+        the bits per symbol
+    PRBS    : bool, optional
+        whether to use PRBS signal generation or np.random.randint (Default True use PRBS)
+    PRBSorder : tuple(int, int), optional
+        The PRBS order for each generated sequence (Default is (15,23))
+    PRBSseed  : tuple(int, int), optional
+        The seed for each PRBS
+
+    Returns
+    -------
+    bitseq  : array_like
+        1D array of booleans that are the interleaved PRBS sequence
+    """
+    if bits % 2:
+        Nbits = (Nsyms * bits // 2, Nsyms * bits // 2)
+    else:
+        Nbits = ((Nsyms + 1) * bits // 2, Nsyms * bits // 2)
+    if PRBS:
+        bitsq1 = make_prbs_extXOR(PRBSorder[0], Nbits[0], PRBSseed[0])
+        bitsq2 = make_prbs_extXOR(PRBSorder[0], Nbits[1], PRBSseed[1])
+    else:
+        bitsq1 = np.random.randint(0, high=2, size=Nbits[0]).astype(np.bool)
+        bitsq2 = np.random.randint(0, high=2, size=Nbits[1]).astype(np.bool)
+    return convert_iqtosinglebitstream(bitsq1, bitsq2, bits)
