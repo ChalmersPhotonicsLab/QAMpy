@@ -51,7 +51,7 @@ def FS_CMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
     return err, wx
 
 
-def FS_RDE_training_python(E, TrCMA, TrRDE, Ntaps, os, muRDE, wx, part, code):
+def FS_RDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     """
     Training of the RDE algorithm to determine the equaliser taps.
 
@@ -94,13 +94,13 @@ def FS_RDE_training_python(E, TrCMA, TrRDE, Ntaps, os, muRDE, wx, part, code):
        equaliser taps
     """
     err = np.zeros(TrRDE, dtype=np.float)
-    for i in range(TrCMA, TrCMA + TrRDE):
+    for i in range(TrRDE):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
         Ssq = abs(Xest)**2
         S_DD = partition_value(Ssq, part, code)
-        err[i - TrCMA] = S_DD - Ssq
-        wx += muRDE * err[i - TrCMA] * Xest * np.conj(X)
+        err[i] = Ssq - S_DD #- Ssq
+        wx -= muRDE * err[i] * Xest * np.conj(X)
     return err, wx
 
 
@@ -188,13 +188,11 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
 def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
-    wy[1, :] = wx[0, ::-1]
-    wy[0, :] = -wx[1, ::-1]
-    wy = np.conj(wy)
+    wy = -np.conj(wx)[::-1,::-1]
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
-    delay = abs(wYmaxidx[1] - wXmaxidx[1])
+    delay = abs(wYmaxidx[0] - wXmaxidx[0])
     pad = np.zeros((2, delay), dtype=np.complex128)
     if delay > 0:
         wy = wy[:, delay:]
@@ -317,7 +315,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     E = np.vstack([Ex, Ey])
     # scale signal
     P = np.mean(utils.cabssquared(E))
-    E = E / np.sqrt(P)
+    #E = E / np.sqrt(P)
     err_cma = np.zeros((2, TrCMA), dtype='float')
     err_rde = np.zeros((2, TrRDE), dtype='float')
     # ** training for X polarisation **
@@ -328,16 +326,16 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     # scale taps for RDE
     wx = np.sqrt(R) * wx
     # use refine taps with RDE
-    err_rde[0, :], wx = FS_RDE_training(E, TrCMA, TrRDE, Ntaps, os, muRDE, wx,
+    err_rde[0, :], wx = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
                                         part, code)
     # ** training for y polarisation **
-    wy = _init_orthogonaltaps(wx)
+    wy = _init_orthogonaltaps(wx)/np.sqrt(R)
     # find taps with CMA
     err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
     # scale taps for RDE
     wy = np.sqrt(R) * wy
     # use refine taps with RDE
-    err_rde[1, :], wy = FS_RDE_training(E, TrCMA, TrRDE, Ntaps, os, muRDE, wy,
+    err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
     syms = L // 2 - Ntaps // os - 1
