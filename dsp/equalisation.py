@@ -172,7 +172,21 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     # run CMA
     err[0, :], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx)
     # ** training for y polarisation **
-    wy = np.zeros((2, Ntaps), dtype=np.complex128)
+    wy = _init_orthogonaltaps(wx)
+    # run CMA
+    err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy)
+    # equalise data points. Reuse samples used for channel estimation
+    syms = L // 2 - Ntaps // os - 1
+    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
+    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
+    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
+    dump = 1000
+    EestX = EestX[dump:-dump]
+    EestY = EestY[dump:-dump]
+    return EestX, EestY, wx, wy, err
+
+def _init_orthogonaltaps(wx):
+    wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
     wy[1, :] = wx[0, ::-1]
     wy[0, :] = -wx[1, ::-1]
@@ -188,17 +202,7 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     elif delay < 0:
         wy = wy[:, 0:Ntaps - delay - 1]
         wy = np.hstack([pad, wy])
-    # run CMA
-    err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy)
-    # equalise data points. Reuse samples used for channel estimation
-    syms = L // 2 - Ntaps // os - 1
-    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
-    dump = 1000
-    EestX = EestX[dump:-dump]
-    EestY = EestY[dump:-dump]
-    return EestX, EestY, wx, wy, err
+    return wy
 
 
 def partition_signal(signal, partitions, codebook):
@@ -327,34 +331,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     err_rde[0, :], wx = FS_RDE_training(E, TrCMA, TrRDE, Ntaps, os, muRDE, wx,
                                         part, code)
     # ** training for y polarisation **
-    wy = np.zeros((2, Ntaps), dtype=np.complex128)
-    # initialising the taps to be orthogonal to the x polarisation
-    wy[1, :] = wx[0, ::-1]
-    wy[0, :] = -wx[1, ::-1]
-    wy = np.conj(wy) / np.sqrt(R)
-    # centering the taps
-    wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
-    wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
-    delay = abs(wYmaxidx[1] - wXmaxidx[1])
-    pad = np.zeros((2, delay), dtype=np.complex128)
-    if delay > 0:
-        wy = wy[:, delay:]
-        wy = np.hstack([wy, pad])
-    elif delay < 0:
-        wy = wy[:, 0:Ntaps - delay - 1]
-        wy = np.hstack([pad, wy])
- # wR = np.abs(wx)
-    # wXmax = np.where(np.max(wR) == wR)
-    # wR = np.abs(wy)
-    # wYmax = np.where(np.max(wR) == wR)
-    # delay = abs(wYmax[1] - wXmax[1])
-    # pad = np.zeros((2, delay), dtype=np.complex128)
-    # if delay > 0:
-        # wy = wy[:, delay:]
-        # wy = np.hstack([wy, pad])
-    # elif delay < 0:
-        # wy = wy[:, 0:Ntaps - delay - 1]
-        # wy = np.hstack([pad, wy])
+    wy = _init_orthogonaltaps(wx)
     # find taps with CMA
     err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
     # scale taps for RDE
