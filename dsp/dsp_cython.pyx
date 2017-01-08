@@ -36,18 +36,19 @@ def partition_value(double signal, np.ndarray[ndim=1, dtype=np.float64_t] partit
         index += 1
     return codebook[index]
 
+
 def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
-        int TrCMA, int TrRDE, int Ntaps, unsigned int os,
+        int TrRDE, int Ntaps, unsigned int os,
         double muRDE,
-        np.ndarray[ndim=2, dtype=np.complex128_t] wx, 
-        np.ndarray[ndim=1, dtype=np.float64_t] partition, 
+        np.ndarray[ndim=2, dtype=np.complex128_t] wx,
+        np.ndarray[ndim=1, dtype=np.float64_t] partition,
         np.ndarray[ndim=1, dtype=np.float64_t] codebook):
     cdef np.ndarray[ndim=1, dtype=np.float64_t] err = np.zeros(TrRDE, dtype=np.float64)
     cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
     cdef np.complex128_t Xest
     cdef np.float64_t Ssq, S_DD
-    for i in range(TrCMA, TrRDE):
+    for i in range(TrRDE):
        Xest = 0.j
        for j in range(Ntaps):
            for k in range(2):
@@ -57,11 +58,11 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        k,<unsigned int> j]
        Ssq = abs(Xest)**2
        S_DD = partition_value(Ssq, partition, codebook)
-       err[<unsigned int> i - TrCMA] = S_DD-Ssq
+       err[<unsigned int> i] = Ssq - S_DD
        for j in range(Ntaps):
            for k in range(2):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                       k,<unsigned int> j]+muRDE*err[<unsigned int>
+                       k,<unsigned int> j] - muRDE*err[<unsigned int>
                                i]*Xest*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
     return err, wx

@@ -111,7 +111,6 @@ except:
     #use python code if cython code is not available
     FS_RDE_training = FS_RDE_training_python
 
-FS_RDE_training = FS_RDE_training_python
 try:
     from .dsp_cython import FS_CMA_training
 except:
