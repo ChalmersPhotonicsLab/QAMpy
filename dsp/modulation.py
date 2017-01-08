@@ -241,7 +241,6 @@ class QAMModulator(object):
                 bitsq = make_prbs_extXOR(PRBSorder, Nbits, PRBSseed)
             else:
                 bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
-        print(bitsq.shape)
         symbols = self.modulate(bitsq)
         noise = (np.random.randn(N) + 1.j * np.random.randn(N)) / np.sqrt(
             2)  # sqrt(2) because N/2 = sigma
