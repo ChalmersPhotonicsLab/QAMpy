@@ -40,14 +40,37 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     """
     for i in range(imax):
         try:
-            sequence = data_rx[i:i + Lsync]
-            idx_offs = utils.find_offset(sequence, data_tx)
-            idx_offs = idx_offs - i
-            data_tx_synced = np.roll(data_tx, -idx_offs)
-            return idx_offs, data_tx_synced
+            idx, data_synced = sync_Tx2Rx_single(data_tx[i], data_rx, Lsync)
+            return idx - i, data_synced
         except ValueError:
             pass
     raise DataSyncError("maximum iterations exceeded")
+
+def sync_Tx2Rx_single(data_tx, data_rx, Lsync):
+    """Sync the transmitted data sequence to the received data, which
+    might contain errors. 
+
+    Parameters
+    ----------
+    data_tx : array_like
+            the known input data sequence.
+    data_rx : array_like
+        the received data sequence which might contain errors.
+    Lsync : int
+        the number of elements to use for syncing.
+
+    Returns
+    -------
+    offset index : int
+        the index where data_rx starts in data_tx
+    data_tx_sync : array_like
+        data_tx which is synchronized to data_rx
+    """
+    sequence = data_rx[:Lsync]
+    idx_offs = utils.find_offset(sequence, data_tx)
+    idx_offs = idx_offs - i
+    data_tx_synced = np.roll(data_tx, -idx_offs)
+    return idx_offs, data_tx_synced
 
 
 def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
