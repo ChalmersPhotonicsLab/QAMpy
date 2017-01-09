@@ -23,10 +23,10 @@ theta2 = np.pi/4
 QAM = modulation.QAMModulator(4)
 snr = 12
 
-X, symbolsX, bitsX = QAM.generateSignal(N, snr, IQsep=True, PRBSorder=15)
-Y, symbolsY, bitsY = QAM.generateSignal(N, snr, IQsep=True, PRBSorder=23)
+X, symbolsX, bitsX = QAM.generateSignal(N, snr, PRBSorder=15, baudrate=fb, samplingrate=fs)
+Y, symbolsY, bitsY = QAM.generateSignal(N, snr, PRBSorder=23, baudrate=fb, samplingrate=fs)
 
-omega = 2*np.pi*np.linspace(-fs/2, fs/2, N, endpoint=False)
+omega = 2*np.pi*np.linspace(-fs/2, fs/2, os*N, endpoint=False)
 t_pmd = 75e-12
 
 H = H_PMD(theta, t_pmd, omega)
@@ -36,15 +36,24 @@ Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
-Ex, Ey, wx, wy, err = equalisation.FS_CMA(SS[0], SS[1], 10000, 40, 2, 0.1)
+Ex, Ey, wx, wy, err = equalisation.FS_CMA(SS[0], SS[1], 10000, 40, os, 0.1)
 
-print(QAM.cal_BER(Ex, bits_tx=bitsX))
-print(QAM.cal_BER(Ey, bits_tx=bitsY))
-print(QAM.cal_BER(Ey, bits_tx=bitsX))
-print(QAM.cal_BER(Ex, bits_tx=bitsY))
+Ex = Ex[1000:-1000]
+Ey = Ey[1000:-1000]
 
-evmX = cal_blind_evm(X[::2], 4)
-evmY = cal_blind_evm(Y[::2], 4)
+try:
+    berx = (QAM.cal_BER(Ex, bits_tx=bitsX, Lsync=100))
+except:
+    berx = (QAM.cal_BER(Ey, bits_tx=bitsX, Lsync=100))
+try:
+    bery = (QAM.cal_BER(Ey, bits_tx=bitsY, Lsync=100))
+except:
+    bery = (QAM.cal_BER(Ex, bits_tx=bitsY, Lsync=100))
+
+print("X BER %f dB"%(10*np.log10(berx[0])))
+print("Y BER %f dB"%(10*np.log10(bery[0])))
+evmX = cal_blind_evm(X[::os], 4)
+evmY = cal_blind_evm(Y[::os], 4)
 evmEx = cal_blind_evm(Ex, 4)
 evmEy = cal_blind_evm(Ey, 4)
 
