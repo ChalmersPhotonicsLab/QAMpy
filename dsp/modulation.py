@@ -110,6 +110,7 @@ class QAMModulator(object):
             self._scale = theory.MQAMScalingFactor(self.M)
         else:
             self._scale = (abs(self.symbols)**2).mean()
+        self.symbols /= np.sqrt(self._scale)
         self.coding = None
         self._graycode = gray_code_for_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
@@ -147,7 +148,7 @@ class QAMModulator(object):
         # the below is not really the fastest method but easy encoding/decoding is possible
         return np.fromstring(
             b''.join(datab.decode(self._encoding)),
-            dtype=np.complex128) / np.sqrt(self._scale)
+            dtype=np.complex128) 
 
     def decode(self, symbols):
         """
@@ -165,7 +166,7 @@ class QAMModulator(object):
         """
         bt = bitarray()
         bt.encode(self._encoding, symbols.view(dtype="S16"))
-        return np.fromstring(bt.unpack(), dtype=np.bool)
+        return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
 
     def quantize(self, signal):
         """
@@ -183,7 +184,7 @@ class QAMModulator(object):
         idx      : array_like
             1D array of indices into QAMmodulator.symbols
         """
-        return quantize(signal, self.symbols / np.sqrt(self._scale))
+        return quantize(signal, self.symbols)
 
     def generateSignal(self,
                        N,
@@ -280,7 +281,7 @@ class QAMModulator(object):
         data_demod = self.quantize(signal_rx)[0]
         return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
 
-    def cal_BER(self, signal_rx, bits_tx=None, PRBS=None, Lsync=150, imax=200):
+    def cal_BER(self, signal_rx, bits_tx=None, PRBS=None, Lsync=100, imax=5):
         assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
         bits_demod = self.decode(self.quantize(signal_rx)[0])
         if bits_tx is None:
@@ -288,22 +289,20 @@ class QAMModulator(object):
                 bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0], PRBS[1])
             else:
                 bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0])
-        else:
-            if len(bits_demod) < len(bits_tx):
-                bits_demod = bits_demod[:len(bits_tx)]
-            else:
-                bits_tx = bits_tx[:len(bits_demod)]
+                bits_tx = ber_functions.adjust_data_length(bits_tx, bits_demod)
         i = 0
-        while i < 4:
+        while i < 5:
+            print(i)
             if i == 4:
-                raise Error("could not sync data")
+                raise ber_functions.DataSyncError("could not sync signal to sequence")
             try:
                 idx, tx_synced = ber_functions.sync_Tx2Rx(bits_tx, bits_demod, Lsync, imax)
                 break
             except:
                 signal_rx *= 1.j  # rotate by 90 degrees
                 #TODO need to adjust length again
-                bits_demod = self.decode(self.quantize(signal_rx[0]))
+                bits_demod = self.decode(self.quantize(signal_rx)[0])
+                bits_demod = ber_functions.adjust_data_length(bits_demod, bits_tx)
             i += 1
         return ber_functions._cal_BER_only(tx_synced, bits_demod)
 
