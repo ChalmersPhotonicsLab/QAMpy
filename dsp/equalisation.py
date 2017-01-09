@@ -175,13 +175,9 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     # run CMA
     err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy)
     # equalise data points. Reuse samples used for channel estimation
-    syms = L // 2 - Ntaps // os - 1
     X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
-    dump = 1000
-    EestX = EestX[dump:-dump]
-    EestY = EestY[dump:-dump]
+    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
+    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
     return EestX, EestY, wx, wy, err
 
 def _init_orthogonaltaps(wx):
@@ -337,13 +333,9 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
-    syms = L // 2 - Ntaps // os - 1
     X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))[:syms]
-    dump = 1000
-    EestX = EestX[dump:-dump]
-    EestY = EestY[dump:-dump]
+    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
+    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
     return EestX, EestY, wx, wy, err_cma, err_rde
 
 
