@@ -110,9 +110,7 @@ def adjust_data_length(data_tx, data_rx):
     if len(data_tx) > len(data_rx):
         return data_tx[:len(data_rx)]
     elif len(data_tx) < len(data_rx):
-        for i in range(len(data_rx) // len(data_tx)):
-            data_tx = np.hstack([data_tx, data_tx])
-        data_tx = np.hstack([data_tx, data_tx[len(data_rx) % len(data_tx)]])
+        data_tx = np.hstack([data_tx, data_tx[:len(data_rx)-len(data_tx)]])
         return data_tx
     else:
         return data_tx
