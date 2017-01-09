@@ -145,6 +145,11 @@ def linspacestep(start, step, N):
     """
     return np.arange(start, start + N * step, step=step)
 
+def dump_edges(E, N):
+    """
+    Remove N samples from the front and end of the input field.
+    """
+    return E[N:-N]
 
 def lfsr_int(seed, mask):
     """
