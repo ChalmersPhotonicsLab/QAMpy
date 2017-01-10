@@ -119,15 +119,15 @@ except:
     FS_CMA_training = FS_CMA_training_python
 
 
-def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
+def FS_CMA(E, TrSyms, Ntaps, os, mu):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Constant Modulus Algorithm (CMA)
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
 
     Parameters
     ----------
-    Ex, Ey     : array_like
-       x and y polarisation of the signal field
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
 
     TrSyms : int
        number of symbols to use for training needs to be less than len(Ex)
@@ -144,8 +144,8 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     Returns
     -------
 
-    EestX, EestY : array_like
-       equalised x and y polarisation of the field
+    E     : array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
 
     wx, wy    : array_like
        equaliser taps for the x and y polarisation
@@ -153,14 +153,11 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     err       : array_like
        CMA estimation error for x and y polarisation
     """
-    Ex = Ex.flatten()
-    Ey = Ey.flatten()
     # if can't have more training samples than field
-    assert TrSyms*os < len(Ex)-Ntaps, "More training samples than"\
+    L = E.shape[1]
+    assert TrSyms*os < L - Ntaps, "More training samples than"\
                                     " overall samples"
-    L = len(Ex)
     mu = mu / Ntaps
-    E = np.vstack([Ex, Ey])
     # scale signal
     P = np.mean(utils.cabssquared(E))
     E = E / np.sqrt(P)
@@ -178,7 +175,7 @@ def FS_CMA(Ex, Ey, TrSyms, Ntaps, os, mu):
     X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
     EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
     EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
-    return EestX, EestY, wx, wy, err
+    return np.vstack([EestX, EestY]), wx, wy, err
 
 def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
@@ -255,7 +252,7 @@ def partition_value(signal, partitions, codebook):
     return quanta
 
 
-def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
+def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     """
     Equalisation of PMD and residual dispersion of a 16 QAM signal based on a radius directed equalisation (RDE)
     fractionally spaced Constant Modulus Algorithm (FS-CMA)
@@ -263,8 +260,8 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
 
     Parameters
     ----------
-    Ex, Ey     : array_like
-       x and y polarisation of the signal field
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
 
     TrCMA : int
        number of symbols to use for training the initial CMA needs to be less than len(Ex)
@@ -287,8 +284,8 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     Returns
     -------
 
-    EestX, EestY : array_like
-       equalised x and y polarisation of the field
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
 
     wx, wy    : array_like
        equaliser taps for the x and y polarisation
@@ -296,9 +293,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     err_cma, err_rde  : array_like
        CMA and RDE estimation error for x and y polarisation
     """
-    Ex = Ex.flatten()
-    Ey = Ey.flatten()
-    L = len(Ex)
+    L = E.shape[1]
     muCMA = muCMA
     muRDE = muRDE
     # if can't have more training samples than field
@@ -308,7 +303,6 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     R = 13.2
     code = np.array([2., 10., 18.])
     part = np.array([5.24, 13.71])
-    E = np.vstack([Ex, Ey])
     # scale signal
     P = np.mean(utils.cabssquared(E))
     #E = E / np.sqrt(P)
@@ -337,7 +331,7 @@ def FS_CMA_RDE_16QAM(Ex, Ey, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
     EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
     EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
-    return EestX, EestY, wx, wy, err_cma, err_rde
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 
 def CDcomp(E, fs, N, L, D, wl):
