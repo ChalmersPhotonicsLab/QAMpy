@@ -42,13 +42,13 @@ Ex = Ex[1000:-1000]
 Ey = Ey[1000:-1000]
 
 try:
-    berx = (QAM.cal_BER(Ex, bits_tx=bitsX, Lsync=100))
+    berx = (QAM.cal_BER(Ex, bits_tx=bitsX, Lsync=50))
 except:
-    berx = (QAM.cal_BER(Ey, bits_tx=bitsX, Lsync=100))
+    berx = (QAM.cal_BER(Ey, bits_tx=bitsX, Lsync=50))
 try:
-    bery = (QAM.cal_BER(Ey, bits_tx=bitsY, Lsync=100))
+    bery = (QAM.cal_BER(Ey, bits_tx=bitsY, Lsync=50))
 except:
-    bery = (QAM.cal_BER(Ex, bits_tx=bitsY, Lsync=100))
+    bery = (QAM.cal_BER(Ex, bits_tx=bitsY, Lsync=50))
 
 print("X BER %f dB"%(10*np.log10(berx[0])))
 print("Y BER %f dB"%(10*np.log10(bery[0])))

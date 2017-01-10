@@ -289,7 +289,8 @@ class QAMModulator(object):
                 bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0], PRBS[1])
             else:
                 bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0])
-                bits_tx = ber_functions.adjust_data_length(bits_tx, bits_demod)
+        else:
+            bits_tx = ber_functions.adjust_data_length(bits_tx, bits_demod)
         i = 0
         while i < 5:
             print(i)
