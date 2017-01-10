@@ -144,7 +144,7 @@ def _cal_BER_only(data_rx, data_tx, threshold=0.2):
     ValueError
         if ber>threshold, as this indicates a sync error.
     """
-    errs = np.count_nonzero(data_rx - data_tx)
+    errs = np.count_nonzero(data_rx != data_tx)
     N = len(data_tx)
     ber = errs / N
     if ber > threshold:
