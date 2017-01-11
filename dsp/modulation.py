@@ -293,7 +293,6 @@ class QAMModulator(object):
             bits_tx = ber_functions.adjust_data_length(bits_tx, bits_demod)
         i = 0
         while i < 5:
-            print(i)
             if i == 4:
                 raise ber_functions.DataSyncError("could not sync signal to sequence")
             try:
