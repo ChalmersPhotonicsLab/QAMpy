@@ -300,7 +300,6 @@ class QAMModulator(object):
                 break
             except:
                 signal_rx *= 1.j  # rotate by 90 degrees
-                #TODO need to adjust length again
                 bits_demod = self.decode(self.quantize(signal_rx)[0])
                 bits_demod = ber_functions.adjust_data_length(bits_demod, bits_tx)
             i += 1
