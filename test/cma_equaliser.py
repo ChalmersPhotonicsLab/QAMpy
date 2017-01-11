@@ -34,7 +34,9 @@ Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
-E, wx, wy, err = equalisation.FS_CMA(SS,  10000, 40, 2, 0.1)
+E, wx, wy, err = equalisation.FS_CMA(SS,  int(SS.shape[1]/os-40), 40, os, 0.01)
+print(E.shape)
+print(SS.shape)
 
 
 evmX = cal_blind_evm(X[::2], 4)

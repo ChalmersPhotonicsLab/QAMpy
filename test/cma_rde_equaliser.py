@@ -40,7 +40,7 @@ Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
-E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE_16QAM(SS, 10000, 40000, 30, 2, 0.0001, 0.0003)
+E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE_16QAM(SS, 30000, 30000, 30, 2, 0.001, 0.0003)
 
 
 evmX = cal_blind_evm(X[::2], M)
