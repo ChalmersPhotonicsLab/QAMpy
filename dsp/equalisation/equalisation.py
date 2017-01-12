@@ -189,6 +189,9 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     mu      : float
        step size parameter
 
+    M       : integer
+       QAM order 
+
     Returns
     -------
     E = utils.normalise_and_center(E)
@@ -252,6 +255,9 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
 
     muRDE      : float
        step size parameter for the RDE algorithm
+
+    M       : integer
+       QAM order
 
     Returns
     -------
