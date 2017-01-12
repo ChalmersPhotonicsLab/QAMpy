@@ -40,6 +40,15 @@ def calculate_MQAM_symbols(M):
     else:
         return calculate_square_QAM_symbols(M)
 
+def calculate_MQAM_scaling_factor(M):
+    """
+    Calculate the scaling factor for normalising MQAM symbols to 1 average Power
+    """
+    if not self.bits % 2:
+        scale = theory.MQAMScalingFactor(self.M)
+    else:
+        symbols = calculate_MQAM_symbols(M)
+        scale = (abs(symbols)**2).mean()
 
 def calculate_square_QAM_symbols(M):
     """
@@ -106,10 +115,7 @@ class QAMModulator(object):
         """
         self.M = M
         self.symbols = calculate_MQAM_symbols(M)
-        if not self.bits % 2:
-            self._scale = theory.MQAMScalingFactor(self.M)
-        else:
-            self._scale = (abs(self.symbols)**2).mean()
+        self._scale = calculate_MQAM_scaling_factor(M)
         self.symbols /= np.sqrt(self._scale)
         self.coding = None
         self._graycode = gray_code_for_qam(M)
