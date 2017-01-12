@@ -17,6 +17,24 @@ except:
     Warning("can not use cython training functions")
 from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
 
+def _init_orthogonaltaps(wx):
+    wy = np.zeros(wx.shape, dtype=np.complex128)
+    # initialising the taps to be ortthogonal to the x polarisation
+    #wy = -np.conj(wx)[::-1,::-1]
+    wy = wx[::-1,::-1]
+    # centering the taps
+    wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
+    wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
+    delay = abs(wYmaxidx[0] - wXmaxidx[0])
+    pad = np.zeros((2, delay), dtype=np.complex128)
+    if delay > 0:
+        wy = wy[:, delay:]
+        wy = np.hstack([wy, pad])
+    elif delay < 0:
+        wy = wy[:, 0:Ntaps - delay - 1]
+        wy = np.hstack([pad, wy])
+    return wy
+
 def FS_MCMA(E, TrSyms, Ntaps, os, mu):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
@@ -136,24 +154,6 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu):
     EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
     EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
     return np.vstack([EestX, EestY]), wx, wy, err
-
-def _init_orthogonaltaps(wx):
-    wy = np.zeros(wx.shape, dtype=np.complex128)
-    # initialising the taps to be ortthogonal to the x polarisation
-    #wy = -np.conj(wx)[::-1,::-1]
-    wy = wx[::-1,::-1]
-    # centering the taps
-    wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
-    wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
-    delay = abs(wYmaxidx[0] - wXmaxidx[0])
-    pad = np.zeros((2, delay), dtype=np.complex128)
-    if delay > 0:
-        wy = wy[:, delay:]
-        wy = np.hstack([wy, pad])
-    elif delay < 0:
-        wy = wy[:, 0:Ntaps - delay - 1]
-        wy = np.hstack([pad, wy])
-    return wy
 
 def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     """
