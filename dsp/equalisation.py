@@ -53,7 +53,7 @@ def FS_MCMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
         Xest = np.sum(wx * X)
         err[i] = (np.abs(Xest.real)**2 -0.5) * Xest.real + (np.abs(Xest.imag)**2 - 0.5)*Xest.imag*1.j
         wx -= mu * err[i] * np.conj(X)
-    return abs(err), wx
+    return err, wx
 
 
 def FS_CMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
@@ -141,14 +141,15 @@ def FS_MRDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
     """
     err = np.zeros(TrRDE, dtype=np.complex)
+    print(part, code)
     for i in range(TrRDE):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
         Ssq = Xest.real**2 + 1.j * Xest.imag**2
-        R = partition_value(Ssq.real, part.real, code.real) + partition_value(Ssq.imag, part.imag, code.imag)
+        R = partition_value(Ssq.real, part.real, code.real) + partition_value(Ssq.imag, part.imag, code.imag)*1.j
         err[i] = (Ssq.real - R.real)*Xest.real + (Ssq.imag - R.imag)*1.j*Xest.imag
         wx -= muRDE * err[i] * np.conj(X)
-    return np.abs(err), wx
+    return err, wx
 
 
 def FS_RDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
@@ -216,15 +217,16 @@ try:
 except:
     Warning("can not use cython CMA training")
     #use python code if cython code is not available
-    FS_CMA_training = FS_CMA_training_python
+    FS_CMA_training = FS_MCMA_training_python
 
 try:
     from .dsp_cython import FS_MRDE_training
 except:
     Warning("can not use cython MRDE training")
     #use python code if cython code is not available
-    FS_RDE_training = FS_MRDE_training_python
+    FS_MRDE_training = FS_MRDE_training_python
 
+FS_MRDE_training = FS_MRDE_training_python
 try:
     from .dsp_cython import FS_MCMA_training
 except:
@@ -454,6 +456,9 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     muRDE      : float
        step size parameter for the RDE algorithm
 
+    M     : int
+       M-QAM order
+
     Returns
     -------
 
@@ -471,38 +476,37 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
     """
     L = E.shape[1]
-    muCMA = muCMA
-    muRDE = muRDE
     # if can't have more training samples than field
     assert (TrCMA + TrRDE
             ) * os < L - Ntaps, "More training samples than overall samples"
     # constellation properties
-    R = 13.2
-    code = np.array([2., 10., 18.])
-    part = np.array([5.24, 13.71])
+    R = 1.32
+    #code = np.array([2., 10., 18.])
+    #part = np.array([5.24, 13.71])
+    part, code = generate_partition_codes_complex(16)
     # scale signal
     P = np.mean(utils.cabssquared(E))
     E = E / np.sqrt(P)
-    err_cma = np.zeros((2, TrCMA), dtype='float')
-    err_rde = np.zeros((2, TrRDE), dtype='float')
+    err_cma = np.zeros((2, TrCMA), dtype=np.float64)
+    err_rde = np.zeros((2, TrRDE), dtype=np.float64)
     # ** training for X polarisation **
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
     # find taps with CMA
-    err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
+    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
     # scale taps for RDE
     #wx = np.sqrt(R) * wx
     # use refine taps with RDE
-    err_rde[0, :], wx = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+    err_rde[0, :], wx = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
                                         part, code)
     # ** training for y polarisation **
-    wy = _init_orthogonaltaps(wx)/np.sqrt(R)
+    wy = _init_orthogonaltaps(wx)
     # find taps with CMA
-    err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
+    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
     # scale taps for RDE
     #wy = np.sqrt(R) * wy
     # use refine taps with RDE
-    err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+    err_rde[1, :], wy = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
     X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
@@ -528,7 +532,7 @@ def generate_partition_codes_complex(M):
     """
     syms = calculate_MQAM_symbols(M)
     scale = calculate_MQAM_scaling_factor(M)
-    syms /= scale
+    syms /= np.sqrt(scale)
     syms_r = np.unique(abs(syms.real)**4/abs(syms.real)**2)
     syms_i = np.unique(abs(syms.imag)**4/abs(syms.imag)**2)
     codes = syms_r + 1.j * syms_i
@@ -603,8 +607,8 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
        CMA and RDE estimation error for x and y polarisation
     """
     L = E.shape[1]
-    muCMA = muCMA
-    muRDE = muRDE
+    #muCMA = muCMA
+    #muRDE = muRDE
     # if can't have more training samples than field
     assert (TrCMA + TrRDE
             ) * os < L - Ntaps, "More training samples than overall samples"
@@ -621,20 +625,20 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
     # find taps with CMA
-    err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
+    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
     # scale taps for RDE
     #wx = np.sqrt(R) * wx
     # use refine taps with RDE
-    err_rde[0, :], wx = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+    err_rde[0, :], wx = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
                                         part, code)
     # ** training for y polarisation **
     wy = _init_orthogonaltaps(wx)/np.sqrt(R)
     # find taps with CMA
-    err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
+    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
     # scale taps for RDE
     #wy = np.sqrt(R) * wy
     # use refine taps with RDE
-    err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+    err_rde[1, :], wy = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
     X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
