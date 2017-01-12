@@ -143,8 +143,8 @@ def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     for i in range(0, TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
-        err[i] = abs(Xest) - R
-        wx -= mu * err[i] * Xest * np.conj(X)
+        err[i] = (abs(Xest)**2 - R)*Xest
+        wx -= mu * err[i] *  np.conj(X)
     return err, wx
 
 def FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
@@ -242,12 +242,12 @@ def FS_RDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     wx    : array_like
        equaliser taps
     """
-    err = np.zeros(TrRDE, dtype=np.float)
+    err = np.zeros(TrRDE, dtype=np.complex128)
     for i in range(TrRDE):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
         Ssq = abs(Xest)**2
         S_DD = partition_value(Ssq, part, code)
-        err[i] = Ssq - S_DD #- Ssq
-        wx -= muRDE * err[i] * Xest * np.conj(X)
+        err[i] = (Ssq - S_DD)*Xest
+        wx -= muRDE * err[i] * np.conj(X)
     return err, wx

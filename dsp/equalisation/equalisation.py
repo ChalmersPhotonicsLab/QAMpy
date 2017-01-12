@@ -213,7 +213,7 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     # scale signal
     E = utils.normalise_and_center(E)
     R = _calculate_Rconstant(M)
-    err = np.zeros((2, TrSyms), dtype='float')
+    err = np.zeros((2, TrSyms), dtype=np.complex128)
     # ** training for X polarisation **
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
@@ -280,8 +280,8 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     part, code = generate_partition_codes_radius(M)
     # scale signal
     E = utils.normalise_and_center(E)
-    err_cma = np.zeros((2, TrCMA), dtype='float')
-    err_rde = np.zeros((2, TrRDE), dtype='float')
+    err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
+    err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
     # ** training for X polarisation **
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
