@@ -141,7 +141,6 @@ def FS_MRDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
     """
     err = np.zeros(TrRDE, dtype=np.complex)
-    print(part, code)
     for i in range(TrRDE):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
