@@ -87,7 +87,7 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        k,<unsigned int> j] - muRDE*err[<unsigned int>
                                i]*Xest*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
-    return np.abs(err), wx
+    return err, wx
 
 def FS_MRDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
         int TrRDE, int Ntaps, unsigned int os,
@@ -116,7 +116,7 @@ def FS_MRDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        k,<unsigned int> j] - muRDE*err[<unsigned int>
                                i]*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
-    return np.abs(err), wx
+    return err, wx
 
 
 def lfsr_ext(int seed, taps, int nbits):
