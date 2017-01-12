@@ -55,7 +55,7 @@ def partition_value(signal, partitions, codebook):
     quanta = codebook[index]
     return quanta
 
-def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx):
+def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
 
@@ -78,6 +78,9 @@ def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx):
 
     wx     : array_like
        initial equaliser taps
+
+    R      : complex
+       CMA cost constant, the real part applies to the real error the imaginary to the imaginary
     
     Returns
     -------
@@ -96,11 +99,11 @@ def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx):
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
-        err[i] = (np.abs(Xest.real)**2 -0.5) * Xest.real + (np.abs(Xest.imag)**2 - 0.5)*Xest.imag*1.j
+        err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
         wx -= mu * err[i] * np.conj(X)
     return err, wx
 
-def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx):
+def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the CMA algorithm to determine the equaliser taps.
 
@@ -124,6 +127,9 @@ def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx):
     wx     : array_like
        initial equaliser taps
 
+    R      : float
+       CMA cost constant, the real part applies to the real error the imaginary to the imaginary
+
     Returns
     -------
 
@@ -137,7 +143,7 @@ def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx):
     for i in range(0, TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
-        err[i] = abs(Xest) - 1
+        err[i] = abs(Xest) - R
         wx -= mu * err[i] * Xest * np.conj(X)
     return err, wx
 

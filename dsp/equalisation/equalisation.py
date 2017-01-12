@@ -15,7 +15,7 @@ try:
 except:
     #use python code if cython code is not available
     Warning("can not use cython training functions")
-from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
+    from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
 
 def _apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
@@ -27,13 +27,13 @@ def _apply_filter(E, wx, wy, Ntaps, os):
 def _calculate_Rconstant(M):
     syms = calculate_MQAM_symbols(M)
     scale = calculate_MQAM_scaling_factor(M)
-    sysm /= np.sqrt(scale)
+    syms /= np.sqrt(scale)
     return np.mean(abs(syms)**4)/np.mean(abs(syms)**2)
 
 def _calculate_Rconstant_complex(M):
     syms = calculate_MQAM_symbols(M)
     scale = calculate_MQAM_scaling_factor(M)
-    sysm /= np.sqrt(scale)
+    syms /= np.sqrt(scale)
     return np.mean(syms.real**4)/np.mean(syms.real**2) + 1.j * np.mean(syms.imag**4)/np.mean(syms.imag**2)
 
 def _init_orthogonaltaps(wx):
@@ -104,7 +104,7 @@ def generate_partition_codes_radius(M):
     parts = codes[:-1] + np.diff(codes)/2
     return parts, codes
 
-def FS_MCMA(E, TrSyms, Ntaps, os, mu):
+def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
@@ -125,6 +125,9 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu):
 
     mu      : float
        step size parameter
+
+    M       : integer
+       QAM order 
 
     Returns
     -------
@@ -147,6 +150,7 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu):
     assert TrSyms*os < L - Ntaps, "More training samples than"\
                                     " overall samples"
     mu = mu / Ntaps
+    R = _calculate_Rconstant_complex(M)
     # scale signal
     E = utils.normalise_and_center(E)
     err = np.zeros((2, TrSyms), dtype=np.complex128)
@@ -154,16 +158,16 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu):
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
     # run CMA
-    err[0, :], wx = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx)
+    err[0, :], wx = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
     # ** training for y polarisation **
     wy = _init_orthogonaltaps(wx)
     # run CMA
-    err[1, :], wy = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wy)
+    err[1, :], wy = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     # equalise data points. Reuse samples used for channel estimation
     EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
-def FS_CMA(E, TrSyms, Ntaps, os, mu):
+def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Constant Modulus Algorithm (CMA)
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
@@ -205,21 +209,22 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu):
     mu = mu / Ntaps
     # scale signal
     E = utils.normalise_and_center(E)
+    R = _calculate_Rconstant(M)
     err = np.zeros((2, TrSyms), dtype='float')
     # ** training for X polarisation **
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
     # run CMA
-    err[0, :], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx)
+    err[0, :], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
     # ** training for y polarisation **
     wy = _init_orthogonaltaps(wx)
     # run CMA
-    err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy)
+    err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     # equalise data points. Reuse samples used for channel estimation
     EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
-def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
+def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     """
     Equalisation of PMD and residual dispersion of a 16 QAM signal based on a radius directed equalisation (RDE)
     fractionally spaced Constant Modulus Algorithm (FS-CMA)
@@ -265,7 +270,8 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     assert (TrCMA + TrRDE
             ) * os < L - Ntaps, "More training samples than overall samples"
     # constellation properties
-    R = 1.32
+    R = _calculate_Rconstant(M)
+    #R = 1.32
     code = np.array([2., 10., 18.])/10
     #part = np.array([5.24, 13.71])
     part = np.array([0.6, 1.4])
@@ -277,18 +283,18 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
     # find taps with CMA
-    err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
+    err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
     # scale taps for RDE
-    wx = np.sqrt(R) * wx
+    #wx = np.sqrt(R) * wx
     # use refine taps with RDE
     err_rde[0, :], wx = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
                                         part, code)
     # ** training for y polarisation **
-    wy = _init_orthogonaltaps(wx)/np.sqrt(R)
+    wy = _init_orthogonaltaps(wx)#/np.sqrt(R)
     # find taps with CMA
-    err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
+    err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy, R)
     # scale taps for RDE
-    wy = np.sqrt(R) * wy
+    #wy = np.sqrt(R) * wy
     # use refine taps with RDE
     err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
@@ -353,6 +359,7 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     #code = np.array([2., 10., 18.])
     #part = np.array([5.24, 13.71])
     part, code = generate_partition_codes_complex(16)
+    R = _calculate_Rconstant_complex(M)
     # scale signal
     E = utils.normalise_and_center(E)
     err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
@@ -361,7 +368,7 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
     wx[1, Ntaps // 2] = 1
     # find taps with CMA
-    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
+    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
     # scale taps for RDE
     #wx = np.sqrt(R) * wx
     # use refine taps with RDE
@@ -370,7 +377,7 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     # ** training for y polarisation **
     wy = _init_orthogonaltaps(wx)
     # find taps with CMA
-    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
+    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy, R)
     # scale taps for RDE
     #wy = np.sqrt(R) * wy
     # use refine taps with RDE
