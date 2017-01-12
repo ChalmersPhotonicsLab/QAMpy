@@ -44,11 +44,13 @@ def calculate_MQAM_scaling_factor(M):
     """
     Calculate the scaling factor for normalising MQAM symbols to 1 average Power
     """
-    if not self.bits % 2:
+    bits = np.log2(M)
+    if not bits % 2:
         scale = theory.MQAMScalingFactor(M)
     else:
         symbols = calculate_MQAM_symbols(M)
         scale = (abs(symbols)**2).mean()
+    return scale
 
 def calculate_square_QAM_symbols(M):
     """
