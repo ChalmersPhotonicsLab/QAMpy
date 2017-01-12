@@ -94,6 +94,9 @@ def supergauss(x, A, x0, w, o):
     return A * np.exp(-((x - x0) / w)**(2 * o) / 2.)
 
 def normalise_and_center(E):
+    """
+    Normalise and center the input field, by calculating the mean power for each polarisation separate and dividing by its square-root
+    """
     if E.ndim > 1:
         for i in range(2):
             E[i] -= np.mean(E[i])
