@@ -17,7 +17,7 @@ def H_PMD(theta, t, omega): #see Ip and Kahn JLT 25, 2033 (2007)
 fb = 40.e9
 os = 2
 fs = os*fb
-N = 2**18
+N = 10**5
 theta = np.pi/2.45
 theta2 = np.pi/4
 M = 4
