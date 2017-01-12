@@ -36,6 +36,11 @@ def _calculate_Rconstant_complex(M):
     syms /= np.sqrt(scale)
     return np.mean(syms.real**4)/np.mean(syms.real**2) + 1.j * np.mean(syms.imag**4)/np.mean(syms.imag**2)
 
+def _init_taps(Ntaps):
+    wx = np.zeros((2, Ntaps), dtype=np.complex128)
+    wx[0, Ntaps // 2] = 1
+    return wx
+
 def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
@@ -155,8 +160,7 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
     E = utils.normalise_and_center(E)
     err = np.zeros((2, TrSyms), dtype=np.complex128)
     # ** training for X polarisation **
-    wx = np.zeros((2, Ntaps), dtype=np.complex128)
-    wx[1, Ntaps // 2] = 1
+    wx = _init_taps(Ntaps)
     # run CMA
     err[0, :], wx = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
     # ** training for y polarisation **
@@ -215,8 +219,7 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     R = _calculate_Rconstant(M)
     err = np.zeros((2, TrSyms), dtype=np.complex128)
     # ** training for X polarisation **
-    wx = np.zeros((2, Ntaps), dtype=np.complex128)
-    wx[1, Ntaps // 2] = 1
+    wx = _init_taps(Ntaps)
     # run CMA
     err[0, :], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
     # ** training for y polarisation **
@@ -283,8 +286,7 @@ def FS_CMA_RDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
     err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
     # ** training for X polarisation **
-    wx = np.zeros((2, Ntaps), dtype=np.complex128)
-    wx[1, Ntaps // 2] = 1
+    wx = _init_taps(Ntaps)
     # find taps with CMA
     err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
     # use refine taps with RDE
@@ -362,8 +364,7 @@ def FS_MCMA_MRDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
     err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
     # ** training for X polarisation **
-    wx = np.zeros((2, Ntaps), dtype=np.complex128)
-    wx[1, Ntaps // 2] = 1
+    wx = _init_taps(Ntaps)
     # find taps with CMA
     err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
     # refine taps with RDE
