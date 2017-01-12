@@ -41,7 +41,7 @@ SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
 #E, wx, wy, err, err_rde = equalisation.FS_MCMA_MRDE_general(SS, len(SS[0])//os//2 - 31, len(SS[0])//os//2 - 31, 30, 2, 0.001, 0.0003, 16)
-E, wx, wy, err, err_rde = equalisation.FS_MCMA_MRDE_general(SS, 30000, 30000, 30, 2, 0.001, 0.0003, 16)
+E, wx, wy, err, err_rde = equalisation.FS_MCMA_MRDE(SS, 30000, 30000, 30, 2, 0.001, 0.0003, 16)
 
 
 evmX = cal_blind_evm(X[::2], M)

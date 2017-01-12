@@ -227,9 +227,9 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
-def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
+def FS_CMA_RDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     """
-    Equalisation of PMD and residual dispersion of a 16 QAM signal based on a radius directed equalisation (RDE)
+    Equalisation of PMD and residual dispersion of a M-QAM signal based on a radius directed equalisation (RDE)
     fractionally spaced Constant Modulus Algorithm (FS-CMA)
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
 
@@ -301,7 +301,7 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
-def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
+def FS_MCMA_MRDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     """
     Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
     fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
