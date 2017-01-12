@@ -18,8 +18,10 @@ fb = 40.e9
 os = 2
 fs = os*fb
 N = 2**18
+mu = 4e-4
 theta = np.pi/2.45
 theta2 = np.pi/4
+
 
 X, XIdata, XQdata = signals.generateRandomQPSKData(N, 14, baudrate=fb, samplingrate=fs)
 Y, YIdata, YQdata = signals.generateRandomQPSKData(N, 14, baudrate=fb, samplingrate=fs, orderI=7, orderQ=15)
@@ -34,8 +36,8 @@ Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
-E, wx, wy, err = equalisation.FS_CMA(SS,  int(SS.shape[1]/os-40), 40, os, 0.01, 4)
-E_m, wx_m, wy_m, err_m = equalisation.FS_MCMA(SS,  int(SS.shape[1]/os-40), 40, os, 0.01, 4)
+E, wx, wy, err = equalisation.FS_CMA(SS,  int(SS.shape[1]/os-40), 40, os, mu, 4)
+E_m, wx_m, wy_m, err_m = equalisation.FS_MCMA(SS,  int(SS.shape[1]/os-40), 40, os, mu, 4)
 print(E.shape)
 print(SS.shape)
 
@@ -54,7 +56,7 @@ plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx))
 plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
 plt.legend()
 plt.subplot(132)
-plt.title('Recovered CMA')
+plt.title('Recovered MCMA')
 plt.plot(E_m[0].real, E_m[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx_m))
 plt.plot(E_m[1].real, E_m[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy_m*100))
 plt.legend()
