@@ -20,8 +20,10 @@ fs = os*fb
 N = 2**18
 theta = np.pi/2.45
 theta2 = np.pi/4
-QAM = modulation.QAMModulator(4)
+M = 4
+QAM = modulation.QAMModulator(M)
 snr = 12
+mu = 1e-3
 
 X, symbolsX, bitsX = QAM.generateSignal(N, snr, PRBSorder=15, baudrate=fb, samplingrate=fs)
 Y, symbolsY, bitsY = QAM.generateSignal(N, snr, PRBSorder=23, baudrate=fb, samplingrate=fs)
@@ -36,7 +38,7 @@ Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
-E, wx, wy, err = equalisation.FS_CMA(SS, 10000, 40, os, 0.1)
+E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, 30, os, mu, M)
 
 E = E[:,1000:-1000]
 
