@@ -278,7 +278,7 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_rde = np.zeros((2, TrRDE), dtype='float')
     # ** training for X polarisation **
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
-    wx[1, Ntapsk // 2] = 1
+    wx[1, Ntaps // 2] = 1
     # find taps with CMA
     err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
     # use refine taps with RDE
