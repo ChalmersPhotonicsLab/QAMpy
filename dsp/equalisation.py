@@ -204,30 +204,30 @@ def FS_RDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
 
 
 try:
-    from .dsp_cython import FS_RDE_training, partition_value
+    from .dsp_cython import FS_RDE_training
 except:
     Warning("can not use cython RDE training")
     #use python code if cython code is not available
     FS_RDE_training = FS_RDE_training_python
 
 try:
-    from .dsp_cython import FS_CMA_training 
+    from .dsp_cython import FS_CMA_training
 except:
     Warning("can not use cython CMA training")
     #use python code if cython code is not available
     FS_CMA_training = FS_CMA_training_python
 
 try:
-    from .dsp_cython import FS_MRDE_training, partition_value
+    from .dsp_cython import FS_MRDE_training
 except:
-    Warning("can not use cython RDE training")
+    Warning("can not use cython MRDE training")
     #use python code if cython code is not available
     FS_RDE_training = FS_MRDE_training_python
 
 try:
     from .dsp_cython import FS_MCMA_training
 except:
-    Warning("can not use cython CMA training")
+    Warning("can not use cython MCMA training")
     #use python code if cython code is not available
     FS_MCMA_training = FS_MCMA_training_python
 
