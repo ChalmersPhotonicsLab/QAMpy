@@ -281,9 +281,7 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
-    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
@@ -367,9 +365,7 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_rde[1, :], wy = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
-    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 
