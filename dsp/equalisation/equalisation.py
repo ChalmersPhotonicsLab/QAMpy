@@ -35,6 +35,56 @@ def _init_orthogonaltaps(wx):
         wy = np.hstack([pad, wy])
     return wy
 
+def generate_partition_codes_complex(M):
+    """
+    Generate complex partitions and codes for M-QAM for MRDE based on the real and imaginary radii of the different symbols. The partitions define the boundaries between the different codes. This is used to determine on which real/imaginary radius a signal symbol should lie on. The real and imaginary parts should be used for parititioning the real and imaginary parts of the signal in MRDE.
+
+    Parameters
+    ----------
+    M       : int
+        M-QAM order
+
+    Returns
+    -------
+    parts   : array_like
+        the boundaries between the different codes for parititioning
+    codes   : array_like
+        the nearest symbol radius 
+    """
+    syms = calculate_MQAM_symbols(M)
+    scale = calculate_MQAM_scaling_factor(M)
+    syms /= np.sqrt(scale)
+    syms_r = np.unique(abs(syms.real)**4/abs(syms.real)**2)
+    syms_i = np.unique(abs(syms.imag)**4/abs(syms.imag)**2)
+    codes = syms_r + 1.j * syms_i
+    part_r = syms_r[:-1] + np.diff(syms_r)/2
+    part_i = syms_i[:-1] + np.diff(syms_i)/2
+    parts = part_r + 1.j*part_i
+    return parts, codes
+
+def generate_partition_codes_radius(M):
+    """
+    Generate partitions and codes for M-QAM for RDE based on the radius of the different symbols. The partitions define the boundaries between the different codes. This is used to determine on which radius a signal symbol should lie.
+
+    Parameters
+    ----------
+    M       : int
+        M-QAM order
+
+    Returns
+    -------
+    parts   : array_like
+        the boundaries between the different codes for parititioning
+    codes   : array_like
+        the nearest symbol radius 
+    """
+    syms = calculate_MQAM_symbols(M)
+    scale = calculate_MQAM_scaling_factor(M)
+    syms /= scale
+    codes = np.unique(abs(syms)**4/abs(syms)**2)
+    parts = codes[:-1] + np.diff(codes)/2
+    return parts, codes
+
 def FS_MCMA(E, TrSyms, Ntaps, os, mu):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
@@ -239,57 +289,6 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
     EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
-
-def generate_partition_codes_complex(M):
-    """
-    Generate complex partitions and codes for M-QAM for MRDE based on the real and imaginary radii of the different symbols. The partitions define the boundaries between the different codes. This is used to determine on which real/imaginary radius a signal symbol should lie on. The real and imaginary parts should be used for parititioning the real and imaginary parts of the signal in MRDE.
-
-    Parameters
-    ----------
-    M       : int
-        M-QAM order
-
-    Returns
-    -------
-    parts   : array_like
-        the boundaries between the different codes for parititioning
-    codes   : array_like
-        the nearest symbol radius 
-    """
-    syms = calculate_MQAM_symbols(M)
-    scale = calculate_MQAM_scaling_factor(M)
-    syms /= np.sqrt(scale)
-    syms_r = np.unique(abs(syms.real)**4/abs(syms.real)**2)
-    syms_i = np.unique(abs(syms.imag)**4/abs(syms.imag)**2)
-    codes = syms_r + 1.j * syms_i
-    part_r = syms_r[:-1] + np.diff(syms_r)/2
-    part_i = syms_i[:-1] + np.diff(syms_i)/2
-    parts = part_r + 1.j*part_i
-    return parts, codes
-
-def generate_partition_codes_radius(M):
-    """
-    Generate partitions and codes for M-QAM for RDE based on the radius of the different symbols. The partitions define the boundaries between the different codes. This is used to determine on which radius a signal symbol should lie.
-
-    Parameters
-    ----------
-    M       : int
-        M-QAM order
-
-    Returns
-    -------
-    parts   : array_like
-        the boundaries between the different codes for parititioning
-    codes   : array_like
-        the nearest symbol radius 
-    """
-    syms = calculate_MQAM_symbols(M)
-    scale = calculate_MQAM_scaling_factor(M)
-    syms /= scale
-    codes = np.unique(abs(syms)**4/abs(syms)**2)
-    parts = codes[:-1] + np.diff(codes)/2
-    return parts, codes
-
 
 def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     """
