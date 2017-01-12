@@ -154,7 +154,6 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
     L = E.shape[1]
     assert TrSyms*os < L - Ntaps, "More training samples than"\
                                     " overall samples"
-    mu = mu / Ntaps
     R = _calculate_Rconstant_complex(M)
     # scale signal
     E = utils.normalise_and_center(E)
@@ -213,7 +212,6 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     L = E.shape[1]
     assert TrSyms*os < L - Ntaps, "More training samples than"\
                                     " overall samples"
-    mu = mu / Ntaps
     # scale signal
     E = utils.normalise_and_center(E)
     R = _calculate_Rconstant(M)
