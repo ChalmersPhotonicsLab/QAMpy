@@ -11,33 +11,11 @@ from ..modulation import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
 
 
 try:
-    from .equaliser_cython import FS_RDE_training
+    from .equaliser_cython import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
 except:
-    Warning("can not use cython RDE training")
     #use python code if cython code is not available
-    FS_RDE_training = FS_RDE_training_python
-
-try:
-    from .equaliser_cython import FS_CMA_training
-except:
-    Warning("can not use cython CMA training")
-    #use python code if cython code is not available
-    FS_CMA_training = FS_MCMA_training_python
-
-try:
-    from .equaliser_cython import FS_MRDE_training
-except:
-    Warning("can not use cython MRDE training")
-    #use python code if cython code is not available
-    FS_MRDE_training = FS_MRDE_training_python
-
-try:
-    from .equaliser_cython import FS_MCMA_training
-except:
-    Warning("can not use cython MCMA training")
-    #use python code if cython code is not available
-    FS_MCMA_training = FS_MCMA_training_python
-
+    Warning("can not use cython training functions")
+from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
 
 def FS_MCMA(E, TrSyms, Ntaps, os, mu):
     """
