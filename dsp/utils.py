@@ -93,6 +93,17 @@ def supergauss(x, A, x0, w, o):
     """
     return A * np.exp(-((x - x0) / w)**(2 * o) / 2.)
 
+def normalise_and_center(E):
+    if E.ndims > 1:
+        for i in range(2):
+            E[i] -= np.mean(E[i])
+            P = np.sqrt(np.mean(cabssquared(E[i])))
+            E[i] /= P
+    else:
+        E -= np.mean(E)
+        P = np.sqrt(np.mean(cabssquared(E)))
+        E /= P
+    return E
 
 def sech(x, A, x0, w):
     """

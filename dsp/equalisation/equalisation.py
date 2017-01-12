@@ -79,8 +79,7 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu):
                                     " overall samples"
     mu = mu / Ntaps
     # scale signal
-    P = np.mean(utils.cabssquared(E))
-    E = E / np.sqrt(P)
+    E = utils.normalise_and_center(E)
     err = np.zeros((2, TrSyms), dtype=np.complex128)
     # ** training for X polarisation **
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
@@ -121,6 +120,7 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu):
 
     Returns
     -------
+    E = utils.normalise_and_center(E)
 
     E     : array_like
        equalised x and y polarisation of the field (2D array first dimension is polarisation)
@@ -137,8 +137,7 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu):
                                     " overall samples"
     mu = mu / Ntaps
     # scale signal
-    P = np.mean(utils.cabssquared(E))
-    E = E / np.sqrt(P)
+    E = utils.normalise_and_center(E)
     err = np.zeros((2, TrSyms), dtype='float')
     # ** training for X polarisation **
     wx = np.zeros((2, Ntaps), dtype=np.complex128)
@@ -213,8 +212,7 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     #part = np.array([5.24, 13.71])
     part, code = generate_partition_codes_complex(16)
     # scale signal
-    P = np.mean(utils.cabssquared(E))
-    E = E / np.sqrt(P)
+    E = utils.normalise_and_center(E)
     err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
     err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
     # ** training for X polarisation **
@@ -343,8 +341,7 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     code = np.array([2., 10., 18.])
     part = np.array([5.24, 13.71])
     # scale signal
-    P = np.mean(utils.cabssquared(E))
-    E = E / np.sqrt(P)
+    E = utils.normalise_and_center(E)
     err_cma = np.zeros((2, TrCMA), dtype='float')
     err_rde = np.zeros((2, TrRDE), dtype='float')
     # ** training for X polarisation **
