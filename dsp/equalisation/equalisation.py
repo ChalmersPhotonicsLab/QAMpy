@@ -17,6 +17,14 @@ except:
     Warning("can not use cython training functions")
 from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
 
+def _apply_filter(E, wx, wy, Ntaps, os):
+    # equalise data points. Reuse samples used for channel estimation
+    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
+    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
+    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    return EestX, EestY
+
+
 def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
@@ -141,9 +149,7 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu):
     # run CMA
     err[1, :], wy = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wy)
     # equalise data points. Reuse samples used for channel estimation
-    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
 def FS_CMA(E, TrSyms, Ntaps, os, mu):
@@ -199,9 +205,7 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu):
     # run CMA
     err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy)
     # equalise data points. Reuse samples used for channel estimation
-    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
 def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
