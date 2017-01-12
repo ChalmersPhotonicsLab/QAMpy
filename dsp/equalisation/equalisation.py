@@ -24,6 +24,17 @@ def _apply_filter(E, wx, wy, Ntaps, os):
     EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
     return EestX, EestY
 
+def _calculate_Rconstant(M):
+    syms = calculate_MQAM_symbols(M)
+    scale = calculate_MQAM_scaling_factor(M)
+    sysm /= np.sqrt(scale)
+    return np.mean(abs(syms)**4)/np.mean(abs(syms)**2)
+
+def _calculate_Rconstant_complex(M):
+    syms = calculate_MQAM_symbols(M)
+    scale = calculate_MQAM_scaling_factor(M)
+    sysm /= np.sqrt(scale)
+    return np.mean(syms.real**4)/np.mean(syms.real**2) + 1.j * np.mean(syms.imag**4)/np.mean(syms.imag**2)
 
 def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
@@ -88,7 +99,7 @@ def generate_partition_codes_radius(M):
     """
     syms = calculate_MQAM_symbols(M)
     scale = calculate_MQAM_scaling_factor(M)
-    syms /= scale
+    syms /= np.sqrt(scale)
     codes = np.unique(abs(syms)**4/abs(syms)**2)
     parts = codes[:-1] + np.diff(codes)/2
     return parts, codes
@@ -254,9 +265,10 @@ def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
     assert (TrCMA + TrRDE
             ) * os < L - Ntaps, "More training samples than overall samples"
     # constellation properties
-    R = 13.2
-    code = np.array([2., 10., 18.])
-    part = np.array([5.24, 13.71])
+    R = 1.32
+    code = np.array([2., 10., 18.])/10
+    #part = np.array([5.24, 13.71])
+    part = np.array([0.6, 1.4])
     # scale signal
     E = utils.normalise_and_center(E)
     err_cma = np.zeros((2, TrCMA), dtype='float')
