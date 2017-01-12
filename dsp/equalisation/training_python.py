@@ -55,7 +55,7 @@ def partition_value(signal, partitions, codebook):
     quanta = codebook[index]
     return quanta
 
-def FS_MCMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
+def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
 
@@ -100,7 +100,7 @@ def FS_MCMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
         wx -= mu * err[i] * np.conj(X)
     return err, wx
 
-def FS_CMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
+def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx):
     """
     Training of the CMA algorithm to determine the equaliser taps.
 
@@ -141,7 +141,7 @@ def FS_CMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
         wx -= mu * err[i] * Xest * np.conj(X)
     return err, wx
 
-def FS_MRDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
+def FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     """
     Training of the Modified RDE algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
 
@@ -194,7 +194,7 @@ def FS_MRDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
         wx -= muRDE * err[i] * np.conj(X)
     return err, wx
 
-def FS_RDE_training_python(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
+def FS_RDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     """
     Training of the RDE algorithm to determine the equaliser taps.
 
