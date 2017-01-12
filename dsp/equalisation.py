@@ -7,6 +7,7 @@ import numexpr as ne
 
 from .segmentaxis import segment_axis
 from . import utils
+from .modulation import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
 
 
 def FS_MCMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
@@ -232,6 +233,68 @@ except:
     FS_MCMA_training = FS_MCMA_training_python
 
 
+def FS_MCMA(E, TrSyms, Ntaps, os, mu):
+    """
+    Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrSyms : int
+       number of symbols to use for training needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    Returns
+    -------
+
+    E     : array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
+    """
+    # if can't have more training samples than field
+    L = E.shape[1]
+    assert TrSyms*os < L - Ntaps, "More training samples than"\
+                                    " overall samples"
+    mu = mu / Ntaps
+    # scale signal
+    P = np.mean(utils.cabssquared(E))
+    E = E / np.sqrt(P)
+    err = np.zeros((2, TrSyms), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = np.zeros((2, Ntaps), dtype=np.complex128)
+    wx[1, Ntaps // 2] = 1
+    # run CMA
+    err[0, :], wx = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx)
+    # ** training for y polarisation **
+    wy = _init_orthogonaltaps(wx)
+    # run CMA
+    err[1, :], wy = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wy)
+    # equalise data points. Reuse samples used for channel estimation
+    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
+    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
+    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    return np.vstack([EestX, EestY]), wx, wy, err
+
 def FS_CMA(E, TrSyms, Ntaps, os, mu):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Constant Modulus Algorithm (CMA)
@@ -308,7 +371,6 @@ def _init_orthogonaltaps(wx):
         wy = np.hstack([pad, wy])
     return wy
 
-
 def partition_signal(signal, partitions, codebook):
     """
     Partition a signal according to their power
@@ -362,6 +424,141 @@ def partition_value(signal, partitions, codebook):
         index += 1
     quanta = codebook[index]
     return quanta
+
+def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muRDE      : float
+       step size parameter for the RDE algorithm
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    L = E.shape[1]
+    muCMA = muCMA
+    muRDE = muRDE
+    # if can't have more training samples than field
+    assert (TrCMA + TrRDE
+            ) * os < L - Ntaps, "More training samples than overall samples"
+    # constellation properties
+    R = 13.2
+    code = np.array([2., 10., 18.])
+    part = np.array([5.24, 13.71])
+    # scale signal
+    P = np.mean(utils.cabssquared(E))
+    E = E / np.sqrt(P)
+    err_cma = np.zeros((2, TrCMA), dtype='float')
+    err_rde = np.zeros((2, TrRDE), dtype='float')
+    # ** training for X polarisation **
+    wx = np.zeros((2, Ntaps), dtype=np.complex128)
+    wx[1, Ntaps // 2] = 1
+    # find taps with CMA
+    err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
+    # scale taps for RDE
+    #wx = np.sqrt(R) * wx
+    # use refine taps with RDE
+    err_rde[0, :], wx = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+                                        part, code)
+    # ** training for y polarisation **
+    wy = _init_orthogonaltaps(wx)/np.sqrt(R)
+    # find taps with CMA
+    err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
+    # scale taps for RDE
+    #wy = np.sqrt(R) * wy
+    # use refine taps with RDE
+    err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+                                        part, code)
+    # equalise data points. Reuse samples used for channel estimation
+    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
+    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
+    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
+def generate_partition_codes_complex(M):
+    """
+    Generate complex partitions and codes for M-QAM for MRDE based on the real and imaginary radii of the different symbols. The partitions define the boundaries between the different codes. This is used to determine on which real/imaginary radius a signal symbol should lie on. The real and imaginary parts should be used for parititioning the real and imaginary parts of the signal in MRDE.
+
+    Parameters
+    ----------
+    M       : int
+        M-QAM order
+
+    Returns
+    -------
+    parts   : array_like
+        the boundaries between the different codes for parititioning
+    codes   : array_like
+        the nearest symbol radius 
+    """
+    syms = calculate_MQAM_symbols(M)
+    scale = calculate_MQAM_scaling_factor(M)
+    syms /= scale
+    syms_r = np.unique(abs(syms.real)**4/abs(syms.real)**2)
+    syms_i = np.unique(abs(syms.imag)**4/abs(syms.imag)**2)
+    codes = syms_r + 1.j * syms_i
+    part_r = syms_r[:-1] + np.diff(syms_r)/2
+    part_i = syms_i[:-1] + np.diff(syms_i)/2
+    parts = part_r + 1.j*part_i
+    return parts, codes
+
+def generate_partition_codes_radius(M):
+    """
+    Generate partitions and codes for M-QAM for RDE based on the radius of the different symbols. The partitions define the boundaries between the different codes. This is used to determine on which radius a signal symbol should lie.
+
+    Parameters
+    ----------
+    M       : int
+        M-QAM order
+
+    Returns
+    -------
+    parts   : array_like
+        the boundaries between the different codes for parititioning
+    codes   : array_like
+        the nearest symbol radius 
+    """
+    syms = calculate_MQAM_symbols(M)
+    scale = calculate_MQAM_scaling_factor(M)
+    syms /= scale
+    codes = np.unique(abs(syms)**4/abs(syms)**2)
+    parts = codes[:-1] + np.diff(codes)/2
+    return parts, codes
 
 
 def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
