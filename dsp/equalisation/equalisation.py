@@ -5,9 +5,9 @@ import numpy as np
 import scipy.signal as scisig
 import numexpr as ne
 
-from .segmentaxis import segment_axis
-from . import utils
-from .modulation import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
+from ..segmentaxis import segment_axis
+from .. import utils
+from ..modulation import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
 
 
 def FS_MCMA_training_python(E, TrSyms, Ntaps, os, mu, wx):
