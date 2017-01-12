@@ -204,6 +204,84 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu):
     EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
     return np.vstack([EestX, EestY]), wx, wy, err
 
+def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
+    """
+    Equalisation of PMD and residual dispersion of a 16 QAM signal based on a radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA)
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muRDE      : float
+       step size parameter for the RDE algorithm
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+    """
+    L = E.shape[1]
+    # if can't have more training samples than field
+    assert (TrCMA + TrRDE
+            ) * os < L - Ntaps, "More training samples than overall samples"
+    # constellation properties
+    R = 13.2
+    code = np.array([2., 10., 18.])
+    part = np.array([5.24, 13.71])
+    # scale signal
+    E = utils.normalise_and_center(E)
+    err_cma = np.zeros((2, TrCMA), dtype='float')
+    err_rde = np.zeros((2, TrRDE), dtype='float')
+    # ** training for X polarisation **
+    wx = np.zeros((2, Ntaps), dtype=np.complex128)
+    wx[1, Ntaps // 2] = 1
+    # find taps with CMA
+    err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
+    # scale taps for RDE
+    wx = np.sqrt(R) * wx
+    # use refine taps with RDE
+    err_rde[0, :], wx = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+                                        part, code)
+    # ** training for y polarisation **
+    wy = _init_orthogonaltaps(wx)/np.sqrt(R)
+    # find taps with CMA
+    err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
+    # scale taps for RDE
+    wy = np.sqrt(R) * wy
+    # use refine taps with RDE
+    err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+                                        part, code)
+    # equalise data points. Reuse samples used for channel estimation
+    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
+    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
+    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
 def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     """
     Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
@@ -283,84 +361,6 @@ def FS_MCMA_MRDE_general(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     #wy = np.sqrt(R) * wy
     # use refine taps with RDE
     err_rde[1, :], wy = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
-                                        part, code)
-    # equalise data points. Reuse samples used for channel estimation
-    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
-    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
-
-def FS_CMA_RDE_16QAM(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE):
-    """
-    Equalisation of PMD and residual dispersion of a 16 QAM signal based on a radius directed equalisation (RDE)
-    fractionally spaced Constant Modulus Algorithm (FS-CMA)
-    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally.
-
-    Parameters
-    ----------
-    E    : array_like
-       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
-
-    TrCMA : int
-       number of symbols to use for training the initial CMA needs to be less than len(Ex)
-
-    TrRDE : int
-       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
-
-    Ntaps   : int
-       number of equaliser taps
-
-    os      : int
-       oversampling factor
-
-    muCMA      : float
-       step size parameter for the CMA algorithm
-
-    muRDE      : float
-       step size parameter for the RDE algorithm
-
-    Returns
-    -------
-
-    E: array_like
-       equalised x and y polarisation of the field (2D array first dimension is polarisation)
-
-    wx, wy    : array_like
-       equaliser taps for the x and y polarisation
-
-    err_cma, err_rde  : array_like
-       CMA and RDE estimation error for x and y polarisation
-    """
-    L = E.shape[1]
-    # if can't have more training samples than field
-    assert (TrCMA + TrRDE
-            ) * os < L - Ntaps, "More training samples than overall samples"
-    # constellation properties
-    R = 13.2
-    code = np.array([2., 10., 18.])
-    part = np.array([5.24, 13.71])
-    # scale signal
-    E = utils.normalise_and_center(E)
-    err_cma = np.zeros((2, TrCMA), dtype='float')
-    err_rde = np.zeros((2, TrRDE), dtype='float')
-    # ** training for X polarisation **
-    wx = np.zeros((2, Ntaps), dtype=np.complex128)
-    wx[1, Ntaps // 2] = 1
-    # find taps with CMA
-    err_cma[0, :], wx = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wx)
-    # scale taps for RDE
-    wx = np.sqrt(R) * wx
-    # use refine taps with RDE
-    err_rde[0, :], wx = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
-                                        part, code)
-    # ** training for y polarisation **
-    wy = _init_orthogonaltaps(wx)/np.sqrt(R)
-    # find taps with CMA
-    err_cma[1, :], wy = FS_CMA_training(E, TrCMA, Ntaps, os, muCMA, wy)
-    # scale taps for RDE
-    wy = np.sqrt(R) * wy
-    # use refine taps with RDE
-    err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
     X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
