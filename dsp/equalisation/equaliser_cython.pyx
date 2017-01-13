@@ -51,7 +51,7 @@ def FS_MCMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        <unsigned int> i*os+j]
                Xest +=  wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
-       err[<unsigned int> i] = (np.abs(Xest.real)**2 - R.real)*Xest.real + 1.j*(np.abs(Xest.imag)**2 - R.imag)*Xest.imag
+       err[<unsigned int> i] = (Xest.real**2 - R.real)*Xest.real + 1.j*(Xest.imag**2 - R.imag)*Xest.imag
        for j in range(Ntaps):
            for k in range(2):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
