@@ -19,10 +19,14 @@ except:
 
 def _apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
-    X = segment_axis(E, Ntaps, Ntaps - os, axis=1)
-    EestX = np.sum(wx[:, np.newaxis, :] * X, axis=(0, 2))
-    EestY = np.sum(wy[:, np.newaxis, :] * X, axis=(0, 2))
-    return EestX, EestY
+    # this seems significantly faster than the previous method using a segment axis
+    X1 = segment_axis(E[0], Ntaps, Ntaps-os)
+    X2 = segment_axis(E[1], Ntaps, Ntaps-os)
+    X = np.hstack([X1,X2])
+    ww = np.vstack([wx.flatten(), wy.flatten()])
+    Eest = np.dot(X, ww.transpose())
+    return Eest[:,0],  Eest[:,1]
+
 
 def _calculate_Rconstant(M):
     syms = calculate_MQAM_symbols(M)
