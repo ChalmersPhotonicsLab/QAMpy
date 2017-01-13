@@ -4,6 +4,8 @@ import numpy as np
 cimport cython
 cimport numpy as np
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def partition_value(double signal, np.ndarray[ndim=1, dtype=np.float64_t] partitions,
                     np.ndarray[ndim=1, dtype=np.float64_t] codebook):
     cdef unsigned int index = 0
@@ -12,6 +14,8 @@ def partition_value(double signal, np.ndarray[ndim=1, dtype=np.float64_t] partit
         index += 1
     return codebook[index]
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def FS_CMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                     int TrSyms, int Ntaps, unsigned int os, double mu,  np.ndarray[ndim=2, dtype=np.complex128_t] wx,
                     double R):
@@ -36,6 +40,8 @@ def FS_CMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                    <unsigned int> j].conjugate()
     return err, wx
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def FS_MCMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      int TrSyms, int Ntaps, unsigned int os, double mu,  np.ndarray[ndim=2, dtype=np.complex128_t] wx,
                      np.complex128_t R):
@@ -60,6 +66,8 @@ def FS_MCMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                    <unsigned int> j].conjugate()
     return err, wx
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
         int TrRDE, int Ntaps, unsigned int os,
         double muRDE,
@@ -90,6 +98,8 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                    <unsigned int> j].conjugate()
     return err, wx
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def FS_MRDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
         int TrRDE, int Ntaps, unsigned int os,
         double muRDE,
