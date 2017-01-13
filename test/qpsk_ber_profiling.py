@@ -26,6 +26,7 @@ M = 4
 QAM = modulation.QAMModulator(M)
 snr = 12
 mu = 1e-3
+ntaps = 30
 
 X, symbolsX, bitsX = QAM.generateSignal(N, snr, PRBSorder=15, baudrate=fb, samplingrate=fs)
 Y, symbolsY, bitsY = QAM.generateSignal(N, snr, PRBSorder=23, baudrate=fb, samplingrate=fs)
@@ -41,7 +42,8 @@ SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
 #pr.enable()
-E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, 30, os, mu, M)
+E, wx, wy, err = equalisation.FS_CMA(SS, N-40, ntaps, os, mu, M)
+E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, ntaps, os, mu, M)
 
 E = E[:,1000:-1000]
 

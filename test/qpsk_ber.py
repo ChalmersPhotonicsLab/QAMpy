@@ -38,8 +38,7 @@ Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
-#pr.enable()
-E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, 30, os, mu, M)
+E, wx, wy, err = equalisation.FS_CMA(SS, N-40, 30, os, mu, M)
 
 E = E[:,1000:-1000]
 
