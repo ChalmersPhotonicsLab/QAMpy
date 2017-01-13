@@ -79,7 +79,7 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        <unsigned int> i*os+j]
                Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
-       Ssq = abs(Xest)**2
+       Ssq = Xest.real*Xest.real + Xest.imag*Xest.imag
        S_DD = partition_value(Ssq, partition, codebook)
        err[<unsigned int> i] = (Ssq - S_DD)*Xest
        for j in range(Ntaps):
