@@ -24,7 +24,7 @@ def FS_CMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
            for k in range(2):
                X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
                        <unsigned int> i*os+j]
-               Xest = Xest + wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+               Xest +=  wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
        err[<unsigned int> i] = (abs(Xest) - R)*Xest
        for j in range(Ntaps):
@@ -48,7 +48,7 @@ def FS_MCMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
            for k in range(2):
                X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
                        <unsigned int> i*os+j]
-               Xest = Xest + wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+               Xest +=  wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
        err[<unsigned int> i] = (np.abs(Xest.real)**2 - R.real)*Xest.real + 1.j*(np.abs(Xest.imag)**2 - R.imag)*Xest.imag
        for j in range(Ntaps):
@@ -76,7 +76,7 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
            for k in range(2):
                X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
                        <unsigned int> i*os+j]
-               Xest = Xest + wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+               Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
        Ssq = abs(Xest)**2
        S_DD = partition_value(Ssq, partition, codebook)
@@ -105,7 +105,7 @@ def FS_MRDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
            for k in range(2):
                X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
                        <unsigned int> i*os+j]
-               Xest = Xest + wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+               Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
        Ssq = Xest.real**2 + 1.j * Xest.imag**2
        S_DD = partition_value(Ssq.real, partition.real, codebook.real) + 1.j * partition_value(Ssq.imag, partition.imag, codebook.imag)
