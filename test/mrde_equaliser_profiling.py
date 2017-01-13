@@ -21,13 +21,15 @@ def rotate_field(theta, field):
 fb = 40.e9
 os = 2
 fs = os*fb
-N = 2**18
+N = 10**6
 theta = np.pi/2.35
 M = 16
 QAM = modulation.QAMModulator(16)
 snr = 24
 muCMA = 3e-4
 muRDE = 3e-4
+ntaps = 30
+trsyms = N//os//2-(ntaps+5) # use full width for training
 
 X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
 Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
@@ -43,8 +45,8 @@ SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
 #E, wx, wy, err, err_rde = equalisation.FS_MCMA_MRDE_general(SS, len(SS[0])//os//2 - 31, len(SS[0])//os//2 - 31, 30, 2, 0.001, 0.0003, 16)
-E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, 30000, 30000, 30, os, muCMA, muRDE, M)
-E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, 30000, 30000, 30, os, muCMA, muRDE, M)
+E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, trsyms, trsyms, ntaps, os, muCMA, muRDE, M)
+E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, trsyms, trsyms, ntaps, os, muCMA, muRDE, M)
 
 
 evmX = cal_blind_evm(X[::2], M)
