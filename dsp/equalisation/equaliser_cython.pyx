@@ -27,7 +27,7 @@ def FS_CMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        <unsigned int> i*os+j]
                Xest +=  wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
-       err[<unsigned int> i] = (Xest.real*Xest.real+Xest.imag*Xest.imag - R)*Xest
+       err[<unsigned int> i] = (Xest.real**2+Xest.imag**2 - R)*Xest
        for j in range(Ntaps):
            for k in range(2):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
@@ -79,7 +79,7 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        <unsigned int> i*os+j]
                Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
-       Ssq = Xest.real*Xest.real + Xest.imag*Xest.imag
+       Ssq = Xest.real**2 + Xest.imag**2
        S_DD = partition_value(Ssq, partition, codebook)
        err[<unsigned int> i] = (Ssq - S_DD)*Xest
        for j in range(Ntaps):
