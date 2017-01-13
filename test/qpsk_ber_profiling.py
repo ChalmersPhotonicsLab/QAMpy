@@ -1,6 +1,7 @@
+#import cProfile
 import numpy as np
 
-import matplotlib.pylab as plt
+#import matplotlib.pylab as plt
 from dsp import signals, equalisation, modulation
 from dsp.signal_quality import cal_blind_evm
 
@@ -14,6 +15,7 @@ def H_PMD(theta, t, omega): #see Ip and Kahn JLT 25, 2033 (2007)
     H = np.einsum('ij,jkl->ikl', h1, h2)
     H = np.einsum('ijl,jk->ikl', H, h3)
     return H
+#pr = cProfile.Profile()
 fb = 40.e9
 os = 2
 fs = os*fb
@@ -59,30 +61,34 @@ evmY = cal_blind_evm(Y[::os], 4)
 evmEx = cal_blind_evm(E[0], 4)
 evmEy = cal_blind_evm(E[1], 4)
 
-#sys.exit()
-plt.figure()
-plt.subplot(121)
-plt.title('Recovered')
-plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx))
-plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
-plt.legend()
-plt.subplot(122)
-plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
-plt.legend()
+#pr.disable()
+#pr.print_stats(sort="time")
 
-plt.figure()
-plt.subplot(211)
-plt.title('Taps')
-plt.plot(wx[0,:], 'r')
-plt.plot(wx[1,:], '--r')
-plt.plot(wy[0,:], 'g')
-plt.plot(wy[1,:], '--g')
-plt.subplot(212)
-plt.title('error')
-plt.plot(err[0], color='r')
-plt.plot(err[1], color='g')
-plt.show()
+
+#sys.exit()
+# plt.figure()
+# plt.subplot(121)
+# plt.title('Recovered')
+# plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx))
+# plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
+# plt.legend()
+# plt.subplot(122)
+# plt.title('Original')
+# plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+# plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+# plt.legend()
+
+# plt.figure()
+# plt.subplot(211)
+# plt.title('Taps')
+# plt.plot(wx[0,:], 'r')
+# plt.plot(wx[1,:], '--r')
+# plt.plot(wy[0,:], 'g')
+# plt.plot(wy[1,:], '--g')
+# plt.subplot(212)
+# plt.title('error')
+# plt.plot(err[0], color='r')
+# plt.plot(err[1], color='g')
+# plt.show()
 
 
