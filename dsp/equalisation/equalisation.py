@@ -15,7 +15,7 @@ try:
 except:
     #use python code if cython code is not available
     Warning("can not use cython training functions")
-    from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
+from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
 
 def _apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation

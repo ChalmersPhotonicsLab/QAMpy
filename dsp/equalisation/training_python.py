@@ -1,4 +1,5 @@
 import numpy as np
+import numba
 
 
 def partition_signal(signal, partitions, codebook):
@@ -55,6 +56,7 @@ def partition_value(signal, partitions, codebook):
     quanta = codebook[index]
     return quanta
 
+@numba.jit(nopython=True)
 def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
@@ -95,7 +97,7 @@ def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     -----
     ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
     """
-    err = np.zeros(TrSyms, dtype=np.complex)
+    err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
@@ -139,7 +141,7 @@ def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     wx        : array_like
        equaliser taps
     """
-    err = np.zeros(TrSyms, dtype=np.float)
+    err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(0, TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
