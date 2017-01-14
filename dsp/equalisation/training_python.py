@@ -57,6 +57,13 @@ def partition_value(signal, partitions, codebook):
     return quanta
 
 @numba.jit(nopython=True)
+def sum(x):
+    __sum = 0.j
+    for i in range(x.size):
+        __sum += x[i]
+    return __sum
+
+@numba.jit(nopython=True)
 def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
@@ -100,7 +107,8 @@ def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
-        Xest = np.sum(wx * X)
+        #Xest = np.sum(wx * X)
+        Xest = sum(wx*X)
         err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
         wx -= mu * err[i] * np.conj(X)
     return err, wx
