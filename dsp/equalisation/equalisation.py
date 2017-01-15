@@ -16,6 +16,7 @@ except:
     #use python code if cython code is not available
     Warning("can not use cython training functions")
     from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
+from .training_python import MDDMA as SBD
 
 def _apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
@@ -379,6 +380,87 @@ def FS_MCMA_MRDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     # refine taps with RDE
     err_rde[1, :], wy = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
+    # equalise data points. Reuse samples used for channel estimation
+    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
+def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muRDE      : float
+       step size parameter for the RDE algorithm
+
+    M     : int
+       M-QAM order
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    L = E.shape[1]
+    # if can't have more training samples than field
+    assert (TrCMA + TrRDE
+            ) * os < L - Ntaps, "More training samples than overall samples"
+    # constellation properties
+    part, code = generate_partition_codes_complex(16)
+    #part = np.hstack([-part.real, part.real]) + 1.j *np.hstack([-part.imag, part.imag])
+    #code = np.hstack([-code.real, code.real]) + 1.j *np.hstack([-code.imag, code.imag])
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E = utils.normalise_and_center(E)
+    # initialise error vectors
+    err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
+    err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = _init_taps(Ntaps)
+    # find taps with CMA
+    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
+    # refine taps with RDE
+    err_rde[0, :], wx = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+                                        syms)
+    # ** training for y polarisation **
+    wy = _init_orthogonaltaps(wx)
+    # find taps with CMA
+    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy, R)
+    # refine taps with RDE
+    err_rde[1, :], wy = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+                                        syms)
     # equalise data points. Reuse samples used for channel estimation
     EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
