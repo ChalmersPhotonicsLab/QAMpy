@@ -131,6 +131,18 @@ def FS_MRDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
        #update_filter(X, Ntaps, mu, err[<unsigned int> i], wx)
     return err, wx
 
+cdef inline np.complex128_t apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+                                         int Ntaps, unsigned int os, unsigned int i,
+                                         np.ndarray[ndim=2, dtype=np.complex128_t] wx):
+    cdef unsigned int i, j, k
+    cdef np.complex128_t Xest, Ssq, S_DD
+    Xest = 0.j
+    for j in range(Ntaps):
+        for k in range(2):
+            Xest += wx[<unsigned int> k,<unsigned int> j]*E[<unsigned int> k,
+                                                            <unsigned int> i*os+j]
+    return Xest
+
 cdef inline np.ndarray[ndim=2, dtype=np.complex128_t] update_filter(np.ndarray[ndim=2, dtype=np.complex128_t] X,
                                                              int Ntaps,
                                                              double mu,
