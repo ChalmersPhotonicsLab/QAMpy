@@ -284,11 +284,11 @@ def MRDE_LMS(E, Niter, os, mu, M, wxy):
     E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
     for i in range(Niter):
         # run CMA
-        err[i, 0, :], wx =FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code) 
+        err[i, 0, :], wx =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code) 
         if empty_taps:
             wy = _init_orthogonaltaps(wx)
         # ** training for y polarisation **
-        err[i, 1, :], wy =FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wy, part, code) 
+        err[i, 1, :], wy =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wy, part, code) 
     return (wx,wy), err
 
 def SBD_LMS(E, Niter, os, mu, M, wxy):
