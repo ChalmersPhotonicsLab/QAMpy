@@ -114,6 +114,229 @@ def generate_partition_codes_radius(M):
     parts = codes[:-1] + np.diff(codes)/2
     return parts, codes
 
+def _lms_init(E, wxy, os):
+    L = E.shape[1]
+    # scale signal
+    E = utils.normalise_and_center(E)
+    if type(wxy) is type(1):
+        Ntaps = wxy
+        wx = _init_taps(Ntaps)
+        empty_taps = True
+    else:
+        wx = wxy[0]
+        wy = wxy[1]
+        Ntaps = wx.shape[1]
+        empty_taps = False
+    Trsyms = L/os -Ntaps
+    err = np.zeros((Niter,2, ), dtype=np.complex128)
+    return E, wx, wy, Trysm, Ntaps, err, empty_taps
+
+def MCMA_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. This is the LMS version, in contrast to the FS_* equaliser functions this does not apply the filter.
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
+    """
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E, wx, wy, Trsyms, Ntaps, empty_taps = _lms_init(E, wxy, os)
+    for i in range(Niter):
+        # run CMA
+        err[i, 0, :], wx = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
+        if empty_taps:
+            wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        # run CMA
+        err[i,1, :], wy = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
+    return (wx,wy), err
+
+
+def MRDE_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    part, code = generate_partition_codes_complex(16)
+    E, wx, wy, Trsyms, Ntaps, empty_taps = _lms_init(E, wxy, os)
+    for i in range(Niter):
+        # run CMA
+        err[i, 0, :], wx =FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code) 
+        if empty_taps:
+            wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        err[i, 1, :], wy =FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wy, part, code) 
+    return (wx,wy), err
+
+def SBD_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    E, wx, wy, Trsyms, Ntaps, empty_taps = _lms_init(E, wxy, os)
+    for i in range(Niter):
+        # run CMA
+        err[i, 0, :], wx = SBD(E, Trsyms, Ntaps, os, mu, wx, syms)
+        if empty_taps:
+            wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        err[i, 1, :], wy = SBD(E, Trsyms, Ntaps, os, mu, wy, syms)
+    return (wx,wy), err
+
+def SBD_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    E, wx, wy, Trsyms, Ntaps, empty_taps = _lms_init(E, wxy, os)
+    for i in range(Niter):
+        # run CMA
+        err[i, 0, :], wx = MDDMA(E, Trsyms, Ntaps, os, mu, wx, syms)
+        if empty_taps:
+            wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        err[i, 1, :], wy = MDDMA(E, Trsyms, Ntaps, os, mu, wy, syms)
+    return (wx,wy), err
+
 def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
