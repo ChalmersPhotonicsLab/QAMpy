@@ -51,7 +51,6 @@ S = np.vstack([X,Y])
 
 SS = applyPMD(S, H)
 
-E, wx, wy, err, err_rde = equalisation.FS_MCMA_MRDE_general(SS, len(SS[0])//os//2 - 31, len(SS[0])//os//2 - 31, 30, 2, 0.001, 0.0003, 16)
 E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
