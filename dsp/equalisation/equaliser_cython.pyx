@@ -131,10 +131,65 @@ def FS_MRDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
        #update_filter(X, Ntaps, mu, err[<unsigned int> i], wx)
     return err, wx
 
+def SBD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+                     int TrSyms, int Ntaps, unsigned int os,
+                     double mu,
+                     np.ndarray[ndim=2, dtype=np.complex128_t] wx,
+                     np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
+    cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
+    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
+    cdef unsigned int i, j, k
+    cdef np.complex128_t Xest, R
+    for i in range(TrSyms):
+       Xest = 0.j
+       for j in range(Ntaps):
+           for k in range(2):
+               X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
+                       <unsigned int> i*os+j]
+               Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+                       k,<unsigned int> j]
+       R = symbols[np.argmin(abs(Xest-symbols))] #this could probably be sped up considerably
+       err[<unsigned int> i] = (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
+       for j in range(Ntaps):
+           for k in range(2):
+               wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
+                       k,<unsigned int> j] - mu*err[<unsigned int>
+                               i]*X[<unsigned int> k,
+                                   <unsigned int> j].conjugate()
+    return err, wx
+
+def MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+                     int TrSyms, int Ntaps, unsigned int os,
+                     double mu,
+                     np.ndarray[ndim=2, dtype=np.complex128_t] wx,
+                     np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
+    cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
+    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
+    cdef unsigned int i, j, k
+    cdef np.complex128_t Xest, R
+    for i in range(TrSyms):
+       Xest = 0.j
+       for j in range(Ntaps):
+           for k in range(2):
+               X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
+                       <unsigned int> i*os+j]
+               Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+                       k,<unsigned int> j]
+       R = symbols[np.argmin(abs(Xest-symbols))] #this could probably be sped up considerably
+       err[<unsigned int> i] = (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
+       for j in range(Ntaps):
+           for k in range(2):
+               wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
+                       k,<unsigned int> j] - mu*err[<unsigned int>
+                               i]*X[<unsigned int> k,
+                                   <unsigned int> j].conjugate()
+    return err, wx
+
+
 cdef inline np.complex128_t apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                          int Ntaps, unsigned int os, unsigned int i,
                                          np.ndarray[ndim=2, dtype=np.complex128_t] wx):
-    cdef unsigned int i, j, k
+    cdef unsigned int j, k
     cdef np.complex128_t Xest, Ssq, S_DD
     Xest = 0.j
     for j in range(Ntaps):
