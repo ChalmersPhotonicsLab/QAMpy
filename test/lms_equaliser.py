@@ -29,12 +29,12 @@ os = 2
 fs = os*fb
 N = 10**6
 theta = np.pi/2.35
-M = 32
+M = 64
 QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 4e-3
-muRDE = 1.e-4
-ntaps = 20
+muCMA = 1e-3
+muRDE = 1.e-3
+ntaps = 11
 Ncma = 3*N//4//os -int(1.5*ntaps)
 Nrde = N//4//os -int(1.5*ntaps)
 
@@ -62,7 +62,7 @@ SS = applyPMD(S, H)
 (wx,wy), err_cma = equalisation.MCMA_LMS(SS, 5, os, muCMA, M, ntaps)
 (wx,wy), err_sbd = equalisation.SBD_LMS(SS, 5, os, muRDE, M, (wx,wy))
 
-Ex, Ey = equalisation.equalisation._apply_filter(SS, wx, wy, ntaps, os)
+Ex, Ey = equalisation.apply_filter(SS, wx, wy, ntaps, os)
 print("equalised")
 
 E = np.vstack([Ex,Ey])
