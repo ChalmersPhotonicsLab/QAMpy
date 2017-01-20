@@ -17,7 +17,7 @@ except:
     raise Warning("can not use cython training functions")
     from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA
 
-def _apply_filter(E, wx, wy, Ntaps, os):
+def apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
     # this seems significantly faster than the previous method using a segment axis
     X1 = segment_axis(E[0], Ntaps, Ntaps-os)
@@ -171,7 +171,7 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
     # run CMA
     err[1, :], wy = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
 def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
@@ -229,7 +229,7 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     # run CMA
     err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
 def FS_CMA_RDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
@@ -302,7 +302,7 @@ def FS_CMA_RDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 def FS_MCMA_MRDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
@@ -380,7 +380,7 @@ def FS_MCMA_MRDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_rde[1, :], wy = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
@@ -458,7 +458,7 @@ def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_rde[1, :], wy = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         syms)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 def FS_MCMA_MDDMA(E, TrCMA, TrDDMA, Ntaps, os, muCMA, muMDDMA, M):
@@ -538,7 +538,7 @@ def FS_MCMA_MDDMA(E, TrCMA, TrDDMA, Ntaps, os, muCMA, muMDDMA, M):
     err_rde[1, :], wy = MDDMA(E[:,TrCMA:], TrDDMA, Ntaps, os, muMDDMA, wy,
                                         syms)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 
