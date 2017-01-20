@@ -29,20 +29,21 @@ os = 2
 fs = os*fb
 N = 10**6
 theta = np.pi/2.35
-M = 32
+M = 64
 QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 4e-3
-muRDE = 1.e-4
-ntaps = 20
-Ncma = 3*N//4//os -int(1.5*ntaps)
-Nrde = N//4//os -int(1.5*ntaps)
+muCMA = 8e-3
+muRDE = 1.e-3
+ntaps = 7
+t_pmd = 20.e-12
+#Ncma = N//4//os -int(1.5*ntaps)
+Ncma = 40000
+Nrde = 4*N//5//os -int(1.5*ntaps)
 
 X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
 Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
-t_pmd = 50.e-12
 
 H = H_PMD(theta, t_pmd, omega)
 H2 = H_PMD(-theta, -t_pmd, omega)
@@ -51,11 +52,10 @@ S = np.vstack([X,Y])
 
 SS = applyPMD(S, H)
 
-E, wx, wy, err, err_rde = equalisation.FS_MCMA_MRDE_general(SS, len(SS[0])//os//2 - 31, len(SS[0])//os//2 - 31, 30, 2, 0.001, 0.0003, 16)
 E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
+#E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 print("equalised")
 
 
@@ -71,7 +71,7 @@ evmEy_s = cal_blind_evm(E_s[1], M)
 #sys.exit()
 plt.figure()
 plt.subplot(221)
-plt.title('Recovered CMA/RDE')
+plt.title('Recovered MCMA/MDDMA')
 plt.plot(E[0].real, E[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx*100))
 plt.plot(E[1].real, E[1].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmEy))
 plt.legend()
