@@ -29,16 +29,16 @@ os = 2
 fs = os*fb
 N = 10**6
 theta = np.pi/2.35
-M = 64
+M = 32
 QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 8e-3
+muCMA = 1e-3
 muRDE = 1.e-3
-ntaps = 7
+ntaps = 11
 t_pmd = 20.e-12
 #Ncma = N//4//os -int(1.5*ntaps)
-Ncma = 40000
-Nrde = 4*N//5//os -int(1.5*ntaps)
+Ncma = 10000
+Nrde = N//2//os -int(1.5*ntaps)
 
 X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
 Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
