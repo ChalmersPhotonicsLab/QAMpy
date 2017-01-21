@@ -323,7 +323,7 @@ def resample(fold, fnew, signal, window=None):
     """
     signal = signal.flatten()
     L = len(signal)
-    num = fnew / fold * L
+    num = int(fnew / fold * L)
     if window is None:
         signal = scisig.resample(signal, num)
     else:
