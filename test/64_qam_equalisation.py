@@ -31,13 +31,13 @@ N = 10**6
 theta = np.pi/2.35
 M = 64
 QAM = modulation.QAMModulator(M)
-snr = 25
-muCMA = 8e-3
-muRDE = 1.e-3
-ntaps = 7
-t_pmd = 20.e-12
+snr = 35
+muCMA = 5e-3
+muRDE = 1e-4
+ntaps = 15
+t_pmd = 120.e-12
 #Ncma = N//4//os -int(1.5*ntaps)
-Ncma = 40000
+Ncma = 10000
 Nrde = 4*N//5//os -int(1.5*ntaps)
 
 X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
@@ -53,10 +53,11 @@ S = np.vstack([X,Y])
 SS = applyPMD(S, H)
 
 E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
+#E_m, wx_m, wy_m, err_m, err_rde_m, = equalisation.joint_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
+#E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
+E, wx, wy, err, err_rde = equalisation.FS_MCMA_SBD_adapt2(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 #E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-print("equalised")
 
 
 evmX = cal_blind_evm(X[::2], M)

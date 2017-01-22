@@ -16,7 +16,7 @@ except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
     from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA
-from .training_python import MCMA_adaptive, joint_MCMA_MDDMA_adaptive, MDDMA
+from .training_python import MCMA_adaptive, joint_MCMA_MDDMA_adaptive, MDDMA, MCMA_adaptive2
 
 def apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
@@ -734,6 +734,111 @@ def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     wy = _init_orthogonaltaps(wx)
     # find taps with CMA
     err_cma[1, :], wy = MCMA_adaptive(E, TrCMA, Ntaps, os, muCMA, wy, R)
+    # refine taps with RDE
+    err_rde[1, :], wy = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+                                        syms)
+    # equalise data points. Reuse samples used for channel estimation
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
+def FS_MCMA_SBD_adapt2(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muRDE      : float
+       step size parameter for the RDE algorithm
+
+    M     : int
+       M-QAM order
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    L = E.shape[1]
+    # if can't have more training samples than field
+    assert (TrCMA + TrRDE
+            ) * os < L - Ntaps, "More training samples than overall samples"
+    # constellation properties
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E = utils.normalise_and_center(E)
+    # initialise error vectors
+    err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
+    err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = _init_taps(Ntaps)
+    wy = _init_orthogonaltaps(wx)
+    # find taps with CMA
+    N = 50
+    D = np.min(abs(syms[0]-syms[1]))
+    print(D)
+    R2 = 0.99*D
+    lR = 0.5
+    lm = 0.5
+    mu = muCMA
+    for i in np.arange(0, TrCMA+N, N):
+        print("X: i=%d"% i)
+        err_cma[0, N:N+50], wx, mu, c1= MCMA_adaptive2(E[:,i:], N, Ntaps, os, mu, wx, R, syms, R2)
+        if c1/N > 0.9:
+            print(R2)
+            mu = lm * muCMA
+            R2 = lR * R2
+        if R2 <= 0.4*D:
+            break
+    # refine taps with RDE
+    err_rde[0, :], wx = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+                                        syms)
+    # ** training for y polarisation **
+    #wy = _init_orthogonaltaps(wx)
+    # find taps with CMA
+    R2 = 0.99*D
+    lR = 0.5
+    lm = 0.5
+    mu = muCMA
+    for i in np.arange(0, TrCMA+N, N):
+        print("Y: i=%d"%i)
+        err_cma[1, N:N+50], wy, mu, c1 = MCMA_adaptive2(E[:,i:], N, Ntaps, os, mu, wy, R, syms, R2)
+        if c1/N > 0.9:
+            muCMA = lm * muCMA
+            R2 = lR * R2
+        if R2 <= 0.4*D:
+            break
     # refine taps with RDE
     err_rde[1, :], wy = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         syms)

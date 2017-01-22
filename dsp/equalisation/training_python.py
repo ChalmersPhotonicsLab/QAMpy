@@ -110,6 +110,21 @@ def MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
         mu = mu/(1+lm*mu*abs(err[i])**2)
     return err, wx
 
+def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
+    err = np.zeros(TrSyms, dtype=np.complex)
+    counter1 = 0
+    for i in range(TrSyms):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = np.sum(wx * X)
+        err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
+        Ri = min(abs(syms-Xest))
+        wx -= mu * err[i] * np.conj(X)
+        if Ri < R2:
+            mu /= 5
+            counter1 += 1
+    return err, wx, mu, counter1
+
+
 def joint_MCMA_MDDMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R, symbols):
     err = np.zeros(TrSyms, dtype=np.complex)
     lm =1
