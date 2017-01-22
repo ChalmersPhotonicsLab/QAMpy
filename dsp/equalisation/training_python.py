@@ -55,6 +55,81 @@ def partition_value(signal, partitions, codebook):
     quanta = codebook[index]
     return quanta
 
+def MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
+    """
+    Modified CMA algorithm with adaptive step size to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
+
+    Parameters
+    ----------
+    E       : array_like
+       dual polarisation signal field
+
+    TrSyms : int
+       number of symbols to use needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    mu   : float
+       step size parameter
+
+    wx     : array_like
+       initial equaliser taps
+
+    R      : complex
+       CMA cost constant, the real part applies to the real error the imaginary to the imaginary
+    
+    Returns
+    -------
+
+    err       : array_like
+       estimation error for x and y polarisation
+
+    wx    : array_like
+       equaliser taps
+
+    Notes
+    -----
+    ..[1] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
+    """
+    err = np.zeros(TrSyms, dtype=np.complex)
+    lm =1
+    for i in range(TrSyms):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = np.sum(wx * X)
+        err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
+        if i > 0:
+            if err[i].real*err[i-1].real>0 and err[i].imag*err[i-1].imag>0:
+                lm = 0
+            else:
+                lm = 1
+        wx -= mu * err[i] * np.conj(X)
+        mu = mu/(1+lm*mu*abs(err[i])**2)
+    return err, wx
+
+def joint_MCMA_MDDMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R, symbols):
+    err = np.zeros(TrSyms, dtype=np.complex)
+    lm =1
+    for i in range(TrSyms):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = np.sum(wx * X)
+        r_cma = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
+        sym_dec = symbols[np.argmin(abs(Xest-symbols))]
+        r_mddma = (Xest.real**2 - sym_dec.real**2)*Xest.real + (Xest.imag**2 - sym_dec.imag**2)*1.j*Xest.imag
+        err[i] = r_cma + r_mddma
+        if i > 0:
+            if err[i].real*err[i-1].real>0 and err[i].imag*err[i-1].imag>0:
+                lm = 0
+            else:
+                lm = 1
+        wx -= mu * err[i] * np.conj(X)
+        mu = mu/(1+lm*mu*abs(err[i])**2)
+    return err, wx
+
+
 def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
