@@ -4,6 +4,7 @@ import numpy as np
 cimport cython
 cimport numpy as np
 
+
 def partition_value(double signal,
                     np.ndarray[ndim=1, dtype=np.float64_t] partitions,
                     np.ndarray[ndim=1, dtype=np.float64_t] codebook):
@@ -12,6 +13,21 @@ def partition_value(double signal,
     while index < L and signal > partitions[index]:
         index += 1
     return codebook[index]
+
+cdef np.complex128_t det_symbol(np.ndarray[ndim=1, dtype=np.complex128_t] syms,
+                                np.complex128_t value):
+    cdef unsigned int i, N
+    cdef np.complex128_t det_sym
+    cdef double dist, disto
+    N = len(syms)
+    disto = 1000.
+    for i in range(N):
+        dist = (syms[i].real - value.real)*(syms[i].real - value.real) + (syms[i].imag - value.imag)*(syms[i].imag - value.imag) # this is much faster than taking abs
+        if dist < disto:
+            det_sym = syms[i]
+            disto = dist
+    return det_sym
+
 
 def FS_CMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                     int TrSyms,
@@ -138,7 +154,7 @@ def SBD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
     cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
-    cdef unsigned int i, j, k
+    cdef unsigned int i, j, k, N
     cdef np.complex128_t Xest, R
     for i in range(TrSyms):
        Xest = 0.j
@@ -148,7 +164,7 @@ def SBD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        <unsigned int> i*os+j]
                Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
-       R = symbols[np.argmin(abs(Xest-symbols))] #this could probably be sped up considerably
+       R = det_symbol(symbols, Xest)
        err[<unsigned int> i] = (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
        for j in range(Ntaps):
            for k in range(2):
@@ -175,7 +191,7 @@ def MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        <unsigned int> i*os+j]
                Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                        k,<unsigned int> j]
-       R = symbols[np.argmin(abs(Xest-symbols))] #this could probably be sped up considerably
+       R = det_symbol(symbols, Xest)
        err[<unsigned int> i] = (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
        for j in range(Ntaps):
            for k in range(2):
@@ -186,11 +202,11 @@ def MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
     return err, wx
 
 
-cdef inline np.complex128_t apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+cdef complex apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                          int Ntaps, unsigned int os, unsigned int i,
                                          np.ndarray[ndim=2, dtype=np.complex128_t] wx):
     cdef unsigned int j, k
-    cdef np.complex128_t Xest, Ssq, S_DD
+    cdef np.complex128_t Xest
     Xest = 0.j
     for j in range(Ntaps):
         for k in range(2):
