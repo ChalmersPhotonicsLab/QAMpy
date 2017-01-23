@@ -4,6 +4,7 @@ import numpy as np
 cimport cython
 cimport numpy as np
 
+
 def partition_value(double signal,
                     np.ndarray[ndim=1, dtype=np.float64_t] partitions,
                     np.ndarray[ndim=1, dtype=np.float64_t] codebook):
@@ -21,7 +22,7 @@ cdef np.complex128_t det_symbol(np.ndarray[ndim=1, dtype=np.complex128_t] syms,
     N = len(syms)
     disto = 1000.
     for i in range(N):
-        dist = (syms[i].real - value.real)**2 + (syms[i].imag - value.imag)**2 # this is much faster than taking abs
+        dist = (syms[i].real - value.real)*(syms[i].real - value.real) + (syms[i].imag - value.imag)*(syms[i].imag - value.imag) # this is much faster than taking abs
         if dist < disto:
             det_sym = syms[i]
             disto = dist
@@ -201,11 +202,11 @@ def MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
     return err, wx
 
 
-cdef inline np.complex128_t apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+cdef complex apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                          int Ntaps, unsigned int os, unsigned int i,
                                          np.ndarray[ndim=2, dtype=np.complex128_t] wx):
     cdef unsigned int j, k
-    cdef np.complex128_t Xest, Ssq, S_DD
+    cdef np.complex128_t Xest
     Xest = 0.j
     for j in range(Ntaps):
         for k in range(2):
