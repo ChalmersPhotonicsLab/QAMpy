@@ -16,7 +16,7 @@ except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
     from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA
-from .training_python import MCMA_adaptive, joint_MCMA_MDDMA_adaptive, MDDMA, MCMA_adaptive2
+from .training_python import MCMA_adaptive
 
 def apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
