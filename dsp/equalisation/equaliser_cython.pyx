@@ -21,9 +21,10 @@ cdef np.complex128_t det_symbol(np.ndarray[ndim=1, dtype=np.complex128_t] syms,
     N = len(syms)
     disto = 1000.
     for i in range(N):
-        dist = (syms[i].real - value.real)**2 + (syms[i].imag - value.imag)**2
+        dist = (syms[i].real - value.real)**2 + (syms[i].imag - value.imag)**2 # this is much faster than taking abs
         if dist < disto:
             det_sym = syms[i]
+            disto = dist
     return det_sym
 
 
