@@ -125,26 +125,6 @@ def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
     return err, wx, mu, counter1
 
 
-def joint_MCMA_MDDMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R, symbols):
-    err = np.zeros(TrSyms, dtype=np.complex)
-    lm =1
-    for i in range(TrSyms):
-        X = E[:, i * os:i * os + Ntaps]
-        Xest = np.sum(wx * X)
-        r_cma = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
-        sym_dec = symbols[np.argmin(abs(Xest-symbols))]
-        r_mddma = (Xest.real**2 - sym_dec.real**2)*Xest.real + (Xest.imag**2 - sym_dec.imag**2)*1.j*Xest.imag
-        err[i] = r_cma + r_mddma
-        if i > 0:
-            if err[i].real*err[i-1].real>0 and err[i].imag*err[i-1].imag>0:
-                lm = 0
-            else:
-                lm = 1
-        wx -= mu * err[i] * np.conj(X)
-        mu = mu/(1+lm*mu*abs(err[i])**2)
-    return err, wx
-
-
 def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
