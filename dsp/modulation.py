@@ -194,6 +194,11 @@ class QAMModulator(object):
         """
         return quantize(signal, self.symbols)
 
+    def cal_EVM(self, signal):
+        syms, idx = self.quantize(signal)
+        return np.mean(np.sqrt(abs(syms-signal)**2))
+
+
     def generateSignal(self,
                        N,
                        snr,
