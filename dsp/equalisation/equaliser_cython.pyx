@@ -190,6 +190,7 @@ def SBD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
     cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k, N
     cdef np.complex128_t Xest, R
+    cdef double lm
     for i in range(TrSyms):
        Xest = 0.j
        for j in range(Ntaps):
@@ -206,6 +207,40 @@ def SBD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        k,<unsigned int> j] - mu*err[<unsigned int>
                                i]*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
+    return err, wx
+
+def SBD_adaptive(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+                     int TrSyms, int Ntaps, unsigned int os,
+                     double mu,
+                     np.ndarray[ndim=2, dtype=np.complex128_t] wx,
+                     np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
+    cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
+    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
+    cdef unsigned int i, j, k, N
+    cdef np.complex128_t Xest, R
+    cdef double lm
+    for i in range(TrSyms):
+       Xest = 0.j
+       for j in range(Ntaps):
+           for k in range(2):
+               X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
+                       <unsigned int> i*os+j]
+               Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+                       k,<unsigned int> j]
+       R = det_symbol(symbols, Xest)
+       err[<unsigned int> i] = (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
+       for j in range(Ntaps):
+           for k in range(2):
+               wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
+                       k,<unsigned int> j] - mu*err[<unsigned int>
+                               i]*X[<unsigned int> k,
+                                   <unsigned int> j].conjugate()
+       if i > 0:
+           if err[<unsigned int> i].real*err[<unsigned int> i-1].real > 0 and err[<unsigned int> i].imag*err[<unsigned int> i-1].imag >  0:
+               lm = 0
+           else:
+               lm = 1
+               mu = mu/(1+lm*mu*(err[<unsigned int> i].real*err[<unsigned int> i].real + err[<unsigned int> i].imag*err[<unsigned int> i].imag))
     return err, wx
 
 def MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
