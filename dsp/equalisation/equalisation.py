@@ -129,7 +129,7 @@ def _lms_init(E, wxy, os, Niter):
         Ntaps = wx.shape[1]
         empty_taps = False
     TrSyms = int(L//os//Ntaps)*int(Ntaps)
-    err = np.zeros((Niter,2, TrSyms ), dtype=np.complex128)
+    err = np.zeros((2, Niter * TrSyms ), dtype=np.complex128)
     return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err, empty_taps
 
 def CMA_LMS(E, Niter, os, mu, M, wxy):
@@ -177,12 +177,12 @@ def CMA_LMS(E, Niter, os, mu, M, wxy):
     for i in range(Niter):
         print("LMS iteration %d"%i)
         # run CMA
-        err[i, 0, :], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
+        err[0, i * TrSyms:(i+1)*TrSyms], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
         #if empty_taps:
             #wy = _init_orthogonaltaps(wx)
         # ** training for y polarisation **
         # run CMA
-        err[i,1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     return (wx,wy), err
 
 
@@ -228,21 +228,15 @@ def MCMA_LMS(E, Niter, os, mu, M, wxy):
     R = _calculate_Rconstant_complex(M)
     # scale signal
     E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
-    E = E[:, ::-1]
-    wx = wx[:, ::-1]
-    wy = wy[:, ::-1]
     for i in range(Niter):
         print("LMS iteration %d"%i)
         # run CMA
-        E = E[:, ::-1]
-        wx = wx[:, ::-1]
-        wy = wy[:, ::-1]
-        err[i, 0, :], wx = MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R)
+        err[0, i*TrSyms:(i+1)*TrSyms], wx = MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R)
         #if empty_taps:
             #wy = _init_orthogonaltaps(wx)
         # ** training for y polarisation **
         # run CMA
-        err[i,1, :], wy = MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wy, R)
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wy, R)
     return (wx,wy), err, E
 
 
@@ -290,11 +284,11 @@ def MRDE_LMS(E, Niter, os, mu, M, wxy):
     E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
     for i in range(Niter):
         # run CMA
-        err[i, 0, :], wx =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code) 
+        err[0, i*TrSyms:(i+1)*TrSyms], wx =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code) 
         #if empty_taps:
             #wy = _init_orthogonaltaps(wx)
         # ** training for y polarisation **
-        err[i, 1, :], wy =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wy, part, code) 
+        err[1, i*TrSyms:(i+1)*TrSyms], wy =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wy, part, code) 
     return (wx,wy), err
 
 def SBD_LMS(E, Niter, os, mu, M, wxy):
@@ -339,19 +333,13 @@ def SBD_LMS(E, Niter, os, mu, M, wxy):
     """
     syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
     E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
-    E = E[:, ::-1]
-    wx = wx[:, ::-1]
-    wy = wy[:, ::-1]
     for i in range(Niter):
         # run CMA
-        E = E[:, ::-1]
-        wx = wx[:, ::-1]
-        wy = wy[:, ::-1]
-        err[i, 0, :], wx = SBD_adaptive(E, TrSyms, Ntaps, os, mu, wx, syms)
+        err[0, i*TrSyms:(i+1)*TrSyms], wx = SBD_adaptive(E, TrSyms, Ntaps, os, mu, wx, syms)
         #if empty_taps:
             #wy = _init_orthogonaltaps(wx)
         # ** training for y polarisation **
-        err[i, 1, :], wy = SBD_adaptive(E, TrSyms, Ntaps, os, mu, wy, syms)
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = SBD_adaptive(E, TrSyms, Ntaps, os, mu, wy, syms)
     return (wx,wy), err, E
 
 def MDDMA_LMS(E, Niter, os, mu, M, wxy):
@@ -398,11 +386,11 @@ def MDDMA_LMS(E, Niter, os, mu, M, wxy):
     E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
     for i in range(Niter):
         # run CMA
-        err[i, 0, :], wx = MDDMA(E, TrSyms, Ntaps, os, mu, wx, syms)
+        err[0, i*TrSyms:(i+1)*TrSyms], wx = MDDMA(E, TrSyms, Ntaps, os, mu, wx, syms)
         #if empty_taps:
             #wy = _init_orthogonaltaps(wx)
         # ** training for y polarisation **
-        err[i, 1, :], wy = MDDMA(E, TrSyms, Ntaps, os, mu, wy, syms)
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = MDDMA(E, TrSyms, Ntaps, os, mu, wy, syms)
     return (wx,wy), err
 
 def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
