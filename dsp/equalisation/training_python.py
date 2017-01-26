@@ -435,3 +435,21 @@ def FS_RDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
         err[i] = (Ssq - S_DD)*Xest
         wx -= mu * err[i] * np.conj(X)
     return err, wx
+
+@numba.jit(nopython=True)
+def FS_CME(E, TrSyms, Ntaps, os, mu, wx, R, d, beta):
+    """Constellation matched error algorithm after _[1]
+
+    References
+    ----------
+    ...[1] He, L., Amin, M. G., Reed, C., & Malkemes, R. C. (2004). A Hybrid Adaptive Blind Equalization Algorithm for QAM Signals in Wireless Communications, 52(7), 2058–2069.
+    """
+    err = np.zeros(TrSyms, dtype=np.complex128)
+    for i in range(TrSyms-33):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = sum(wx * X)
+        err[i] = (abs(Xest)**2 - R)*Xest
+        err[i] +=  beta * np.pi/(2*d) * (np.sin(Xest.real*np.pi/d) + 1.j * np.sin(Xest.imag*np.pi/d)) 
+        wx -= mu * err[i] *  np.conj(X)
+    return err, wx
+
