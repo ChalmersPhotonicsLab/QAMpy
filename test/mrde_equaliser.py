@@ -26,8 +26,11 @@ theta = np.pi/2.35
 M = 16
 QAM = modulation.QAMModulator(16)
 snr = 24
-muCMA = 3e-4
-muRDE = 3e-4
+muCMA = 1e-3
+muRDE = 0.5e-3
+ntaps = 30
+Ncma = N//6//os -int(1.5*ntaps)
+Nrde = 5*N//6//os -int(1.5*ntaps)
 
 X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
 Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
@@ -43,8 +46,8 @@ SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
 #E, wx, wy, err, err_rde = equalisation.FS_MCMA_MRDE_general(SS, len(SS[0])//os//2 - 31, len(SS[0])//os//2 - 31, 30, 2, 0.001, 0.0003, 16)
-E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, 30000, 30000, 30, os, muCMA, muRDE, M)
-E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, 30000, 30000, 30, os, muCMA, muRDE, M)
+E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
+E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 
 
 evmX = cal_blind_evm(X[::2], M)

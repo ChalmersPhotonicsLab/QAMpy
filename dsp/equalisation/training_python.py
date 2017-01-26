@@ -64,6 +64,76 @@ def sum(x):
     return __sum
 
 @numba.jit(nopython=True)
+def MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
+    """
+    Modified CMA algorithm with adaptive step size to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
+
+    Parameters
+    ----------
+    E       : array_like
+       dual polarisation signal field
+
+    TrSyms : int
+       number of symbols to use needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    mu   : float
+       step size parameter
+
+    wx     : array_like
+       initial equaliser taps
+
+    R      : complex
+       CMA cost constant, the real part applies to the real error the imaginary to the imaginary
+    
+    Returns
+    -------
+
+    err       : array_like
+       estimation error for x and y polarisation
+
+    wx    : array_like
+       equaliser taps
+
+    Notes
+    -----
+    ..[1] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
+    """
+    err = np.zeros(TrSyms, dtype=np.complex)
+    lm =1
+    for i in range(TrSyms):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = np.sum(wx * X)
+        err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
+        if i > 0:
+            if err[i].real*err[i-1].real>0 and err[i].imag*err[i-1].imag>0:
+                lm = 0
+            else:
+                lm = 1
+        wx -= mu * err[i] * np.conj(X)
+        mu = mu/(1+lm*mu*abs(err[i])**2)
+    return err, wx
+
+def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
+    err = np.zeros(TrSyms, dtype=np.complex)
+    counter1 = 0
+    for i in range(TrSyms):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = np.sum(wx * X)
+        err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
+        Ri = min(abs(syms-Xest))
+        wx -= mu * err[i] * np.conj(X)
+        if Ri < R2:
+            mu /= 5
+            counter1 += 1
+    return err, wx, mu, counter1
+
+
 def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
@@ -157,7 +227,7 @@ def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
         wx -= mu * err[i] *  np.conj(X)
     return err, wx
 
-def FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
+def FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
     """
     Training of the Modified RDE algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
 
@@ -166,7 +236,7 @@ def FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     E       : array_like
        dual polarisation signal field
 
-    TrRDE : int
+    TrSyms : int
        number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
 
     Ntaps   : int
@@ -175,7 +245,7 @@ def FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     os      : int
        oversampling factor
 
-    muRDE   : float
+    mu   : float
        step size parameter
 
     wx     : array_like
@@ -200,17 +270,117 @@ def FS_MRDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     -----
     ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
     """
-    err = np.zeros(TrRDE, dtype=np.complex)
-    for i in range(TrRDE):
+    err = np.zeros(TrSyms, dtype=np.complex)
+    for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
         Ssq = Xest.real**2 + 1.j * Xest.imag**2
         R = partition_value(Ssq.real, part.real, code.real) + partition_value(Ssq.imag, part.imag, code.imag)*1.j
         err[i] = (Ssq.real - R.real)*Xest.real + (Ssq.imag - R.imag)*1.j*Xest.imag
-        wx -= muRDE * err[i] * np.conj(X)
+        wx -= mu * err[i] * np.conj(X)
     return err, wx
 
-def FS_RDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
+def SBD(E, TrSyms, Ntaps, os, mu, wx, symbols):
+    """
+    Symbol Based Decision (SBD) training function after _[1]. This is a DD error function. This does not implement the neighbor weigthing detailed further in _[1].
+
+    Parameters
+    ----------
+    E       : array_like
+       dual polarisation signal field
+
+    TrSyms : int
+       number of symbols to use for training, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    mu   : float
+       step size parameter
+
+    wx     : array_like
+       initial equaliser taps
+
+    symbols    : array_like
+       the symbols of the QAM format being recovered
+
+    Returns
+    -------
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    wx    : array_like
+       equaliser taps
+
+    References
+    ----------
+    ...[1] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
+    """
+    err = np.zeros(TrSyms, dtype=np.complex)
+    for i in range(TrSyms):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = np.sum(wx * X)
+        R = symbols[np.argmin(abs(Xest-symbols))]
+        err[i] = (Xest.real - R.real)*abs(R.real) + (Xest.imag - R.imag)*1.j*abs(R.imag)
+        wx -= mu * err[i] * np.conj(X)
+    return err, wx
+
+def MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
+    """
+    Modified Decision Directed Modulus Algorithm (MDDMA) after _[1].
+    This is a DD error function. 
+
+    Parameters
+    ----------
+    E       : array_like
+       dual polarisation signal field
+
+    TrSyms : int
+       number of symbols to use for training, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    mu   : float
+       step size parameter
+
+    wx     : array_like
+       initial equaliser taps
+
+    symbols    : array_like
+       the symbols of the QAM format being recovered
+
+    Returns
+    -------
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    wx    : array_like
+       equaliser taps
+
+    References
+    ----------
+    ...[1] Fernandes, C. A. R., Favier, G., & Mota, J. C. M. (2007). Decision directed adaptive blind equalization based on the constant modulus algorithm. Signal, Image and Video Processing, 1(4), 333–346. http://doi.org/10.1007/s11760-007-0027-2
+    """
+    err = np.zeros(TrSyms, dtype=np.complex)
+    for i in range(TrSyms):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = np.sum(wx * X)
+        R = symbols[np.argmin(abs(Xest-symbols))]
+        err[i] = (Xest.real**2 - R.real**2)*Xest.real + (Xest.imag**2 - R.imag**2)*1.j*Xest.imag
+        wx -= mu * err[i] * np.conj(X)
+    return err, wx
+
+
+def FS_RDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
     """
     Training of the RDE algorithm to determine the equaliser taps.
 
@@ -219,10 +389,7 @@ def FS_RDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     E       : array_like
        dual polarisation signal field
 
-    TrCMA : int
-       number of symbols to use for training the initial CMA needs to be less than len(Ex)
-
-    TrRDE : int
+    TrSyms : int
        number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
 
     Ntaps   : int
@@ -231,7 +398,7 @@ def FS_RDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     os      : int
        oversampling factor
 
-    muRDE   : float
+    mu   : float
        step size parameter
 
     wx     : array_like
@@ -252,12 +419,12 @@ def FS_RDE_training(E, TrRDE, Ntaps, os, muRDE, wx, part, code):
     wx    : array_like
        equaliser taps
     """
-    err = np.zeros(TrRDE, dtype=np.complex128)
-    for i in range(TrRDE):
+    err = np.zeros(TrSyms, dtype=np.complex128)
+    for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
         Ssq = abs(Xest)**2
         S_DD = partition_value(Ssq, part, code)
         err[i] = (Ssq - S_DD)*Xest
-        wx -= muRDE * err[i] * np.conj(X)
+        wx -= mu * err[i] * np.conj(X)
     return err, wx

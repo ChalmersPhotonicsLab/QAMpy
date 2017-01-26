@@ -11,13 +11,13 @@ from ..modulation import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
 
 
 try:
-    from .equaliser_cython import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
+    from .equaliser_cython import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA, MCMA_adaptive, SBD_adaptive
 except:
     #use python code if cython code is not available
-    Warning("can not use cython training functions")
-from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training
+    raise Warning("can not use cython training functions")
+    from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA
 
-def _apply_filter(E, wx, wy, Ntaps, os):
+def apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
     # this seems significantly faster than the previous method using a segment axis
     X1 = segment_axis(E[0], Ntaps, Ntaps-os)
@@ -49,7 +49,7 @@ def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
     #wy = -np.conj(wx)[::-1,::-1]
-    wy = wx[::-1,::-1]
+    wy = -np.conj(wx[::-1,::-1])
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
@@ -113,6 +113,285 @@ def generate_partition_codes_radius(M):
     parts = codes[:-1] + np.diff(codes)/2
     return parts, codes
 
+def _lms_init(E, wxy, os, Niter):
+    L = E.shape[1]
+    # scale signal
+    E = utils.normalise_and_center(E)
+    if type(wxy) is type(1):
+        Ntaps = wxy
+        wx = _init_taps(Ntaps)
+        wy = _init_orthogonaltaps(wx)
+        empty_taps = True
+    else:
+        wx = wxy[0]
+        wy = wxy[1]
+        Ntaps = wx.shape[1]
+        empty_taps = False
+    TrSyms = int(L//os//Ntaps)*int(Ntaps)
+    err = np.zeros((2, Niter * TrSyms ), dtype=np.complex128)
+    return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err, empty_taps
+
+def CMA_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. This is the LMS version, in contrast to the FS_* equaliser functions this does not apply the filter.
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
+    """
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
+    for i in range(Niter):
+        print("LMS iteration %d"%i)
+        # run CMA
+        err[0, i * TrSyms:(i+1)*TrSyms], wx = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R)
+        #if empty_taps:
+            #wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        # run CMA
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
+    return (wx,wy), err
+
+
+def MCMA_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. This is the LMS version, in contrast to the FS_* equaliser functions this does not apply the filter.
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
+    """
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
+    for i in range(Niter):
+        print("LMS iteration %d"%i)
+        # run CMA
+        err[0, i*TrSyms:(i+1)*TrSyms], wx = MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R)
+        #if empty_taps:
+            #wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        # run CMA
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wy, R)
+    return (wx,wy), err, E
+
+
+def MRDE_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    part, code = generate_partition_codes_complex(16)
+    E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
+    for i in range(Niter):
+        # run CMA
+        err[0, i*TrSyms:(i+1)*TrSyms], wx =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code) 
+        #if empty_taps:
+            #wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        err[1, i*TrSyms:(i+1)*TrSyms], wy =FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wy, part, code) 
+    return (wx,wy), err
+
+def SBD_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
+    for i in range(Niter):
+        # run CMA
+        err[0, i*TrSyms:(i+1)*TrSyms], wx = SBD_adaptive(E, TrSyms, Ntaps, os, mu, wx, syms)
+        #if empty_taps:
+            #wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = SBD_adaptive(E, TrSyms, Ntaps, os, mu, wy, syms)
+    return (wx,wy), err, E
+
+def MDDMA_LMS(E, Niter, os, mu, M, wxy):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    Niter : int
+       number of iterations
+
+    os      : int
+       oversampling factor
+
+    mu      : float
+       step size parameter
+
+    M       : integer
+       QAM order
+
+    wxy     : tuple(array_like, array_like) or int, optional
+       tuple of the wx and wy filter taps or if given as an int number of filter taps to create..
+
+
+    Returns
+    -------
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err       : array_like
+       CMA estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
+    for i in range(Niter):
+        # run CMA
+        err[0, i*TrSyms:(i+1)*TrSyms], wx = MDDMA(E, TrSyms, Ntaps, os, mu, wx, syms)
+        #if empty_taps:
+            #wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = MDDMA(E, TrSyms, Ntaps, os, mu, wy, syms)
+    return (wx,wy), err
+
 def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
@@ -171,7 +450,7 @@ def FS_MCMA(E, TrSyms, Ntaps, os, mu, M):
     # run CMA
     err[1, :], wy = FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
 def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
@@ -229,7 +508,7 @@ def FS_CMA(E, TrSyms, Ntaps, os, mu, M):
     # run CMA
     err[1, :], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err
 
 def FS_CMA_RDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
@@ -302,7 +581,7 @@ def FS_CMA_RDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_rde[1, :], wy = FS_RDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
 
 def FS_MCMA_MRDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
@@ -380,8 +659,351 @@ def FS_MCMA_MRDE(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     err_rde[1, :], wy = FS_MRDE_training(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         part, code)
     # equalise data points. Reuse samples used for channel estimation
-    EestX, EestY = _apply_filter(E, wx, wy, Ntaps, os)
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
     return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
+def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muRDE      : float
+       step size parameter for the RDE algorithm
+
+    M     : int
+       M-QAM order
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    L = E.shape[1]
+    # if can't have more training samples than field
+    assert (TrCMA + TrRDE
+            ) * os < L - Ntaps, "More training samples than overall samples"
+    # constellation properties
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E = utils.normalise_and_center(E)
+    # initialise error vectors
+    err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
+    err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = _init_taps(Ntaps)
+    # find taps with CMA
+    err_cma[0, :], wx = MCMA_adaptive(E, TrCMA, Ntaps, os, muCMA, wx, R)
+    # refine taps with RDE
+    err_rde[0, :], wx = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+                                        syms)
+    # ** training for y polarisation **
+    wy = _init_orthogonaltaps(wx)
+    # find taps with CMA
+    err_cma[1, :], wy = MCMA_adaptive(E, TrCMA, Ntaps, os, muCMA, wy, R)
+    # refine taps with RDE
+    err_rde[1, :], wy = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+                                        syms)
+    # equalise data points. Reuse samples used for channel estimation
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
+def FS_MCMA_SBD_adapt2(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified radius directed equalisation (RDE)
+    fractionally spaced Constant Modulus Algorithm (FS-CMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrRDE : int
+       number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muRDE      : float
+       step size parameter for the RDE algorithm
+
+    M     : int
+       M-QAM order
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS, Filho, Silva, Miranda
+    """
+    L = E.shape[1]
+    # if can't have more training samples than field
+    assert (TrCMA + TrRDE
+            ) * os < L - Ntaps, "More training samples than overall samples"
+    # constellation properties
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E = utils.normalise_and_center(E)
+    # initialise error vectors
+    err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
+    err_rde = np.zeros((2, TrRDE), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = _init_taps(Ntaps)
+    wy = _init_orthogonaltaps(wx)
+    # find taps with CMA
+    N = 50
+    D = np.min(abs(syms[0]-syms[1]))
+    print(D)
+    R2 = 0.99*D
+    lR = 0.5
+    lm = 0.5
+    mu = muCMA
+    for i in np.arange(0, TrCMA+N, N):
+        print("X: i=%d"% i)
+        err_cma[0, N:N+50], wx, mu, c1= MCMA_adaptive2(E[:,i:], N, Ntaps, os, mu, wx, R, syms, R2)
+        if c1/N > 0.9:
+            print(R2)
+            mu = lm * muCMA
+            R2 = lR * R2
+        if R2 <= 0.4*D:
+            break
+    # refine taps with RDE
+    err_rde[0, :], wx = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
+                                        syms)
+    # ** training for y polarisation **
+    #wy = _init_orthogonaltaps(wx)
+    # find taps with CMA
+    R2 = 0.99*D
+    lR = 0.5
+    lm = 0.5
+    mu = muCMA
+    for i in np.arange(0, TrCMA+N, N):
+        print("Y: i=%d"%i)
+        err_cma[1, N:N+50], wy, mu, c1 = MCMA_adaptive2(E[:,i:], N, Ntaps, os, mu, wy, R, syms, R2)
+        if c1/N > 0.9:
+            muCMA = lm * muCMA
+            R2 = lR * R2
+        if R2 <= 0.4*D:
+            break
+    # refine taps with RDE
+    err_rde[1, :], wy = SBD(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
+                                        syms)
+    # equalise data points. Reuse samples used for channel estimation
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
+def joint_MCMA_MDDMA(E, TrCMA, TrSyms, Ntaps, os, muCMA, mu, M):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified Directed Decision Modulus Algorithm (MDDMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrDDMA : int
+       number of symbols to use for training the decision directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muMDDMA      : float
+       step size parameter for the MDDMA algorithm
+
+    M     : int
+       M-QAM order
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
+    """
+    L = E.shape[1]
+    # if can't have more training samples than field
+    # constellation properties
+    #part, code = generate_partition_codes_complex(16)
+    #part = np.hstack([-part.real, part.real]) + 1.j *np.hstack([-part.imag, part.imag])
+    #code = np.hstack([-code.real, code.real]) + 1.j *np.hstack([-code.imag, code.imag])
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E = utils.normalise_and_center(E)
+    # initialise error vectors
+    err = np.zeros((2, TrSyms), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = _init_taps(Ntaps)
+    # find taps with CMA
+    err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = _init_taps(Ntaps)
+    # find taps with CMA
+    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
+    # refine taps with RDE
+    err[0, :], wx = joint_MCMA_MDDMA_adaptive(E, TrSyms, Ntaps, os, mu, wx,
+                                              R, syms)
+    # ** training for y polarisation **
+    wy = _init_orthogonaltaps(wx)
+    err_cma[0, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy, R)
+    err[1, :], wy = joint_MCMA_MDDMA_adaptive(E, TrSyms, Ntaps, os, mu, wy,
+                                              R, syms)
+    # equalise data points. Reuse samples used for channel estimation
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
+    return np.vstack([EestX, EestY]), wx, wy, err, err_cma
+
+def FS_MCMA_MDDMA(E, TrCMA, TrDDMA, Ntaps, os, muCMA, muMDDMA, M):
+    """
+    Equalisation of PMD and residual dispersion of a M QAM signal based on a modified Directed Decision Modulus Algorithm (MDDMA). This equaliser is a dual mode equaliser, which performs intial convergence using the MCMA algorithm before switching to the MRDE.
+    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. Some details can be found in _[1]
+
+    Parameters
+    ----------
+    E    : array_like
+       x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    TrCMA : int
+       number of symbols to use for training the initial CMA needs to be less than len(Ex)
+
+    TrDDMA : int
+       number of symbols to use for training the decision directed equaliser, needs to be less than len(Ex)
+
+    Ntaps   : int
+       number of equaliser taps
+
+    os      : int
+       oversampling factor
+
+    muCMA      : float
+       step size parameter for the CMA algorithm
+
+    muMDDMA      : float
+       step size parameter for the MDDMA algorithm
+
+    M     : int
+       M-QAM order
+
+    Returns
+    -------
+
+    E: array_like
+       equalised x and y polarisation of the field (2D array first dimension is polarisation)
+
+    wx, wy    : array_like
+       equaliser taps for the x and y polarisation
+
+    err_cma, err_rde  : array_like
+       CMA and RDE estimation error for x and y polarisation
+
+    References
+    ----------
+    ...[1] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
+    """
+    L = E.shape[1]
+    # if can't have more training samples than field
+    assert (TrCMA + TrDDMA
+            ) * os < L - Ntaps, "More training samples than overall samples"
+    # constellation properties
+    #part, code = generate_partition_codes_complex(16)
+    #part = np.hstack([-part.real, part.real]) + 1.j *np.hstack([-part.imag, part.imag])
+    #code = np.hstack([-code.real, code.real]) + 1.j *np.hstack([-code.imag, code.imag])
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    R = _calculate_Rconstant_complex(M)
+    # scale signal
+    E = utils.normalise_and_center(E)
+    # initialise error vectors
+    err_cma = np.zeros((2, TrCMA), dtype=np.complex128)
+    err_rde = np.zeros((2, TrDDMA), dtype=np.complex128)
+    # ** training for X polarisation **
+    wx = _init_taps(Ntaps)
+    # find taps with CMA
+    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
+    # refine taps with RDE
+    err_rde[0, :], wx = MDDMA(E[:,TrCMA:], TrDDMA, Ntaps, os, muMDDMA, wx,
+                                        syms)
+    # ** training for y polarisation **
+    wy = _init_orthogonaltaps(wx)
+    # find taps with CMA
+    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy, R)
+    # refine taps with RDE
+    err_rde[1, :], wy = MDDMA(E[:,TrCMA:], TrDDMA, Ntaps, os, muMDDMA, wy,
+                                        syms)
+    # equalise data points. Reuse samples used for channel estimation
+    EestX, EestY = apply_filter(E, wx, wy, Ntaps, os)
+    return np.vstack([EestX, EestY]), wx, wy, err_cma, err_rde
+
 
 
 def CDcomp(E, fs, N, L, D, wl):
