@@ -30,6 +30,7 @@ def partition_signal(signal, partitions, codebook):
         quanta.append(codebook[index])
     return quanta
 
+@numba.jit(nopython=True)
 def partition_value(signal, partitions, codebook):
     """
     Partition a value according to their power
@@ -58,9 +59,10 @@ def partition_value(signal, partitions, codebook):
 
 @numba.jit(nopython=True)
 def sum(x):
+    y = x.flatten()
     __sum = 0.j
-    for i in range(x.size):
-        __sum += x[i]
+    for i in range(y.size):
+        __sum += y[i]
     return __sum
 
 @numba.jit(nopython=True)
@@ -104,11 +106,11 @@ def MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
     -----
     ..[1] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
     """
-    err = np.zeros(TrSyms, dtype=np.complex)
+    err = np.zeros(TrSyms, dtype=np.complex128)
     lm =1
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
-        Xest = np.sum(wx * X)
+        Xest = sum(wx * X)
         err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
         if i > 0:
             if err[i].real*err[i-1].real>0 and err[i].imag*err[i-1].imag>0:
@@ -119,12 +121,13 @@ def MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
         mu = mu/(1+lm*mu*abs(err[i])**2)
     return err, wx
 
+@numba.jit(nopython=True)
 def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
-    err = np.zeros(TrSyms, dtype=np.complex)
+    err = np.zeros(TrSyms, dtype=np.complex128)
     counter1 = 0
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
-        Xest = np.sum(wx * X)
+        Xest = sum(wx * X)
         err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
         Ri = min(abs(syms-Xest))
         wx -= mu * err[i] * np.conj(X)
@@ -133,7 +136,7 @@ def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
             counter1 += 1
     return err, wx, mu, counter1
 
-
+@numba.jit(nopython=True)
 def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
@@ -183,6 +186,7 @@ def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
         wx -= mu * err[i] * np.conj(X)
     return err, wx
 
+@numba.jit(nopython=True)
 def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the CMA algorithm to determine the equaliser taps.
@@ -227,6 +231,7 @@ def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
         wx -= mu * err[i] *  np.conj(X)
     return err, wx
 
+@numba.jit(nopython=True)
 def FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
     """
     Training of the Modified RDE algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
@@ -270,16 +275,17 @@ def FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
     -----
     ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
     """
-    err = np.zeros(TrSyms, dtype=np.complex)
+    err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
-        Xest = np.sum(wx * X)
+        Xest = sum(wx * X)
         Ssq = Xest.real**2 + 1.j * Xest.imag**2
         R = partition_value(Ssq.real, part.real, code.real) + partition_value(Ssq.imag, part.imag, code.imag)*1.j
         err[i] = (Ssq.real - R.real)*Xest.real + (Ssq.imag - R.imag)*1.j*Xest.imag
         wx -= mu * err[i] * np.conj(X)
     return err, wx
 
+@numba.jit(nopython=True)
 def SBD(E, TrSyms, Ntaps, os, mu, wx, symbols):
     """
     Symbol Based Decision (SBD) training function after _[1]. This is a DD error function. This does not implement the neighbor weigthing detailed further in _[1].
@@ -320,15 +326,16 @@ def SBD(E, TrSyms, Ntaps, os, mu, wx, symbols):
     ----------
     ...[1] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
     """
-    err = np.zeros(TrSyms, dtype=np.complex)
+    err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
-        Xest = np.sum(wx * X)
+        Xest = sum(wx * X)
         R = symbols[np.argmin(abs(Xest-symbols))]
         err[i] = (Xest.real - R.real)*abs(R.real) + (Xest.imag - R.imag)*1.j*abs(R.imag)
         wx -= mu * err[i] * np.conj(X)
     return err, wx
 
+@numba.jit(nopython=True)
 def MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
     """
     Modified Decision Directed Modulus Algorithm (MDDMA) after _[1].
@@ -370,7 +377,7 @@ def MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
     ----------
     ...[1] Fernandes, C. A. R., Favier, G., & Mota, J. C. M. (2007). Decision directed adaptive blind equalization based on the constant modulus algorithm. Signal, Image and Video Processing, 1(4), 333–346. http://doi.org/10.1007/s11760-007-0027-2
     """
-    err = np.zeros(TrSyms, dtype=np.complex)
+    err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
@@ -379,7 +386,7 @@ def MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
         wx -= mu * err[i] * np.conj(X)
     return err, wx
 
-
+@numba.jit(nopython=True)
 def FS_RDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
     """
     Training of the RDE algorithm to determine the equaliser taps.
@@ -422,7 +429,7 @@ def FS_RDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
     err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
-        Xest = np.sum(wx * X)
+        Xest = sum(wx * X)
         Ssq = abs(Xest)**2
         S_DD = partition_value(Ssq, part, code)
         err[i] = (Ssq - S_DD)*Xest
