@@ -52,12 +52,12 @@ os = 2
 M = 64
 QAM = modulation.QAMModulator(M)
 snr = 35
-muCMA = 5e-3
+muCMA = 4e-3
 muRDE = 2e-3
-ntaps = 33
-#Ncma = N//4//os -int(1.5*ntaps)
-Ncma = 300000
+Ncma = 100000
 Nrde = 300000
+ntaps = 33
+niter = 4
 
 Dat = loadmat('OSNRLoading_1544p32_Att_2_OSNR_37_3.mat')
 
@@ -65,25 +65,31 @@ X = Dat['CH1'] + 1.j * Dat['CH2']
 Y = Dat['CH3'] + 1.j * Dat['CH4']
 X = X.flatten()
 Y = Y.flatten()
+X = X[len(X)//2:]
+Y = Y[len(Y)//2:]
 
-X = pre_filter(X, 3.75)
-Y = pre_filter(Y, 3.75)
+X = pre_filter(X, 3.9)
+Y = pre_filter(Y, 3.9)
 X = utils.resample(2.5, 2, X)
 Y = utils.resample(2.5, 2, Y)
 X = compIQbalance(X)
 Y = compIQbalance(Y)
-SS = np.vstack([X,Y])
+SS = np.vstack([X[5000:-5000],Y[5000:-5000]])
 
 
 #E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 #E_m, wx_m, wy_m, err_m, err_rde_m, = equalisation.joint_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 #E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-(wx, wy), err_cma = equalisation.MCMA_LMS(SS, 2, 2, muCMA, M, 33)
-(wxdd, wydd), err_dd = equalisation.MDDMA_LMS(SS, 2, 2, muRDE, M, (wx,wy))
-#E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
+#(wx, wy), err_cma = equalisation.CMA_LMS(SS, 1, os, muCMA, M, 33)
+#(wx, wy), err_cma = equalisation.MCMA_LMS(SS, niter, os, muCMA, M, 33)
+#(wx, wy), err_cma = equalisation.MCMA_LMS(SS, niter, os, muCMA, M, 33)
+#(wxdd, wydd), err_dd = equalisation.SBD_LMS(SS, niter, os, muRDE, M, (wx,wy))
+#(wxdd, wydd), err_dd = equalisation.MSBD_LMS(SS, niter, os, muRDE, M, (wx,wy))
+E, wx, wy, err, err_rde = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 #E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-E = equalisation.apply_filter(SS, wxdd, wydd, 33, 2 )
-Ec = equalisation.apply_filter(SS, wx, wy, 33, 2)
+#E = equalisation.apply_filter(SS, wxdd, wydd, 33, os )
+#Ec = equalisation.apply_filter(SS, wx, wy, 33, os)
+Ec = E
 
 evmX = cal_blind_evm(X[::2], M)
 evmY = cal_blind_evm(Y[::2], M)
@@ -112,33 +118,9 @@ plt.title(r'Recovered SBD $EVM_y=%.1f\%%$'%(evmEy*100))
 plt.hexbin(E[1].real, E[1].imag)
 plt.show()
 sys.exit()
-#plt.plot(E[0].real, E[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx*100))
-#plt.plot(E[1].real, E[1].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmEy))
-
-plt.subplot(212)
-plt.plot(Ec[0].real, Ec[0].imag, 'r.' ,label=r"$EVMCMA_x=%.1f\%%$"%(evmEx_c*100))
-plt.plot(Ec[1].real, Ec[1].imag, 'g.', label=r"$EVMCMA_y=%.1f\%%$"%(100*evmEy_c))
-plt.legend()
-plt.show()
-sys.exit()
-plt.title('Recovered MCMA/MRDE')
-plt.plot(E_m[1].real, E_m[1].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmEy_m))
-plt.plot(E_m[0].real, E_m[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx_m*100))
-plt.legend()
-plt.subplot(223)
-plt.title('Recovered MCMA/MDDMA')
-plt.plot(E_s[1].real, E_s[1].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmEy_s))
-plt.plot(E_s[0].real, E_s[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
-plt.legend()
-plt.subplot(224)
-plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'r.', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
-plt.legend()
-
 plt.figure()
 plt.subplot(331)
-plt.title('CMA/MDDMA Taps')
+plt.title('CMA Taps')
 plt.plot(wx[0,:], 'r')
 plt.plot(wx[1,:], '--r')
 plt.plot(wy[0,:], 'g')
