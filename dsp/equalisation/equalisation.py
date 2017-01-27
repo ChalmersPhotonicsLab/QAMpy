@@ -16,6 +16,7 @@ except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
     from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA
+from .training_python import FS_SCA
 
 def apply_filter(E, wx, wy, Ntaps, os):
     # equalise data points. Reuse samples used for channel estimation
@@ -27,6 +28,14 @@ def apply_filter(E, wx, wy, Ntaps, os):
     Eest = np.dot(X, ww.transpose())
     return Eest[:,0],  Eest[:,1]
 
+def _calculate_Rdash(syms):
+     return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (sign(syms.real + syms.imag) + sign(syms.real-syms.imag) + 1.j*(sign(syms.real+syms.imag) - sign(syms.real-syms.imag)))*syms.conj()
+
+def _calculate_Rsca(M):
+    syms = calculate_MQAM_symbols(M)
+    syms /= np.sqrt(calculate_MQAM_scaling_factor(M))
+    Rd = _calculate_Rdash(syms)
+    return np.mean((abs(syms.real + syms.imag) + abs(syms.real - syms.imag))**2 * Rd)/(4*np.mean(Rd))
 
 def _calculate_Rconstant(M):
     syms = calculate_MQAM_symbols(M)
@@ -183,6 +192,19 @@ def CMA_LMS(E, Niter, os, mu, M, wxy):
         # run CMA
         err[1, i*TrSyms:(i+1)*TrSyms], wy = FS_CMA_training(E, TrSyms, Ntaps, os, mu, wy, R)
     return (wx,wy), err
+
+def SCA_LMS(E, Niter, os, mu, M, wxy):
+    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    R = _calculate_Rdash(syms)
+    E, wx, wy, TrSyms, Ntaps, err, empty_taps = _lms_init(E, wxy, os, Niter)
+    for i in range(Niter):
+        err[0, i * TrSyms:(i+1)*TrSyms], wx = FS_SCA(E, TrSyms, Ntaps, os, mu, wx, R)
+        #if empty_taps:
+            #wy = _init_orthogonaltaps(wx)
+        # ** training for y polarisation **
+        # run CMA
+        err[1, i*TrSyms:(i+1)*TrSyms], wy = FS_SCA(E, TrSyms, Ntaps, os, mu, wy, R)
+    return (wx, wy), err
 
 
 def MCMA_LMS(E, Niter, os, mu, M, wxy):
@@ -715,8 +737,17 @@ def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     assert (TrCMA + TrRDE
             ) * os < L - Ntaps, "More training samples than overall samples"
     # constellation properties
-    syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    #syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+    syms = calculate_MQAM_symbols(M)
     R = _calculate_Rconstant_complex(M)
+    Rd = (abs(syms.real + syms.imag) + abs(syms.real - syms.imag))* (np.sign(syms.real + syms.imag) + np.sign(syms.real - syms.imag) + 1.j * (np.sign(syms.real+syms.imag) - np.sign(syms.real - syms.imag)))*syms.conj()
+    R = np.mean((abs(syms.real + syms.imag) + abs(syms.real - syms.imag))**2 * Rd)
+    RR = np.mean(2*Rd)
+    R /= RR
+    print(R)
+    R = np.sqrt(abs(R))
+    print(R)
+    R = 2.95
     # scale signal
     E = utils.normalise_and_center(E)
     # initialise error vectors
@@ -725,14 +756,14 @@ def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     # ** training for X polarisation **
     wx = _init_taps(Ntaps)
     # find taps with CMA
-    err_cma[0, :], wx = MCMA_adaptive(E, TrCMA, Ntaps, os, muCMA, wx, R)
+    err_cma[0, :], wx = FS_SCA(E, TrCMA, Ntaps, os, muCMA/100, wx, R)
     # refine taps with RDE
     err_rde[0, :], wx = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
                                         syms)
     # ** training for y polarisation **
     wy = _init_orthogonaltaps(wx)
     # find taps with CMA
-    err_cma[1, :], wy = MCMA_adaptive(E, TrCMA, Ntaps, os, muCMA, wy, R)
+    err_cma[1, :], wy = FS_SCA(E, TrCMA, Ntaps, os, muCMA/100, wy, R)
     # refine taps with RDE
     err_rde[1, :], wy = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         syms)

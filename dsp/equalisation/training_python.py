@@ -453,3 +453,28 @@ def FS_CME(E, TrSyms, Ntaps, os, mu, wx, R, d, beta):
         wx -= mu * err[i] *  np.conj(X)
     return err, wx
 
+@numba.jit(nopython=True)
+def FS_SCA(E, TrSyms, Ntaps, os, mu, wx, R):
+    """Constellation matched error algorithm after _[1]
+
+    References
+    ----------
+    ...[1] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.dsp.2007.09.001
+    """
+    err = np.zeros(TrSyms, dtype=np.complex128)
+    for i in range(TrSyms-33):
+        X = E[:, i * os:i * os + Ntaps]
+        Xest = sum(wx * X)
+        if abs(Xest.real) >= abs(Xest.imag):
+            A = 1
+            if abs(Xest.real) == abs(Xest.imag):
+                B = 1
+            else:
+                B = 0
+        else:
+            A = 0
+            B = 1
+        err[i] = 4*Xest.real*(4*Xest.real**2 - 4*R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*R**2)*B
+        wx -= mu * err[i] *  np.conj(X)
+    return err, wx
+
