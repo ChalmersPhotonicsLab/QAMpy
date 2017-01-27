@@ -5,6 +5,16 @@ from .utils import bin2gray
 
 # All the formulas below are taken from dsplog.com
 
+def Q_function(x):
+    """The Q function is the tail probability of the standard normal distribution see _[1,2] for a definition and its relation to the erfc. In _[3] it is called the Gaussian co-error function.
+
+    References
+    ----------
+    ...[1] https://en.wikipedia.org/wiki/Q-function
+    ...[2] https://en.wikipedia.org/wiki/Error_function#Integral_of_error_function_with_Gaussian_density_function
+    ...[3] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
+    """
+    return 0.5*erfc(x/np.sqrt(2))
 
 def MQAM_SERvsEsN0(snr, M):
     """Calculate the symbol error rate (SER) of an M-QAM signal as a function
@@ -13,6 +23,32 @@ def MQAM_SERvsEsN0(snr, M):
     return 2*(1-1/np.sqrt(M))*erfc(np.sqrt(3*snr/(2*(M-1)))) -\
             (1-2/np.sqrt(M)+1/M)*erfc(np.sqrt(3*snr/(2*(M-1))))**2
 
+def MQAM_BERvsEsN0(snr, M):
+    """
+    Bit-error-rate vs signal to noise ratio after formula in _[1].
+
+    Parameters
+    ----------
+
+    snr   : array_like
+        Signal to noise ratio in linear units
+
+    M     : integer
+        Order of M-QAM 
+
+    Returns
+    -------
+
+    ber   : array_like
+        theoretical bit-error-rate
+
+    References
+    ----------
+    ...[3] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
+    """
+    L = np.sqrt(M)
+    ber = 2*(1-1/L)/np.log2(L)*Q_function(np.sqrt(3*np.log2(L)/(L**2-1)*(2*snr/np.log2(M))))
+    return ber
 
 def MPSK_SERvsEsN0(snr, M):
     """Calculate the symbol error rate (SER) of an M-PSK signal as a function
