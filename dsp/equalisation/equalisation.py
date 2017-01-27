@@ -740,14 +740,6 @@ def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     #syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
     syms = calculate_MQAM_symbols(M)
     R = _calculate_Rconstant_complex(M)
-    Rd = (abs(syms.real + syms.imag) + abs(syms.real - syms.imag))* (np.sign(syms.real + syms.imag) + np.sign(syms.real - syms.imag) + 1.j * (np.sign(syms.real+syms.imag) - np.sign(syms.real - syms.imag)))*syms.conj()
-    R = np.mean((abs(syms.real + syms.imag) + abs(syms.real - syms.imag))**2 * Rd)
-    RR = np.mean(2*Rd)
-    R /= RR
-    print(R)
-    R = np.sqrt(abs(R))
-    print(R)
-    R = 2.95
     # scale signal
     E = utils.normalise_and_center(E)
     # initialise error vectors
@@ -756,14 +748,14 @@ def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     # ** training for X polarisation **
     wx = _init_taps(Ntaps)
     # find taps with CMA
-    err_cma[0, :], wx = FS_SCA(E, TrCMA, Ntaps, os, muCMA/100, wx, R)
+    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
     # refine taps with RDE
     err_rde[0, :], wx = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
                                         syms)
     # ** training for y polarisation **
     wy = _init_orthogonaltaps(wx)
     # find taps with CMA
-    err_cma[1, :], wy = FS_SCA(E, TrCMA, Ntaps, os, muCMA/100, wy, R)
+    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy, R)
     # refine taps with RDE
     err_rde[1, :], wy = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         syms)
