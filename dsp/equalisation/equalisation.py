@@ -748,14 +748,14 @@ def FS_MCMA_SBD(E, TrCMA, TrRDE, Ntaps, os, muCMA, muRDE, M):
     # ** training for X polarisation **
     wx = _init_taps(Ntaps)
     # find taps with CMA
-    err_cma[0, :], wx = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wx, R)
+    err_cma[0, :], wx = MCMA_adaptive(E, TrCMA, Ntaps, os, muCMA, wx, R)
     # refine taps with RDE
     err_rde[0, :], wx = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wx,
                                         syms)
     # ** training for y polarisation **
     wy = _init_orthogonaltaps(wx)
     # find taps with CMA
-    err_cma[1, :], wy = FS_MCMA_training(E, TrCMA, Ntaps, os, muCMA, wy, R)
+    err_cma[1, :], wy = MCMA_adaptive(E, TrCMA, Ntaps, os, muCMA, wy, R)
     # refine taps with RDE
     err_rde[1, :], wy = SBD_adaptive(E[:,TrCMA:], TrRDE, Ntaps, os, muRDE, wy,
                                         syms)
