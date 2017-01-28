@@ -50,7 +50,7 @@ def MQAM_BERvsEVM(evm_dB, M):
     """
     L = np.sqrt(M)
     evm = dB2lin(evm_dB)
-    ber = 2*(1-1/L)/np.log2(L)*Q_function(np.sqrt(3*np.log2(L)/(L**2-1)*(2/(evm**2*np.log2(M)))))
+    ber = 2*(1-1/L)/np.log2(L)*Q_function(np.sqrt(3*np.log2(L)/(L**2-1)*(2/(evm*np.log2(M)))))
     return ber
 
 
