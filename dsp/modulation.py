@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample
+from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center
 from .prbs import make_prbs_extXOR
 from . import theory
 from . import ber_functions
@@ -192,12 +192,13 @@ class QAMModulator(object):
         idx      : array_like
             1D array of indices into QAMmodulator.symbols
         """
-        return quantize(signal, self.symbols)
+        return quantize(normalise_and_center(signal), self.symbols)
 
-    def cal_EVM(self, signal):
-        syms, idx = self.quantize(signal)
-        return np.mean(np.sqrt(abs(syms-signal)**2))
-
+    def cal_EVM(self, signal, syms=None):
+        signal = normalise_and_center(signal)
+        if syms == None:
+            syms, idx = self.quantize(signal)
+        return np.sqrt(np.mean(abs(syms-signal)**2))#/np.mean(abs(self.symbols)**2))
 
     def generateSignal(self,
                        N,
