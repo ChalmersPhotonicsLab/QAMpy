@@ -295,14 +295,44 @@ class QAMModulator(object):
         data_demod = self.quantize(signal_rx)[0]
         return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
 
-    def cal_BER(self, signal_rx, bits_tx=None, PRBS=None, Lsync=100, imax=5):
+    def cal_BER(self, signal_rx, bits_tx=None, PRBS=(15,utils.bool2bin(np.ones(15))), Lsync=100, imax=5):
+        """
+        Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
+
+        Parameters
+        ----------
+
+        signal_rx    : array_like
+            received signal to demodulate and calculate BER of
+
+        bits_tx      : array_like, optional
+            transmitted bit sequence to compare against. (default is None, which means we will calculate a PRBS)
+
+        PRBS         : tuple(int, int), optional
+            tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
+
+        Lsync        : integer, optional
+            Number of bits to use for synchronising against the known bit sequence
+
+        imax         : integer, optional
+            Number of different sequence to try for synchronisation
+
+        Returns
+        -------
+
+        ber          : float
+            bit-error-rate in linear units
+
+        errs         : integer
+            number of detected errors
+
+        N            : integer
+            length of input sequence
+        """
         assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
         bits_demod = self.decode(self.quantize(signal_rx)[0])
         if bits_tx is None:
-            if len(PRBS)>1:
-                bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0], PRBS[1])
-            else:
-                bits_tx = make_prbs_extXOR(len(bits_demod), PRBS[0])
+            bits_tx = make_prbs_extXOR( PRBS[0], len(bits_demod), seed=PRBS[1])
         else:
             bits_tx = ber_functions.adjust_data_length(bits_tx, bits_demod)
         i = 0
