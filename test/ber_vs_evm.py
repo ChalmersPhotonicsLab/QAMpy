@@ -1,79 +1,90 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import signals, theory, ber_functions, signal_quality, modulation
+from dsp import theory, ber_functions, signal_quality, modulation, utils
 
 
-""" Check the calculation of EVM, BER, Q vs theoretical symbol error rate"""
 
-snr = np.arange(5, 17, 1)
-ser = []
-ber = []
-ser_class = []
-ber_class = []
-evm = []
-snr2 = []
-modl = modulation.QAMModulator(4)
-N = 10**6
+"""
+Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]
 
 
-for sr in snr:
-    print(sr)
-    data_rx, dataI, dataQ = signals.generateRandomQPSKData(N, sr)
-    data_tx = 2*(dataI+1.j*dataQ-0.5-0.5j)
-    ser.append(signal_quality.cal_ser_QAM(data_rx, data_tx, 4))
-    data_rx2, symbols2, bits2 = modl.generateSignal(N, sr)
-    ser_class.append(modl.calculate_SER(data_rx2, symbol_tx=symbols2))
-    try:
-        ber.append(ber_functions.cal_BER_QPSK_prbs(data_rx, 15, 23)[0])
-    except:
-        ber.append(1)
-    try:
-        ber_class.append(modl.cal_BER(data_rx2, bits_tx=bits2)[0])
-    except:
-        ber_class.append(1)
-    snr2.append(signal_quality.cal_SNR_QAM(data_rx, 4))
-    evm.append(signal_quality.cal_blind_evm(data_rx, 4))
-evm = np.array(evm)
-ber = np.array(ber)
-snr2 = np.array(snr2)
-ser_class = np.array(ser_class)
-ber_class = np.array(ber_class)
+References
+----------
+...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
+"""
+
+snr = np.linspace(5, 30, 5)
+snrf = np.linspace(5, 30, 500)
+evmf = np.linspace(-30, 0, 500)
+N = 10**5
+Mqams = [ 4, 16, 64]
+
 plt.figure()
-ax = plt.subplot(411)
-plt.title(r"BER vs SNR")
-plt.plot(snr, ber, 'bo', label="calculated BER")
-plt.plot(snr, ber_class, 'ro', label="calculated BER from class")
-plt.plot(snr, theory.MPSK_SERvsEsN0(10**(snr/10.), 4)/2, label='symbol error rate/2 theory')
-#plt.plot(snr, 10*np.log10(ser), 'or',label='calculation')
-plt.xlabel('SNR [dB]')
-plt.ylabel('BER [dB]')
-plt.legend()
-ax.set_yscale('log')
-ax2 = plt.subplot(412)
-plt.title(r"EVM vs BER")
-plt.plot(ber, evm, 'b', label="EVM")
-#plt.plot(snr, 10*np.log10(ser), 'or',label='calculation')
-plt.xlabel('EVM [dB]')
-plt.ylabel('BER [dB]')
+ax1 = plt.subplot(221)
+ax2 = plt.subplot(222)
+ax3 = plt.subplot(223)
+ax4 = plt.subplot(224)
+ax1.set_title("BER vs SNR")
+ax2.set_title("SER vs SNR")
+ax3.set_title("BER vs EVM")
+ax4.set_title("EVM vs SNR")
+ax1.set_xlabel('SNR [dB]')
+ax1.set_ylabel('BER [dB]')
+ax1.set_yscale('log')
+ax1.set_xlim(0,30)
+ax1.set_ylim(1e-5,1)
+ax2.set_xlabel('SNR [dB]')
+ax2.set_ylabel('SER [dB]')
 ax2.set_yscale('log')
-plt.legend()
-ax3 = plt.subplot(413)
-plt.title(r"$EVM^2$ vs SNR")
-plt.plot(snr, 10*np.log10(evm**2), 'ro', label=r"$EVM^2")
-plt.plot(snr, -snr,  label=r"SNR")
-plt.plot(snr, -10*np.log10(snr2), 'go', label="SNR calculated")
-plt.xlabel('SNR [dB]')
-plt.ylabel('$EVM^2$ [dB]')
-plt.legend()
-ax4 = plt.subplot(414)
-plt.title(r"SER vs SNR")
-plt.plot(snr, ser, 'bo', label="calculated SER")
-plt.plot(snr, ser_class, 'ro', label="calculated SER from class")
-plt.plot(snr, theory.MPSK_SERvsEsN0(10**(snr/10.), 4), label='symbol error rate theory')
-#plt.plot(snr, 10*np.log10(ser), 'or',label='calculation')
-plt.xlabel('SNR [dB]')
-plt.ylabel('SER [dB]')
-plt.legend()
-ax4.set_yscale('log')
+ax2.set_xlim(0,30)
+ax2.set_ylim(1e-5,1)
+ax3.set_xlabel('EVM [dB]')
+ax3.set_ylabel('BER [dB]')
+ax3.set_yscale('log')
+ax3.set_xlim(-30,0)
+ax3.set_ylim(1e-6,1)
+ax4.set_xlabel('SNR [dB]')
+ax4.set_ylabel('EVM [dB]')
+ax4.set_xlim(0, 30)
+ax4.set_ylim(-30, 0)
+
+
+
+c = ['b', 'r', 'g', 'c']
+s = ['o', '1', 's', '+']
+j = 0
+for M in Mqams:
+    print("%d-QAM"%M)
+    ser = np.zeros(snr.shape)
+    ber = np.zeros(snr.shape)
+    evm1 = np.zeros(snr.shape)
+    evm2 = np.zeros(snr.shape)
+    i = 0
+    for sr in snr:
+        print("SNR = %2f.0 dB"%sr)
+        modulator = modulation.QAMModulator(M)
+        signal, syms, bits = modulator.generateSignal(N, sr)
+        ser[i] = modulator.calculate_SER(signal, symbol_tx=syms)
+        try:
+            ber[i] = modulator.cal_BER(signal, bits)[0]
+        except:
+            ber[i] = 1
+        evm1[i] = modulator.cal_EVM(signal)
+        evm2[i] = signal_quality.cal_blind_evm(signal, M)
+        i += 1
+    ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    ax2.plot(snrf, theory.MQAM_SERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    ax3.plot(evmf, theory.MQAM_BERvsEVM(utils.dB2lin(evmf), M), color=c[j], label="%d-QAM theory"%M)
+    ax3.plot(utils.lin2dB(evm1), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    ax3.plot(utils.lin2dB(evm2), ber, color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
+    ax4.plot(snr, utils.lin2dB(evm1), color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
+    j += 1
+ax1.legend()
+ax2.legend()
+ax3.legend()
+ax4.legend()
 plt.show()
 
