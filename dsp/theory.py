@@ -23,6 +23,18 @@ def MQAM_SERvsEsN0(snr, M):
     return 2*(1-1/np.sqrt(M))*erfc(np.sqrt(3*snr/(2*(M-1)))) -\
             (1-2/np.sqrt(M)+1/M)*erfc(np.sqrt(3*snr/(2*(M-1))))**2
 
+def MQAM_BERvsEVM(evm, M):
+    """Calculate the bit-error-rate for a M-QAM signal as a function of EVM. Taken from _[1]. Note that here we miss the square in the definition to match the plots given in the paper.
+
+    References
+    ----------
+    ...[3] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
+    """
+    L = np.sqrt(M)
+    ber = 2*(1-1/L)/np.log2(L)*Q_function(np.sqrt(3*np.log2(L)/(L**2-1)*(2/(evm*np.log2(M)))))
+    return ber
+
+
 def MQAM_BERvsEsN0(snr, M):
     """
     Bit-error-rate vs signal to noise ratio after formula in _[1].
