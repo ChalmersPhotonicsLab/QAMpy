@@ -82,10 +82,12 @@ for M in Mqams:
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
     ax2.plot(snrf, theory.MQAM_SERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax3.plot(evmf, theory.MQAM_BERvsEVM(utils.dB2lin(evmf), M), color=c[j], label="%d-QAM theory"%M)
+    ax3.plot(evmf, theory.MQAM_BERvsEVM(evmf, M), color=c[j], label="%d-QAM theory"%M)
     ax3.plot(utils.lin2dB(evm1**2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax3.plot(utils.lin2dB(evm**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
+    # illustrate the difference between a blind and non-blind EVM
+    ax3.plot(utils.lin2dB(evm_known**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
     ax4.plot(snr, utils.lin2dB(evm1**2), color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    ax4.plot(snr, utils.lin2dB(evm_known**2), color=c[j], marker=s[j], lw=0, label="%d-QAM non-blind"%M)
     #ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
     j += 1
 ax1.legend()
