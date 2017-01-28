@@ -194,8 +194,14 @@ def _lms_init(E, wxy, os, Niter):
     err = np.zeros((2, Niter * TrSyms ), dtype=np.complex128)
     return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err, empty_taps
 
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd")):
+    wx, wy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
+    wx2, wy2, err2 = equalise_signal(E, os, mu[0], M, wxy=(wx,wy), TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
+    EestX, EestY = apply_filter(E, wx2, wy2, Ntaps, os)
+    return np.vstack([EestX, EestY]), (wx2, wy2), (err1), err2
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="cma"):
+
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive"):
     """
     Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
     The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. This is the LMS version, in contrast to the FS_* equaliser functions this does not apply the filter.
