@@ -13,7 +13,7 @@ References
 ...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
 """
 
-snr = np.linspace(5, 30, 5)
+snr = np.linspace(5, 30, 10)
 snrf = np.linspace(5, 30, 500)
 evmf = np.linspace(-30, 0, 500)
 N = 10**5
@@ -51,7 +51,7 @@ ax4.set_ylim(-30, 0)
 
 
 c = ['b', 'r', 'g', 'c']
-s = ['o', '1', 's', '+']
+s = ['o', '<', 's', '+']
 j = 0
 for M in Mqams:
     print("%d-QAM"%M)
@@ -59,6 +59,7 @@ for M in Mqams:
     ber = np.zeros(snr.shape)
     evm1 = np.zeros(snr.shape)
     evm2 = np.zeros(snr.shape)
+    evm_known = np.zeros(snr.shape)
     i = 0
     for sr in snr:
         print("SNR = %2f.0 dB"%sr)
@@ -67,24 +68,29 @@ for M in Mqams:
         ser[i] = modulator.calculate_SER(signal, symbol_tx=syms)
         try:
             ber[i] = modulator.cal_BER(signal, bits)[0]
-        except:
-            ber[i] = 1
+        except ber_functions.DataSyncError:
+            try:
+                ber[i] = modulator.cal_BER(signal, bits, Lsync=30, imax=50)[0]
+            except:
+                ber[i] = 1
+                print("Could not sync data")
         evm1[i] = modulator.cal_EVM(signal)
         evm2[i] = signal_quality.cal_blind_evm(signal, M)
+        evm_known = modulator.cal_EVM(signal, syms)
         i += 1
     ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
     ax2.plot(snrf, theory.MQAM_SERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
     ax3.plot(evmf, theory.MQAM_BERvsEVM(utils.dB2lin(evmf), M), color=c[j], label="%d-QAM theory"%M)
-    ax3.plot(utils.lin2dB(evm1), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax3.plot(utils.lin2dB(evm2), ber, color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
-    ax4.plot(snr, utils.lin2dB(evm1), color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
+    ax3.plot(utils.lin2dB(evm1**2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    ax3.plot(utils.lin2dB(evm**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
+    ax4.plot(snr, utils.lin2dB(evm1**2), color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    #ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
     j += 1
 ax1.legend()
 ax2.legend()
-ax3.legend()
+#ax3.legend()
 ax4.legend()
 plt.show()
 
