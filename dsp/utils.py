@@ -97,15 +97,10 @@ def normalise_and_center(E):
     """
     Normalise and center the input field, by calculating the mean power for each polarisation separate and dividing by its square-root
     """
-    if E.ndim > 1:
-        for i in range(2):
-            E[i] -= np.mean(E[i])
-            P = np.sqrt(np.mean(cabssquared(E[i])))
-            E[i] /= P
-    else:
-        E -= np.mean(E)
-        P = np.sqrt(np.mean(cabssquared(E)))
-        E /= P
+    for i in range(E.shape[0]):
+        E[i] -= np.mean(E[i])
+        P = np.sqrt(np.mean(cabssquared(E[i])))
+        E[i] /= P
     return E
 
 def sech(x, A, x0, w):
