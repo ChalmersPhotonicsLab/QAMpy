@@ -241,7 +241,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
 
     """
     (wx, wy), err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
-    (wx2, wy2), err2 = equalise_signal(E, os, mu[0], M, wxy=(wx,wy), TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
+    (wx2, wy2), err2 = equalise_signal(E, os, mu[1], M, wxy=(wx,wy), TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1])
     EestX, EestY = apply_filter(E, os, (wx2, wy2))
     return np.vstack([EestX, EestY]), (wx2, wy2), (err1, err2)
 
