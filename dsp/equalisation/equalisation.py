@@ -197,6 +197,49 @@ def _lms_init(E, os, wxy, Ntaps, Niter):
     return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err
 
 def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd")):
+    """
+    Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
+
+
+    Parameters
+    ----------
+    E    : array_like
+        x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+
+    os      : int
+        oversampling factor
+
+    mu      : tuple(float, float)
+        step size parameter for the first and second equaliser method
+
+    M       : integer
+        QAM order
+
+    Ntaps   : int
+        number of filter taps. Either this or wxy need to be given. If given taps are initialised as [00100]
+
+    TrSyms  : tuple(int,int) optional
+        number of symbols to use for filter estimation for each equaliser mode. Default is (None, None) which means use all symbols in both equaliser.
+
+    Niter   : tuple(int, int), optional
+        number of iterations for each equaliser. Default is one single iteration for both
+
+    method  : tuple(string,string), optional
+        equaliser method for the first and second mode has to be one of cma, rde, mrde, mcma, sbd, mddma, sca, dd_adaptive, sbd_adaptive, mcma_adaptive
+
+    Returns
+    -------
+
+    E         : array_like
+        equalised signal X and Y polarisation
+
+    (wx, wy)  : tuple(array_like, array_like)
+       equaliser taps for the x and y polarisation
+
+    (err1, err2)       : tuple(array_like, array_like)
+       estimation error for x and y polarisation for each equaliser mode
+
+    """
     (wx, wy), err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
     (wx2, wy2), err2 = equalise_signal(E, os, mu[0], M, wxy=(wx,wy), TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
     EestX, EestY = apply_filter(E, os, (wx2, wy2))
@@ -204,9 +247,8 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
 
 def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive"):
     """
-    Equalisation of PMD and residual dispersion for an QPSK signal based on the Fractionally spaced (FS) Modified Constant Modulus Algorithm (CMA), see Oh and Chin _[1] for details.
-    The taps for the X polarisation are initialised to [0001000] and the Y polarisation is initialised orthogonally. This is the LMS version, in contrast to the FS_* equaliser functions this does not apply the filter.
-
+    Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
+    
     Parameters
     ----------
     E    : array_like
@@ -239,15 +281,12 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     Returns
     -------
 
-    wx, wy    : array_like
+    (wx, wy)    : tuple(array_like, array_like)
        equaliser taps for the x and y polarisation
 
     err       : array_like
-       CMA estimation error for x and y polarisation
+       estimation error for x and y polarisation
 
-    References
-    ----------
-    ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
     """
     method = method.lower()
     training_fct = TRAINING_FCTS[method]
