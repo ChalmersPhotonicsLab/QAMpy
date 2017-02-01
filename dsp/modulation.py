@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center
+from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin
 from .prbs import make_prbs_extXOR
 from . import theory
 from . import ber_functions
@@ -323,7 +323,7 @@ class QAMModulator(object):
         data_demod = self.quantize(signal_rx)[0]
         return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
 
-    def cal_BER(self, signal_rx, bits_tx=None, PRBS=(15,utils.bool2bin(np.ones(15))), Lsync=100, imax=5):
+    def cal_BER(self, signal_rx, bits_tx=None, PRBS=(15,bool2bin(np.ones(15))), Lsync=100, imax=5):
         """
         Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
 
