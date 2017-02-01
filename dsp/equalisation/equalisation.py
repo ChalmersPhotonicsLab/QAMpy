@@ -47,7 +47,7 @@ try:
 except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
-    from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA
+    from .training_python import FS_RDE, FS_CMA, FS_MRDE_training, FS_MCMA, SBD, MDDMA, FS_MCMA_adpative, FS_MCMA_adaptive2
 from .training_python import FS_SCA, FS_CME
 
 TRAINING_FCTS = {"cma": FS_CMA_training, "mcma": FS_MCMA_training,
@@ -290,7 +290,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     """
     method = method.lower()
     training_fct = TRAINING_FCTS[method]
-    args = _init_args(method, M) 
+    args = _init_args(method, M)
     # scale signal
     E, wx, wy, TrSyms, Ntaps, err = _lms_init(E, os, wxy, Ntaps, Niter)
     for i in range(Niter):

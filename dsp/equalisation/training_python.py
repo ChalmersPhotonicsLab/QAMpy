@@ -66,7 +66,7 @@ def sum(x):
     return __sum
 
 @numba.jit(nopython=True)
-def MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
+def FS_MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Modified CMA algorithm with adaptive step size to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
 
@@ -137,7 +137,7 @@ def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
     return err, wx, mu, counter1
 
 @numba.jit(nopython=True)
-def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
+def FS_MCMA(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
 
@@ -187,7 +187,7 @@ def FS_MCMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     return err, wx
 
 @numba.jit(nopython=True)
-def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
+def FS_CMA(E, TrSyms, Ntaps, os, mu, wx, R):
     """
     Training of the CMA algorithm to determine the equaliser taps.
 
@@ -232,7 +232,7 @@ def FS_CMA_training(E, TrSyms, Ntaps, os, mu, wx, R):
     return err, wx
 
 @numba.jit(nopython=True)
-def FS_MRDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
+def FS_MRDE(E, TrSyms, Ntaps, os, mu, wx, part, code):
     """
     Training of the Modified RDE algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
 
@@ -387,7 +387,7 @@ def MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
     return err, wx
 
 @numba.jit(nopython=True)
-def FS_RDE_training(E, TrSyms, Ntaps, os, mu, wx, part, code):
+def FS_RDE(E, TrSyms, Ntaps, os, mu, wx, part, code):
     """
     Training of the RDE algorithm to determine the equaliser taps.
 
