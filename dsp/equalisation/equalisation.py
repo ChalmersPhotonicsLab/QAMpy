@@ -57,7 +57,7 @@ TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
                  "sca": FS_SCA, "cme": FS_CME}
 
 
-def _init_args(method, M):
+def _init_args(method, M, **kwargs):
     if method in ["mcma", "mcma_adaptive"]:
         return _calculate_Rconstant_complex(M),
     elif method in ["cma"]:
@@ -68,6 +68,12 @@ def _init_args(method, M):
         return generate_partition_codes_complex(M),
     elif method in ["sca"]:
         return _calculate_Rsca(M),
+    elif method in ["cme"]:
+        syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+        d = np.min(abs(np.diff(syms.real))) # should be fixed to consider different spacing between real and imag
+        R = _calculate_Rconstant(M)
+        beta = kwargs['beta']
+        return (R, d, beta)
     else:
         return calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M)),
 
@@ -196,7 +202,7 @@ def _lms_init(E, os, wxy, Ntaps, Niter):
     err = np.zeros((2, Niter * TrSyms ), dtype=np.complex128)
     return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err
 
-def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd")):
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -240,12 +246,12 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
        estimation error for x and y polarisation for each equaliser mode
 
     """
-    (wx, wy), err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
-    (wx2, wy2), err2 = equalise_signal(E, os, mu[1], M, wxy=(wx,wy), TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1])
+    (wx, wy), err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], **kwargs)
+    (wx2, wy2), err2 = equalise_signal(E, os, mu[1], M, wxy=(wx,wy), TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], **kwargs)
     EestX, EestY = apply_filter(E, os, (wx2, wy2))
     return np.vstack([EestX, EestY]), (wx2, wy2), (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive"):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive", **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -290,7 +296,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     """
     method = method.lower()
     training_fct = TRAINING_FCTS[method]
-    args = _init_args(method, M)
+    args = _init_args(method, M, **kwargs)
     # scale signal
     E, wx, wy, TrSyms, Ntaps, err = _lms_init(E, os, wxy, Ntaps, Niter)
     for i in range(Niter):
