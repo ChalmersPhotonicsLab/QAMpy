@@ -79,6 +79,27 @@ def _init_args(method, M, **kwargs):
 
 
 def apply_filter(E, os, wxy):
+    """
+    Apply the equaliser filter taps to the input signal.
+
+    Parameters
+    ----------
+
+    E      : array_like
+        input signal to be equalised
+
+    os     : int
+        oversampling factor
+
+    wxy    : tuple(array_like, array_like)
+        filter taps for the x and y polarisation
+
+    Returns
+    -------
+
+    Eest   : array_like
+        equalised signal
+    """
     # equalise data points. Reuse samples used for channel estimation
     # this seems significantly faster than the previous method using a segment axis
     wx = wxy[0]
