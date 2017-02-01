@@ -48,10 +48,10 @@ except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
     from .training_python import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA
-from .training_python import FS_SCA
+from .training_python import FS_SCA, FS_CME
 
 TRAINING_FCTS = {"cma": FS_CMA_training, "mcma": FS_MCMA_training,
-                 "rde": FS_RDE_training, "mrde": FS_MRDE_TRAINING,
+                 "rde": FS_RDE_training, "mrde": FS_MRDE_training,
                  "sbd": SBD, "mddma": MDDMA,
                  "mcma_adaptive": MCMA_adaptive, "sbd_adaptive": SBD_adaptive,
                  "sca": FS_SCA, "cme": FS_CME}
@@ -59,17 +59,17 @@ TRAINING_FCTS = {"cma": FS_CMA_training, "mcma": FS_MCMA_training,
 
 def _init_args(method, M):
     if method in ["mcma", "mcma_adaptive"]:
-        return _calculate_Rconstant_complex(M)
+        return _calculate_Rconstant_complex(M),
     elif method in ["cma"]:
-        return _calculate_Rconstant(M)
+        return _calculate_Rconstant(M),
     elif method in ["rde"]:
-        return generate_partition_codes_radius(M)
+        return generate_partition_codes_radius(M),
     elif method in ["mrde"]:
-        return generate_partition_codes_complex(M)
+        return generate_partition_codes_complex(M),
     elif method in ["sca"]:
-        return _calculate_Rsca(M)
+        return _calculate_Rsca(M),
     else:
-        return calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
+        return calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M)),
 
 
 def apply_filter(E, wx, wy, Ntaps, os):
@@ -176,12 +176,11 @@ def generate_partition_codes_radius(M):
     parts = codes[:-1] + np.diff(codes)/2
     return parts, codes
 
-def _lms_init(E, wxy, os, Niter):
+def _lms_init(E, os, wxy, Ntaps, Niter):
     L = E.shape[1]
     # scale signal
     E = utils.normalise_and_center(E)
-    if type(wxy) is type(1):
-        Ntaps = wxy
+    if wxy is None:
         wx = _init_taps(Ntaps)
         wy = _init_orthogonaltaps(wx)
         empty_taps = True
@@ -192,14 +191,14 @@ def _lms_init(E, wxy, os, Niter):
         empty_taps = False
     TrSyms = int(L//os//Ntaps)*int(Ntaps)
     err = np.zeros((2, Niter * TrSyms ), dtype=np.complex128)
-    return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err, empty_taps
+    return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err
 
 def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd")):
-    wx, wy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
-    wx2, wy2, err2 = equalise_signal(E, os, mu[0], M, wxy=(wx,wy), TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
+    (wx, wy), err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
+    (wx2, wy2), err2 = equalise_signal(E, os, mu[0], M, wxy=(wx,wy), TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
     EestX, EestY = apply_filter(E, wx2, wy2, Ntaps, os)
-    return np.vstack([EestX, EestY]), (wx2, wy2), (err1), err2
-
+    out = (np.vstack([EestX, EestY]), (wx2, wy2), (err1, err2))
+    return out
 
 def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive"):
     """
@@ -252,7 +251,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     training_fct = TRAINING_FCTS[method]
     args = _init_args(method, M) 
     # scale signal
-    E, wx, wy, TrSyms, Ntaps, err = _lms_init(E, wxy, os, Niter)
+    E, wx, wy, TrSyms, Ntaps, err = _lms_init(E, os, wxy, Ntaps, Niter)
     for i in range(Niter):
         print("LMS iteration %d"%i)
         # run CMA
