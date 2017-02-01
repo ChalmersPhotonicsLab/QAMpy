@@ -86,7 +86,7 @@ def apply_filter(E, os, wxy):
     return np.vstack([Eest[:,0],  Eest[:,1]])
 
 def _calculate_Rdash(syms):
-     return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (sign(syms.real + syms.imag) + sign(syms.real-syms.imag) + 1.j*(sign(syms.real+syms.imag) - sign(syms.real-syms.imag)))*syms.conj()
+     return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (np.sign(syms.real + syms.imag) + np.sign(syms.real-syms.imag) + 1.j*(np.sign(syms.real+syms.imag) - np.sign(syms.real-syms.imag)))*syms.conj()
 
 def _calculate_Rsca(M):
     syms = calculate_MQAM_symbols(M)
