@@ -63,9 +63,9 @@ def _init_args(method, M, **kwargs):
     elif method in ["cma"]:
         return _calculate_Rconstant(M),
     elif method in ["rde"]:
-        return generate_partition_codes_radius(M),
+        return generate_partition_codes_radius(M)
     elif method in ["mrde"]:
-        return generate_partition_codes_complex(M),
+        return generate_partition_codes_complex(M)
     elif method in ["sca"]:
         return _calculate_Rsca(M),
     elif method in ["cme"]:
