@@ -72,15 +72,18 @@ def _init_args(method, M):
         return calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M)),
 
 
-def apply_filter(E, wx, wy, Ntaps, os):
+def apply_filter(E, os, wxy):
     # equalise data points. Reuse samples used for channel estimation
     # this seems significantly faster than the previous method using a segment axis
+    wx = wxy[0]
+    wy = wxy[1]
+    Ntaps = wx.shape[1]
     X1 = segment_axis(E[0], Ntaps, Ntaps-os)
     X2 = segment_axis(E[1], Ntaps, Ntaps-os)
     X = np.hstack([X1,X2])
     ww = np.vstack([wx.flatten(), wy.flatten()])
     Eest = np.dot(X, ww.transpose())
-    return Eest[:,0],  Eest[:,1]
+    return np.vstack([Eest[:,0],  Eest[:,1]])
 
 def _calculate_Rdash(syms):
      return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (sign(syms.real + syms.imag) + sign(syms.real-syms.imag) + 1.j*(sign(syms.real+syms.imag) - sign(syms.real-syms.imag)))*syms.conj()
@@ -196,9 +199,8 @@ def _lms_init(E, os, wxy, Ntaps, Niter):
 def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd")):
     (wx, wy), err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
     (wx2, wy2), err2 = equalise_signal(E, os, mu[0], M, wxy=(wx,wy), TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0])
-    EestX, EestY = apply_filter(E, wx2, wy2, Ntaps, os)
-    out = (np.vstack([EestX, EestY]), (wx2, wy2), (err1, err2))
-    return out
+    EestX, EestY = apply_filter(E, os, (wx2, wy2))
+    return np.vstack([EestX, EestY]), (wx2, wy2), (err1, err2)
 
 def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive"):
     """
