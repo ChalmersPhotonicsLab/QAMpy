@@ -43,15 +43,15 @@ References
 """
 
 try:
-    from .equaliser_cython import FS_RDE_training, FS_CMA_training, FS_MRDE_training, FS_MCMA_training, SBD, MDDMA, MCMA_adaptive, SBD_adaptive
+    from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, SBD, MDDMA, MCMA_adaptive, SBD_adaptive
 except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
-    from .training_python import FS_RDE, FS_CMA, FS_MRDE_training, FS_MCMA, SBD, MDDMA, FS_MCMA_adpative, FS_MCMA_adaptive2
+    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, SBD, MDDMA, FS_MCMA_adpative, FS_MCMA_adaptive2
 from .training_python import FS_SCA, FS_CME
 
-TRAINING_FCTS = {"cma": FS_CMA_training, "mcma": FS_MCMA_training,
-                 "rde": FS_RDE_training, "mrde": FS_MRDE_training,
+TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
+                 "rde": FS_RDE, "mrde": FS_MRDE,
                  "sbd": SBD, "mddma": MDDMA,
                  "mcma_adaptive": MCMA_adaptive, "sbd_adaptive": SBD_adaptive,
                  "sca": FS_SCA, "cme": FS_CME}

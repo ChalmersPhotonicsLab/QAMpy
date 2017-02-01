@@ -29,7 +29,7 @@ cdef np.complex128_t det_symbol(np.ndarray[ndim=1, dtype=np.complex128_t] syms,
     return det_sym
 
 
-def FS_CMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+def FS_CMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                     int TrSyms,
                     int Ntaps,
                     unsigned int os,
@@ -91,7 +91,7 @@ def MCMA_adaptive(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                 mu = mu/(1+lm*mu*(err[<unsigned int> i].real*err[<unsigned int> i].real + err[<unsigned int> i].imag*err[<unsigned int> i].imag))
     return err, wx
 
-def FS_MCMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+def FS_MCMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      int TrSyms,
                      int Ntaps,
                      unsigned int os,
@@ -119,7 +119,7 @@ def FS_MCMA_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                    <unsigned int> j].conjugate()
     return err, wx
 
-def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+def FS_RDE(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                     int TrSyms,
                     int Ntaps,
                     unsigned int os,
@@ -151,7 +151,7 @@ def FS_RDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                    <unsigned int> j].conjugate()
     return err, wx
 
-def FS_MRDE_training(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+def FS_MRDE(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      int TrSyms, int Ntaps, unsigned int os,
                      double mu,
                      np.ndarray[ndim=2, dtype=np.complex128_t] wx,
