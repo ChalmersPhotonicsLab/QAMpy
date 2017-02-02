@@ -247,7 +247,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     Parameters
     ----------
     E    : array_like
-        x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+        single or dual polarisation signal field (2D complex array first dim is the polarisation)
 
     os      : int
         oversampling factor
@@ -295,7 +295,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     Parameters
     ----------
     E    : array_like
-        x and y polarisation of the signal field (2D complex array first dim is the polarisation)
+        single or dual polarisation signal field (2D complex array first dim is the polarisation)
 
     os      : int
         oversampling factor
