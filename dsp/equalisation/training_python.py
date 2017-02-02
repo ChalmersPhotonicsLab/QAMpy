@@ -330,7 +330,7 @@ def SBD(E, TrSyms, Ntaps, os, mu, wx, symbols):
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = sum(wx * X)
-        R = symbols[np.argmin(abs(Xest-symbols))]
+        R = symbols[np.argmin(np.abs(Xest-symbols))]
         err[i] = (Xest.real - R.real)*abs(R.real) + (Xest.imag - R.imag)*1.j*abs(R.imag)
         wx -= mu * err[i] * np.conj(X)
     return err, wx
@@ -381,7 +381,7 @@ def MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = np.sum(wx * X)
-        R = symbols[np.argmin(abs(Xest-symbols))]
+        R = symbols[np.argmin(np.abs(Xest-symbols))]
         err[i] = (Xest.real**2 - R.real**2)*Xest.real + (Xest.imag**2 - R.imag**2)*1.j*Xest.imag
         wx -= mu * err[i] * np.conj(X)
     return err, wx
