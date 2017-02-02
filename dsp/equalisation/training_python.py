@@ -129,7 +129,7 @@ def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
         X = E[:, i * os:i * os + Ntaps]
         Xest = sum(wx * X)
         err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
-        Ri = min(abs(syms-Xest))
+        Ri = min(np.abs(syms-Xest))
         wx -= mu * err[i] * np.conj(X)
         if Ri < R2:
             mu /= 5
