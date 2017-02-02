@@ -47,7 +47,7 @@ try:
 except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
-    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, SBD, MDDMA, FS_MCMA_adpative, FS_MCMA_adaptive2
+    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, SBD, MDDMA, FS_MCMA_adaptive
 from .training_python import FS_SCA, FS_CME
 
 TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
@@ -91,7 +91,7 @@ def apply_filter(E, os, wxy):
     os     : int
         oversampling factor
 
-    wxy    : tuple(array_like, array_like)
+    wxy    : tuple(array_like, array_like,optional)
         filter taps for the x and y polarisation
 
     Returns
@@ -102,15 +102,21 @@ def apply_filter(E, os, wxy):
     """
     # equalise data points. Reuse samples used for channel estimation
     # this seems significantly faster than the previous method using a segment axis
-    wx = wxy[0]
-    wy = wxy[1]
-    Ntaps = wx.shape[1]
+    E = np.atleast_2d(E)
+    pols = E.shape[0]
+    Ntaps = wxy[0].shape[1]
     X1 = segment_axis(E[0], Ntaps, Ntaps-os)
-    X2 = segment_axis(E[1], Ntaps, Ntaps-os)
-    X = np.hstack([X1,X2])
-    ww = np.vstack([wx.flatten(), wy.flatten()])
-    Eest = np.dot(X, ww.transpose())
-    return np.vstack([Eest[:,0],  Eest[:,1]])
+    if pols == 2:
+        X2 = segment_axis(E[1], Ntaps, Ntaps-os)
+        X = np.hstack([X1,X2])
+        ww = np.vstack([wxy[0].flatten(), wxy[1].flatten()])
+        Eest = np.dot(X, ww.transpose())
+        return np.vstack([Eest[:,0],  Eest[:,1]])
+    else:
+        X = X1
+        ww = wxy[0].flatten()
+        Eest = np.dot(X, ww.transpose())
+        return np.atleast_2d(Eest)
 
 def _calculate_Rdash(syms):
      return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (np.sign(syms.real + syms.imag) + np.sign(syms.real-syms.imag) + 1.j*(np.sign(syms.real+syms.imag) - np.sign(syms.real-syms.imag)))*syms.conj()
@@ -133,8 +139,8 @@ def _calculate_Rconstant_complex(M):
     syms /= np.sqrt(scale)
     return np.mean(syms.real**4)/np.mean(syms.real**2) + 1.j * np.mean(syms.imag**4)/np.mean(syms.imag**2)
 
-def _init_taps(Ntaps):
-    wx = np.zeros((2, Ntaps), dtype=np.complex128)
+def _init_taps(Ntaps, pols):
+    wx = np.zeros((pols, Ntaps), dtype=np.complex128)
     wx[0, Ntaps // 2] = 1
     return wx
 
@@ -206,22 +212,32 @@ def generate_partition_codes_radius(M):
     parts = codes[:-1] + np.diff(codes)/2
     return parts, codes
 
-def _lms_init(E, os, wxy, Ntaps, Niter):
+def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
+    E = np.atleast_2d(E)
+    pols = E.shape[0]
     L = E.shape[1]
     # scale signal
     E = utils.normalise_and_center(E)
     if wxy is None:
-        wx = _init_taps(Ntaps)
-        wy = _init_orthogonaltaps(wx)
-        empty_taps = True
+        wxy = [_init_taps(Ntaps, pols),]
+        if pols == 2:
+            wy = _init_orthogonaltaps(wxy[0])
+            wxy = [wxy[0],wy]
     else:
-        wx = wxy[0]
-        wy = wxy[1]
-        Ntaps = wx.shape[1]
-        empty_taps = False
-    TrSyms = int(L//os//Ntaps)*int(Ntaps)
-    err = np.zeros((2, Niter * TrSyms ), dtype=np.complex128)
-    return E[:,:TrSyms*os], wx, wy, TrSyms, Ntaps, err
+        if pols == 2:
+            Ntaps = wxy[0].shape[1]
+        else:
+            try:
+                wxy = wxy.flatten()
+                Ntaps = len(wxy)
+                wxy = [wxy.copy(),]
+            except:
+                Ntaps = len(wxy[0])
+    if not TrSyms:
+        TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
+    err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
+    Eout = E[:, :(TrSyms-1)*os+Ntaps]
+    return Eout, wxy, TrSyms, Ntaps, err, pols
 
 def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), **kwargs):
     """
@@ -267,10 +283,10 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
        estimation error for x and y polarisation for each equaliser mode
 
     """
-    (wx, wy), err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], **kwargs)
-    (wx2, wy2), err2 = equalise_signal(E, os, mu[1], M, wxy=(wx,wy), TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], **kwargs)
-    EestX, EestY = apply_filter(E, os, (wx2, wy2))
-    return np.vstack([EestX, EestY]), (wx2, wy2), (err1, err2)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], **kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], **kwargs)
+    Eest = apply_filter(E, os, wxy2)
+    return Eest, wxy2, (err1, err2)
 
 def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive", **kwargs):
     """
@@ -319,14 +335,13 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     training_fct = TRAINING_FCTS[method]
     args = _init_args(method, M, **kwargs)
     # scale signal
-    E, wx, wy, TrSyms, Ntaps, err = _lms_init(E, os, wxy, Ntaps, Niter)
+    E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     for i in range(Niter):
         print("LMS iteration %d"%i)
         # run CMA
-        err[0, i * TrSyms:(i+1)*TrSyms], wx = training_fct(E, TrSyms, Ntaps, os, mu, wx, *args)
-        # run CMA
-        err[1, i*TrSyms:(i+1)*TrSyms], wy = training_fct(E, TrSyms, Ntaps, os, mu, wy, *args)
-    return (wx,wy), err
+        for l in range(pols):
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args)
+    return wxy, err
 
 
 def CDcomp(E, fs, N, L, D, wl):
