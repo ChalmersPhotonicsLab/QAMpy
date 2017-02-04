@@ -27,9 +27,7 @@ Modified Decision Directed Modulus Algorithm (MDDMA) after _[8]
 
 Adaptive Step Size Algorithms
 -----------------------------
-MCMA with adaptive step size after _[9]
-SBD with adaptive step size  after _[10]
-Decision Directed (DD) with adaptive step size after _[9]
+based on the step size adoption in _[9]  it is possible to use an adaptive step for all equalisers using the adaptive_stepsize keyword parameter
 
 References
 ----------
@@ -236,10 +234,12 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     if not TrSyms:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
-    Eout = E[:, :(TrSyms-1)*os+Ntaps]
+    # the copy below is important because otherwise the array will not be contiguous, which will cause issues in
+    # the C functions
+    Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
     return Eout, wxy, TrSyms, Ntaps, err, pols
 
-def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), **kwargs):
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -270,6 +270,9 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     method  : tuple(string,string), optional
         equaliser method for the first and second mode has to be one of cma, rde, mrde, mcma, sbd, mddma, sca, dd_adaptive, sbd_adaptive, mcma_adaptive
 
+    adaptive_stepsize : tuple(bool, bool)
+        whether to adapt the step size upon training for each of the equaliser modes
+
     Returns
     -------
 
@@ -283,12 +286,12 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
        estimation error for x and y polarisation for each equaliser mode
 
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], **kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], **kwargs)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize[0] **kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize[1], **kwargs)
     Eest = apply_filter(E, os, wxy2)
     return Eest, wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive", **kwargs):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma_adaptive", adaptive_stepsize=False, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -318,8 +321,11 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     Niter   : int, optional
         number of iterations. Default is one single iteration
 
-    method  : string
+    method  : string, optional
         equaliser method has to be one of cma, rde, mrde, mcma, sbd, mddma, sca, dd_adaptive, sbd_adaptive, mcma_adaptive
+
+    adaptive_stepsize : bool, optional
+        whether to use an adaptive stepsize or a fixed
 
     Returns
     -------
@@ -340,7 +346,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         print("LMS iteration %d"%i)
         # run CMA
         for l in range(pols):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args, adaptive_stepsize)
     return wxy, err
 
 
