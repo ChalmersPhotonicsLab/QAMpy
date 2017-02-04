@@ -226,7 +226,7 @@ class QAMModulator(object):
         signal = normalise_and_center(signal)
         if syms == None:
             syms, idx = self.quantize(signal)
-        return np.sqrt(np.mean(abs(syms-signal)**2))#/np.mean(abs(self.symbols)**2))
+        return np.sqrt(np.mean(cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
 
     def generateSignal(self,
                        N,
