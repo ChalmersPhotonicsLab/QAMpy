@@ -41,22 +41,21 @@ References
 """
 
 try:
-    from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, SBD, MDDMA, MCMA_adaptive, SBD_adaptive
+    from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA 
 except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
-    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, SBD, MDDMA, FS_MCMA_adaptive
+    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
 from .training_python import FS_SCA, FS_CME
 
 TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
                  "rde": FS_RDE, "mrde": FS_MRDE,
-                 "sbd": SBD, "mddma": MDDMA,
-                 "mcma_adaptive": MCMA_adaptive, "sbd_adaptive": SBD_adaptive,
+                 "sbd": FS_SBD, "mddma": FS_MDDMA,
                  "sca": FS_SCA, "cme": FS_CME}
 
 
 def _init_args(method, M, **kwargs):
-    if method in ["mcma", "mcma_adaptive"]:
+    if method in ["mcma"]:
         return _calculate_Rconstant_complex(M),
     elif method in ["cma"]:
         return _calculate_Rconstant(M),
