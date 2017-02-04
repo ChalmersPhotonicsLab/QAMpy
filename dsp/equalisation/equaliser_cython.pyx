@@ -46,7 +46,6 @@ def FS_CMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                     double R,
                     bool adaptive=False):
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
-    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
     cdef unsigned int L = E.shape[1]
@@ -68,7 +67,6 @@ def FS_MCMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      np.complex128_t R,
                     bool adaptive=False):
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
-    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
     cdef unsigned int L = E.shape[1]
@@ -91,7 +89,6 @@ def FS_RDE(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                     np.ndarray[ndim=1, dtype=np.float64_t] codebook,
                     bool adaptive=False):
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
-    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
     cdef unsigned int L = E.shape[1]
@@ -115,7 +112,6 @@ def FS_MRDE(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      np.ndarray[ndim=1, dtype=np.complex128_t] codebook,
                     bool adaptive=False):
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
-    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
     cdef unsigned int L = E.shape[1]
@@ -159,7 +155,6 @@ def MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      np.ndarray[ndim=1, dtype=np.complex128_t] symbols,
                      bool adaptive=False):
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
-    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
     cdef np.complex128_t Xest, R
     cdef unsigned int M = len(symbols)
