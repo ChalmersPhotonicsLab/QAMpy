@@ -122,7 +122,7 @@ def FS_MCMA_adaptive(E, TrSyms, Ntaps, os, mu, wx, R):
     return err, wx
 
 @numba.jit(nopython=True)
-def MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
+def FS_MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
     err = np.zeros(TrSyms, dtype=np.complex128)
     counter1 = 0
     for i in range(TrSyms):
@@ -286,7 +286,7 @@ def FS_MRDE(E, TrSyms, Ntaps, os, mu, wx, part, code):
     return err, wx
 
 @numba.jit(nopython=True)
-def SBD(E, TrSyms, Ntaps, os, mu, wx, symbols):
+def FS_SBD(E, TrSyms, Ntaps, os, mu, wx, symbols):
     """
     Symbol Based Decision (SBD) training function after _[1]. This is a DD error function. This does not implement the neighbor weigthing detailed further in _[1].
 
@@ -336,7 +336,7 @@ def SBD(E, TrSyms, Ntaps, os, mu, wx, symbols):
     return err, wx
 
 @numba.jit(nopython=True)
-def MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
+def FS_MDDMA(E, TrSyms, Ntaps, os, mu, wx, symbols):
     """
     Modified Decision Directed Modulus Algorithm (MDDMA) after _[1].
     This is a DD error function. 
