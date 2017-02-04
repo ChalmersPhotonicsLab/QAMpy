@@ -141,7 +141,7 @@ def FS_SBD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
     cdef unsigned int L = E.shape[1]
     for i in range(TrSyms):
         Xest = apply_filter(&E[0, i*os], Ntaps, &wx[0,0], pols, L)
-        R = det_symbol(&symbols[0,0], M, Xest)
+        R = det_symbol(&symbols[0], M, Xest)
         err[i] = (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
         update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
         if adaptive and i > 0:
@@ -162,7 +162,7 @@ def FS_MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
     cdef unsigned int L = E.shape[1]
     for i in range(TrSyms):
         Xest = apply_filter(&E[0, i*os], Ntaps, &wx[0,0], pols, L)
-        R = det_symbol(&symbols[0,0], M, Xest)
+        R = det_symbol(&symbols[0], M, Xest)
         err[i] = (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
         update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
         if adaptive and i > 0:
