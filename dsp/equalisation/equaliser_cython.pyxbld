@@ -1,5 +1,8 @@
+import os
+print(os.getcwd())
 def make_ext(modname, pyxfilename):
     from distutils.extension import Extension
     return Extension(name=modname,
-                     sources=[pyxfilename],
+                     sources=[pyxfilename, "equaliserC.c"],
+                     include_dirs=["/home/jschrod/Work/Code/Communications/dsp/equalisation/"],
                      extra_compile_args=['-O3', '-march=native', '-ffast-math'])
