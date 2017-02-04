@@ -1,8 +1,14 @@
 # cython: profile=True, boundscheck=False, wraparound=False
 from __future__ import division
 import numpy as np
+from cython.view cimport array as cvarray
+from cython.parallel import prange
 cimport cython
 cimport numpy as np
+
+cdef extern from "complex.h":
+    double complex conj(double complex)
+
 
 
 def partition_value(double signal,
@@ -14,7 +20,7 @@ def partition_value(double signal,
         index += 1
     return codebook[index]
 
-cdef np.complex128_t det_symbol(np.ndarray[ndim=1, dtype=np.complex128_t] syms,
+cdef complex det_symbol(np.ndarray[ndim=1, dtype=np.complex128_t] syms,
                                 np.complex128_t value):
     cdef unsigned int i, N
     cdef np.complex128_t det_sym
@@ -49,11 +55,11 @@ def FS_CMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                                          <unsigned int> i*os+j]
                Xest +=  wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
                                                                 k,<unsigned int> j]
-       err[<unsigned int> i] = (Xest.real**2+Xest.imag**2 - R)*Xest
+       err[<unsigned int> i] = Xest*(Xest.real**2+Xest.imag**2 - R)
        for j in range(Ntaps):
            for k in range(pols):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                                                          k,<unsigned int> j]-mu*err[<unsigned int>
+                                                          k,<unsigned int> j]-(mu+0.j)*err[<unsigned int>
                                                                                      i]*X[<unsigned int> k,
                                                                                           <unsigned int> j].conjugate()
     return err, wx
@@ -82,7 +88,7 @@ def MCMA_adaptive(np.ndarray[ndim=2, dtype=np.complex128_t] E,
         for j in range(Ntaps):
             for k in range(pols):
                 wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                                                          k,<unsigned int> j]-mu*err[<unsigned int>
+                                                          k,<unsigned int> j]-(mu+0.j)*err[<unsigned int>
                                                                                      i]*X[<unsigned int> k,
                                                                                           <unsigned int> j].conjugate()
         if i > 0:
@@ -117,7 +123,7 @@ def FS_MCMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
        for j in range(Ntaps):
            for k in range(pols):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                       k,<unsigned int> j]-mu*err[<unsigned int>
+                       k,<unsigned int> j]-(mu+0.j)*err[<unsigned int>
                                i]*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
     return err, wx
@@ -134,8 +140,8 @@ def FS_RDE(np.ndarray[ndim=2, dtype=np.complex128_t] E,
     cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
-    cdef np.complex128_t Xest
-    cdef np.float64_t Ssq, S_DD
+    cdef double complex Xest
+    cdef double Ssq, S_DD
     for i in range(TrSyms):
        Xest = 0.j
        for j in range(Ntaps):
@@ -146,7 +152,7 @@ def FS_RDE(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                        k,<unsigned int> j]
        Ssq = Xest.real**2 + Xest.imag**2
        S_DD = partition_value(Ssq, partition, codebook)
-       err[<unsigned int> i] = (Ssq - S_DD)*Xest
+       err[<unsigned int> i] = Xest*(Ssq - S_DD)
        for j in range(Ntaps):
            for k in range(pols):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
@@ -180,39 +186,56 @@ def FS_MRDE(np.ndarray[ndim=2, dtype=np.complex128_t] E,
        for j in range(Ntaps):
            for k in range(pols):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                       k,<unsigned int> j] - mu*err[<unsigned int>
+                       k,<unsigned int> j] - (mu+0.j)*err[<unsigned int>
                                i]*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
        #update_filter(X, Ntaps, mu, err[<unsigned int> i], wx)
     return err, wx
 
+cdef complex apply_flt(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+                          int Ntaps, unsigned int os, unsigned int i,
+                           np.ndarray[ndim=2, dtype=np.complex128_t]  wx, unsigned int pols):
+    cdef unsigned int j,k
+    cdef double complex Xest
+    Xest = 0.j
+    for j in range(Ntaps):
+        for k in range(pols):
+               Xest += wx[<unsigned int> k,<unsigned int> j]*E[<unsigned int> k,
+                                                               <unsigned int> i*os+j]
+    return Xest
+
+ 
 def SBD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      int TrSyms, int Ntaps, unsigned int os,
                      double mu,
                      np.ndarray[ndim=2, dtype=np.complex128_t] wx,
                      np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
-    cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
+    #cdef np.ndarray[ndim=2, dtype=np.complex128_t] X = np.zeros([2,Ntaps], dtype=np.complex128)
     cdef unsigned int i, j, k, N
     cdef np.complex128_t Xest, R
     cdef unsigned int pols = E.shape[0]
     cdef double lm
     for i in range(TrSyms):
-       Xest = 0.j
-       for j in range(Ntaps):
-           for k in range(pols):
-               X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
-                       <unsigned int> i*os+j]
-               Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
-                       k,<unsigned int> j]
+       #Xest = 0.j
+       #for j in range(Ntaps):
+           #for k in range(pols):
+               #X[<unsigned int> k, <unsigned int> j] = E[<unsigned int> k,
+                       #<unsigned int> i*os+j]
+               #Xest += wx[<unsigned int> k,<unsigned int> j]*X[<unsigned int>
+                       #k,<unsigned int> j]
+       #Xest = apply_flt(E, Ntaps, os, i , wx, pols)
+       Xest = apply_filter(E, Ntaps, os, i , wx)
        R = det_symbol(symbols, Xest)
        err[<unsigned int> i] = (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
-       for j in range(Ntaps):
-           for k in range(pols):
-               wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                       k,<unsigned int> j] - mu*err[<unsigned int>
-                               i]*X[<unsigned int> k,
-                                   <unsigned int> j].conjugate()
+       #for j in range(Ntaps):
+           #for k in range(pols):
+               #wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
+                       #k,<unsigned int> j] - (mu+0.j)*err[<unsigned int>
+                               #i]*conj(E[<unsigned int> k, <unsigned int> i*os + j])
+       update_filter(E, Ntaps, os, mu, i, err[<unsigned int> i], wx)
+                                   #X[<unsigned int> k,
+                                   #<unsigned int> j])
     return err, wx
 
 def SBD_adaptive(np.ndarray[ndim=2, dtype=np.complex128_t] E,
@@ -239,7 +262,7 @@ def SBD_adaptive(np.ndarray[ndim=2, dtype=np.complex128_t] E,
        for j in range(Ntaps):
            for k in range(pols):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                       k,<unsigned int> j] - mu*err[<unsigned int>
+                       k,<unsigned int> j] - (mu+0.j)*err[<unsigned int>
                                i]*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
        if i > 0:
@@ -273,12 +296,13 @@ def MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
        for j in range(Ntaps):
            for k in range(pols):
                wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                       k,<unsigned int> j] - mu*err[<unsigned int>
+                       k,<unsigned int> j] - (mu+0.j)*err[<unsigned int>
                                i]*X[<unsigned int> k,
                                    <unsigned int> j].conjugate()
     return err, wx
 
 
+# somehow inplace change does not work here
 cdef complex apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                          int Ntaps, unsigned int os, unsigned int i,
                                          np.ndarray[ndim=2, dtype=np.complex128_t] wx):
@@ -292,16 +316,20 @@ cdef complex apply_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                                             <unsigned int> i*os+j]
     return Xest
 
-cdef inline np.ndarray[ndim=2, dtype=np.complex128_t] update_filter(np.ndarray[ndim=2, dtype=np.complex128_t] X,
+# changing wx inplace is about a third faster than giving a return value
+cdef void update_filter(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                                                              int Ntaps,
+                                                             unsigned int os,
                                                              double mu,
+                                                             unsigned int i,
                                                              np.complex128_t err,
                                                              np.ndarray[ndim=2, dtype=np.complex128_t] wx):
-    cdef unsigned int i, j, k
-    cdef unsigned int pols = X.shape[0]
+    cdef unsigned int j, k
+    cdef unsigned int pols = E.shape[0]
     for j in range(Ntaps):
         for k in range(pols):
             wx[<unsigned int> k,<unsigned int> j] = wx[<unsigned int>
-                                                       k,<unsigned int> j] - mu*err*X[<unsigned int> k,
-                                                                                            <unsigned int> j].conjugate()
-    return wx
+                                                       k,<unsigned int> j] - (mu+0.j)*err*conj(E[<unsigned int> k,
+                                                                                                 <unsigned int> i*os+j]
+)
+    #return wx
