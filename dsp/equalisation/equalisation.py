@@ -285,8 +285,8 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
        estimation error for x and y polarisation for each equaliser mode
 
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize[0] **kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize[1], **kwargs)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], **kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1], **kwargs)
     Eest = apply_filter(E, os, wxy2)
     return Eest, wxy2, (err1, err2)
 
@@ -345,7 +345,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         print("LMS iteration %d"%i)
         # run CMA
         for l in range(pols):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args, adaptive_stepsize)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args, adaptive=adaptive_stepsize)
     return wxy, err
 
 
