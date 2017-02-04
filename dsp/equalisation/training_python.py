@@ -30,6 +30,7 @@ def partition_signal(signal, partitions, codebook):
         quanta.append(codebook[index])
     return quanta
 
+@numba.jit(nopython=True)
 def adapt_step(mu, err_p, err):
     if err.real*err_p.real > 0 and err.imag*err_p.imag >  0:
         lm = 0
