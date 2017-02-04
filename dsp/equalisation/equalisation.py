@@ -41,7 +41,7 @@ References
 """
 
 try:
-    from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA 
+    from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA, FS_DD
 except:
     #use python code if cython code is not available
     raise Warning("can not use cython training functions")
@@ -51,7 +51,8 @@ from .training_python import FS_SCA, FS_CME
 TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
                  "rde": FS_RDE, "mrde": FS_MRDE,
                  "sbd": FS_SBD, "mddma": FS_MDDMA,
-                 "sca": FS_SCA, "cme": FS_CME}
+                 "sca": FS_SCA, "cme": FS_CME,
+                 "dd": FS_DD}
 
 
 def _init_args(method, M, **kwargs):

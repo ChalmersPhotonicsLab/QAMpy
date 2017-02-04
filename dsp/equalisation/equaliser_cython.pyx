@@ -168,3 +168,24 @@ def FS_MDDMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])
     return err, wx
+
+def FS_DD(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+                     int TrSyms, int Ntaps, unsigned int os,
+                     double mu,
+                     np.ndarray[ndim=2, dtype=np.complex128_t] wx,
+                     np.ndarray[ndim=1, dtype=np.complex128_t] symbols,
+                     bool adaptive=False):
+    cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
+    cdef unsigned int i, j, k
+    cdef np.complex128_t Xest, R
+    cdef unsigned int M = len(symbols)
+    cdef unsigned int pols = E.shape[0]
+    cdef unsigned int L = E.shape[1]
+    for i in range(TrSyms):
+        Xest = apply_filter(&E[0, i*os], Ntaps, &wx[0,0], pols, L)
+        R = det_symbol(&symbols[0], M, Xest)
+        err[i] = (Xest - R)
+        update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
+        if adaptive and i > 0:
+            mu = adapt_step(mu, err[i-1], err[i])
+    return err, wx
