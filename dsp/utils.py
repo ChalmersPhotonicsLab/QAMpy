@@ -196,7 +196,6 @@ def lfsr_int(seed, mask):
             state ^= mask  #this performs the modulus operation
         yield xor, state
 
-
 def lfsr_ext(seed, taps, nbits):
     """A Fibonacci or external XOR linear feedback shift register.
 
@@ -224,7 +223,6 @@ def lfsr_ext(seed, taps, nbits):
                 xor ^= 1
         sr = (xor << nbits - 1) + (sr >> 1)
         yield xor, sr
-
 
 def bool2bin(x):
     """
