@@ -212,7 +212,7 @@ class QAMModulator(object):
         """
         return theory.MQAM_SERvsEsN0(snr, self.M)
 
-    def calculate_SER(self, signal_rx, bits_tx=None, symbol_tx=None):
+    def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None):
         """
         Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol. 
 
@@ -220,10 +220,11 @@ class QAMModulator(object):
         ----------
         signal_rx  : array_like
             Received signal (1D complex array)
-        bits_tx    : array_like, optional
-            bitstream at the transmitter for comparison against signal. If set to None symbol_tx needs to be given (Default is None)
+
         symbol_tx  : array_like, optional
             symbols at the transmitter for comparison against signal. If set to None bits_tx needs to be given (Default is None)
+        bits_tx    : array_like, optional
+            bitstream at the transmitter for comparison against signal. If set to None symbol_tx needs to be given (Default is None)
 
         Returns
         -------
@@ -233,10 +234,10 @@ class QAMModulator(object):
         assert symbol_tx is not None or bits_tx is not None, "data_tx or symbol_tx must be given"
         if symbol_tx is None:
             symbol_tx = self.modulate(bits_tx)
-        data_demod = self.quantize(signal_rx)[0]
+        data_demod = self.quantize(signal_rx)
         return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
 
-    def cal_BER(self, signal_rx, bits_tx=None, PRBS=(15,bool2bin(np.ones(15))), Lsync=100, imax=5):
+    def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15,bool2bin(np.ones(15))), N1=2**15, N2=8000):
         """
         Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
 
@@ -247,16 +248,19 @@ class QAMModulator(object):
             received signal to demodulate and calculate BER of
 
         bits_tx      : array_like, optional
-            transmitted bit sequence to compare against. (default is None, which means we will calculate a PRBS)
+            transmitted bit sequence to compare against. (default is None, which either PRBS or syms_tx has to be given)
+
+        syms_tx      : array_like, optional
+            transmitted bit sequence to compare against. (default is None, which means bits_tx or PRBS has to be given)
 
         PRBS         : tuple(int, int), optional
             tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
 
-        Lsync        : integer, optional
-            Number of bits to use for synchronising against the known bit sequence
+        N1        : integer, optional
+            length of the rx signal to use for the crosscorrelation sync. A good value is the length of PRBS order of the transmitted signal
 
-        imax         : integer, optional
-            Number of different sequence to try for synchronisation
+        N2         : integer, optional
+            subsequence to use for searching the offset. This should not be too small otherwise there will be high BERs, 1/6 of the PRBS length seems to work quite well. 
 
         Returns
         -------
@@ -271,25 +275,24 @@ class QAMModulator(object):
             length of input sequence
         """
         assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
-        bits_demod = self.decode(self.quantize(signal_rx))
-        if bits_tx is None:
-            bits_tx = make_prbs_extXOR( PRBS[0], len(bits_demod), seed=PRBS[1])
-        else:
-            bits_tx = ber_functions.adjust_data_length(bits_tx, bits_demod)
-        i = 0
-        while i < 5:
-            if i == 4:
-                raise ber_functions.DataSyncError("could not sync signal to sequence")
-            try:
-                idx, tx_synced = ber_functions.sync_Tx2Rx(bits_tx, bits_demod, Lsync, imax)
-                break
-            except:
-                signal_rx *= 1.j  # rotate by 90 degrees
-                bits_demod = self.decode(self.quantize(signal_rx))
-                bits_demod = ber_functions.adjust_data_length(bits_demod, bits_tx)
-            i += 1
-        return ber_functions._cal_BER_only(tx_synced, bits_demod)
-
+        syms_demod = self.quantize(signal_rx)
+        if syms_tx is None:
+            if bits_tx is None:
+                bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
+            syms_tx = self.modulate(bits_tx)
+            syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)
+        acm = 0.
+        for i in range(4):
+            syms_tx *= 1.j
+            s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod, N1, N2)
+            act = abs(ac).max()
+            if act > acm:
+                s_tx_sync = s_sync
+                ix = idx[1]
+                acm = act
+        bits_demod = self.decode(syms_demod)
+        tx_synced = self.decode(s_tx_sync)
+        return ber_functions._cal_BER_only(tx_synced, bits_demod, threshold=0.8)
 
 
 def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):

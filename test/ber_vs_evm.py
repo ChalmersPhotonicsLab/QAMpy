@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from dsp import theory, ber_functions, signal_quality, modulation, utils
+import sys
 
 
 
@@ -13,7 +14,7 @@ References
 ...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
 """
 
-snr = np.linspace(5, 30, 10)
+snr = np.linspace(5, 30, 8)
 snrf = np.linspace(5, 30, 500)
 evmf = np.linspace(-30, 0, 500)
 N = 10**5
@@ -66,17 +67,12 @@ for M in Mqams:
         modulator = modulation.QAMModulator(M)
         signal, syms, bits = modulator.generateSignal(N, sr)
         ser[i] = modulator.calculate_SER(signal, symbol_tx=syms)
-        try:
-            ber[i] = modulator.cal_BER(signal, bits)[0]
-        except ber_functions.DataSyncError:
-            try:
-                ber[i] = modulator.cal_BER(signal, bits, Lsync=30, imax=50)[0]
-            except:
-                ber[i] = 1
-                print("Could not sync data")
         evm1[i] = modulator.cal_EVM(signal)
         evm2[i] = signal_quality.cal_blind_evm(signal, M)
-        evm_known = modulator.cal_EVM(signal, syms)
+        evm_known[i] = modulator.cal_EVM(signal, syms)
+        # check to see that we can recovery timing delay
+        signal = np.roll(signal * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
+        ber[i] = modulator.cal_BER(signal, bits)[0]
         i += 1
     ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
@@ -87,7 +83,7 @@ for M in Mqams:
     # illustrate the difference between a blind and non-blind EVM
     ax3.plot(utils.lin2dB(evm_known**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
     ax4.plot(snr, utils.lin2dB(evm1**2), color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax4.plot(snr, utils.lin2dB(evm_known**2), color=c[j], marker=s[j], lw=0, label="%d-QAM non-blind"%M)
+    ax4.plot(snr, utils.lin2dB(evm_known**2), color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
     #ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
     j += 1
 ax1.legend()

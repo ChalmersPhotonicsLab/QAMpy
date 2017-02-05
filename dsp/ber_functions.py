@@ -8,6 +8,123 @@ from . import modulation
 class DataSyncError(Exception):
     pass
 
+def sync_Rx2Tx_Xcorr(data_tx, data_rx, N1, N2):
+    """
+    Sync the received data sequence to the transmitted data, which
+    might contain errors, using cross-correlation between data_rx and data_tx.
+    Calculates np.correlate(data_rx[:N1], data_tx[:N2], 'full').
+
+    Parameters
+    ----------
+
+    data_tx : array_like
+            the known input data sequence.
+
+    data_rx : array_like
+        the received data sequence which might contain errors.
+
+    N1 : int
+        the length of elements of the longer array input to correlate. This should be long enough so that the subsequence we use for searching is present, a good value is the number of bits in the PRBS.
+
+    N2 : int, optional
+        the length of the subsequence from data_tx to use to search for in data_rx
+
+    Returns
+    -------
+    offset index : int
+        the index where data_rx starts in data_rx
+    data_rx_sync : array_like
+        data_rx which is synchronized to data_tx
+
+    """
+    # this one gives a slightly higher BER need to investigate
+
+    # needed to convert bools to integers
+    tx = 1.*data_tx
+    rx = 1.*data_rx
+    ac = np.correlate(rx[:N1], tx[:N2], 'full')
+    idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
+    return np.roll(data_rx, idx), idx
+
+def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
+    """
+    Sync the transmitted data sequence to the received data, which
+    might contain errors, using cross-correlation between data_rx and data_tx.
+    Calculates np.correlate(data_rx[:N1], data_tx[:N2], 'full').
+
+    Parameters
+    ----------
+
+    data_tx : array_like
+            the known input data sequence.
+
+    data_rx : array_like
+        the received data sequence which might contain errors.
+
+    N1 : int
+        the length of elements of the longer array input to correlate. This should be long enough so that the subsequence we use for searching is present, a good value is the number of bits in the PRBS.
+
+    N2 : int, optional
+        the length of the subsequence from data_tx to use to search for in data_rx
+
+    Returns
+    -------
+    offset index : int
+        the index where data_rx starts in data_rx
+    data_rx_sync : array_like
+        data_tx which is synchronized to data_rx
+
+    """
+    # needed to convert bools to integers
+    tx = 1.*data_tx
+    rx = 1.*data_rx
+    if tx.dtype==np.complex128:
+        ac = np.correlate(np.angle(tx[:N1]), np.angle(rx[:N2]), 'full')
+    else:
+        ac = np.correlate(tx[:N1], rx[:N2], 'full')
+    idx1 = abs(ac).argmax() 
+    idx2 = idx1 - len(ac)//2 + (N1-N2)//2
+    return np.roll(data_tx, -idx2), (idx1, idx2), ac
+
+def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
+    """Sync the received data sequence to the transmitted data, which
+    might contain errors. Starts to with data_rx[:Lsync] if it does not find
+    the offset it will iterate through data[i*Lsync:Lsync*(i+1)] until offset is found
+    or imax is reached.
+
+    Parameters
+    ----------
+    data_tx : array_like
+            the known input data sequence.
+    data_rx : array_like
+        the received data sequence which might contain errors.
+    Lsync : int
+        the number of elements to use for syncing.
+    imax : imax, optional
+        maximum number of tries before giving up (the default is 200).
+
+    Returns
+    -------
+    offset index : int
+        the index where data_rx starts in data_rx
+    data_rx_sync : array_like
+        data_rx which is synchronized to data_tx
+
+    Raises
+    ------
+    DataSyncError
+        If no position can be found.
+    """
+    for i in np.arange(imax)*Lsync:
+        try:
+            sequence = data_rx[i:i + Lsync]
+            idx_offs = utils.find_offset(sequence, data_tx)
+            idx_offs = idx_offs - i
+            data_rx_synced = np.roll(data_rx, idx_offs)
+            return idx_offs, data_rx_synced
+        except ValueError:
+            pass
+    raise DataSyncError("maximum iterations exceeded")
 
 def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
     """Sync the transmitted data sequence to the received data, which
