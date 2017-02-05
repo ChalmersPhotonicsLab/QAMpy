@@ -2,20 +2,21 @@ from __future__ import division, print_function
 import pyximport
 pyximport.install()
 import numpy as np
+import numba
 from . import utils
 
 try:
-    from .dsp_cython import lfsr_ext
+    pass
+    from .dsp_cython import lfsr_ext, prbs_ext
 except:
     from .utils import lfsr_ext
     print("can not import cython build module")
 
 try:
-    from .dsp_cython import lfsr_int
+    from .dsp_cython import lfsr_int, prbs_int
 except:
     print("can not import cython build module")
     from .utils import lfsr_int
-
 
 def make_prbs_extXOR(order, nbits, seed=None):
     """
@@ -47,11 +48,8 @@ def make_prbs_extXOR(order, nbits, seed=None):
             seed = utils.bool2bin(seed)
         except TypeError:
             seed = seed
-    out = np.zeros(nbits, dtype=bool)
-    lfsr = lfsr_ext(seed, tapdict[order], order)
-    for i in range(nbits):
-        out[i] = next(lfsr)[0]
-    return out
+    out = prbs_ext(seed, tapdict[order], order, nbits)
+    return out.astype(bool)
 
 
 def make_prbs_intXOR(order, nbits, seed=None):
@@ -87,8 +85,6 @@ def make_prbs_intXOR(order, nbits, seed=None):
             seed = utils.bool2bin(seed)
         except TypeError:
             seed = seed
-    out = np.empty(nbits, dtype=bool)
-    lfsr = lfsr_int(seed, masks[order])
-    for i in range(nbits):
-        out[i] = next(lfsr)[0]
-    return out
+    out = prbs_int(seed, masks[order], nbits)
+    return out.astype(bool)
+
