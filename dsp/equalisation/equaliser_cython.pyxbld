@@ -1,5 +1,3 @@
-import os
-print(os.getcwd())
 def make_ext(modname, pyxfilename):
     from distutils.extension import Extension
     return Extension(name=modname,
