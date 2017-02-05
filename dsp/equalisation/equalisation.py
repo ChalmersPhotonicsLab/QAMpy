@@ -4,7 +4,7 @@ pyximport.install()
 import numpy as np
 
 from .. import utils
-from ..modulation import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
+from ..theory import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
 from ..segmentaxis import segment_axis
 
 
