@@ -66,12 +66,12 @@ for M in Mqams:
         print("SNR = %2f.0 dB"%sr)
         modulator = modulation.QAMModulator(M)
         signal, syms, bits = modulator.generateSignal(N, sr)
-        ser[i] = modulator.calculate_SER(signal, symbol_tx=syms)
         evm1[i] = modulator.cal_EVM(signal)
         evm2[i] = signal_quality.cal_blind_evm(signal, M)
         evm_known[i] = modulator.cal_EVM(signal, syms)
         # check to see that we can recovery timing delay
         signal = np.roll(signal * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
+        ser[i] = modulator.calculate_SER(signal, symbol_tx=syms)
         ber[i] = modulator.cal_BER(signal, bits)[0]
         i += 1
     ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
