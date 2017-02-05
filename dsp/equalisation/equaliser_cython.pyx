@@ -20,6 +20,28 @@ cdef extern from "equaliserC.h":
     void update_filter(double complex *E, unsigned int Ntaps, double mu, double complex err, double complex *wx, unsigned int pols, unsigned int L)
 
 
+def quantize(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
+    """
+    Quantize signal to symbols, based on closest distance.
+
+    Parameters
+    ----------
+    sig     : array_like
+        input signal field, 1D array of complex values
+    symbols : array_like
+        symbol alphabet to quantize to (1D array, dtype=complex)
+
+    Returns:
+    sigsyms : array_like
+        array of detected symbols
+    """
+    cdef unsigned int L = E.shape[0]
+    cdef unsigned int M = symbols.shape[0]
+    cdef np.ndarray[ndim =1, dtype=np.complex128_t] det_syms = np.zeros(L, dtype=np.complex128)
+    for i in range(L):
+        det_syms[i] = det_symbol(<double complex *>symbols.data, M, E[i])
+    return det_syms
+
 def partition_value(double signal,
                     np.ndarray[ndim=1, dtype=np.float64_t] partitions,
                     np.ndarray[ndim=1, dtype=np.float64_t] codebook):
