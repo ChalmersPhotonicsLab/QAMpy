@@ -1,7 +1,7 @@
 #import cProfile
 import numpy as np
 
-#import matplotlib.pylab as plt
+import matplotlib.pylab as plt
 from dsp import signals, equalisation, modulation
 from dsp.signal_quality import cal_blind_evm
 
@@ -42,8 +42,9 @@ SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
 
 #pr.enable()
-E, wx, wy, err = equalisation.FS_CMA(SS, N-40, ntaps, os, mu, M)
-E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, ntaps, os, mu, M)
+wx, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="mcma", adaptive_stepsize=True)
+E = equalisation.apply_filter(SS, os, wx)
+#E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, ntaps, os, mu, M)
 
 E = E[:,1000:-1000]
 
@@ -58,27 +59,30 @@ except:
 
 print("X BER %f dB"%(10*np.log10(berx[0])))
 print("Y BER %f dB"%(10*np.log10(bery[0])))
-evmX = cal_blind_evm(X[::os], 4)
-evmY = cal_blind_evm(Y[::os], 4)
-evmEx = cal_blind_evm(E[0], 4)
-evmEy = cal_blind_evm(E[1], 4)
+evmX = QAM.cal_EVM(X[::os])
+evmY = QAM.cal_EVM(Y[::os])
+evmEx = QAM.cal_EVM(E[0])
+evmEy = QAM.cal_EVM(E[1])
+print("X EVM %f "%evmEx)
+print("Y EVM %f "%evmEy)
 
 #pr.disable()
 #pr.print_stats(sort="time")
 
 
-#sys.exit()
-# plt.figure()
-# plt.subplot(121)
-# plt.title('Recovered')
-# plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx))
-# plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
-# plt.legend()
-# plt.subplot(122)
-# plt.title('Original')
-# plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-# plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
-# plt.legend()
+sys.exit()
+plt.figure()
+plt.subplot(121)
+plt.title('Recovered')
+plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx))
+plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
+plt.legend()
+plt.subplot(122)
+plt.title('Original')
+plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.legend()
+plt.show()
 
 # plt.figure()
 # plt.subplot(211)
