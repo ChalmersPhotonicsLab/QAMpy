@@ -82,9 +82,8 @@ def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
         ac = np.correlate(np.angle(tx[:N1]), np.angle(rx[:N2]), 'full')
     else:
         ac = np.correlate(tx[:N1], rx[:N2], 'full')
-    idx1 = abs(ac).argmax() 
-    idx2 = idx1 - len(ac)//2 + (N1-N2)//2
-    return np.roll(data_tx, -idx2), (idx1, idx2), ac
+    idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
+    return np.roll(data_tx, -idx), idx, ac
 
 def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
     """Sync the received data sequence to the transmitted data, which
