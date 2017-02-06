@@ -1,6 +1,7 @@
 import numpy as np
 import numba
-
+import locale
+locale.setlocale(locale.LC_NUMERIC, 'C')
 
 def partition_signal(signal, partitions, codebook):
     """
