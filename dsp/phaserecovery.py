@@ -2,10 +2,10 @@
 from __future__ import division, print_function
 import numpy as np
 from .segmentaxis import segment_axis
-from .theory import CalculateMQAMSymbols
+from .theory import calculate_MQAM_symbols
 from .signal_quality import calS0
 
-SYMBOLS_16QAM = CalculateMQAMSymbols(16)
+SYMBOLS_16QAM = calculate_MQAM_symbols(16)
 
 
 def viterbiviterbi_gen(N, E, M):
