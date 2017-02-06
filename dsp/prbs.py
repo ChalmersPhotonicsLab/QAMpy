@@ -2,7 +2,6 @@ from __future__ import division, print_function
 import pyximport
 pyximport.install()
 import numpy as np
-import numba
 from . import utils
 
 try:
