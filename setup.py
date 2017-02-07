@@ -7,12 +7,12 @@ import numpy as np
 
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math"]
 
-equaliser_cython = Extension(name=modname,
+equaliser_cython = Extension(name="dsp.equalisation.equaliser_cython",
                      sources=["dsp/equalisation/equaliser_cython.pyx", "dsp/equalisation/equaliserC.c"],
                              include_dirs=["dsp/equalisation", np.get_include()],
                      extra_compile_args=COMPILER_ARGS)
 
-dsp_cython = Extension(name=modname,
+dsp_cython = Extension(name="dsp.dsp_cython",
                        sources=["dsp/dsp_cython.pyx"],
                              include_dirs=[np.get_include()],
                      extra_compile_args=COMPILER_ARGS)
@@ -86,7 +86,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy'],
 
-    extensions = [equaliser_cython, dsp_cython]
+    extensions = [equaliser_cython, dsp_cython],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
