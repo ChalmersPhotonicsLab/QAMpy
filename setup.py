@@ -86,7 +86,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy'],
 
-    extensions = [equaliser_cython, dsp_cython],
+    ext_modules = [equaliser_cython, dsp_cython],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
