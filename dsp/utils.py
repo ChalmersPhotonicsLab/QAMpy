@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 import scipy.signal as scisig
+import fractions
 """ a number of convenience functions"""
 
 
@@ -321,11 +322,12 @@ def resample(fold, fnew, signal, window=None):
     """
     signal = signal.flatten()
     L = len(signal)
-    num = int(fnew / fold * L)
+    ratn = fractions.Fraction(fnew/fold).limit_denominator()
     if window is None:
-        signal = scisig.resample(signal, num)
+        
+        signal = scisig.resample_poly(signal, ratn.numerator, ratn.denominator)
     else:
-        signal = scisig.resample(signal, num, window=window)
+        signal = scisig.resample_poly(signal, ratn.numberator, ratn.denominator, window=window)
     return signal
 
 
