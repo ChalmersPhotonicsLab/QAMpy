@@ -324,7 +324,6 @@ def resample(fold, fnew, signal, window=None):
     L = len(signal)
     ratn = fractions.Fraction(fnew/fold).limit_denominator()
     if window is None:
-        
         signal = scisig.resample_poly(signal, ratn.numerator, ratn.denominator)
     else:
         signal = scisig.resample_poly(signal, ratn.numberator, ratn.denominator, window=window)
