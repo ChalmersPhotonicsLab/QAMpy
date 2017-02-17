@@ -42,16 +42,17 @@ def viterbiviterbi_gen(N, E, M):
     phase_est = phase_est - np.pi
     return E * np.exp(-1.j * phase_est / M)
 
-def blindphasesearch(E, M, symbols, N):
-    angles = np.arange(M)/M*np.pi/2.
+def blindphasesearch(E, Mtestangles, symbols, N):
+    angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
-    dist = (abs(EE[:,:,np.newaxis]-symbols)**2).min(axis=2)
-    print(dist.shape)
-    idx = segment_axis(dist, 2*N, 2*N-1, axis=0).sum(axis=1).argmin(axis=1)
-    try:
-        En = E[N:-N]*np.exp(1.j*angles[idx])
-    except:
-        En = E[N:-N]*np.exp(1.j*angles[idx[:-1]])
+    idx = np.zeros(len(E)-2*N, dtype=np.int)
+    dist = (abs(EE[:2*N, :, np.newaxis]-symbols)**2).min(axis=2)
+    idx[0] = dist.sum(axis=0).argmin(axis=0)
+    for i in range(1,len(idx)):
+        tmp = (abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1).reshape(1,Mtestangles)
+        dist = np.concatenate([dist[1:], tmp])#(abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1)])
+        idx[i] = dist.sum(axis=0).argmin(axis=0)
+    En = E[N:-N]*np.exp(1.j*angles[idx])
     return En
 
 
