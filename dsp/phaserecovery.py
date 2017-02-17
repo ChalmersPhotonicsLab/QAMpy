@@ -42,6 +42,18 @@ def viterbiviterbi_gen(N, E, M):
     phase_est = phase_est - np.pi
     return E * np.exp(-1.j * phase_est / M)
 
+def blindphasesearch(E, M, symbols, N):
+    angles = np.arange(M)/M*np.pi/2.
+    EE = E[:,np.newaxis]*np.exp(1.j*angles)
+    dist = (abs(EE[:,:,np.newaxis]-symbols)**2).min(axis=2)
+    print(dist.shape)
+    idx = segment_axis(dist, 2*N, 2*N-1, axis=0).sum(axis=1).argmin(axis=1)
+    try:
+        En = E[N:-N]*np.exp(1.j*angles[idx])
+    except:
+        En = E[N:-N]*np.exp(1.j*angles[idx[:-1]])
+    return En
+
 
 def viterbiviterbi_qpsk(N, E):
     """
