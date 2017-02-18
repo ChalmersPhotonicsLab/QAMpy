@@ -1,8 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from . import utils
-from .modulation import calculate_MQAM_symbols
-from .theory import  MQAMScalingFactor
+from .theory import  MQAMScalingFactor,calculate_MQAM_symbols
 from .ber_functions import QAMquantize
 
 
