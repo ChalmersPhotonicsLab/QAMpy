@@ -65,8 +65,8 @@ X = Dat['CH1'] + 1.j * Dat['CH2']
 Y = Dat['CH3'] + 1.j * Dat['CH4']
 X = X.flatten()
 Y = Y.flatten()
-X = X[len(X)//2:]
-Y = Y[len(Y)//2:]
+#X = X[len(X)//2:]
+#Y = Y[len(Y)//2:]
 
 X = pre_filter(X, 3.9)
 Y = pre_filter(Y, 3.9)
@@ -86,7 +86,7 @@ SS = np.vstack([X[5000:-5000],Y[5000:-5000]])
 #(wxdd, wydd), err_dd = equalisation.SBD_LMS(SS, niter, os, muRDE, M, (wx,wy))
 #(wxdd, wydd), err_dd = equalisation.MSBD_LMS(SS, niter, os, muRDE, M, (wx,wy))
 #E, wx, wy, err, err_rde = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(3,3), methods=("mcma_adaptive", "sbd_adaptive"))
+E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(3,3), methods=("mcma", "sbd"), adaptive_stepsize=(True,True) )
 #E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 #E = equalisation.apply_filter(SS, wxdd, wydd, 33, os )
 #Ec = equalisation.apply_filter(SS, wx, wy, 33, os)
