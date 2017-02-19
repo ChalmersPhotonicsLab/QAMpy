@@ -3,12 +3,56 @@ import numpy as np
 from bitarray import bitarray
 from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin
 from .prbs import make_prbs_extXOR
-from .equalisation import quantize
+#from .equalisation import quantize
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
 from . import theory
 from . import ber_functions
+import arrayfire as af
 
 
+def quantize(signal, symbols):
+    L = len(signal)
+    step = L//10
+    K = len(symbols)
+    ss = af.np_to_af_array(signal.flatten())
+    sy = af.transpose(af.np_to_af_array(symbols.flatten()))
+    print(af.device.info())
+    print(af.device.device_mem_info())
+    tmp = af.constant(0, L, dtype=af.Dtype.c64)
+    print(af.device.device_mem_info())
+    for i in range(10):
+        sig = af.tile(ss[i*step:(i+1)*step], 1, K)
+        sym = af.tile(sy, step, 1)
+        v, idx = af.imin(af.abs(sig-sym), dim=1)
+        tmp[i*step:(i+1)*step] = af.transpose(sy)[idx]
+    return np.array(tmp)
+
+def quantize3(signal, symbols):
+    L = len(signal)
+    K = len(symbols)
+    ss = af.np_to_af_array(signal.flatten())
+    ss = af.tile(ss, 1, K)
+    sy = af.transpose(af.np_to_af_array(symbols.flatten()))
+    tmp = af.constant(0, L, dtype=af.Dtype.c64)
+    for i in af.ParallelRange(L):
+        v, idx = af.imin(af.abs(ss[i,:] - sy))
+        tmp[i] = sy[:,idx]
+    return np.array(tmp)
+
+def quantize4(signal, symbols):
+    L = len(signal)
+    K = len(symbols)
+    ss = af.np_to_af_array(signal.flatten())
+    ss = af.transpose(af.tile(ss, 1, K))
+    sy = af.np_to_af_array(symbols.flatten())
+    tmp = af.constant(0, L, dtype=af.Dtype.u32)
+    tmp22 = af.constant(0, L, dtype=af.Dtype.c64)
+    for i in af.ParallelRange(L):
+        v, idx = af.imin(af.abs(ss[:,i] - sy))
+        tmp[i] = idx
+        tmp22[i] = sy[idx]
+    return np.array(tmp22)
+  
 
 class QAMModulator(object):
     """
