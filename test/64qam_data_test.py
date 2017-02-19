@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, modulation, utils
+from dsp import signals, equalisation, modulation, utils, phaserecovery
 from dsp.signal_quality import cal_blind_evm
 from scipy.io import loadmat
 
@@ -86,9 +86,18 @@ SS = np.vstack([X[5000:-5000],Y[5000:-5000]])
 #(wxdd, wydd), err_dd = equalisation.SBD_LMS(SS, niter, os, muRDE, M, (wx,wy))
 #(wxdd, wydd), err_dd = equalisation.MSBD_LMS(SS, niter, os, muRDE, M, (wx,wy))
 #E, wx, wy, err, err_rde = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(3,3), methods=("mcma", "sbd"), adaptive_stepsize=(True,True) )
+E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(True,True) )
+print("X pol phase")
+Ex = phaserecovery.blindphasesearch_af(E[0], 64, QAM.symbols, 8)
+print("X pol phase done")
+print("Y pol phase")
+Ey = phaserecovery.blindphasesearch_af(E[1], 64, QAM.symbols, 8)
+print("Y pol phase done")
+E = np.vstack([Ex,Ey])
+#wx, err_both = equalisation.equalise_signal(E, 1, muRDE, M, Ntaps=ntaps, method="sbd" , adaptive_stepsize=True)
+
 #E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-#E = equalisation.apply_filter(SS, wxdd, wydd, 33, os )
+#E = equalisation.apply_filter(E, 1, wx)
 #Ec = equalisation.apply_filter(SS, wx, wy, 33, os)
 Ec = E
 
