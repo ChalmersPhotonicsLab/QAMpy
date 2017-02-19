@@ -66,8 +66,8 @@ def blindphasesearch_af(E, Mtestangles, symbols, N):
     angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     syms  = af.np_to_af_array(symbols.reshape(1,1,-1))
-    Eaf = af.np_to_af_array(EE)
     if L <= Nmax+N:
+        Eaf = af.np_to_af_array(EE)
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[0:L,:], syms))**2, dim=2)
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
@@ -79,17 +79,20 @@ def blindphasesearch_af(E, Mtestangles, symbols, N):
         if R < N:
             R = R+Nmax
             K -= 1
+        Eaf = af.np_to_af_array(EE[0:Nmax+N])
         idxnd = np.zeros(L-2*N, dtype=np.int32)
-        tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[0:Nmax+N], syms))**2, dim=2)
+        tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[0:Nmax-N] = np.array(idx)
         for i in range(1,K):
-            tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[i*Nmax-N:(i+1)*Nmax+N:], syms))**2, dim=2)
+            Eaf = af.np_to_af_array(EE[i*Nmax-N:(i+1)*Nmax+N])
+            tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
             cs = afmavg(tmp, 2*N, axis=0)
             val, idx = af.imin(cs, dim=1)
             idxnd[i*Nmax-N:(i+1)*Nmax-N] = np.array(idx)
-        tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[K*Nmax-N:K*Nmax+R,:], syms))**2, dim=2)
+        Eaf = af.np_to_af_array(EE[K*Nmax-N:K*Nmax+R])
+        tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax-N:] = np.array(idx)
