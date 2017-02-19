@@ -43,7 +43,7 @@ def viterbiviterbi_gen(N, E, M):
     phase_est = phase_est - np.pi
     return E * np.exp(-1.j * phase_est / M)
 
-def blindphasesearch(E, Mtestangles, symbols, N):
+def blindphasesearch_py(E, Mtestangles, symbols, N):
     angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     idx = np.zeros(len(E)-2*N, dtype=np.int)
@@ -56,39 +56,11 @@ def blindphasesearch(E, Mtestangles, symbols, N):
     En = E[N:-N]*np.exp(1.j*angles[idx])
     return En
 
-def mvsum(X, N, axis=0):
-    cs = np.cumsum(X, axis=0)
-    #cs = cs.reshape(X.shape)
-    return cs[N:] - cs[:-N]
-
-def blindphasesearch3(E, Mtestangles, symbols, N):
-    angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
-    EE = E[:,np.newaxis]*np.exp(1.j*angles)
-    idx = np.zeros(len(E)-2*N, dtype=np.int)
-    dist = (abs(EE[:, :, np.newaxis]-symbols)**2).min(axis=2)
-    dist = mvsum(dist, 2*N)
-    idx = dist.argmin(axis=1)
-    #idx[0] = dist.sum(axis=0).argmin(axis=0)
-    #for i in range(1,len(idx)):
-        #tmp = (abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1).reshape(1,Mtestangles)
-        #dist = np.concatenate([dist[1:], tmp])#(abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1)])
-        #idx[i] = dist.sum(axis=0).argmin(axis=0)
-    En = E[N:-N]*np.exp(1.j*angles[idx])
-    return En
-
 def afmavg(X, N, axis=0):
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
-def mindist(E, syms, M, N):
-    d = af.constant(100., 1)
-    for i in af.ParallelRange(M):
-        for j in af.ParallelRange(N):
-            E[i] = af.minof(af.abs(E[i]-syms[j])**2, d)
-    return E
-
-
-def blindphasesearch2(E, Mtestangles, symbols, N):
+def blindphasesearch_af(E, Mtestangles, symbols, N):
     Nmax = NMAX//Mtestangles//symbols.shape[0]//16
     L = E.shape[0]
     angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
@@ -113,7 +85,6 @@ def blindphasesearch2(E, Mtestangles, symbols, N):
         val, idx = af.imin(cs, dim=1)
         idxnd[0:Nmax-N] = np.array(idx)
         for i in range(1,K):
-            print(i)
             tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[i*Nmax-N:(i+1)*Nmax+N:], syms))**2, dim=2)
             cs = afmavg(tmp, 2*N, axis=0)
             val, idx = af.imin(cs, dim=1)
