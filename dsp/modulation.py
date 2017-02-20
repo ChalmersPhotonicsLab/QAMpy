@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, phase_noise
+from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise
 from .prbs import make_prbs_extXOR
 from .equalisation import quantize
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
@@ -208,7 +208,7 @@ class QAMModulator(object):
         outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
         # not 100% clear if we should apply before or after resampling
         if lw_LO:
-            outdata *= np.exp(1.j*phase_noise(outdata.shape[0], lw_LO, samplingrate ))
+            outdata = apply_phase_noise(outdata, lw_LO, samplingrate)
         return outdata, symbols, bitsq
 
     def theoretical_SER(self, snr):
