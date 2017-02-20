@@ -514,9 +514,8 @@ def apply_phase_noise(signal, df, fs):
 
     """
     N = signal.shape[0]
-    var = 2*np.pi*df/fs
-    f = np.random.normal(scale=np.sqrt(var), size=N)
-    return signal*np.exp(1.j*np.cumsum(f))
+    ph = phase_noise(N, df, fs)
+    return signal*np.exp(1.j*ph)
 
 
 
