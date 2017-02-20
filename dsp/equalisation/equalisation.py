@@ -342,7 +342,6 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     for i in range(Niter):
         print("LMS iteration %d"%i)
-        # run CMA
         for l in range(pols):
             err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args, adaptive=adaptive_stepsize)
     return wxy, err
