@@ -12,6 +12,7 @@ from .phaserecovery import NMAX
 
 
 def quantize(signal, symbols):
+    global  NMAX
     Nmax = NMAX//len(symbols.flatten())//16
     L = signal.flatten().shape[0]
     sig = af.np_to_af_array(signal.flatten())
