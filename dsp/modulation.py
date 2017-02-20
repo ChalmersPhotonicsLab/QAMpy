@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin
+from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, phase_noise
 from .prbs import make_prbs_extXOR
 from .equalisation import quantize
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
@@ -145,6 +145,7 @@ class QAMModulator(object):
                       N,
                        snr,
                        carrier_df=0,
+                       lw_LO = 0,
                        baudrate=1,
                        samplingrate=1,
                        IQsep=False,
@@ -163,6 +164,8 @@ class QAMModulator(object):
         carrier_df: number, optional
             carrier frequency offset, relative to the overall window, if not given it
             is set to 0 (baseband modulation)
+        lw_LO : float, optional
+            linewidth in frequency of the local oscillator for emulation of phase noise (default is 0, no phase noise)
         baudrate:  number, optional
             symbol rate of the signal. This should be the real symbol rate, used
             for calculating the oversampling factor. If not given it is 1.
@@ -202,8 +205,11 @@ class QAMModulator(object):
         noise = (np.random.randn(N) + 1.j * np.random.randn(N)) / np.sqrt(2)  # sqrt(2) because N/2 = sigma
         outdata = symbols + noise * 10**(-snr / 20)  #the 20 here is so we don't have to take the sqrt
         outdata = resample(baudrate, samplingrate, outdata)
-        return outdata * np.exp(2.j * np.pi * np.arange(len(outdata)) *
-                                carrier_df / samplingrate), symbols, bitsq
+        outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
+        # not 100% clear if we should apply before or after resampling
+        if lw_LO:
+            outdata *= np.exp(1.j*phase_noise(outdata.shape[0], lw_LO, samplingrate ))
+        return outdata, symbols, bitsq
 
     def theoretical_SER(self, snr):
         """
@@ -312,7 +318,7 @@ class QAMModulator(object):
 
 def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):
     """
-    Generate a PRBS from two independent PRBS generators.
+    Generata a PRBS from two independent PRBS generators.
 
     Parameters
     ----------
