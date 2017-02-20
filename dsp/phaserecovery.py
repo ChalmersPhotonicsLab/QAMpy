@@ -61,14 +61,14 @@ def afmavg(X, N, axis=0):
     return cs[N:] - cs[:-N]
 
 def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
-    global = NMAX
+    global NMAX
     if precision == 16:
         prec_dtype = np.complex128
     elif precision == 8:
         prec_dtype = np.complex64
     else:
         raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
-    Nmax = NMAX//Mtestangles//symbols.shape[0]//precision
+    Nmax = NMAX//Mtestangles//symbols.shape[0]//16
     L = E.shape[0]
     angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
     EE = E[:,np.newaxis]*np.exp(1.j*angles)

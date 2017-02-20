@@ -12,14 +12,14 @@ from .phaserecovery import NMAX
 
 
 def quantize(signal, symbols, precision=16):
+    global  NMAX
     if precision == 16:
         prec_dtype = np.complex128
     elif precision == 8:
         prec_dtype = np.complex64
     else:
         raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
-    global  NMAX
-    Nmax = NMAX//len(symbols.flatten())//precision
+    Nmax = NMAX//len(symbols.flatten())//16
     L = signal.flatten().shape[0]
     sig = af.np_to_af_array(signal.flatten().astype(dtype))
     sym = af.transpose(af.np_to_af_array(symbols.flatten().astype(prec_dtype)))
