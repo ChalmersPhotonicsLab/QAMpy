@@ -13,7 +13,7 @@ cdef extern from "complex.h":
 cdef extern from "equaliserC.h":
     double complex apply_filter(double complex *E, unsigned int Ntaps, double complex *wx, unsigned int pols, unsigned int L)
 
-cdef extern from "equaliserC.h":
+cdef extern from "equaliserC.h" nogil:
     double complex det_symbol(double complex *syms, unsigned int M, double complex value)
 
 cdef extern from "equaliserC.h":
@@ -37,8 +37,9 @@ def quantize(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dty
     """
     cdef unsigned int L = E.shape[0]
     cdef unsigned int M = symbols.shape[0]
+    cdef unsigned int i
     cdef np.ndarray[ndim =1, dtype=np.complex128_t] det_syms = np.zeros(L, dtype=np.complex128)
-    for i in range(L):
+    for i in prange(L, nogil=True):
         det_syms[i] = det_symbol(<double complex *>symbols.data, M, E[i])
     return det_syms
 

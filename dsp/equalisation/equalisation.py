@@ -1,6 +1,4 @@
 from __future__ import division
-import pyximport
-pyximport.install()
 import numpy as np
 
 from .. import utils

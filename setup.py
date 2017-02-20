@@ -1,8 +1,26 @@
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 # To use a consistent encoding
 from codecs import open
 from os import path
+import numpy as np
+
+COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
+LINK_ARGS = ["-fopenmp"]
+
+equaliser_cython = Extension(name="dsp.equalisation.equaliser_cython",
+                     sources=["dsp/equalisation/equaliser_cython.pyx", "dsp/equalisation/equaliserC.c"],
+                             include_dirs=["dsp/equalisation", np.get_include()],
+                             extra_compile_args=COMPILER_ARGS,
+                             extra_link_args=LINK_ARGS)
+
+dsp_cython = Extension(name="dsp.dsp_cython",
+                       sources=["dsp/dsp_cython.pyx"],
+                             include_dirs=[np.get_include()],
+                       extra_compile_args=COMPILER_ARGS,
+                             extra_link_args=LINK_ARGS)
+
+
 
 here = path.abspath(path.dirname(__file__))
 
@@ -23,7 +41,7 @@ setup(
 
     # Author details
     author='Jochen Schröder',
-    author_email='cycomanic@gmail.com',
+    author_email='jochen.schroeder@gmail.com',
 
     # Choose your license
     license='GPLv3',
@@ -71,6 +89,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy'],
 
+    ext_modules = [equaliser_cython, dsp_cython],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
