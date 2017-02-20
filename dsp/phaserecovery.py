@@ -60,14 +60,21 @@ def afmavg(X, N, axis=0):
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
-def blindphasesearch_af(E, Mtestangles, symbols, N):
-    Nmax = NMAX//Mtestangles//symbols.shape[0]//16
+def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
+    global = NMAX
+    if precision == 16:
+        prec_dtype = np.complex128
+    elif precision == 8:
+        prec_dtype = np.complex64
+    else:
+        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
+    Nmax = NMAX//Mtestangles//symbols.shape[0]//precision
     L = E.shape[0]
     angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
-    syms  = af.np_to_af_array(symbols.reshape(1,1,-1))
+    syms  = af.np_to_af_array(symbols.astype(prec_dtype).reshape(1,1,-1))
     if L <= Nmax+N:
-        Eaf = af.np_to_af_array(EE)
+        Eaf = af.np_to_af_array(EE.astype(prec_dtype))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[0:L,:], syms))**2, dim=2)
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
@@ -79,19 +86,19 @@ def blindphasesearch_af(E, Mtestangles, symbols, N):
         if R < N:
             R = R+Nmax
             K -= 1
-        Eaf = af.np_to_af_array(EE[0:Nmax+N])
+        Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(np.complex128))
         idxnd = np.zeros(L-2*N, dtype=np.int32)
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[0:Nmax-N] = np.array(idx)
         for i in range(1,K):
-            Eaf = af.np_to_af_array(EE[i*Nmax-N:(i+1)*Nmax+N])
+            Eaf = af.np_to_af_array(EE[i*Nmax-N:(i+1)*Nmax+N].astype(np.complex128))
             tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
             cs = afmavg(tmp, 2*N, axis=0)
             val, idx = af.imin(cs, dim=1)
             idxnd[i*Nmax-N:(i+1)*Nmax-N] = np.array(idx)
-        Eaf = af.np_to_af_array(EE[K*Nmax-N:K*Nmax+R])
+        Eaf = af.np_to_af_array(EE[K*Nmax-N:K*Nmax+R].astype(np.complex128))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)

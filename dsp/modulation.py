@@ -11,12 +11,18 @@ from . import ber_functions
 from .phaserecovery import NMAX
 
 
-def quantize(signal, symbols):
+def quantize(signal, symbols, precision=16):
+    if precision == 16:
+        prec_dtype = np.complex128
+    elif precision == 8:
+        prec_dtype = np.complex64
+    else:
+        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
     global  NMAX
-    Nmax = NMAX//len(symbols.flatten())//16
+    Nmax = NMAX//len(symbols.flatten())//precision
     L = signal.flatten().shape[0]
-    sig = af.np_to_af_array(signal.flatten())
-    sym = af.transpose(af.np_to_af_array(symbols.flatten()))
+    sig = af.np_to_af_array(signal.flatten().astype(dtype))
+    sym = af.transpose(af.np_to_af_array(symbols.flatten().astype(prec_dtype)))
     tmp = af.constant(0, L, dtype=af.Dtype.c64)
     if L < Nmax:
         v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig,sym)), dim=1)
