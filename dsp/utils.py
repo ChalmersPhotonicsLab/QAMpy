@@ -491,4 +491,34 @@ def phase_noise(N, df, fs):
     f = np.random.normal(scale=np.sqrt(var), size=N)
     return np.cumsum(f)
 
+def apply_phase_noise(signal, df, fs):
+    """
+    Add phase noise from local oscillators, based on a Wiener noise process.
+
+    Parameters
+    ----------
+
+    signal  : array_like
+        single polarisation signal
+
+    df : float
+        combined linewidth of local oscillators in the system
+
+    fs : float
+        sampling frequency of the signal
+
+    Returns
+    -------
+    out : array_like
+       output signal with phase noise
+
+    """
+    N = signal.shape[0]
+    var = 2*np.pi*df/fs
+    f = np.random.normal(scale=np.sqrt(var), size=N)
+    return signal*np.exp(1.j*np.cumsum(f))
+
+
+
+
 
