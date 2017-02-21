@@ -209,7 +209,7 @@ def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
     raise DataSyncError("maximum iterations exceeded")
 
 
-def adjust_data_length(data_tx, data_rx):
+def adjust_data_length(data_tx, data_rx, method=None):
     """Adjust the length of data_tx to match data_rx, either by truncation
     or repeating the data.
 
@@ -218,18 +218,42 @@ def adjust_data_length(data_tx, data_rx):
     data_tx, data_rx : array_like
         known input data sequence, received data sequence
 
+    method : string, optional
+        method to use for adjusting the length. This can be either None, "extend" or "truncate".
+        Description:
+            "extend"   - pad the short array with its data from the beginning. This assumes that the data is periodic
+            "truncate" - cut the shorter array to the length of the longer one
+            None       - (default) either truncate or extend data_tx 
+
     Returns
     -------
-    data_tx_new : array_like
-        input data sequence truncated or repeated to the same length as data_rx
+    data_tx_new, data_rx_new : array_like
+        adjusted data sequences
     """
-    if len(data_tx) > len(data_rx):
-        return data_tx[:len(data_rx)]
-    elif len(data_tx) < len(data_rx):
-        data_tx = np.hstack([data_tx, data_tx[:len(data_rx)-len(data_tx)]])
-        return data_tx
-    else:
-        return data_tx
+    if method is None:
+        if len(data_tx) > len(data_rx):
+            return data_tx[:len(data_rx)], data_rx
+        elif len(data_tx) < len(data_rx):
+            data_tx = np.hstack([data_tx, data_tx[:len(data_rx)-len(data_tx)]])
+            return data_tx, data_rx
+        else:
+            return data_tx, data_rx
+    elif method is "truncate":
+        if len(data_tx) > len(data_rx):
+            return data_tx[:len(data_rx)], data__rx
+        elif len(data_tx) < len(data_rx):
+            return data_tx, data_rx[:len(data_tx)]
+        else:
+            return data_tx
+    elif method is "extend":
+        if len(data_tx) > len(data_rx):
+            data_rx = np.hstack([data_rx, data_rx[:len(data_tx)-len(data_rx)]])
+            return data_tx, data__rx
+        elif len(data_tx) < len(data_rx):
+            data_tx = np.hstack([data_tx, data_tx[:len(data_rx)-len(data_tx)]])
+            return data_tx, data__rx
+        else:
+            return data_tx, data_rx
 
 
 def _cal_BER_only(data_rx, data_tx, threshold=0.2):
