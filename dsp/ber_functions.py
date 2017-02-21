@@ -69,11 +69,13 @@ def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
 
     Returns
     -------
-    offset index : int
-        the index where data_rx starts in data_rx
     data_rx_sync : array_like
         data_tx which is synchronized to data_rx
+    offset index : int
+        the index where data_rx starts in data_rx
 
+    ac           : array_like
+        the correlation between the two sequences
     """
     # needed to convert bools to integers
     tx = 1.*data_tx
