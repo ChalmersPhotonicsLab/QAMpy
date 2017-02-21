@@ -234,27 +234,34 @@ def adjust_data_length(data_tx, data_rx, method=None):
         if len(data_tx) > len(data_rx):
             return data_tx[:len(data_rx)], data_rx
         elif len(data_tx) < len(data_rx):
-            data_tx = np.hstack([data_tx, data_tx[:len(data_rx)-len(data_tx)]])
+            data_tx = _extend_by(data_tx, data_rx.shape[0]-data_tx.shape[0])
             return data_tx, data_rx
         else:
             return data_tx, data_rx
     elif method is "truncate":
         if len(data_tx) > len(data_rx):
-            return data_tx[:len(data_rx)], data__rx
+            return data_tx[:len(data_rx)], data_rx
         elif len(data_tx) < len(data_rx):
             return data_tx, data_rx[:len(data_tx)]
         else:
-            return data_tx
+            return data_tx, data_rx
     elif method is "extend":
         if len(data_tx) > len(data_rx):
-            data_rx = np.hstack([data_rx, data_rx[:len(data_tx)-len(data_rx)]])
+            data_rx = _extend_by(data_rx, data_tx.shape[0]-data_rx.shape[0])
             return data_tx, data__rx
         elif len(data_tx) < len(data_rx):
-            data_tx = np.hstack([data_tx, data_tx[:len(data_rx)-len(data_tx)]])
-            return data_tx, data__rx
+            data_tx = _extend_by(data_tx, data_rx.shape[0]-data_tx.shape[0])
+            return data_tx, data_rx
         else:
             return data_tx, data_rx
 
+def _extend_by(data, N):
+    L = data.shape[0]
+    K = N//L
+    rem = N%L
+    data = np.hstack([data for i in range(K+1)])
+    data = np.hstack([data, data[:rem]])
+    return data
 
 def _cal_BER_only(data_rx, data_tx, threshold=0.2):
     """Calculate the bit-error rate (BER) between two synchronised binary data
