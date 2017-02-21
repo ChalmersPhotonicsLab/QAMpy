@@ -44,7 +44,7 @@ def viterbiviterbi_gen(N, E, M):
     return E * np.exp(-1.j * phase_est / M)
 
 def blindphasesearch_py(E, Mtestangles, symbols, N):
-    angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     idx = np.zeros(len(E)-2*N, dtype=np.int)
     dist = (abs(EE[:2*N, :, np.newaxis]-symbols)**2).min(axis=2)
@@ -53,8 +53,9 @@ def blindphasesearch_py(E, Mtestangles, symbols, N):
         tmp = (abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1).reshape(1,Mtestangles)
         dist = np.concatenate([dist[1:], tmp])#(abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1)])
         idx[i] = dist.sum(axis=0).argmin(axis=0)
-    En = E[N:-N]*np.exp(1.j*angles[idx])
-    return En
+    ph = np.unwrap(angles[idx]*4)/4
+    En = E[N:-N]*np.exp(1.j*ph)
+    return En, ph
 
 def afmavg(X, N, axis=0):
     cs = af.accum(X, dim=axis)
@@ -70,7 +71,7 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
         raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
     Nmax = NMAX//Mtestangles//symbols.shape[0]//16
     L = E.shape[0]
-    angles = np.arange(Mtestangles)/Mtestangles*np.pi/2.
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     syms  = af.np_to_af_array(symbols.astype(prec_dtype).reshape(1,1,-1))
     if L <= Nmax+N:
@@ -103,8 +104,9 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax-N:] = np.array(idx)
-    En = E[N:-N]*np.exp(1.j*angles[idxnd])
-    return En
+    angles_adj = np.unwrap(angles[idxnd]*4)/4
+    En = E[N:-N]*np.exp(1.j*angles_adj)
+    return En, angles_adj
 
 def viterbiviterbi_qpsk(N, E):
     """
