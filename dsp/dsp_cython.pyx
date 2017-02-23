@@ -4,6 +4,28 @@ cimport cython
 from cpython cimport bool
 cimport numpy as np
 
+
+def gen_unwrap(double[::1] seq, double max_diff, double period):
+    cdef int i
+    cdef double diff
+    cdef long nperiods = 0
+    cdef np.ndarray[ndim=1, dtype=double] new_array = np.zeros(seq.shape[0], dtype=np.float)
+    new_array[0] = seq[0]
+    for i in range(1, seq.shape[0]):
+        diff = seq[i]-seq[i-1]
+        if diff > period:
+            nperiods -= 1
+        elif diff > max_diff:
+            new_array[i] = seq[i-1]
+            continue
+        elif diff < -period:
+            nperiods += 1
+        elif diff < -max_diff:
+            new_array[i] = seq[i-1]
+            continue
+        new_array[i] = seq[i] + period * nperiods
+    return new_array
+
 def prbs_ext(np.int64_t seed, taps, int nbits, int N):
     cdef int t
     cdef np.int64_t xor, sr
