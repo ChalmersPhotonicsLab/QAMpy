@@ -81,10 +81,14 @@ def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
     tx = 1.*data_tx
     rx = 1.*data_rx
     if tx.dtype==np.complex128:
-        ac = np.correlate(np.angle(tx[:N1]), np.angle(rx[:N2]), 'full')
+        #ac = np.correlate(np.angle(tx[:N1]), np.angle(rx[:N2]), 'full')
+        stx = np.fft.fft(np.angle(tx))
+        srx = np.fft.fft(np.angle(rx))
+        ac = np.fft.ifftshift(np.fft.ifft(stx*np.conj(srx)))
     else:
         ac = np.correlate(tx[:N1], rx[:N2], 'full')
     idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
+    idx = abs(ac).argmax() - len(ac)//2
     return np.roll(data_tx, -idx), idx, ac
 
 def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
