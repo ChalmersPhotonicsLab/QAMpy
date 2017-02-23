@@ -5,6 +5,7 @@ import numpy as np
 from .segmentaxis import segment_axis
 from .theory import calculate_MQAM_symbols
 from .signal_quality import calS0
+from .dsp_cython import gen_unwrap
 
 SYMBOLS_16QAM = calculate_MQAM_symbols(16)
 NMAX = 4*1024**3
@@ -71,7 +72,8 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
         raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
     Nmax = NMAX//Mtestangles//symbols.shape[0]//16
     L = E.shape[0]
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
+    #angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
+    angles = np.arange(Mtestangles)*np.pi/2/Mtestangles
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     syms  = af.np_to_af_array(symbols.astype(prec_dtype).reshape(1,1,-1))
     if L <= Nmax+N:
@@ -104,9 +106,13 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax-N:] = np.array(idx)
-    angles_adj = np.unwrap(angles[idxnd]*4)/4
+    angles_adj = np.unwrap(angles[idxnd]*4, discont=np.pi*6/4)/4
+    #angles_adj = gen_unwrap(angles[idxnd], np.pi/16 , np.pi/2)
+    #T = np.pi/2 * 3/4
+    #angles_adj = T*np.unwrap(angles[idxnd]*2*np.pi/T)/(2*np.pi)
     En = E[N:-N]*np.exp(1.j*angles_adj)
-    return En, angles_adj
+    return En, angles_adj, angles[idxnd]
+
 
 def viterbiviterbi_qpsk(N, E):
     """

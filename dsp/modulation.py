@@ -21,7 +21,7 @@ def quantize(signal, symbols, precision=16):
         raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
     Nmax = NMAX//len(symbols.flatten())//16
     L = signal.flatten().shape[0]
-    sig = af.np_to_af_array(signal.flatten().astype(dtype))
+    sig = af.np_to_af_array(signal.flatten().astype(prec_dtype))
     sym = af.transpose(af.np_to_af_array(symbols.flatten().astype(prec_dtype)))
     tmp = af.constant(0, L, dtype=af.Dtype.c64)
     if L < Nmax:
@@ -279,19 +279,26 @@ class QAMModulator(object):
             symbol_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
+            symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
             symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod, N1, N2)
-        return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
+        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod), symbol_tx, data_demod
 
     def _sync_symbol2signal(self, syms_tx, syms_demod, N1, N2):
         acm = 0.
         for i in range(4):
+            #from matplotlib import pylab as plt
             syms_tx = syms_tx*1.j**i
             s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod, N1, N2)
-            act = abs(ac).max()
+            #plt.plot(ac)
+            act = abs(ac.max())
             if act > acm:
                 s_tx_sync = s_sync
-                ix = idx
+                print("i=%d"%i)
+                print("idx=%d"%idx)
+                print("argmax=%d"%ac.argmax())
+                ix = idx-1
                 acm = act
+        print(idx)
         return s_tx_sync
 
     def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15,bool2bin(np.ones(15))), N1=2**15, N2=8000):
