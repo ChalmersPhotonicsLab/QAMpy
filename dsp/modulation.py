@@ -245,7 +245,7 @@ class QAMModulator(object):
         """
         return theory.MQAM_SERvsEsN0(snr, self.M)
 
-    def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False, N1=2**15, N2=8000):
+    def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
         Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol. 
 
@@ -262,12 +262,6 @@ class QAMModulator(object):
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
 
-        N1        : integer, optional
-            length of the rx signal to use for the crosscorrelation sync. A good value is the length of PRBS order of the transmitted signal
-
-        N2         : integer, optional
-            subsequence to use for searching the offset. This should not be too small otherwise there will be high BERs, 1/6 of the PRBS length seems to work quite well. 
-
 
         Returns
         -------
@@ -279,11 +273,11 @@ class QAMModulator(object):
             symbol_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
-            symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod, N1, N2)
+            symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
             symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
         return np.count_nonzero(data_demod - symbol_tx), symbol_tx, data_demod
 
-    def _sync_symbol2signal(self, syms_tx, syms_demod, N1, N2):
+    def _sync_symbol2signal(self, syms_tx, syms_demod):
         acm = 0.
         for i in range(4):
             syms_tx = syms_tx*1.j**i
