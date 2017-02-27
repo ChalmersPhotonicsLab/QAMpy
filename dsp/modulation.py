@@ -4,7 +4,7 @@ import arrayfire as af
 from bitarray import bitarray
 from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise
 from .prbs import make_prbs_extXOR
-#from .equalisation import quantize
+from .equalisation import quantize
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
 from . import theory
 from . import ber_functions
@@ -279,26 +279,20 @@ class QAMModulator(object):
             symbol_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
-            symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
             symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod, N1, N2)
-        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod), symbol_tx, data_demod
+            symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
+        return np.count_nonzero(data_demod - symbol_tx), symbol_tx, data_demod
 
     def _sync_symbol2signal(self, syms_tx, syms_demod, N1, N2):
         acm = 0.
         for i in range(4):
-            #from matplotlib import pylab as plt
             syms_tx = syms_tx*1.j**i
-            s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod, N1, N2)
-            #plt.plot(ac)
+            s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod)
             act = abs(ac.max())
             if act > acm:
                 s_tx_sync = s_sync
-                print("i=%d"%i)
-                print("idx=%d"%idx)
-                print("argmax=%d"%ac.argmax())
-                ix = idx-1
+                ix = idx
                 acm = act
-        print(idx)
         return s_tx_sync
 
     def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15,bool2bin(np.ones(15))), N1=2**15, N2=8000):
@@ -344,7 +338,7 @@ class QAMModulator(object):
             if bits_tx is None:
                 bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
             syms_tx = self.modulate(bits_tx)
-            syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)
+            syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
         s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod, N1, N2)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
