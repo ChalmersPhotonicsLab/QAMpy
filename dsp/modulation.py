@@ -275,7 +275,7 @@ class QAMModulator(object):
         if not synced:
             symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
             symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
-        return np.count_nonzero(data_demod - symbol_tx), symbol_tx, data_demod
+        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod), symbol_tx, data_demod
 
     def _sync_symbol2signal(self, syms_tx, syms_demod):
         acm = 0.
