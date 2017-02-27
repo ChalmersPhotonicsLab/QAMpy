@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
+from scipy.signal import fftconvolve
 from . import utils, prbs
 from . import theory
 from . import modulation
@@ -46,11 +47,11 @@ def sync_Rx2Tx_Xcorr(data_tx, data_rx, N1, N2):
     idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
     return np.roll(data_rx, idx), idx
 
-def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
+def sync_Tx2Rx_Xcorr(data_tx, data_rx):
     """
     Sync the transmitted data sequence to the received data, which
     might contain errors, using cross-correlation between data_rx and data_tx.
-    Calculates np.correlate(data_rx[:N1], data_tx[:N2], 'full').
+    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This assumes that data_tx is at least once inside data_rx and repetitive>
 
     Parameters
     ----------
@@ -61,11 +62,6 @@ def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
     data_rx : array_like
         the received data sequence which might contain errors.
 
-    N1 : int
-        the length of elements of the longer array input to correlate. This should be long enough so that the subsequence we use for searching is present, a good value is the number of bits in the PRBS.
-
-    N2 : int, optional
-        the length of the subsequence from data_tx to use to search for in data_rx
 
     Returns
     -------
@@ -73,7 +69,6 @@ def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
         data_tx which is synchronized to data_rx
     offset index : int
         the index where data_rx starts in data_rx
-
     ac           : array_like
         the correlation between the two sequences
     """
@@ -81,15 +76,15 @@ def sync_Tx2Rx_Xcorr(data_tx, data_rx, N1, N2):
     tx = 1.*data_tx
     rx = 1.*data_rx
     if tx.dtype==np.complex128:
-        #ac = np.correlate(np.angle(tx[:N1]), np.angle(rx[:N2]), 'full')
-        stx = np.fft.fft(np.angle(tx))
-        srx = np.fft.fft(np.angle(rx))
-        ac = np.fft.ifftshift(np.fft.ifft(stx*np.conj(srx)))
+        N2 = len(tx)
+        ac = fftconvolve(np.angle(rx), np.angle(tx)[::-1], 'same')
     else:
-        ac = np.correlate(tx[:N1], rx[:N2], 'full')
-    idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
-    idx = abs(ac).argmax() - len(ac)//2
-    return np.roll(data_tx, -idx), idx, ac
+        N2 = len(tx)
+        ac = fftconvolve(rx, tt[::-1], 'same')
+    # I still don't quite get why the following works, an alternative would be to zero pad the shorter array
+    # and the offset would be argmax()-len(ac)//2 however this does take significantly longer
+    idx = abs(ac).argmax() - 5*N2//2
+    return np.roll(data_tx, idx), idx, ac
 
 def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
     """Sync the received data sequence to the transmitted data, which
