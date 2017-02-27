@@ -89,7 +89,7 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
         if R < N:
             R = R+Nmax
             K -= 1
-        Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(np.complex128))
+        Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(prec_dtype))
         idxnd = np.zeros(L-2*N, dtype=np.int32)
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         cs = afmavg(tmp, 2*N, axis=0)
@@ -106,7 +106,7 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax-N:] = np.array(idx)
-    angles_adj = np.unwrap(angles[idxnd]*4, discont=np.pi*6/4)/4
+    angles_adj = np.unwrap(angles[idxnd]*4, discont=np.pi*5/4)/4
     #angles_adj = gen_unwrap(angles[idxnd], np.pi/16 , np.pi/2)
     #T = np.pi/2 * 3/4
     #angles_adj = T*np.unwrap(angles[idxnd]*2*np.pi/T)/(2*np.pi)
