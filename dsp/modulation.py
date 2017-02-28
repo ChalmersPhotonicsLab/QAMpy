@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import arrayfire as af
 from bitarray import bitarray
 from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise
 from .prbs import make_prbs_extXOR
@@ -7,7 +8,34 @@ from .equalisation import quantize
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
 from . import theory
 from . import ber_functions
+from .phaserecovery import NMAX
 
+
+def quantize(signal, symbols, precision=16):
+    global  NMAX
+    if precision == 16:
+        prec_dtype = np.complex128
+    elif precision == 8:
+        prec_dtype = np.complex64
+    else:
+        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
+    Nmax = NMAX//len(symbols.flatten())//16
+    L = signal.flatten().shape[0]
+    sig = af.np_to_af_array(signal.flatten().astype(prec_dtype))
+    sym = af.transpose(af.np_to_af_array(symbols.flatten().astype(prec_dtype)))
+    tmp = af.constant(0, L, dtype=af.Dtype.c64)
+    if L < Nmax:
+        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig,sym)), dim=1)
+        tmp = af.transpose(sym)[idx]
+    else:
+        steps = L//Nmax
+        rem = L%Nmax
+        for i in range(steps):
+            v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[i*Nmax:(i+1)*Nmax],sym)), dim=1)
+            tmp[i*Nmax:(i+1)*Nmax] = af.transpose(sym)[idx]
+        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[steps*Nmax:],sym)), dim=1)
+        tmp[steps*Nmax:] = af.transpose(sym)[idx]
+    return np.array(tmp)
 
 
 class QAMModulator(object):
@@ -217,7 +245,7 @@ class QAMModulator(object):
         """
         return theory.MQAM_SERvsEsN0(snr, self.M)
 
-    def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False, N1=2**15, N2=8000):
+    def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
         Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol. 
 
@@ -234,12 +262,6 @@ class QAMModulator(object):
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
 
-        N1        : integer, optional
-            length of the rx signal to use for the crosscorrelation sync. A good value is the length of PRBS order of the transmitted signal
-
-        N2         : integer, optional
-            subsequence to use for searching the offset. This should not be too small otherwise there will be high BERs, 1/6 of the PRBS length seems to work quite well. 
-
 
         Returns
         -------
@@ -251,22 +273,23 @@ class QAMModulator(object):
             symbol_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
-            symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod, N1, N2)
-        return np.count_nonzero(data_demod - symbol_tx)/len(signal_rx)
+            symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
+            symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
+        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod), symbol_tx, data_demod
 
-    def _sync_symbol2signal(self, syms_tx, syms_demod, N1, N2):
+    def _sync_symbol2signal(self, syms_tx, syms_demod):
         acm = 0.
         for i in range(4):
             syms_tx = syms_tx*1.j**i
-            s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod, N1, N2)
-            act = abs(ac).max()
+            s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod)
+            act = abs(ac.max())
             if act > acm:
                 s_tx_sync = s_sync
                 ix = idx
                 acm = act
         return s_tx_sync
 
-    def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15,bool2bin(np.ones(15))), N1=2**15, N2=8000):
+    def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15,bool2bin(np.ones(15)))):
         """
         Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
 
@@ -285,11 +308,6 @@ class QAMModulator(object):
         PRBS         : tuple(int, int), optional
             tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
 
-        N1        : integer, optional
-            length of the rx signal to use for the crosscorrelation sync. A good value is the length of PRBS order of the transmitted signal
-
-        N2         : integer, optional
-            subsequence to use for searching the offset. This should not be too small otherwise there will be high BERs, 1/6 of the PRBS length seems to work quite well. 
 
         Returns
         -------
@@ -309,8 +327,9 @@ class QAMModulator(object):
             if bits_tx is None:
                 bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
             syms_tx = self.modulate(bits_tx)
-            syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)
-        s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod, N1, N2)
+            # TODO check if this needs to be put below the synchronization
+            syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
+        s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
         return ber_functions._cal_BER_only(tx_synced, bits_demod, threshold=0.8)

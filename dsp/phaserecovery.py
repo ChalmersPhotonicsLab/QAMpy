@@ -1,12 +1,14 @@
 #vim:fileencoding=utf-8
 from __future__ import division, print_function
+import arrayfire as af
 import numpy as np
 from .segmentaxis import segment_axis
 from .theory import calculate_MQAM_symbols
 from .signal_quality import calS0
+from .dsp_cython import gen_unwrap
 
 SYMBOLS_16QAM = calculate_MQAM_symbols(16)
-
+NMAX = 4*1024**3
 
 def viterbiviterbi_gen(N, E, M):
     """
@@ -41,6 +43,75 @@ def viterbiviterbi_gen(N, E, M):
     # need a shift by pi/M for constellation points to not be on the axis
     phase_est = phase_est - np.pi
     return E * np.exp(-1.j * phase_est / M)
+
+def blindphasesearch_py(E, Mtestangles, symbols, N):
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
+    EE = E[:,np.newaxis]*np.exp(1.j*angles)
+    idx = np.zeros(len(E)-2*N, dtype=np.int)
+    dist = (abs(EE[:2*N, :, np.newaxis]-symbols)**2).min(axis=2)
+    idx[0] = dist.sum(axis=0).argmin(axis=0)
+    for i in range(1,len(idx)):
+        tmp = (abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1).reshape(1,Mtestangles)
+        dist = np.concatenate([dist[1:], tmp])#(abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1)])
+        idx[i] = dist.sum(axis=0).argmin(axis=0)
+    ph = np.unwrap(angles[idx]*4)/4
+    En = E[N:-N]*np.exp(1.j*ph)
+    return En, ph
+
+def afmavg(X, N, axis=0):
+    cs = af.accum(X, dim=axis)
+    return cs[N:] - cs[:-N]
+
+def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16):
+    global NMAX
+    if precision == 16:
+        prec_dtype = np.complex128
+    elif precision == 8:
+        prec_dtype = np.complex64
+    else:
+        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
+    Nmax = NMAX//Mtestangles//symbols.shape[0]//16
+    L = E.shape[0]
+    #angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
+    angles = np.arange(Mtestangles)*np.pi/2/Mtestangles
+    EE = E[:,np.newaxis]*np.exp(1.j*angles)
+    syms  = af.np_to_af_array(symbols.astype(prec_dtype).reshape(1,1,-1))
+    if L <= Nmax+N:
+        Eaf = af.np_to_af_array(EE.astype(prec_dtype))
+        tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[0:L,:], syms))**2, dim=2)
+        cs = afmavg(tmp, 2*N, axis=0)
+        val, idx = af.imin(cs, dim=1)
+        idxnd = np.array(idx)
+        #return E[N:-N]*np.exp(1.j*angles[np.array(idx)])
+    else:
+        K = L//Nmax
+        R = L%Nmax
+        if R < N:
+            R = R+Nmax
+            K -= 1
+        Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(prec_dtype))
+        idxnd = np.zeros(L-2*N, dtype=np.int32)
+        tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
+        cs = afmavg(tmp, 2*N, axis=0)
+        val, idx = af.imin(cs, dim=1)
+        idxnd[0:Nmax-N] = np.array(idx)
+        for i in range(1,K):
+            Eaf = af.np_to_af_array(EE[i*Nmax-N:(i+1)*Nmax+N].astype(np.complex128))
+            tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
+            cs = afmavg(tmp, 2*N, axis=0)
+            val, idx = af.imin(cs, dim=1)
+            idxnd[i*Nmax-N:(i+1)*Nmax-N] = np.array(idx)
+        Eaf = af.np_to_af_array(EE[K*Nmax-N:K*Nmax+R].astype(np.complex128))
+        tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
+        cs = afmavg(tmp, 2*N, axis=0)
+        val, idx = af.imin(cs, dim=1)
+        idxnd[K*Nmax-N:] = np.array(idx)
+    angles_adj = np.unwrap(angles[idxnd]*4, discont=np.pi*5/4)/4
+    #angles_adj = gen_unwrap(angles[idxnd], np.pi/16 , np.pi/2)
+    #T = np.pi/2 * 3/4
+    #angles_adj = T*np.unwrap(angles[idxnd]*2*np.pi/T)/(2*np.pi)
+    En = E[N:-N]*np.exp(1.j*angles_adj)
+    return En, angles_adj, angles[idxnd]
 
 
 def viterbiviterbi_qpsk(N, E):

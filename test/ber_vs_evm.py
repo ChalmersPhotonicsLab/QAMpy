@@ -18,7 +18,7 @@ snr = np.linspace(5, 30, 8)
 snrf = np.linspace(5, 30, 500)
 evmf = np.linspace(-30, 0, 500)
 N = 10**5
-Mqams = [ 4, 16, 64]
+Mqams = [ 4, 16, 64, 128]
 
 plt.figure()
 ax1 = plt.subplot(221)
@@ -59,7 +59,7 @@ for M in Mqams:
     ser = np.zeros(snr.shape)
     ber = np.zeros(snr.shape)
     evm1 = np.zeros(snr.shape)
-    evm2 = np.zeros(snr.shape)
+    #evm2 = np.zeros(snr.shape)
     evm_known = np.zeros(snr.shape)
     i = 0
     for sr in snr:
@@ -67,11 +67,11 @@ for M in Mqams:
         modulator = modulation.QAMModulator(M)
         signal, syms, bits = modulator.generateSignal(N, sr)
         evm1[i] = modulator.cal_EVM(signal)
-        evm2[i] = signal_quality.cal_blind_evm(signal, M)
+        #evm2[i] = signal_quality.cal_blind_evm(signal, M)
         evm_known[i] = modulator.cal_EVM(signal, syms)
         # check to see that we can recovery timing delay
         signal = np.roll(signal * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
-        ser[i] = modulator.calculate_SER(signal, symbol_tx=syms)
+        ser[i] = modulator.calculate_SER(signal, symbol_tx=syms)[0]
         ber[i] = modulator.cal_BER(signal, bits)[0]
         i += 1
     ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
