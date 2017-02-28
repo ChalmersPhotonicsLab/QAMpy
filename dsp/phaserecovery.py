@@ -118,12 +118,12 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, a
     if applyphase:
         if angles.ndim > 1:
             angles1 =  select_angles(angles, idxnd)
-            angles_adj = np.unwrap(angles1*4, discont=np.pi*5/4)/4
+            angles_adj = np.unwrap(angles1*4, discont=np.pi*4/4)/4
             En = E * np.exp(1.j*angles_adj)
             return En, angles_adj, angles1
         else:
             angles1 =  angles[idxnd]
-            angles_adj = np.unwrap(angles1*4, discont=np.pi*5/4)/4
+            angles_adj = np.unwrap(angles1*4, discont=np.pi*4/4)/4
             En = E * np.exp(1.j*angles_adj)
             return En, angles_adj, angles1
     else:
