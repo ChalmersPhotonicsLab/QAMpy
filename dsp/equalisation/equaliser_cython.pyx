@@ -37,9 +37,9 @@ def quantize(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dty
     """
     cdef unsigned int L = E.shape[0]
     cdef unsigned int M = symbols.shape[0]
-    cdef unsigned int i
+    cdef int i
     cdef np.ndarray[ndim =1, dtype=np.complex128_t] det_syms = np.zeros(L, dtype=np.complex128)
-    for i in prange(L, nogil=True):
+    for i in prange(L, nogil=True, schedule='static', num_threads=8):
         det_syms[i] = det_symbol(<double complex *>symbols.data, M, E[i])
     return det_syms
 

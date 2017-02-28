@@ -430,7 +430,7 @@ def FS_SCA(E, TrSyms, Ntaps, os, mu, wx, R, adaptive=False):
     ...[1] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.dsp.2007.09.001
     """
     err = np.zeros(TrSyms, dtype=np.complex128)
-    for i in range(TrSyms-33):
+    for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = sum(wx * X)
         if abs(Xest.real) >= abs(Xest.imag):

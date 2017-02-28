@@ -63,7 +63,7 @@ def afmavg(X, N, axis=0):
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
-def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None):
+def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, applyphase=False):
     global NMAX
     if precision == 16:
         prec_dtype = np.complex128
@@ -94,7 +94,7 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None):
         if R < N:
             R = R+Nmax
             K -= 1
-        Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(np.complex128))
+        Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(prec_dtype))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         tt = np.array(tmp)
         cs = afmavg(tmp, 2*N, axis=0)
@@ -111,16 +111,26 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None):
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax:-N] = np.array(idx)
-    #angles_adj = np.unwrap(angles[idxnd]*4, discont=np.pi*6/4)/4
     #angles_adj = gen_unwrap(angles[idxnd], np.pi/16 , np.pi/2)
     #T = np.pi/2 * 3/4
     #angles_adj = T*np.unwrap(angles[idxnd]*2*np.pi/T)/(2*np.pi)
     #En = E[N:-N]*np.exp(1.j*angles_adj)
-    if angles.ndim > 1:
-        return select_angles(angles, idxnd)
-        #return angles[:,idxnd]
+    if applyphase:
+        if angles.ndim > 1:
+            angles1 =  select_angles(angles, idxnd)
+            angles_adj = np.unwrap(angles1*4, discont=np.pi*5/4)/4
+            En = E * np.exp(1.j*angles_adj)
+            return En, angles_adj, angles1
+        else:
+            angles1 =  angles[idxnd]
+            angles_adj = np.unwrap(angles1*4, discont=np.pi*5/4)/4
+            En = E * np.exp(1.j*angles_adj)
+            return En, angles_adj, angles1
     else:
-        return angles[idxnd]
+        if angles.ndim > 1:
+            return select_angles(angles, idxnd)
+        else:
+            return angles[idxnd]
 
 @numba.jit(nopython=True)
 def select_angles(angles, idx):
@@ -129,7 +139,6 @@ def select_angles(angles, idx):
     for i in range(L):
         anglesn[i] = angles[i, idx[i]]
     return anglesn
- 
 
 def two_stageBPS(E, Mtestangles, B, symbols, N , precision=16):
     """Two stage BPS to reduce number of required angles"""
@@ -139,7 +148,7 @@ def two_stageBPS(E, Mtestangles, B, symbols, N , precision=16):
     phf = blindphasesearch_af(E, Mtestangles, symbols, N, precision, angles=phn)
     angles_adj = np.unwrap(phf*4, discont=np.pi*4/4)/4
     En = E*np.exp(1.j*angles_adj)
-    return En[N:-N], angles_adj, phf
+    return En, angles_adj, phf
 
 
 
