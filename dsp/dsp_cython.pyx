@@ -35,28 +35,31 @@ def unwrap_discont(double[::1] seq, double max_diff, double period):
         new_array[i] = seq[i] + period * nperiods
     return new_array
 
-def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
+#def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
+def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dtype=np.float64_t] testangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
     global  NTHREADS
     cdef unsigned int i, j
     cdef int L = E.shape[0]
     cdef int M = symbols.shape[0]
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles
+    cdef int Ntestangles = testangles.shape[0]
+    #cdef np.ndarray[ndim=1, dtype=np.float64_t] angles
     cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
     cdef np.ndarray[ndim=2, dtype=np.float64_t] dists
     cdef np.ndarray[ndim=1, dtype=np.complex128_t] comp_angles
     cdef double dtmp
     cdef np.complex128_t s
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
-    comp_angles = np.exp(1.j*angles)
-    dists = np.zeros((L, Mtestangles))+100.
+    #angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
+
+    comp_angles = np.exp(1.j*testangles)
+    dists = np.zeros((L, Ntestangles))+100.
     idx = np.zeros(L, dtype=np.uint32)
     for i in prange(L, schedule='static', num_threads=NTHREADS, nogil=True):
-        for j in range(Mtestangles):
+        for j in range(Ntestangles):
             s = det_symbol(&symbols[0], M, E[i]*comp_angles[j], &dtmp)
             if dtmp < dists[<unsigned int>i,<unsigned int>j]:
                 dists[<unsigned int>i, <unsigned int>j] = dtmp
     idx = select_angle_index(dists, 2*N)
-    return angles[idx]
+    return testangles[idx]
 
 def select_angle_index(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
     cdef np.ndarray[ndim=2, dtype=np.float64_t] csum
