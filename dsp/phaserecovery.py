@@ -52,7 +52,7 @@ def blindphasesearch_py(E, Mtestangles, symbols, N):
     dist = (abs(EE[:2*N, :, np.newaxis]-symbols)**2).min(axis=2)
     idx[0] = dist.sum(axis=0).argmin(axis=0)
     for i in range(1,len(idx)):
-        tmp = (abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1).reshape(1,Mtestangles)
+        tmp = (abs(EE[N+i:i+3*N,:,np.newaxis]-symbols)**2).min(axis=1).reshape(1,Mtestangles)
         dist = np.concatenate([dist[1:], tmp])#(abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1)])
         idx[i] = dist.sum(axis=0).argmin(axis=0)
     ph = np.unwrap(angles[idx]*4)/4
