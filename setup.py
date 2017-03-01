@@ -15,8 +15,8 @@ equaliser_cython = Extension(name="dsp.equalisation.equaliser_cython",
                              extra_link_args=LINK_ARGS)
 
 dsp_cython = Extension(name="dsp.dsp_cython",
-                       sources=["dsp/dsp_cython.pyx"],
-                             include_dirs=[np.get_include()],
+                       sources=["dsp/dsp_cython.pyx", "dsp/equalisation/equaliserC.c"],
+                             include_dirs=["dsp/equalisation", np.get_include()],
                        extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
 
