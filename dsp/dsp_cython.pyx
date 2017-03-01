@@ -6,6 +6,8 @@ cimport cython
 from cpython cimport bool
 cimport numpy as np
 
+cdef unsigned int NTHREADS=8
+
 cdef extern from "complex.h":
     double complex conj(double complex)
 
@@ -34,71 +36,32 @@ def gen_unwrap(double[::1] seq, double max_diff, double period):
     return new_array
 
 def bps3(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
-    cdef unsigned int i, j, k, M, l, o
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles
+    global  NTHREADS
+    cdef unsigned int i, j
+    cdef int L = E.shape[0]
+    cdef int M = symbols.shape[0]
+    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles, angles_out
     cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles_out
     cdef np.ndarray[ndim=2, dtype=np.float64_t] dists
-    #cdef np.ndarray[ndim=2, dtype=np.float64_t] distn
-    cdef np.ndarray[ndim=1, dtype=np.complex128_t] pp, En
-    cdef double dtmp, dmin,
-    cdef np.complex128_t dd, s
+    cdef np.ndarray[ndim=1, dtype=np.complex128_t] comp_angles, En
+    cdef double dtmp
+    cdef np.complex128_t s
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
-    pp = np.exp(1.j*angles)
-    L = E.shape[0]
+    comp_angles = np.exp(1.j*angles)
     dists = np.zeros((L, Mtestangles))+100.
-    #distn = np.zeros(L, Mtestangeles)
     angles_out = np.zeros(E.shape[0], dtype=np.float64)
     idx = np.zeros(L, dtype=np.uint32)
-    M = symbols.shape[0]
-    for i in prange(L, schedule='static', num_threads=8, nogil=True):
-        #for j in prange(Mtestangles):
+    for i in prange(L, schedule='static', num_threads=NTHREADS, nogil=True):
         for j in range(Mtestangles):
-            #if i < N:
-            s = det_symbol(&symbols[0], M, E[i]*pp[j], &dtmp)
+            s = det_symbol(&symbols[0], M, E[i]*comp_angles[j], &dtmp)
             if dtmp < dists[<unsigned int>i,<unsigned int>j]:
                 dists[<unsigned int>i, <unsigned int>j] = dtmp
-            #else:
-            #dists = np.roll(dists, -1, 0)
-                #o = N - i%N
-                #for k in range(M):
-                    #dd = E[<unsigned int>i]*pp[<unsigned int>j] - symbols[k]
-                    #dtmp = dd.real*dd.real + dd.imag*dd.imag
-                    #if dtmp < dists[<unsigned int>o,<unsigned int>j]:
-                        #dists[<unsigned int>o, <unsigned int>j] = dtmp
-                #for l in range(N):
-                    #distn[j] += dists[<unsigned int>l, <unsigned int>j]
-                #if distn[j] < dmin:
-                    #idx[<unsigned int>i-N//2] = j
-                    #dmin = distn[<unsigned int>j]
-                #angles_out[<unsigned int>i-N//2] = angles[idx[<unsigned int>i-N//2]]
-    idx = avg_win3(dists, 2*N)
-    #distn = avg_win2(dists, 2*N)
-    #idx[N:-N] = distn.argmin(axis=1)
-    #idx[:] = distn.argmin(axis=1)
-    angles_out = angles[idx]
-    angles_out = np.unwrap(angles_out*4, discont=np.pi)/4
+    idx = select_angle_index(dists, 2*N)
+    angles_out = np.unwrap(angles[idx]*4, discont=np.pi)/4
     En = E*np.exp(1.j*angles_out)
-    return En, angles_out, idx
+    return En, angles_out
 
-def avg_win2(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
-    cdef np.ndarray[ndim=2, dtype=np.float64_t] output, csum
-    cdef int i,k, L, M
-    L = x.shape[0]
-    M = x.shape[1]
-    csum = np.zeros((L,M))
-    output = np.zeros((L,M))
-    for i in range(1, L-1):
-        if i < N:
-            for k in range(x.shape[1]):
-                csum[i-1,k] = csum[i-1,k]+x[i,k]
-        if i >= N:
-            for k in range(x.shape[1]):
-                csum[i,k] = csum[i-1,k]+x[i,k]
-                output[i,k] = csum[i,k]  - csum[i-N,k]
-    return output
-
-def avg_win3(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
+def select_angle_index(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
     cdef np.ndarray[ndim=2, dtype=np.float64_t] csum
     cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
     cdef int i,k, L, M
@@ -107,13 +70,12 @@ def avg_win3(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
     M = x.shape[1]
     csum = np.zeros((L,M))
     idx = np.zeros(L, dtype=np.uint32)
-    output = np.zeros((L,M))
     for i in range(1, L-1):
         dmin = 1000.
         if i < N:
-            for k in range(x.shape[1]):
+            for k in range(M):
                 csum[i-1,k] = csum[i-1,k]+x[i,k]
-        if i >= N:
+        else:
             for k in range(x.shape[1]):
                 csum[i,k] = csum[i-1,k]+x[i,k]
                 dtmp = csum[i,k]  - csum[i-N,k]
@@ -121,8 +83,6 @@ def avg_win3(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
                     idx[i-N//2] = k
                     dmin = dtmp
     return idx
-
-
 
 def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
     cdef unsigned int i, j, k, M, l, o
