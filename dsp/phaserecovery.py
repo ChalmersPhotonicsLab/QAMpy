@@ -5,7 +5,7 @@ import numpy as np
 from .segmentaxis import segment_axis
 from .theory import calculate_MQAM_symbols
 from .signal_quality import calS0
-from .dsp_cython import gen_unwrap
+from .dsp_cython import unwrap_discont, bps
 import numba 
 
 SYMBOLS_16QAM = calculate_MQAM_symbols(16)
@@ -57,6 +57,13 @@ def blindphasesearch_py(E, Mtestangles, symbols, N):
         idx[i] = dist.sum(axis=0).argmin(axis=0)
     ph = np.unwrap(angles[idx]*4)/4
     En = E[N:-N]*np.exp(1.j*ph)
+    return En, ph
+
+def blindphasesearch_pyx(E, Mtestangles, symbols, N, applyphase=False):
+    ph =  bps(E, Mtestangles, symbols, N)
+    # ignore the phases which have not been compensated
+    ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
+    En = E*np.exp(1.j*ph)
     return En, ph
 
 def afmavg(X, N, axis=0):
@@ -111,7 +118,7 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, a
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax:-N] = np.array(idx)
-    #angles_adj = gen_unwrap(angles[idxnd], np.pi/16 , np.pi/2)
+    #angles_adj = unwrap_discont(angles[idxnd], np.pi/16 , np.pi/2)
     #T = np.pi/2 * 3/4
     #angles_adj = T*np.unwrap(angles[idxnd]*2*np.pi/T)/(2*np.pi)
     #En = E[N:-N]*np.exp(1.j*angles_adj)
@@ -120,12 +127,12 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, a
             angles1 =  select_angles(angles, idxnd)
             angles_adj = np.unwrap(angles1*4, discont=np.pi*4/4)/4
             En = E * np.exp(1.j*angles_adj)
-            return En, angles_adj, angles1
+            return En, angles_adj
         else:
             angles1 =  angles[idxnd]
             angles_adj = np.unwrap(angles1*4, discont=np.pi*4/4)/4
             En = E * np.exp(1.j*angles_adj)
-            return En, angles_adj, angles1
+            return En, angles_adj
     else:
         if angles.ndim > 1:
             return select_angles(angles, idxnd)

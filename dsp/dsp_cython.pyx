@@ -14,42 +14,41 @@ cdef extern from "complex.h":
 cdef extern from "equaliserC.h" nogil:
     double complex det_symbol(double complex *syms, unsigned int M, double complex value, double *distout)
 
-def gen_unwrap(double[::1] seq, double max_diff, double period):
+def unwrap_discont(double[::1] seq, double max_diff, double period):
     cdef int i
     cdef double diff
     cdef long nperiods = 0
     cdef np.ndarray[ndim=1, dtype=double] new_array = np.zeros(seq.shape[0], dtype=np.float)
     new_array[0] = seq[0]
     for i in range(1, seq.shape[0]):
-        diff = seq[i]-seq[i-1]
+        diff = seq[i]-new_array[i-1]
         if diff > period:
             nperiods -= 1
         elif diff > max_diff:
-            new_array[i] = seq[i-1]
+            new_array[i] = new_array[i-1]
             continue
         elif diff < -period:
             nperiods += 1
         elif diff < -max_diff:
-            new_array[i] = seq[i-1]
+            new_array[i] = new_array[i-1]
             continue
         new_array[i] = seq[i] + period * nperiods
     return new_array
 
-def bps3(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
+def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
     global  NTHREADS
     cdef unsigned int i, j
     cdef int L = E.shape[0]
     cdef int M = symbols.shape[0]
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles, angles_out
+    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles
     cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
     cdef np.ndarray[ndim=2, dtype=np.float64_t] dists
-    cdef np.ndarray[ndim=1, dtype=np.complex128_t] comp_angles, En
+    cdef np.ndarray[ndim=1, dtype=np.complex128_t] comp_angles
     cdef double dtmp
     cdef np.complex128_t s
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
     comp_angles = np.exp(1.j*angles)
     dists = np.zeros((L, Mtestangles))+100.
-    angles_out = np.zeros(E.shape[0], dtype=np.float64)
     idx = np.zeros(L, dtype=np.uint32)
     for i in prange(L, schedule='static', num_threads=NTHREADS, nogil=True):
         for j in range(Mtestangles):
@@ -57,9 +56,7 @@ def bps3(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarra
             if dtmp < dists[<unsigned int>i,<unsigned int>j]:
                 dists[<unsigned int>i, <unsigned int>j] = dtmp
     idx = select_angle_index(dists, 2*N)
-    angles_out = np.unwrap(angles[idx]*4, discont=np.pi)/4
-    En = E*np.exp(1.j*angles_out)
-    return En, angles_out
+    return angles[idx]
 
 def select_angle_index(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
     cdef np.ndarray[ndim=2, dtype=np.float64_t] csum
@@ -83,95 +80,6 @@ def select_angle_index(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
                     idx[i-N//2] = k
                     dmin = dtmp
     return idx
-
-def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
-    cdef unsigned int i, j, k, M, l, o
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles
-    cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] angles_out
-    cdef np.ndarray[ndim=2, dtype=np.float64_t] dists
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] distn
-    cdef np.ndarray[ndim=1, dtype=np.complex128_t] pp, En
-    cdef double dtmp, dmin
-    cdef np.complex128_t dd
-    dmin = 1000.
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
-    pp = np.exp(1.j*angles)
-    dists = np.zeros((N, Mtestangles))+100.
-    distn = np.zeros(Mtestangles)
-    angles_out = np.zeros(E.shape[0], dtype=np.float64)
-    idx = np.zeros(E.shape[0], dtype=np.uint32)
-    L = E.shape[0]
-    M = symbols.shape[0]
-    for i in range(L):
-        #for j in prange(Mtestangles):
-        for j in range(Mtestangles):
-            if i < N:
-                for k in range(M):
-                    dd = E[<unsigned int> i]*pp[<unsigned int> j] - symbols[<unsigned int> k]
-                    dtmp = dd.real*dd.real + dd.imag*dd.imag
-                    if dtmp < dists[<unsigned int>i,<unsigned int>j]:
-                        dists[<unsigned int>i, <unsigned int>j] = dtmp
-            else:
-            #dists = np.roll(dists, -1, 0)
-                print('where')
-                o = N - i%N
-                for k in range(M):
-                    dd = E[<unsigned int>i]*pp[<unsigned int>j] - symbols[k]
-                    dtmp = dd.real*dd.real + dd.imag*dd.imag
-                    if dtmp < dists[<unsigned int>o,<unsigned int>j]:
-                        dists[<unsigned int>o, <unsigned int>j] = dtmp
-                for l in range(N):
-                    distn[j] += dists[<unsigned int>l, <unsigned int>j]
-                if distn[j] < dmin:
-                    idx[<unsigned int>i-N//2] = j
-                    dmin = distn[<unsigned int>j]
-                angles_out[<unsigned int>i-N//2] = angles[idx[<unsigned int>i-N//2]]
-    angles_out = np.unwrap(angles_out*4, discont=np.pi)/4
-    En = E*np.exp(1.j*angles_out)
-    return En, angles_out
-
-def avg_win(x, N, axis=0):
-    cs = np.cumsum(x, axis=axis)
-    return cs[N:]-cs[:-N]
-
-# def bps2(np.ndarray[ndim=1, dtype=np.complex128_t] E, int Mtestangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
-#     cdef unsigned int i, j, k, M, l, o, offset
-#     cdef np.ndarray[ndim=1, dtype=np.float64_t] angles
-#     cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
-#     cdef np.ndarray[ndim=1, dtype=np.float64_t] angles_out
-#     cdef np.ndarray[ndim=2, dtype=np.float64_t] dists
-#     cdef np.ndarray[ndim=1, dtype=np.float64_t] distn
-#     cdef np.ndarray[ndim=1, dtype=np.complex128_t] pp, En,EE
-#     cdef double dtmp, dmin
-#     cdef np.complex128_t dd
-#     dmin = 1000.
-#     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
-#     pp = np.exp(1.j*angles)
-#     dists = np.zeros((E.shape[0], Mtestangles))+100.
-#     distn = np.zeros(Mtestangles)
-#     angles_out = np.zeros(E.shape[0], dtype=np.float64)
-#     idx = np.zeros(E.shape[0], dtype=np.uint32)
-#     L = E.shape[0]
-#     M = symbols.shape[0]
-#     nthreads = 8
-#     ll = L//nthreads
-#     for i in prange(8, nogil=True, num_threads=nthreads):
-#         if i == 0:
-#             offset = i*ll
-#             endoff = (i+1)*ll + N
-#         else:
-#             offset = i*ll - N
-#             endoff = (i+1)*ll + N
-#         for l in range(ll):
-#             for j in range(Mtestangles):
-#                 for k in range(M):
-#                     dmin = abs(E[i*ll+])
-#                 dists[i*ll+(offset-N), k]
-#         dist = np.min(abs(E[i*ll-offset:(i+1)*ll+offset, :, np.newaxis] - symbols)**2, axis=2)
-#         idx[i*ll:(i+1)*ll] = avg_win(EE, N).argmin(axis=0)
-#     angles_out = np.unwrap(angles[idx]*4)/4
-#    return E*np.exp(1.j*angles_out), angles_out
 
 def prbs_ext(np.int64_t seed, taps, int nbits, int N):
     cdef int t
