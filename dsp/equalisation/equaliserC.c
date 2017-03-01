@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-double complex det_symbol(double complex *syms, unsigned int M, double complex value){
+double complex det_symbol(double complex *syms, unsigned int M, double complex value, double *distout){
   int i;
   double complex det_sym;
   double dist, dist0;
@@ -16,6 +16,7 @@ double complex det_symbol(double complex *syms, unsigned int M, double complex v
         dist0 = dist;
       }
     }
+    *distout = dist0;
     return det_sym;
  }
 
@@ -31,7 +32,7 @@ void SBD_C(double complex *E, int TrSyms, int Ntaps,  unsigned int os, double mu
           Xest = Xest + (wx+j*2)[k]*(E+(i*os+j)*pols)[k];
         }
       }
-      dsymb = det_symbol(symbols, M, Xest);
+      //dsymb = det_symbol(symbols, M, Xest);
       err[i] = (creal(Xest) - creal(dsymb))*abs(creal(dsymb)) + I*(cimag(Xest) - cimag(dsymb)) * abs(cimag(dsymb));
       for(j=0; j<Ntaps; j++) {
         for(k=0; k<pols; k++) {
