@@ -405,7 +405,7 @@ def H_PMD(theta, t_dgd, omega): #see Ip and Kahn JLT 25, 2033 (2007)
 
     """
     h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    h2 = np.array([[np.exp(1.j*omega*t/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t/2)]])
+    h2 = np.array([[np.exp(1.j*omega*t_dgd/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t_dgd/2)]])
     h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
     H = np.einsum('ij,jkl->ikl', h1, h2)
     H = np.einsum('ijl,jk->ikl', H, h3)
