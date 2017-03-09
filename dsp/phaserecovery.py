@@ -59,9 +59,16 @@ def blindphasesearch_py(E, Mtestangles, symbols, N):
     En = E[N:-N]*np.exp(1.j*ph)
     return En, ph
 
-def blindphasesearch_pyx(E, Mtestangles, symbols, N, applyphase=False):
-    ph =  bps(E, Mtestangles, symbols, N)
-    # ignore the phases which have not been compensated
+def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
+    if method.lower() == "cython":
+        bps_fct = bps_pyx
+    elif method.lower() == "af":
+        bps_fct = bps_af
+    else:
+        raise("Method needs to be 'cython' or 'af'")
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
+    ph =  bps_fct(E, angles, symbols, N, **kwargs)
+    # ignore the phases outside the averaging window
     ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
     En = E*np.exp(1.j*ph)
     return En, ph
@@ -70,7 +77,7 @@ def afmavg(X, N, axis=0):
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
-def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, applyphase=False):
+def _bps_idx_af(E, angles, symbols, N, precision=16,  applyphase=False):
     global NMAX
     if precision == 16:
         prec_dtype = np.complex128
@@ -78,13 +85,9 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, a
         prec_dtype = np.complex64
     else:
         raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
-    if angles is None:
-        angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
-    else:
-        Mtestangles = angles.shape[1]
-    Nmax = NMAX//Mtestangles//symbols.shape[0]//16
+    Ntestangles = angles.shape[1]
+    Nmax = NMAX//Ntestangles//symbols.shape[0]//16
     L = E.shape[0]
-    #angles = np.arange(Mtestangles)*np.pi/2/Mtestangles
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     syms  = af.np_to_af_array(symbols.astype(prec_dtype).reshape(1,1,-1))
     idxnd = np.zeros(L, dtype=np.int32)
@@ -94,7 +97,6 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, a
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[N:-N] = np.array(idx)
-        #return E[N:-N]*np.exp(1.j*angles[np.array(idx)])
     else:
         K = L//Nmax
         R = L%Nmax
@@ -118,46 +120,47 @@ def blindphasesearch_af(E, Mtestangles, symbols, N, precision=16, angles=None, a
         cs = afmavg(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax:-N] = np.array(idx)
-    #angles_adj = unwrap_discont(angles[idxnd], np.pi/16 , np.pi/2)
-    #T = np.pi/2 * 3/4
-    #angles_adj = T*np.unwrap(angles[idxnd]*2*np.pi/T)/(2*np.pi)
-    #En = E[N:-N]*np.exp(1.j*angles_adj)
-    if applyphase:
-        if angles.ndim > 1:
-            angles1 =  select_angles(angles, idxnd)
-            angles_adj = np.unwrap(angles1*4, discont=np.pi*4/4)/4
-            En = E * np.exp(1.j*angles_adj)
-            return En, angles_adj
-        else:
-            angles1 =  angles[idxnd]
-            angles_adj = np.unwrap(angles1*4, discont=np.pi*4/4)/4
-            En = E * np.exp(1.j*angles_adj)
-            return En, angles_adj
-    else:
-        if angles.ndim > 1:
-            return select_angles(angles, idxnd)
-        else:
-            return angles[idxnd]
+    return idxnd
+
+def bps_af(E, testangles, symbols, N, **kwargs):
+    idx = _bps_idx_af(E, testangles, symbols, N, **kwargs)
+    return select_angles(testangles, idx)
+
+def bps_pyx(E, testangles, symbols, N):
+    idx =  bps(E, testangles, symbols, N)
+    return select_angles(testangles, idx)
 
 @numba.jit(nopython=True)
 def select_angles(angles, idx):
-    L = angles.shape[0]
-    anglesn = np.zeros(L, dtype=np.float64)
-    for i in range(L):
-        anglesn[i] = angles[i, idx[i]]
-    return anglesn
+    if angles.shape[0] > 1:
+        L = angles.shape[0]
+        anglesn = np.zeros(L, dtype=np.float64)
+        for i in range(L):
+            anglesn[i] = angles[i, idx[i]]
+        return anglesn
+    else:
+        L = idx.shape[0]
+        anglesn = np.zeros(L, dtype=np.float64)
+        for i in range(L):
+            anglesn[i] = angles[0, idx[i]]
+        return anglesn
 
-def two_stageBPS(E, Mtestangles, B, symbols, N , precision=16):
+def blindphasesearch_twostage(E, Mtestangles, B, symbols, N , method="cython", **kwargs):
     """Two stage BPS to reduce number of required angles"""
-    ph = blindphasesearch_af(E, Mtestangles, symbols, N, precision)
+    if method.lower() == "cython":
+        bps_fct = bps_pyx
+    elif method.lower() == "af":
+        bps_fct = bps_af
+    else:
+        raise("Method needs to be 'cython' or 'af'")
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
+    ph = bps_fct(E, angles, symbols, N, **kwargs)
     b = np.linspace(-B/2, B/2, B)
     phn = ph[:,np.newaxis] + b[np.newaxis,:]/(B*Mtestangles)*np.pi/2
-    phf = blindphasesearch_af(E, Mtestangles, symbols, N, precision, angles=phn)
+    phf = bps_fct(E, phn, symbols, N, **kwargs)
     angles_adj = np.unwrap(phf*4, discont=np.pi*4/4)/4
     En = E*np.exp(1.j*angles_adj)
-    return En, angles_adj, phf
-
-
+    return En, angles_adj
 
 def viterbiviterbi_qpsk(N, E):
     """
