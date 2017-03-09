@@ -60,6 +60,41 @@ def blindphasesearch_py(E, Mtestangles, symbols, N):
     return En, ph
 
 def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
+    """
+    Perform a blind phase search phase recovery after _[1]
+
+    Parameters
+    ----------
+
+    E           : array_like
+        input signal (single polarisation)
+
+    Mtestangles : int
+        number of test angles to try
+
+    symbols     : array_like
+        the symbols of the modulation format
+
+    N           : int
+        block length to use for averaging
+
+    method      : string, optional
+        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "cython" for a OpenMP based parallel search.
+
+    **kwargs    :
+        arguments to be passed to the search function
+
+    Returns
+    -------
+    Eout    : array_like
+        phase compensated field
+    ph      : array_like
+        unwrapped angle from phase recovery
+
+    References
+    ----------
+    ..[1] Timo Pfau et al, Hardware-Efficient Coherent Digital Receiver Concept With Feedforward Carrier Recovery for M-QAM Constellations, Journal of Lightwave Technology 27, pp 989-999 (2009)
+    """
     if method.lower() == "cython":
         bps_fct = bps_pyx
     elif method.lower() == "af":
@@ -70,8 +105,8 @@ def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
     ph =  bps_fct(E, angles, symbols, N, **kwargs)
     # ignore the phases outside the averaging window
     ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
-    En = E*np.exp(1.j*ph)
-    return En, ph
+    Eout = E*np.exp(1.j*ph)
+    return Eout, ph
 
 def afmavg(X, N, axis=0):
     cs = af.accum(X, dim=axis)
@@ -145,8 +180,45 @@ def select_angles(angles, idx):
             anglesn[i] = angles[0, idx[i]]
         return anglesn
 
-def blindphasesearch_twostage(E, Mtestangles, B, symbols, N , method="cython", **kwargs):
-    """Two stage BPS to reduce number of required angles"""
+def blindphasesearch_twostage(E, Mtestangles, symbols, N , B=4, method="cython", **kwargs):
+    """
+    Perform a blind phase search phase recovery using two stages after _[1]
+
+    Parameters
+    ----------
+
+    E           : array_like
+        input signal (single polarisation)
+
+    Mtestangles : int
+        number of initial test angles to try
+
+    symbols     : array_like
+        the symbols of the modulation format
+
+    N           : int
+        block length to use for averaging
+
+    B           : int, optional
+        number of second stage test angles
+
+    method      : string, optional
+        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "cython" for a OpenMP based parallel search.
+
+    **kwargs    :
+        arguments to be passed to the search function
+
+    Returns
+    -------
+    Eout    : array_like
+        phase compensated field
+    ph      : array_like
+        unwrapped angle from phase recovery
+
+    References
+    ----------
+    ..[1] Qunbi Zhuge and Chen Chen and David V. Plant, Low Computation Complexity Two-Stage Feedforward Carrier Recovery Algorithm for M-QAM, Optical Fiber Communication Conference (OFC, 2011)
+    """
     if method.lower() == "cython":
         bps_fct = bps_pyx
     elif method.lower() == "af":
