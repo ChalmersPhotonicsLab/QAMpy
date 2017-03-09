@@ -27,14 +27,18 @@ for lw in lw_LO:
     pp = utils.phase_noise(X.shape[0], lw, fs)
     XX = X*np.exp(1.j*pp)
     t1 = timer()
-    recoverd,ph, phx= phaserecovery.blindphasesearch_af(XX, 64, QAM.symbols, 14, 16)
+    recoverd,ph= phaserecovery.blindphasesearch(XX, 64, QAM.symbols, 14, method="af")
+    recoverd2,ph= phaserecovery.blindphasesearch_twostage(XX, 28, QAM.symbols, 14, method='cython')
     ser,s,d = QAM.calculate_SER(recoverd, symbol_tx=xtest)
+    ser2,s,d = QAM.calculate_SER(recoverd2, symbol_tx=xtest)
+    plt.plot(abs(s-d))
     t2 = timer()
     print("time  %f"%(t2-t1))
-    print(ser)
+    print("1 stage ser=%g"%ser)
+    print("2 stage ser=%g"%ser2)
     sers.append(ser)
 
-plt.plot(lw_LO, sers)
+#plt.plot(lw_LO, sers)
 plt.show()
 
 
