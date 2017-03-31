@@ -37,9 +37,9 @@ def viterbiviterbi_gen(N, E, M):
     phase_est = np.sum(sa, axis=1)
     phase_est = np.unwrap(np.angle(phase_est))
     if N % 2:
-        E = E[(N - 1) / 2:L - (N - 1) / 2]
+        E = E[(N - 1) // 2:L - (N - 1) // 2]
     else:
-        E = E[N / 2 - 1:L - (N / 2)]
+        E = E[N // 2 - 1:L - (N // 2)]
     #if M == 4: # QPSK needs pi/4 shift
     # need a shift by pi/M for constellation points to not be on the axis
     phase_est = phase_est - np.pi
