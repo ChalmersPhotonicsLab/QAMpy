@@ -518,6 +518,17 @@ def apply_phase_noise(signal, df, fs):
     return signal*np.exp(1.j*ph)
 
 
+def filter_signal(signal, fs, cutoff, type="bessel", order=2):
+    nyq = 0.5*fs
+    cutoff_norm = cutoff/nyq
+    b, a = scisig.bessel(order, cutoff_norm, 'low', norm='mag', analog=False)
+    y = scisig.filtfilt(b, a, signal)
+    return y
+
+
+
+
+
 
 
 
