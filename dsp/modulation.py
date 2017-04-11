@@ -11,7 +11,7 @@ from . import ber_functions
 from .phaserecovery import NMAX
 
 
-def quantize(signal, symbols, precision=16):
+def quantize_af(signal, symbols, precision=16):
     global  NMAX
     if precision == 16:
         prec_dtype = np.complex128

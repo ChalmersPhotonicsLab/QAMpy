@@ -3,7 +3,6 @@ import numpy as np
 from scipy.signal import fftconvolve
 from . import utils, prbs
 from . import theory
-from . import modulation
 
 
 class DataSyncError(Exception):
@@ -489,7 +488,7 @@ def QAMquantize(sig, M):
     L = len(sig)
     sym = np.zeros(L, dtype=np.complex128)
     data = np.zeros(L, dtype='int')
-    cons = modulation.calculate_MQAM_symbols(M).flatten()
+    cons = theory.calculate_MQAM_symbols(M).flatten()
     scal = theory.MQAMScalingFactor(M)
     P = np.mean(utils.cabssquared(sig))
     sig = sig / np.sqrt(P)

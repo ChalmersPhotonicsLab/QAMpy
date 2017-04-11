@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import theory, ber_functions, signal_quality, modulation, utils
+from dsp import theory, ber_functions, modulation, utils
 import sys
 
 
@@ -67,7 +67,6 @@ for M in Mqams:
         modulator = modulation.QAMModulator(M)
         signal, syms, bits = modulator.generateSignal(N, sr)
         evm1[i] = modulator.cal_EVM(signal)
-        #evm2[i] = signal_quality.cal_blind_evm(signal, M)
         evm_known[i] = modulator.cal_EVM(signal, syms)
         # check to see that we can recovery timing delay
         signal = np.roll(signal * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
