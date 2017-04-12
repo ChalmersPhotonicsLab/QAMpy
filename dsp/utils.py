@@ -517,7 +517,38 @@ def apply_phase_noise(signal, df, fs):
     ph = phase_noise(N, df, fs)
     return signal*np.exp(1.j*ph)
 
+def comp_IQbalance(signal):
+    """
+    Compensate IQ imbalance of a signal
+    """
+    signal -= np.mean(signal)
+    I = signal.real
+    Q = signal.imag
 
+    # phase balance
+    mon_signal = np.sum(I*Q)/np.sum(I**2)
+    phase_inbalance = np.arcsin(-mon_signal)
+    Q_balcd = (Q + np.sin(phase_inbalance)*I)/np.cos(phase_inbalance)
+    am_bal = np.sum(I**2)/np.sum(Q_balcd**2)
+    Q_comp = Q_balcd * np.sqrt(am_bal)
+    return I + 1.j * Q_comp
 
+def pre_filter(signal, bw):
+    """
+    Low-pass pre-filter signal with square shape filter
 
+    Parameters
+    ----------
+
+    signal : array_like
+        single polarization signal
+
+    bw     : float
+        bandwidth of the rejected part, given as fraction of overall length
+    """
+    N = len(signal)
+    h = np.zeros(N, dtype=np.float64)
+    h[int(N/(bw/2)):-int(N/(bw/2))] = 1
+    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
+    return s
 
