@@ -2,42 +2,23 @@ import numpy as np
 import matplotlib.pylab as plt
 from dsp import signals, equalisation, modulation, utils
 
-
-
-def H_PMD(theta, t, omega): #see Ip and Kahn JLT 25, 2033 (2007)
-    """"""
-    h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    h2 = np.array([[np.exp(1.j*omega*t/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t/2)]])
-    h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    H = np.einsum('ij,jkl->ikl', h1, h2)
-    H = np.einsum('ijl,jk->ikl', H, h3)
-    return H
-
-def rotate_field(theta, field):
-    h = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    return np.dot(h, field)
-
-def applyPMD(field, H):
-    Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(field, axes=1),axis=1), axes=1)
-    SSf = np.einsum('ijk,ik -> ik',H , Sf)
-    SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
-    return SS
-
 fb = 40.e9
 os = 2
 fs = os*fb
 N = 10**5
-theta = np.pi/2.35
+theta = 0* np.pi/2.35
 M = 64
 QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 5e-4
-muRDE = 5e-4
-ntaps = 21
-t_pmd = 120.e-12
+muCMA = 0.2e-3
+muRDE = 0.2e-3
+ntaps = 11
+t_pmd = 100.e-12
 #Ncma = N//4//os -int(1.5*ntaps)
-Ncma = 60000
-Nrde = 4*N//5//os -int(1.5*ntaps)
+#Ncma = 60000
+#Nrde = 4*N//5//os -int(1.5*ntaps)
+Ncma = None
+Nrde = None
 
 X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
 Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
@@ -45,6 +26,7 @@ Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PR
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 
 SS = utils.apply_PMD_to_field(np.vstack([X,Y]), theta, t_pmd, omega)
+#SS = np.vstack([X,Y])
 
 E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
 E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
