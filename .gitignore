@@ -1,2 +1,7 @@
 *pyc
 *.cprof
+build/
+*.so
+*.html
+__pycache__
+.ropeproject
