@@ -15,7 +15,7 @@ Nrde = 300000
 ntaps = 33
 niter = 4
 
-Dat = loadmat('OSNRLoading_1544p32_Att_2_OSNR_37_3.mat')
+Dat = loadmat('data/OSNRLoading_1544p32_Att_2_OSNR_37_3.mat')
 
 X = Dat['CH1'] + 1.j * Dat['CH2']
 Y = Dat['CH3'] + 1.j * Dat['CH4']
