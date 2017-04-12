@@ -247,7 +247,7 @@ class QAMModulator(object):
 
     def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
-        Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol. 
+        Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
 
         Parameters
         ----------
@@ -273,9 +273,15 @@ class QAMModulator(object):
             symbol_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
-            symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
-            symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
+            #symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
+            #symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
+            symbol_tx, data_demod = self._sync_and_adjust(symbol_tx, data_demod)
         return np.count_nonzero(data_demod - symbol_tx)/len(data_demod), symbol_tx, data_demod
+
+    def _sync_and_adjust(self, syms_tx, syms_rx):
+        syms_tx = self._sync_symbol2signal(syms_tx, syms_rx)
+        syms_tx, syms_rx = ber_functions.adjust_data_length(syms_tx, syms_rx)
+        return syms_tx, syms_rx
 
     def _sync_symbol2signal(self, syms_tx, syms_demod):
         acm = 0.
@@ -328,8 +334,9 @@ class QAMModulator(object):
                 bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
             syms_tx = self.modulate(bits_tx)
             # TODO check if this needs to be put below the synchronization
-            syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
-        s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod)
+            #syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
+        #s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod)
+        s_tx_sync, syms_demod = self._sync_and_adjust(syms_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
         return ber_functions._cal_BER_only(tx_synced, bits_demod, threshold=0.8)
