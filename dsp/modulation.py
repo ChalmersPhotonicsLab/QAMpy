@@ -1,14 +1,27 @@
 from __future__ import division
 import numpy as np
-import arrayfire as af
+try:
+    import arrayfire as af
+except ImportError:
+    af = None
 from bitarray import bitarray
 from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise
 from .prbs import make_prbs_extXOR
-from .equalisation import quantize
+from .equalisation import quantize as quantize_pyx
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
 from . import theory
 from . import ber_functions
 from .phaserecovery import NMAX
+
+def quantize(signal, symbols, method="pyx", **kwargs):
+    if method == "pyx":
+        return quantize_pyx(signal, symbols, **kwargs)
+    elif method == "af":
+        if af == None:
+            raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
+        return quantize_af(signal, symbols, **kwargs)
+    else:
+        raise ValueError("method '%s' unknown has to be either 'pyx' or 'af'"%(method))
 
 
 def quantize_af(signal, symbols, precision=16):
