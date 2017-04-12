@@ -5,3 +5,6 @@ build/
 *.html
 __pycache__
 .ropeproject
+*.lprof
+*.prof
+*.egg-info
