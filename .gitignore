@@ -8,3 +8,5 @@ __pycache__
 *.lprof
 *.prof
 *.egg-info
+dsp_cython.c
+equaliser_cython.c*
