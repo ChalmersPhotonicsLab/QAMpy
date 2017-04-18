@@ -346,6 +346,32 @@ def rcos_freq(f, beta, T):
                                                       (2 * T))))
     return rc
 
+def rrcos_freq(t, beta, T):
+    """Frequency transfer function of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
+
+    Parameters
+    ----------
+
+    t   : array_like
+        time vector
+    beta : float
+        roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
+
+    T   : float
+        symbol period
+
+    Returns
+    -------
+    y   : array_like
+       filter response
+
+    References
+    ----------
+    ..[1] B.P. Lathi, Z. Ding Modern Digital and Analog Communication Systems
+    """
+    return 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
+
+
 def rrcos_time(t, beta, T):
     """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
 
@@ -588,7 +614,21 @@ def pre_filter(signal, bw):
     """
     Low-pass pre-filter signal with square shape filter
 
-<<<<<<< HEAD
+    Parameters
+    ----------
+
+    signal : array_like
+        single polarization signal
+
+    bw     : float
+        bandwidth of the rejected part, given as fraction of overall length
+    """
+    N = len(signal)
+    h = np.zeros(N, dtype=np.float64)
+    h[int(N/(bw/2)):-int(N/(bw/2))] = 1
+    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
+    return s
+
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
     nyq = 0.5*fs
     cutoff_norm = cutoff/nyq
@@ -613,22 +653,6 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
         filter type can be either a bessel, butter or gauss filter (default=bessel)
     order   : int
         order of the filter
-=======
-    Parameters
-    ----------
-
-    signal : array_like
-        single polarization signal
-
-    bw     : float
-        bandwidth of the rejected part, given as fraction of overall length
-    """
-    N = len(signal)
-    h = np.zeros(N, dtype=np.float64)
-    h[int(N/(bw/2)):-int(N/(bw/2))] = 1
-    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
-    return s
->>>>>>> develop
 
     Returns
     -------
