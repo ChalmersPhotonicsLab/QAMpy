@@ -330,22 +330,73 @@ def resample(fold, fnew, signal, window=None):
     return signal
 
 
-def rrcos_time(t, beta, T):
-    """Time response of a root-raised cosine filter with a given roll-off factor and width """
+def rcos_time(t, beta, T):
+    """Time response of a raised cosine filter with a given roll-off factor and width """
     return np.sinc(t / T) * np.cos(t / T * np.pi * beta) / (1 - 4 *
                                                             (beta * t / T)**2)
 
 
-def rrcos_freq(f, beta, T):
-    """Frequency response of a root-raised cosine filter with a given roll-off factor and width """
-    rrc = np.zeros(f.shape[0], dtype=f.dtype)
-    rrc[np.where(np.abs(f) <= (1 - beta) / (2 * T))] = T
+def rcos_freq(f, beta, T):
+    """Frequency response of a raised cosine filter with a given roll-off factor and width """
+    rc = np.zeros(f.shape[0], dtype=f.dtype)
+    rc[np.where(np.abs(f) <= (1 - beta) / (2 * T))] = T
     idx = np.where((np.abs(f) > (1 - beta) / (2 * T)) & (np.abs(f) <= (
         1 + beta) / (2 * T)))
-    rrc[idx] = T / 2 * (1 + np.cos(np.pi * T / beta *
+    rc[idx] = T / 2 * (1 + np.cos(np.pi * T / beta *
                                                      (np.abs(f[idx]) - (1 - beta) /
                                                       (2 * T))))
-    return rrc
+    return rc
+
+def rrcos_time(t, beta, T):
+    """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
+
+    Parameters
+    ----------
+
+    t   : array_like
+        time vector
+    beta : float
+        roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
+
+    T   : float
+        symbol period
+
+    Returns
+    -------
+    y   : array_like
+       filter response
+
+    References
+    ----------
+    ..[1] B.P. Lathi, Z. Ding Modern Digital and Analog Communication Systems
+    """
+    return 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
+
+def rrcos_time2(t, beta, T):
+    """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
+    This implementation differs by a factor 2 from the previous.
+
+    Parameters
+    ----------
+
+    t   : array_like
+        time vector
+    beta : float
+        roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
+
+    T   : float
+        symbol period
+
+    Returns
+    -------
+    y   : array_like
+       filter response
+
+    References
+    ----------
+    ..[1] https://en.wikipedia.org/wiki/Root-raised-cosine_filter
+    """
+    return 1/T*((np.sin(np.pi*t/T*(1-beta)) +  4*beta*t/T*np.cos(np.pi*t/T*(1+beta)))/(np.pi*t/T*(1-(4*beta*t/T)**2)))
 
 def bin2gray(value):
     """
