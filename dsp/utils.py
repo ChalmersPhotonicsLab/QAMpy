@@ -338,11 +338,12 @@ def rrcos_time(t, beta, T):
 
 def rrcos_freq(f, beta, T):
     """Frequency response of a root-raised cosine filter with a given roll-off factor and width """
-    rrc = np.zeros(len(beta), dtype=f.dtype)
+    rrc = np.zeros(f.shape[0], dtype=f.dtype)
     rrc[np.where(np.abs(f) <= (1 - beta) / (2 * T))] = T
-    rrc[np.where((np.abs(f) > (1 - beta) / (2 * T)) & (np.abs(f) <= (
-        1 + beta) / (2 * T)))] = T / 2 * (1 + np.cos(np.pi * T / beta *
-                                                     (np.abs(f) - (1 - beta) /
+    idx = np.where((np.abs(f) > (1 - beta) / (2 * T)) & (np.abs(f) <= (
+        1 + beta) / (2 * T)))
+    rrc[idx] = T / 2 * (1 + np.cos(np.pi * T / beta *
+                                                     (np.abs(f[idx]) - (1 - beta) /
                                                       (2 * T))))
     return rrc
 
