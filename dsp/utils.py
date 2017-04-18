@@ -522,8 +522,18 @@ def filter_signal(signal, fs, cutoff, type="bessel", order=2):
     nyq = 0.5*fs
     cutoff_norm = cutoff/nyq
     b, a = scisig.bessel(order, cutoff_norm, 'low', norm='mag', analog=False)
-    y = scisig.filtfilt(b, a, signal)
+    #y = scisig.filtfilt(b, a, signal)
+    y = scisig.lfilter(b, a, signal)
     return y
+
+def filter_signal_analog(signal, fs, cutoff, type="bessel", order=2):
+    #om = np.linspace(-fs/2, fs/2, signal.shape[0])*2*np.pi
+    system = scisig.bessel(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
+    t = np.arange(0, signal.shape[0])*1/fs
+    to, yo, xo = scisig.lsim(system, signal, t)
+    return yo
+    
+
 
 
 
