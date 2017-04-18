@@ -1,95 +1,76 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, modulation
-from dsp.signal_quality import cal_blind_evm
-
-
-
-def H_PMD(theta, t, omega): #see Ip and Kahn JLT 25, 2033 (2007)
-    """"""
-    h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    h2 = np.array([[np.exp(1.j*omega*t/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t/2)]])
-    h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    H = np.einsum('ij,jkl->ikl', h1, h2)
-    H = np.einsum('ijl,jk->ikl', H, h3)
-    return H
-
-def rotate_field(theta, field):
-    h = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    return np.dot(h, field)
-
-def applyPMD(field, H):
-    Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(field, axes=1),axis=1), axes=1)
-    SSf = np.einsum('ijk,ik -> ik',H , Sf)
-    SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
-    return SS
+from dsp import signals, equalisation, modulation, utils
 
 fb = 40.e9
 os = 2
 fs = os*fb
-N = 10**6
-theta = np.pi/2.35
+N = 10**5
+theta = 0* np.pi/2.35
 M = 64
 QAM = modulation.QAMModulator(M)
-snr = 35
-muCMA = 5e-3
-muRDE = 1e-4
-ntaps = 15
-t_pmd = 120.e-12
+snr = 25
+muCMA = 0.2e-3
+muRDE = 0.2e-3
+ntaps = 11
+t_pmd = 100.e-12
 #Ncma = N//4//os -int(1.5*ntaps)
-Ncma = 10000
-Nrde = 4*N//5//os -int(1.5*ntaps)
+#Ncma = 60000
+#Nrde = 4*N//5//os -int(1.5*ntaps)
+Ncma = None
+Nrde = None
 
 X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
 Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 
-H = H_PMD(theta, t_pmd, omega)
-H2 = H_PMD(-theta, -t_pmd, omega)
+SS = utils.apply_PMD_to_field(np.vstack([X,Y]), theta, t_pmd, omega)
+#SS = np.vstack([X,Y])
 
-S = np.vstack([X,Y])
-
-SS = applyPMD(S, H)
-
-E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-#E_m, wx_m, wy_m, err_m, err_rde_m, = equalisation.joint_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-#E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-E, wx, wy, err, err_rde = equalisation.FS_MCMA_SBD_adapt2(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-#E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
+E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
+E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
+E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
-evmX = cal_blind_evm(X[::2], M)
-evmY = cal_blind_evm(Y[::2], M)
-evmEx = cal_blind_evm(E[0], M)
-evmEy = cal_blind_evm(E[1], M)
-evmEx_m = cal_blind_evm(E_m[0], M)
-evmEy_m = cal_blind_evm(E_m[1], M)
-evmEx_s = cal_blind_evm(E_s[0], M)
-evmEy_s = cal_blind_evm(E_s[1], M)
+evmX = QAM.cal_EVM(X[::2])
+evmY = QAM.cal_EVM(Y[::2])
+evmEx = QAM.cal_EVM(E[0])
+evmEy = QAM.cal_EVM(E[1])
+evmEx_m = QAM.cal_EVM(E_m[0])
+evmEy_m= QAM.cal_EVM(E_m[1])
+evmEx_s = QAM.cal_EVM(E_s[0])
+evmEy_s= QAM.cal_EVM(E_s[1])
 
 #sys.exit()
 plt.figure()
-plt.subplot(221)
+plt.subplot(241)
 plt.title('Recovered MCMA/MDDMA')
-plt.plot(E[0].real, E[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx*100))
-plt.plot(E[1].real, E[1].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmEy))
+plt.hexbin(E[0].real, E[0].imag,  label=r"$EVM_x=%.1f\%%$"%(evmEx*100))
 plt.legend()
-plt.subplot(222)
+plt.subplot(242)
+plt.hexbin(E[1].real, E[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy))
+plt.legend()
+plt.subplot(243)
 plt.title('Recovered MCMA/MRDE')
-plt.plot(E_m[1].real, E_m[1].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmEy_m))
-plt.plot(E_m[0].real, E_m[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx_m*100))
+plt.hexbin(E_m[1].real, E_m[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy_m))
 plt.legend()
-plt.subplot(223)
+plt.subplot(244)
+plt.hexbin(E_m[0].real, E_m[0].imag, label=r"$EVM_x=%.1f\%%$"%(evmEx_m*100))
+plt.legend()
+plt.subplot(245)
 plt.title('Recovered MCMA/SBD')
-plt.plot(E_s[1].real, E_s[1].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmEy_s))
-plt.plot(E_s[0].real, E_s[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
+plt.hexbin(E_s[1].real, E_s[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy_s))
 plt.legend()
-plt.subplot(224)
+plt.subplot(246)
+plt.hexbin(E_s[0].real, E_s[0].imag, label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
+plt.legend()
+plt.subplot(247)
 plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'r.', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.hexbin(X[::2].real, X[::2].imag, label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.legend()
+plt.subplot(248)
+plt.hexbin(Y[::2].real, Y[::2].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmY))
 plt.legend()
 
 plt.figure()

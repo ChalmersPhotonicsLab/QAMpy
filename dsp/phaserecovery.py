@@ -1,12 +1,15 @@
 #vim:fileencoding=utf-8
 from __future__ import division, print_function
-import arrayfire as af
 import numpy as np
 from .segmentaxis import segment_axis
 from .theory import calculate_MQAM_symbols
 from .signal_quality import calS0
 from .dsp_cython import unwrap_discont, bps
-import numba 
+import numba
+try:
+    import arrayfire as af
+except ImportError:
+    af = None
 
 SYMBOLS_16QAM = calculate_MQAM_symbols(16)
 NMAX = 4*1024**3
@@ -98,6 +101,8 @@ def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
     if method.lower() == "cython":
         bps_fct = bps_pyx
     elif method.lower() == "af":
+        if af == None:
+            raise RuntimeError("Arrayfire was not imported so cannot use it")
         bps_fct = bps_af
     else:
         raise("Method needs to be 'cython' or 'af'")
