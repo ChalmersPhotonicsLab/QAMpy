@@ -338,7 +338,7 @@ def rrcos_time(t, beta, T):
 
 def rrcos_freq(f, beta, T):
     """Frequency response of a root-raised cosine filter with a given roll-off factor and width """
-    rrc = np.zeros(len(beta), dtype=f.dtype)
+    rrc = np.zeros(len(f), dtype=f.dtype)
     rrc[np.where(np.abs(f) <= (1 - beta) / (2 * T))] = T
     rrc[np.where((np.abs(f) > (1 - beta) / (2 * T)) & (np.abs(f) <= (
         1 + beta) / (2 * T)))] = T / 2 * (1 + np.cos(np.pi * T / beta *
@@ -518,27 +518,24 @@ def apply_phase_noise(signal, df, fs):
     return signal*np.exp(1.j*ph)
 
 
-def filter_signal(signal, fs, cutoff, type="bessel", order=2):
+def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
     nyq = 0.5*fs
     cutoff_norm = cutoff/nyq
     b, a = scisig.bessel(order, cutoff_norm, 'low', norm='mag', analog=False)
-    #y = scisig.filtfilt(b, a, signal)
     y = scisig.lfilter(b, a, signal)
     return y
 
-def filter_signal_analog(signal, fs, cutoff, type="bessel", order=2):
-    #om = np.linspace(-fs/2, fs/2, signal.shape[0])*2*np.pi
-    system = scisig.bessel(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
+def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
+    if ftype == "gauss":
+        om = np.linspace(-fs/2, fs/2, X.shape[0], endpoint=False)*np.pi*2
+        w = np.pi*cutoff/(2*np.sqrt(np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
+        g = np.exp(-om**2/(2*w**2))
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
+        return np.fft.fftshift(np.fft.ifft(np.fftshift(fsignal)))
+    if ftype == "bessel":
+        system = scisig.bessel(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
+    elif ftype == "butter":
+        system = scisig.butter(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
     t = np.arange(0, signal.shape[0])*1/fs
     to, yo, xo = scisig.lsim(system, signal, t)
     return yo
-    
-
-
-
-
-
-
-
-
-
