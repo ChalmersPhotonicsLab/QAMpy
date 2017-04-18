@@ -526,6 +526,28 @@ def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
     return y
 
 def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
+    """
+    Apply an analog filter to a signal for simulating e.g. electrical bandwidth limitation
+
+    Parameters
+    ----------
+
+    signal  : array_like
+        input signal array
+    fs      : float
+        sampling frequency of the input signal
+    cutoff  : float
+        3 dB cutoff frequency of the filter
+    ftype   : string, optional
+        filter type can be either a bessel, butter or gauss filter (default=bessel)
+    order   : int
+        order of the filter
+
+    Returns
+    -------
+    signalout : array_like
+        filtered output signal
+    """
     if ftype == "gauss":
         om = np.linspace(-fs/2, fs/2, X.shape[0], endpoint=False)*np.pi*2
         w = np.pi*cutoff/(2*np.sqrt(np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
