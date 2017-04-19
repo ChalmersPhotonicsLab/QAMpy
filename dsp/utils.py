@@ -370,7 +370,8 @@ def rrcos_time(t, beta, T):
     ----------
     ..[1] B.P. Lathi, Z. Ding Modern Digital and Analog Communication Systems
     """
-    return 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
+    rrcos = 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
+    return rrcos
 
 def rrcos_time2(t, beta, T):
     """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
@@ -396,7 +397,19 @@ def rrcos_time2(t, beta, T):
     ----------
     ..[1] https://en.wikipedia.org/wiki/Root-raised-cosine_filter
     """
-    return 1/T*((np.sin(np.pi*t/T*(1-beta)) +  4*beta*t/T*np.cos(np.pi*t/T*(1+beta)))/(np.pi*t/T*(1-(4*beta*t/T)**2)))
+    rrcos = 1/T*((np.sin(np.pi*t/T*(1-beta)) +  4*beta*t/T*np.cos(np.pi*t/T*(1+beta)))/(np.pi*t/T*(1-(4*beta*t/T)**2)))
+    idx = np.isnan(rrcos)
+    if np.count_nonzero(idx) == 0:
+        return rrcos
+    else:
+        ii = np.where(idx)
+        for i in ii:
+            # need to put values to poles
+            if abs(t[i]) < abs(t[1]-t[0]):
+                rrcos[i] = 1/T*(1+beta*(4/np.pi-1))
+            elif abs(t[i]-T/(4*beta)) < abs(t[1]-t[0]) or abs(t[i]+T/(4*beta)) < abs(t[1]-t[0]):
+                rrcos[i] = beta/(T*np.sqrt(2))*((1+2/np.pi)*np.sin(np.pi/(4*beta))+(1-2/np.pi)*np.cos(np.pi/(4*beta)))
+        return rrcos
 
 def bin2gray(value):
     """
