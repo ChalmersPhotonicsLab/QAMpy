@@ -650,7 +650,7 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
     cutoff  : float
         3 dB cutoff frequency of the filter
     ftype   : string, optional
-        filter type can be either a bessel, butter or gauss filter (default=bessel)
+        filter type can be either a bessel, butter, exp or gauss filter (default=bessel)
     order   : int
         order of the filter
 
@@ -660,11 +660,18 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
         filtered output signal
     """
     if ftype == "gauss":
-        om = np.linspace(-fs/2, fs/2, X.shape[0], endpoint=False)*np.pi*2
-        w = np.pi*cutoff/(2*np.sqrt(np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
-        g = np.exp(-om**2/(2*w**2))
+        f = np.linspace(-fs/2, fs/2, signal.shape[0], endpoint=False)
+        w = cutoff/(2*np.sqrt(2*np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
+        g = np.exp(-f**2/(2*w**2))
         fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
-        return np.fft.fftshift(np.fft.ifft(np.fftshift(fsignal)))
+        return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+    if ftype == "exp":
+        f = np.linspace(-fs/2, fs/2, signal.shape[0], endpoint=False)
+        w = cutoff/(np.sqrt(2*np.log(2)**2)) # might need to add a factor of 2 here do we want FWHM or HWHM?
+        g = np.exp(-np.sqrt((f**2/(2*w**2))))
+        g /= g.max()
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
+        return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
     if ftype == "bessel":
         system = scisig.bessel(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
     elif ftype == "butter":
