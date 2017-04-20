@@ -335,7 +335,6 @@ def rcos_time(t, beta, T):
     return np.sinc(t / T) * np.cos(t / T * np.pi * beta) / (1 - 4 *
                                                             (beta * t / T)**2)
 
-
 def rcos_freq(f, beta, T):
     """Frequency response of a raised cosine filter with a given roll-off factor and width """
     rc = np.zeros(f.shape[0], dtype=f.dtype)
@@ -346,6 +345,32 @@ def rcos_freq(f, beta, T):
                                                      (np.abs(f[idx]) - (1 - beta) /
                                                       (2 * T))))
     return rc
+
+def rrcos_freq(t, beta, T):
+    """Frequency transfer function of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
+
+    Parameters
+    ----------
+
+    t   : array_like
+        time vector
+    beta : float
+        roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
+
+    T   : float
+        symbol period
+
+    Returns
+    -------
+    y   : array_like
+       filter response
+
+    References
+    ----------
+    ..[1] B.P. Lathi, Z. Ding Modern Digital and Analog Communication Systems
+    """
+    return 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
+
 
 def rrcos_time(t, beta, T):
     """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
@@ -617,3 +642,53 @@ def pre_filter(signal, bw):
     s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
     return s
 
+def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
+    nyq = 0.5*fs
+    cutoff_norm = cutoff/nyq
+    b, a = scisig.bessel(order, cutoff_norm, 'low', norm='mag', analog=False)
+    y = scisig.lfilter(b, a, signal)
+    return y
+
+def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
+    """
+    Apply an analog filter to a signal for simulating e.g. electrical bandwidth limitation
+
+    Parameters
+    ----------
+
+    signal  : array_like
+        input signal array
+    fs      : float
+        sampling frequency of the input signal
+    cutoff  : float
+        3 dB cutoff frequency of the filter
+    ftype   : string, optional
+        filter type can be either a bessel, butter, exp or gauss filter (default=bessel)
+    order   : int
+        order of the filter
+
+    Returns
+    -------
+    signalout : array_like
+        filtered output signal
+    """
+    if ftype == "gauss":
+        f = np.linspace(-fs/2, fs/2, signal.shape[0], endpoint=False)
+        w = cutoff/(2*np.sqrt(2*np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
+        g = np.exp(-f**2/(2*w**2))
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
+        return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+    if ftype == "exp":
+        f = np.linspace(-fs/2, fs/2, signal.shape[0], endpoint=False)
+        w = cutoff/(np.sqrt(2*np.log(2)**2)) # might need to add a factor of 2 here do we want FWHM or HWHM?
+        g = np.exp(-np.sqrt((f**2/(2*w**2))))
+        g /= g.max()
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
+        return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+    if ftype == "bessel":
+        system = scisig.bessel(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
+    elif ftype == "butter":
+        system = scisig.butter(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
+    t = np.arange(0, signal.shape[0])*1/fs
+    to, yo, xo = scisig.lsim(system, signal, t)
+    return yo
