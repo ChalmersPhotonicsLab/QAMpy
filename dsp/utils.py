@@ -299,6 +299,9 @@ def rolling_window(data, size):
     strides = data.strides + (data.strides[-1], )
     return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
 
+def _resamplingfactors(fold, fnew):
+    ratn = fractions.Fraction(fnew/fold).limit_denominator()
+    return ratn.numerator, ratn.denominator
 
 def resample(signal, fold, fnew, window=None):
     """
@@ -324,23 +327,34 @@ def resample(signal, fold, fnew, window=None):
     """
     signal = signal.flatten()
     L = len(signal)
-    ratn = fractions.Fraction(fnew/fold).limit_denominator()
+    up, down = _resamplingfactors(fold, fnew)
     if window is None:
-        signal = scisig.resample_poly(signal, ratn.numerator, ratn.denominator)
+        signal = scisig.resample_poly(signal, up, down)
     else:
-        signal = scisig.resample_poly(signal, ratn.numberator, ratn.denominator, window=window)
+        signal = scisig.resample_poly(signal, up, down, window=window)
     return signal
+
+def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e-4):
+    N = signal.shape[0]
+    up, down = _resamplingfactors(fold, fnew)
+    sig_new = np.zeros(N*up, signal.dtype)
+    sig_new[::up] = signal
+    tup = np.linspace(-N*up/2, N*up/2, N*up, endpoint=False)/(fold*up)
+    nqf = rrcos_time(tup, beta, Ts)
+    sig_new = scisig.fftconvolve(sig_new, nqf, 'same')
+    return sig_new[::down]
 
 def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e-4):
     if beta is None:
-        return resample(signal, 1, os)
+        return resample(signal, fold, fnew)
     else:
         ratn = fractions.Fraction(fnew/fold).limit_denominator()
         fup = ratn.numerator*fold
         Nup = signal.shape[0]*ratn.numerator
         t = np.linspace(-Nup/2, Nup/2, Nup, endpoint=False)*1/fup
         nqf = rrcos_time(t, beta, Ts)
-        nqf = nqf[np.where(abs(nqf)<1e-4)]
+        nqf = nqf[np.where(abs(nqf)>discardfactor)]
+        print(nqf.shape)
         return resample(signal, fold, fnew, window=nqf)
 
 def rcos_time(t, beta, T):
