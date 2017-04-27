@@ -346,14 +346,14 @@ def rcos_freq(f, beta, T):
                                                       (2 * T))))
     return rc
 
-def rrcos_freq(t, beta, T):
+def rrcos_freq(f, beta, T):
     """Frequency transfer function of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
 
     Parameters
     ----------
 
-    t   : array_like
-        time vector
+    f   : array_like
+        frequency vector
     beta : float
         roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
 
@@ -369,7 +369,7 @@ def rrcos_freq(t, beta, T):
     ----------
     ..[1] B.P. Lathi, Z. Ding Modern Digital and Analog Communication Systems
     """
-    return 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
+    return np.sqrt(rcos_freq(f, beta, T))
 
 def rrcos_time(t, beta, T):
     """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
