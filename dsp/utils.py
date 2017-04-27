@@ -371,34 +371,7 @@ def rrcos_freq(t, beta, T):
     """
     return 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
 
-
 def rrcos_time(t, beta, T):
-    """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
-
-    Parameters
-    ----------
-
-    t   : array_like
-        time vector
-    beta : float
-        roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
-
-    T   : float
-        symbol period
-
-    Returns
-    -------
-    y   : array_like
-       filter response
-
-    References
-    ----------
-    ..[1] B.P. Lathi, Z. Ding Modern Digital and Analog Communication Systems
-    """
-    rrcos = 2*beta/(np.pi*np.sqrt(T))*(np.cos((1+beta)*np.pi*t/T)+ np.sin((1-beta)*np.pi*t/T)*1/(4*beta*t/T))/(1-(4*beta*t/T)**2)
-    return rrcos
-
-def rrcos_time2(t, beta, T):
     """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
     This implementation differs by a factor 2 from the previous.
 
@@ -423,18 +396,12 @@ def rrcos_time2(t, beta, T):
     ..[1] https://en.wikipedia.org/wiki/Root-raised-cosine_filter
     """
     rrcos = 1/T*((np.sin(np.pi*t/T*(1-beta)) +  4*beta*t/T*np.cos(np.pi*t/T*(1+beta)))/(np.pi*t/T*(1-(4*beta*t/T)**2)))
-    idx = np.isnan(rrcos)
-    if np.count_nonzero(idx) == 0:
-        return rrcos
-    else:
-        ii = np.where(idx)
-        for i in ii:
-            # need to put values to poles
-            if abs(t[i]) < abs(t[1]-t[0]):
-                rrcos[i] = 1/T*(1+beta*(4/np.pi-1))
-            elif abs(t[i]-T/(4*beta)) < abs(t[1]-t[0]) or abs(t[i]+T/(4*beta)) < abs(t[1]-t[0]):
-                rrcos[i] = beta/(T*np.sqrt(2))*((1+2/np.pi)*np.sin(np.pi/(4*beta))+(1-2/np.pi)*np.cos(np.pi/(4*beta)))
-        return rrcos
+    eps = abs(t[0]-t[1])/4
+    idx1 = np.where(abs(t)<eps)
+    rrcos[idx1] = 1/T*(1+beta*(4/np.pi-1))
+    idx2 = np.where(abs(abs(t)-abs(T/(4*beta)))<eps)
+    rrcos[idx2] = beta/(T*np.sqrt(2))*((1+2/np.pi)*np.sin(np.pi/(4*beta))+(1-2/np.pi)*np.cos(np.pi/(4*beta)))
+    return rrcos
 
 def bin2gray(value):
     """
