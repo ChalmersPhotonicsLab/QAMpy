@@ -354,7 +354,6 @@ def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e
         t = np.linspace(-Nup/2, Nup/2, Nup, endpoint=False)*1/fup
         nqf = rrcos_time(t, beta, Ts)
         nqf = nqf[np.where(abs(nqf)>discardfactor)]
-        print(nqf.shape)
         return resample(signal, fold, fnew, window=nqf)
 
 def rcos_time(t, beta, T):
