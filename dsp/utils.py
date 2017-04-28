@@ -334,25 +334,86 @@ def resample(signal, fold, fnew, window=None):
         signal = scisig.resample_poly(signal, up, down, window=window)
     return signal
 
-def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e-4):
+def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=0., renormalise=False):
+    """
+    Resample a signal using a root raised cosine filter. This performs pulse shaping and resampling a the same time.
+    The resampling is done by upsampling using zeroinsertion and down sampling by decimation.
+
+    Parameters
+    ----------
+    signal   : array_like
+        input time domain signal
+    fold     : float
+        sampling frequency of the input signal
+    fnew     : float
+        desired sampling frequency
+    Ts       : float, optional
+        time width of the RRCOS filter (default:None makes this 1/fold)
+    beta     : float, optional
+        filter roll off factor between [0,1] 
+    renormalise : bool, optional
+        whether to renormalise and recenter the signal to a power of 1.
+
+    Returns
+    -------
+    sig_out  : array_like
+        resampled output signal
+
+    """
+    if Ts is None:
+        Ts = 1/fold
     N = signal.shape[0]
     up, down = _resamplingfactors(fold, fnew)
     sig_new = np.zeros(N*up, signal.dtype)
     sig_new[::up] = signal
-    tup = np.linspace(-N*up/2, N*up/2, N*up, endpoint=False)/(fold*up)
-    nqf = rrcos_time(tup, beta, Ts)
-    sig_new = scisig.fftconvolve(sig_new, nqf, 'same')
+    # below is a way to apply the filter in the time domain (somewhat) there is a shift by 1 point which can make a difference for the equaliser
+    #tup = np.linspace(-N*up/2, N*up/2, N*up, endpoint=False)/(fold*up)
+    #nqf = rrcos_time(tup, beta, Ts)
+    #nqf /= nqf.max()
+    #sig_new = scisig.fftconvolve(sig_new, nqf, 'same')
+    sig_new = rrcos_pulseshaping(sig_new, up*fold, Ts, beta)
+    if renormalise:
+        sig_new = normalise_and_center(sig_new)
     return sig_new[::down]
 
-def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e-4):
+def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e-3):
+    """
+    Resample a signal using a root raised cosine filter. This performs pulse shaping and resampling a the same time.
+    The resampling is done by scipy.signal.resample_poly. This function can be quite slow.
+
+    Parameters
+    ----------
+    signal   : array_like
+        input time domain signal
+    fold     : float
+        sampling frequency of the input signal
+    fnew     : float
+        desired sampling frequency
+    Ts       : float, optional
+        time width of the RRCOS filter (default:None makes this 1/fold)
+    beta     : float, optional
+        filter roll off factor between [0,1] (default:None will use the default filter in poly_resample)
+    discardfactor : float, optional
+        discard filter elements below this threshold, this causes the filter to be significantly shorter
+        and thus speeds up the function significantly
+
+    Returns
+    -------
+    sig_out  : array_like
+        resampled output signal
+
+    """
     if beta is None:
         return resample(signal, fold, fnew)
+    if Ts is None:
+        Ts = 1/fold
     else:
         ratn = fractions.Fraction(fnew/fold).limit_denominator()
         fup = ratn.numerator*fold
         Nup = signal.shape[0]*ratn.numerator
         t = np.linspace(-Nup/2, Nup/2, Nup, endpoint=False)*1/fup
         nqf = rrcos_time(t, beta, Ts)
+        nqf /= nqf.max()
         nqf = nqf[np.where(abs(nqf)>discardfactor)]
         return resample(signal, fold, fnew, window=nqf)
 
@@ -685,3 +746,31 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
     t = np.arange(0, signal.shape[0])*1/fs
     to, yo, xo = scisig.lsim(system, signal, t)
     return yo
+
+def rrcos_pulseshaping(sig, fs, T, beta):
+    """
+    Root-raised cosine filter applied in the spectral domain.
+
+    Parameters
+    ----------
+    sig    : array_like
+        input time distribution of the signal
+    fs    : float
+        sampling frequency of the signal
+    T     : float
+        width of the filter (typically this is the symbol period)
+    beta  : float
+        filter roll-off factor needs to be in range [0, 1]
+
+    Returns
+    -------
+    sign_out : array_like
+        filtered signal in time domain
+    """
+    f = np.linspace(-fs/2, fs/2, sig.shape[0], endpoint=False)
+    nyq_fil = np.sqrt(rcos_freq(f, beta, T))
+    nyq_fil /= nyq_fil.max()
+    sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig)))
+    sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
+    return sig_out
+
