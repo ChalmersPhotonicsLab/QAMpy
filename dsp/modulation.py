@@ -180,6 +180,8 @@ class QAMModulator(object):
         """
         if syms == None:
             syms = self.quantize(signal)
+        else:
+            syms, signal_ad = self._sync_and_adjust(syms, signal)
         return np.sqrt(np.mean(cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
 
     def generateSignal(self,
