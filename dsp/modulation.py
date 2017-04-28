@@ -5,7 +5,7 @@ try:
 except ImportError:
     af = None
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise
+from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise, rrcos_resample_poly, rrcos_resample_zeroins
 from .prbs import make_prbs_extXOR
 from .equalisation import quantize as quantize_pyx
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
@@ -192,7 +192,9 @@ class QAMModulator(object):
                        IQsep=False,
                        PRBS=True,
                        PRBSorder=15,
-                       PRBSseed=None):
+                       PRBSseed=None,
+                       beta=0.1,
+                       resample_noise=False):
         """
         Generate a M-QAM data signal array
 
@@ -227,6 +229,10 @@ class QAMModulator(object):
         PRBSseed: array_like, optional
             Seed to the PRBS generator needs to be a 1D array of booleans of length order.
           . (Default=None, which corresponds to a seed of all 1's)
+        beta   : float, optional
+            roll-off factor for the root raised cosine pulseshaping filter, value needs to be in range [0,1]
+        resample_noise : bool
+            whether to add the noise before resampling or after (default: False add noise after resampling)
         """
         if IQsep:
             if np.isscalar(PRBSorder):
@@ -243,9 +249,16 @@ class QAMModulator(object):
             else:
                 bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
         symbols = self.modulate(bitsq)
-        noise = (np.random.randn(N) + 1.j * np.random.randn(N)) / np.sqrt(2)  # sqrt(2) because N/2 = sigma
-        outdata = symbols + noise * 10**(-snr / 20)  #the 20 here is so we don't have to take the sqrt
-        outdata = resample(baudrate, samplingrate, outdata)
+        if resample_noise:
+            noise = (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2)
+            outdata = symbols + noise * 10**(-snr / 20)  #the 20 here is so we don't have to take the sqrt
+            outdata = resample(baudrate, samplingrate, outdata)
+        else:
+            os = samplingrate/baudrate
+            outdata = rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
+            noise = (np.random.randn(outdata.shape[0]) + 1.j * np.random.randn(outdata.shape[0])) / np.sqrt(2)  # sqrt(2) because N/2 = sigma
+            #outdata += 10**(-(snr+10*np.log10(os))/20)*noise
+            outdata += 10**(-snr/20)*noise*np.sqrt(os) # the factor sqrt(os) is needed as SNR is defined as in-band noise
         outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
         # not 100% clear if we should apply before or after resampling
         if lw_LO:
