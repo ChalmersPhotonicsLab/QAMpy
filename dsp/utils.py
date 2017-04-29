@@ -774,7 +774,23 @@ def rrcos_pulseshaping(sig, fs, T, beta):
     sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
     return sig_out
 
-def add_noise(sig, strgth):
+def add_awgn(sig, strgth):
+    """
+    Add additive white Gaussian noise to a signal.
+
+    Parameters
+    ----------
+    sig    : array_like
+        signal input array can be 1d or 2d, if 2d noise will be added to every dimension
+    strgth : float
+        the strength of the noise to be added to each dimension
+
+    Returns
+    -------
+    sigout : array_like
+       output signal with added noise
+
+    """
     sigout = np.zeros(sig.shape, dtype=sig.dtype)
     if sig.ndim > 1:
         N = sig.shape[1]
