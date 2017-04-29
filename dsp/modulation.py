@@ -253,17 +253,12 @@ class QAMModulator(object):
                 bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
         symbols = self.modulate(bitsq)
         if resample_noise:
-            #noise = (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2)
-            #outdata = symbols + noise * 10**(-snr / 20)  #the 20 here is so we don't have to take the sqrt
-            outdata = utils.add_noise(symbols, 10**(-snr/20))
+            outdata = utils.add_awgn(symbols, 10**(-snr/20))
             outdata = resample(baudrate, samplingrate, outdata)
         else:
             os = samplingrate/baudrate
             outdata = rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
-            outdata = utils.add_noise(outdata, 10**(-snr/20)*np.sqrt(os))
-            #noise = (np.random.randn(outdata.shape[0]) + 1.j * np.random.randn(outdata.shape[0])) / np.sqrt(2)  # sqrt(2) because N/2 = sigma
-            #outdata += 10**(-(snr+10*np.log10(os))/20)*noise
-            #outdata += 10**(-snr/20)*noise*np.sqrt(os) # the factor sqrt(os) is needed as SNR is defined as in-band noise
+            outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
         outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
         # not 100% clear if we should apply before or after resampling
         if lw_LO:
