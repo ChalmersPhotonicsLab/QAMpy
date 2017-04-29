@@ -303,7 +303,7 @@ def _resamplingfactors(fold, fnew):
     ratn = fractions.Fraction(fnew/fold).limit_denominator()
     return ratn.numerator, ratn.denominator
 
-def resample(signal, fold, fnew, window=None):
+def resample(signal, fold, fnew, window=None, renormalise=False):
     """
     Resamples a signal from an old frequency to a new. Preserves the whole data
     but adjusts the length of the array in the process.
@@ -318,6 +318,8 @@ def resample(signal, fold, fnew, window=None):
         New desired sampling frequency.
     window : array_like, optional
         sampling windowing function
+    renormalise : bool, optional
+        whether to renormalise and recenter the signal to a power of 1.
 
     Returns
     -------
@@ -332,6 +334,8 @@ def resample(signal, fold, fnew, window=None):
         signal = scisig.resample_poly(signal, up, down)
     else:
         signal = scisig.resample_poly(signal, up, down, window=window)
+    if renormalise:
+        signal = normalise_and_center(signal)
     return signal
 
 def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=0., renormalise=False):
