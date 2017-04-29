@@ -206,7 +206,7 @@ class QAMModulator(object):
         N :  int
             number of symbols to be generated.
         snr: number
-            Signal to Noise Ratio (Es/N0) in logarithmic units
+            Signal to Noise Ratio (Es/N0) in logarithmic units, if None do not add noise
         carrier_df: number, optional
             carrier frequency offset, relative to the overall window, if not given it
             is set to 0 (baseband modulation)
@@ -253,12 +253,14 @@ class QAMModulator(object):
                 bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
         symbols = self.modulate(bitsq)
         if resample_noise:
-            outdata = utils.add_awgn(symbols, 10**(-snr/20))
+            if snr is not None:
+                outdata = utils.add_awgn(symbols, 10**(-snr/20))
             outdata = resample(baudrate, samplingrate, outdata)
         else:
             os = samplingrate/baudrate
             outdata = rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
-            outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
+            if snr is not None:
+                outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
         outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
         # not 100% clear if we should apply before or after resampling
         if lw_LO:
