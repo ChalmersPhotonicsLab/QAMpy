@@ -774,3 +774,13 @@ def rrcos_pulseshaping(sig, fs, T, beta):
     sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
     return sig_out
 
+def add_noise(sig, strgth):
+    sigout = np.zeros(sig.shape, dtype=sig.dtype)
+    if sig.ndim > 1:
+        N = sig.shape[1]
+        for i in range(sig.shape[0]):
+            sigout[i] = sig[i] + strgth * (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because of var vs std
+    else:
+        N = sig.shape[0]
+        sigout = sig + strgth * (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because of var vs std
+    return sigout
