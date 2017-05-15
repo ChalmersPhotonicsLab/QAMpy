@@ -29,7 +29,7 @@ for lw in lw_LO:
     t1 = timer()
     recoverd_af,ph= phaserecovery.blindphasesearch(XX, 64, QAM.symbols, 14, method="af")
     t2 = timer()
-    recoverd_pyx,ph= phaserecovery.blindphasesearch(XX, 64, QAM.symbols, 14, method="af")
+    recoverd_pyx,ph= phaserecovery.blindphasesearch(XX, 64, QAM.symbols, 14, method="cython")
     t3 = timer()
     recoverd_2s,ph= phaserecovery.blindphasesearch_twostage(XX, 28, QAM.symbols, 14, method='cython')
     t4 = timer()
