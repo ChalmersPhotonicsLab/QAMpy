@@ -426,10 +426,10 @@ def QPSK_partition_phase_16QAM(Nblock, E):
 
 def find_freq_offset(sig, dual_pol = 1, sps = 1, fft_size = 4096):
     """
-    Find the frequency offset by searching in the spectrum of the signal 
+    Find the frequency offset by searching in the spectrum of the signal
     raised to 4. Doing so eliminates the modulation for QPSK but the method also
-    works for higher order M-QAM. 
-    
+    works for higher order M-QAM.
+
     Parameters
     ----------
         sig : array_line
@@ -439,39 +439,39 @@ def find_freq_offset(sig, dual_pol = 1, sps = 1, fft_size = 4096):
         sps: int
             Samples per symbols in sig
         fft_size: int
-            Size of FFT used to estimate. Should be power of 2, otherwise the 
-            next higher power of 2 will be used. 
+            Size of FFT used to estimate. Should be power of 2, otherwise the
+            next higher power of 2 will be used.
 
     Returns
     -------
         freq_offset : int
-            found frequency offset    
-    
+            found frequency offset
+
     """
-    
+
     if not((np.log2(fft_size)%2 == 0) | (np.log2(fft_size)%2 == 1)):
         fft_size = 2**(np.ceil(np.log2(fft_size)))
-    
+
     if dual_pol:
         freq_sig_x = np.abs(np.fft.fftshift(np.fft.fft(sig[0,:]**4,fft_size)))**2
-        freq_sig_y = np.abs(np.fft.fftshift(np.fft.fft(sig[1,:]**4,fft_size)))**2              
+        freq_sig_y = np.abs(np.fft.fftshift(np.fft.fft(sig[1,:]**4,fft_size)))**2
         freq_sig = freq_sig_x + freq_sig_y
-        
+
     else:
         freq_sig = np.abs(np.fft.fftshift(np.fft.fft(sig**4,fft_size)))**2 
-                           
+
     max_freq_bin = nargmax(freq_sig)
-    
-    freq_vector = np.fft.fftshift(np.fft.fftfreq(fft_size,1/sps))/4    
+
+    freq_vector = np.fft.fftshift(np.fft.fftfreq(fft_size,1/sps))/4
     freq_offset = freq_vector[max_freq_bin]
 
-                  
+
     return freq_offset
 
 def comp_freq_offset(sig, freq_offset, dual_pol = 1, sps = 1):
     """
     Compensate for frequency offset in signal
-    
+
     Parameters
     ----------
         sig : array_line
@@ -487,24 +487,24 @@ def comp_freq_offset(sig, freq_offset, dual_pol = 1, sps = 1):
     Returns
     -------
         comp_signal : array_line
-            input signal with removed frequency offset  
-    
+            input signal with removed frequency offset
+
     """
-    
-    
+
+
     if dual_pol:
         sig_length = len(sig[0,:])
     else:
         sig_length = len(sig)
-          
+
     lin_phase = np.arange(1,sig_length + 1,dtype = float)
     lin_phase *= 2 * np.pi * freq_offset /  sps
-    
+
     if dual_pol:
         comp_signal_x = sig[0,:] * np.exp(-1j * lin_phase)
         comp_signal_y = sig[1,:] * np.exp(-1j * lin_phase)
         comp_signal = np.vstack([comp_signal_x,comp_signal_y])
     else:
         comp_signal = sig * np.exp(-1j * lin_phase)
-        
+
     return comp_signal
