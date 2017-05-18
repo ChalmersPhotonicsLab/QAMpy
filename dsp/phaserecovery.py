@@ -453,16 +453,16 @@ def find_freq_offset(sig, dual_pol = 1, sps = 1, fft_size = 4096):
         fft_size = 2**(np.ceil(np.log2(fft_size)))
 
     if dual_pol:
-        freq_sig_x = np.abs(np.fft.fftshift(np.fft.fft(sig[0,:]**4,fft_size)))**2
-        freq_sig_y = np.abs(np.fft.fftshift(np.fft.fft(sig[1,:]**4,fft_size)))**2
+        freq_sig_x = np.abs(np.fft.fft(sig[0,:]**4,fft_size))**2
+        freq_sig_y = np.abs(np.fft.fft(sig[1,:]**4,fft_size))**2
         freq_sig = freq_sig_x + freq_sig_y
 
     else:
-        freq_sig = np.abs(np.fft.fftshift(np.fft.fft(sig**4,fft_size)))**2 
+        freq_sig = np.abs(np.fft.fft(sig**4,fft_size))**2 
 
     max_freq_bin = nargmax(freq_sig)
 
-    freq_vector = np.fft.fftshift(np.fft.fftfreq(fft_size,1/sps))/4
+    freq_vector = np.fft.fftfreq(fft_size,1/sps)/4
     freq_offset = freq_vector[max_freq_bin]
 
 
