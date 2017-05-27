@@ -22,10 +22,10 @@ M = 128
 frame_length = 2**18
 
 # Initial number of pilot tones for equalizer pre-convergence
-pilot_sequence_length = 256
+pilot_seq_len = 256
 
 # Repetative pilot symbols for phase tracking and equalizer update
-pilot_insertion_ratio = 32 
+pilot_ins_ratio = 32 
 
 # Settings if PRBS is seleted for generation
 PRBS = False
@@ -35,13 +35,14 @@ PRBSseed=None
 data_modulator = modulation.QAMModulator(M)
 pilot_modualtor = modulation.QAMModulator(4)
 
+N_data_frames = (frame_length - pilot_seq_len) / pilot_ins_ratio
 
-N_pilot_symbs = pilot_sequence_length + (frame_length - pilot_sequence_length) / pilot_insertion_ratio 
-
-if (N_pilot_symbs%1) != 0:
+if (N_data_frames%1) != 0:
     print("Pilot insertion ratio not propper selected")
 
-N_data_symbs = frame_length - N_pilot_symbs
+N_pilot_symbs = pilot_seq_len + N_data_frames
+
+N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)
 
 N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.bits
 N_data_bits = N_data_symbs * data_modulator.bits
@@ -54,21 +55,21 @@ else:
     pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(np.bool)    
     data_bits = np.random.randint(0, high=2, size=N_data_bits).astype(np.bool)
 
-pilot_symbols = pilot_modualtor.modulate(pilot_bits)
-data_symbols = data_modulator.modulate(data_bits)
+pilot_symbs = pilot_modualtor.modulate(pilot_bits)
+data_symbs = data_modulator.modulate(data_bits)
  
 
 # Set sequence together
-symbol_sequence = np.zeros(frame_length, dtype=np.complex)
+symbol_seq = np.zeros(frame_length, dtype=np.complex)
 
 # Insert pilot sequence
-symbol_sequence[0:pilot_sequence_length] = pilot_symbols[0:pilot_sequence_length]
-symbol_sequence\
-[(pilot_sequence_length)::pilot_insertion_ratio] \
-= pilot_symbols[pilot_sequence_length:]
+symbol_seq[0:pilot_seq_len] = pilot_symbs[0:pilot_seq_len]
+symbol_seq\
+[(pilot_seq_len)::pilot_ins_ratio] \
+= pilot_symbs[pilot_seq_len:]
 
 # Insert data symbols
-for j in np.arange(N_pilot_symbs - pilot_sequence_length):
-    symbol_sequence[pilot_sequence_length + j*pilot_insertion_ratio + 1:\
-                    pilot_sequence_length + (j+1)*pilot_insertion_ratio ] = \
-                    data_symbols[j*(pilot_insertion_ratio-1):(j+1)*(pilot_insertion_ratio-1)]
+for j in np.arange(N_data_frames):
+    symbol_seq[pilot_seq_len + j*pilot_ins_ratio + 1:\
+                    pilot_seq_len + (j+1)*pilot_ins_ratio ] = \
+                    data_symbs[j*(pilot_ins_ratio-1):(j+1)*(pilot_ins_ratio-1)]
