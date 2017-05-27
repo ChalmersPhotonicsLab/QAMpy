@@ -11,10 +11,19 @@ import numpy as np
 from dsp import signals, equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality
 from scipy.io import loadmat, savemat
 from dsp.prbs import make_prbs_extXOR
+import matplotlib.pylab as plt
+
 
 # Oversampling
 os = 2
-    
+
+symb_rate = 20e9
+
+
+snr = None #dB
+linewidth = None # Linewidth symbol-rate product
+fo = None # Frequency offset MHz
+
 # Mapper settings
 M = 128
 
@@ -73,3 +82,22 @@ for j in np.arange(N_data_frames):
     symbol_seq[pilot_seq_len + j*pilot_ins_ratio + 1:\
                     pilot_seq_len + (j+1)*pilot_ins_ratio ] = \
                     data_symbs[j*(pilot_ins_ratio-1):(j+1)*(pilot_ins_ratio-1)]
+
+# Upshift and pulse shaping
+sig = utils.rrcos_resample_zeroins(symbol_seq, 1, os, beta = 0.1, renormalise = True)
+
+addAWGN = False
+addPhaseNoise = False
+
+if snr is not None:
+    sig = utils.add_awgn(sig,10**(-snr/20)*np.sqrt(os))
+
+
+if linewidth is not None:       
+    sig = sig*np.exp(1j*utils.phase_noise(sig.shape, linewidth, symb_rate * os ))
+
+if fo is not None:
+    sig *= np.exp(2.j * np.pi * np.arange(len(sig)) * fo / (symb_rate * os)
+
+
+
