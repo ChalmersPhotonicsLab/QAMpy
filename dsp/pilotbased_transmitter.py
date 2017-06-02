@@ -92,7 +92,7 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
 Testing the transmitter
 """
 # Tx Config
-M = 32
+M = 64
 os = 2
 symb_rate = 20e9
 snr = None #dB
