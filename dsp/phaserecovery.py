@@ -460,7 +460,7 @@ def find_freq_offset(sig, dual_pol=True, sps=1, fft_size = 4096):
     else:
         freq_sig = np.abs(np.fft.fft(sig**4,fft_size))**2 
 
-    max_freq_bin = nargmax(freq_sig)
+    max_freq_bin = np.argmax(freq_sig)
 
     freq_vector = np.fft.fftfreq(fft_size,1/sps)/4
     freq_offset = freq_vector[max_freq_bin]
