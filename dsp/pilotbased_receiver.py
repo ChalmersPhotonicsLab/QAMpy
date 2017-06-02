@@ -11,6 +11,38 @@ from dsp import signals, equalisation, modulation, utils, phaserecovery, dsp_cyt
 from scipy.io import loadmat, savemat
 import matplotlib.pylab as plt
 
+def pilot_based_foe(rec_symbs,pilot_symbs, dual_pol = 0 ):
+    """
+    Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
+    sequence to find the frequency offset from the corresponding aligned symbols.
+    
+    Gives higher accuracy than blind power of 4 based FFT for noisy signals. 
+    Calculates the phase variations between the batches and does a linear fit
+    to find the corresponding frequency offset. 
+    
+    Input:
+        rec_symbs:  complex symbols after initial Rx DSP
+        pilot_symbs: Complex pilot symbols transmitted
+        
+    
+    Output:
+        foe:    Estimated frequency offset. Outputed in terms of complex phase
+        cond:   Condition number of linear fit. Gives accuracy of estimation
+    
+    
+    """
+
+    phaseEvolution = np.unwrap(np.angle(pilot_symbs.conj()*rec_symbs))
+    
+    # fit a first order polynomial to the unwrapped phase evolution
+    freqFit = np.polyfit(np.arange(0,len(phaseEvolution)),phaseEvolution,1)
+    
+    freqFound = freqFit[0]/(2*np.pi)
+    condNum = freqFit[1]                 
+                       
+    return freqFound, condNum
+
+
 # Tx Config
 M = 32
 os = 2
