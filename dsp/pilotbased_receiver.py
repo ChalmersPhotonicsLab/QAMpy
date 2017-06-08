@@ -29,7 +29,6 @@ def pilot_based_foe(rec_symbs,pilot_symbs, dual_pol = 0 ):
         foe:    Estimated frequency offset. Outputed in terms of complex phase
         cond:   Condition number of linear fit. Gives accuracy of estimation
     
-    
     """
 
     phaseEvolution = np.unwrap(np.angle(pilot_symbs.conj()*rec_symbs))
@@ -42,7 +41,104 @@ def pilot_based_foe(rec_symbs,pilot_symbs, dual_pol = 0 ):
                        
     return freqFound, condNum
 
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1):
+    """
+    Carrier phase recovery using periodically inserted symbols.
+    
+    Performs a linear interpolation with averaging over n symbols to estimate
+    the phase drift from laser phase noise to compensate for this.
+    
+    Input: 
+        rec_symbs: Received symbols in block (first of each block is the pilot)
+        pilot_symbs: Corresponding pilot symbols. 
+            Index N is the first symbol in transmitted block N.
+        pilot_ins_ratio: Length of each block. Ex. 16 -> 1 pilot symbol followed
+            by 15 data symbols
+        num_average: Number of pilot symbols to average over to avoid noise. 
+        use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
+        
+    Output:
+        data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
+    """
+    # Extract the pilot symbols
+    rec_pilots = rec_symbs[::pilot_ins_ratio]
+    
+    # Remove every X pilot symbol if wanted
+    rec_pilots = rec_pilots[::use_pilot_ratio]
+    
+    
+    # If not a complete block, remove the remaning symbols
+    if len(pilot_symbs)> np.floor(len(rec_symbs)/(pilot_ins_ratio*use_pilot_ratio)):
+        pilot_symbs = pilot_symbs[:len(rec_symbs)]
+        
+    # Should be an odd number to keey symmetry in averaging
+    if (num_average % 2):
+        num_average += 1
+    
+    # Calculate phase respons
+    res_phase = pilot_symbs.conjugate()*rec_pilots
+    pilot_phase = np.unwrap(np.angle(res_phase))
+    
+    # Fix! Need moving average in numpy
+    pilot_phase_average = moving_average(pilot_phase,num_average)
+    pilot_phase = [pilot_phase[:(num_average-1) / 2], pilot_phase_average]
+    
+    
+    # Pilot positions in the received data set
+    pilot_pos = np.arange(0,len(pilot_phase),pilot_ins_ratio*use_pilot_ratio)
+    
+    # Lineary interpolate the phase evolution
+    phase_evol = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio),\
+                           pilot_pos,pilot_phase)
+    
+    # Compensate phase
+    comp_symbs = rec_symbs*np.exp(-1j*phase_evol)
+    
+    # Allocate output memory
+    out_size = np.shape(rec_symbs)
+    data_symbs = np.zeros(out_size[0],out_size[1]-len(pilot_symbs))
+    
+    # Allocate output by removing pilots
+    block_len = (pilot_ins_ratio*use_pilot_ratio) - 1
+    for i in range(len(pilot_symbs)):
+        data_symbs[i*block_len:(i+1)*block_len] = \
+                   comp_symbs[i*(pilot_ins_ratio*use_pilot_ratio):\
+                              (i+1)*(pilot_ins_ratio*use_pilot_ratio)]
+    
+    # If additional pilots are in between, throw them out
+    
+    
+    
+    
+   return data_symbs
+    
+    
+def moving_average(sig, n=3):
+    """
+    Moving average of signal
+    
+    Input:
+        sig: Signal for moving average
+        n: number of averaging samples
+        
+    Output:
+        ret: Returned average signal of length len(sig)-n+1
+    """
+    
+    ret = np.cumsum(a,dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    
+    return ret[n-1:]/n
 
+
+# Interpolate for a phase trace
+pilotPlace = np.arange(0,len(qpskSymbs),pilotRate)
+phase_test = np.interp(np.arange(0,len(qpskSymbs)),pilotPlace,pilotPhase)
+
+# Compensate and observe output
+qpskPhaseNoiseComp = qpskPhaseNoise*np.exp(-1j*phase_test)
+
+plt.plot(qpskPhaseNoiseComp[:256].real,qpskPhaseNoiseComp[:256].imag,'.')
 # Tx Config
 M = 32
 os = 2
