@@ -21,7 +21,7 @@ def pilot_based_foe(rec_symbs,pilot_symbs, dual_pol = 0 ):
     to find the corresponding frequency offset. 
     
     Input:
-        rec_symbs:  complex symbols after initial Rx DSP
+        rec_symbs:  Complex symbols after initial Rx DSP
         pilot_symbs: Complex pilot symbols transmitted
         
     
@@ -106,11 +106,18 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
                               (i+1)*(pilot_ins_ratio*use_pilot_ratio)]
     
     # If additional pilots are in between, throw them out
+    pilot_pos = np.arange(0,len(pilot_symbs),pilot_ins_ratio)
+    for i in range(0,len(pilot_pos)):
+        if (pilot_pos[i]%(pilot_ins_ratio*use_pilot_ratio)) == 0:
+            print(pilot_pos[i])
+            pilot_pos[i] = 0
+            
+    pilot_pos = pilot_pos[pilot_pos != 0]
+    
+    data_symbs = np.delete(data_symbs,pilot_pos)
     
     
-    
-    
-   return data_symbs
+    return data_symbs
     
     
 def moving_average(sig, n=3):
@@ -125,20 +132,12 @@ def moving_average(sig, n=3):
         ret: Returned average signal of length len(sig)-n+1
     """
     
-    ret = np.cumsum(a,dtype=float)
+    ret = np.cumsum(sig,dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     
     return ret[n-1:]/n
 
 
-# Interpolate for a phase trace
-pilotPlace = np.arange(0,len(qpskSymbs),pilotRate)
-phase_test = np.interp(np.arange(0,len(qpskSymbs)),pilotPlace,pilotPhase)
-
-# Compensate and observe output
-qpskPhaseNoiseComp = qpskPhaseNoise*np.exp(-1j*phase_test)
-
-plt.plot(qpskPhaseNoiseComp[:256].real,qpskPhaseNoiseComp[:256].imag,'.')
 # Tx Config
 M = 32
 os = 2
@@ -170,9 +169,61 @@ Locate pilot sequence
 
 """
 
-step_size = pilot_seq_len / os
-num_steps = frame_length / step_size
+def frame_sync(rx_signal, os, pilot_seq_length = 256, mu = 1e-3, M_pilot = 4, Ntaps = 25, Niter = 10, adap_step = True):
+    """
+    Locate the pilot sequence starting the frame and syncronize it
+    
+    """
+    
+    symb_step_size = int(np.floor(pilot_seq_len / 2 * os))
+    num_steps = int(np.ceil(frame_length / symb_step_size))
 
+    sub_var = np.zeros([1,num_steps])
+    
+    for i in np.arange(0,num_steps):
+        wx, err = equalisation.equalise_signal(rx_signal[(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
+        sub_var[0,i] = np.var(err[0,-symb_step_size/os+N_taps:])
+        
+    minPart = np.argmin(sub_var)
+    
+    
+
+    # Extract a longer sequence
+    seq = rx_signal[(minPart-2)*symb_step_size:(minPart+3)*symb_step_size]
+        
+    # Now test for all polarizations, first pre-convergence from before
+    wx, err = equalisation.equalise_signal(rx_signal[(minPart)*symb_step_size:(minPart+1)*symb_step_size], os, mu, M_pilot,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step)    
+    wx, err = equalisation.equalise_signal(seq, os, mu/10, M_pilot,wxy=wx,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
+    
+    
+    
+    symbs_out= equalisation.apply_filter(seq,os,wx)
+
+    
+    #Find the variations
+    xcov = np.correlate(np.angle(symbs_out[0,:]),np.angle(ref_symbs))
+    symb_delay = np.argmax(xcov)
+    
+    # Extract the received pilots
+    rec_pilots = symbs_out[0,symb_delay:symb_delay+pilot_seq_len]
+    
+    # New starting sample
+    shift_factor = (minPart-2)*symb_step_size +os*symb_delay
+    
+    
+    # Verification and plotting
+    test = equalisation.apply_filter(rx_signal[shift_factor:shift_factor+pilot_seq_len*os+N_taps-1],os,wx)
+    plt.plot(test.real,test.imag,'.')
+    
+    plt.plot(rec_pilots.real,rec_pilots.imag,'.')
+    
+    
+    a = rec_pilots - ref_symbs
+    plt.plot(a.imag)
+    
+    
+    
+    
 
 tx_sig_shift = np.roll(tx_sig,int(1e4))
 
@@ -183,8 +234,9 @@ batchVar = np.zeros([numTests,1])
 
 mu = 1e-3
 M_pilot = 4
-Ntaps = 25
+N_taps = 25
 adap_step = True
+Niter = 10
 
 # Find suitable starting point
 for i in np.arange(0,numTests):
