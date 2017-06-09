@@ -72,7 +72,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
         pilot_symbs = pilot_symbs[:len(rec_symbs)]
         
     # Should be an odd number to keey symmetry in averaging
-    if (num_average % 2):
+    if not(num_average % 2):
         num_average += 1
     
     # Calculate phase respons
@@ -204,8 +204,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Nit
 
     # Search based on equalizer error. Avoid certain part in the beginning and
     # end to ensure that sufficient symbols can be used for the search
-    sub_var = np.ones([npols,num_steps])*1e2
-        
+    sub_var = np.ones([npols,num_steps])*1e2        
     for i in np.arange(2,num_steps-3):
         wx, err = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
         sub_var[:,i] = np.var(err[:,-symb_step_size/os+N_taps:],axis = 1)
@@ -213,7 +212,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Nit
     
     # Now search for every mode independent
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
-    shift_factor = np.zeros([npols,1])
+    shift_factor = np.zeros([npols,1],dtype = int)
     for l in range(npols):
         
         # Lowest variance of the CMA error
@@ -233,7 +232,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Nit
         max_phase_rot = np.zeros([1,4])
         found_delay = np.zeros([1,4])
         for k in range(4):
-            #Find the variations
+            # Find correlation for all 4 possible pi/2 rotations
             xcov = np.correlate(np.angle(symbs_out[l,:]*np.exp(1j*k)),np.angle(ref_symbs[l,:]))
             max_phase_rot[0,k] = np.max(xcov)
             found_delay[0,k] = np.argmax(xcov)
@@ -252,6 +251,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Nit
     
     return eq_pilots, shift_factor
 
+
 #  Verification and plotting    
     plt.plot(eq_pilots[l,:].real,eq_pilots[l,:].imag,'.')  
     
@@ -260,7 +260,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Nit
     
     
     
-    
+[eq_pil, shift] = frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Niter = 10, adap_step = True)
 
 tx_sig_shift = np.roll(tx_sig,int(1e4))
 
