@@ -34,7 +34,7 @@ def gen_dataframe_withpilots(M,npols, frame_length = 2**18, pilot_seq_len = 256,
     N_data_bits = N_data_symbs * data_modulator.bits
     
     
-        # Set sequence together
+    # Set sequence together
     symbol_seq = np.zeros([npols,frame_length], dtype = complex)
     data_symbs = np.zeros([npols,N_data_symbs], dtype = complex)
     pilot_symbs = np.zeros([npols,N_pilot_symbs], dtype = complex)
