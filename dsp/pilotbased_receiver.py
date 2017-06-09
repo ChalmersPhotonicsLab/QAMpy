@@ -202,6 +202,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Nit
     Output:
         eq_pilots: Found pilot sequence after equalization
         shift_factor: New starting point for initial equalization
+        wx: Taps for equalization of the whole signal
     
     """
     # Fix number of stuff
@@ -262,7 +263,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Nit
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
         eq_pilots[l,:] = symbs_out[l,:]    
     
-    return eq_pilots, shift_factor
+    return eq_pilots, shift_factor, wx
 
 
 #  Verification and plotting    
