@@ -169,59 +169,91 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, os, pilot_seq_length = 256, mu = 1e-3, M_pilot = 4, Ntaps = 25, Niter = 10, adap_step = True):
+def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, Ntaps = 25, Niter = 10, adap_step = True):
     """
-    Locate the pilot sequence starting the frame and syncronize it
+    Locate and extract the pilot starting frame.
+    
+    Uses a CMA-based search scheme to located the initiial pilot sequence in
+    the long data frame. 
+    
+    Input:
+        rx_signal: Received Rx signal
+        ref_symbs: Pilot sequence
+        os: Oversampling
+        mu: CMA step size
+        M_pilot: Order for pilot symbols. Should normally be QPSK
+        Ntaps: Number of T/2-spaced taps for equalization
+        Niter: Number of iterations for the equalizer
+        adap_step: Use adaptive step size (bool)
+        
+    Output:
+        eq_pilots: Found pilot sequence after equalization
+        shift_factor: New starting point for initial equalization
     
     """
+    # Fix number of stuff
+    rx_signal = np.atleast_2d(rx_signal)
+    ref_symbs = np.atleast_2d(ref_symbs)
+    npols = rx_signal.shape[0]
+    
+    # Find the length of the pilot frame
+    pilot_seq_len = len(ref_symbs[0,:])
     
     symb_step_size = int(np.floor(pilot_seq_len / 2 * os))
     num_steps = int(np.ceil(frame_length / symb_step_size))
 
-    sub_var = np.zeros([1,num_steps])
-    
-    for i in np.arange(0,num_steps):
-        wx, err = equalisation.equalise_signal(rx_signal[(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
-        sub_var[0,i] = np.var(err[0,-symb_step_size/os+N_taps:])
+    # Search based on equalizer error. Avoid certain part in the beginning and
+    # end to ensure that sufficient symbols can be used for the search
+    sub_var = np.ones([npols,num_steps])*1e2
         
-    minPart = np.argmin(sub_var)
+    for i in np.arange(2,num_steps-3):
+        wx, err = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
+        sub_var[:,i] = np.var(err[:,-symb_step_size/os+N_taps:],axis = 1)
     
     
-
-    # Extract a longer sequence to ensure that the complete pilot sequence is found
-    seq = rx_signal[(minPart-2)*symb_step_size:(minPart+3)*symb_step_size]
+    # Now search for every mode independent
+    eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
+    shift_factor = np.zeros([npols,1])
+    for l in range(npols):
         
-    # Now test for all polarizations, first pre-convergence from before
-    wx1, err = equalisation.equalise_signal(rx_signal[(minPart)*symb_step_size:(minPart+1)*symb_step_size], os, mu, M_pilot,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step)    
-    wx2, err = equalisation.equalise_signal(seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
+        # Lowest variance of the CMA error
+        minPart = np.argmin(sub_var[l,:])
+        
+        # Extract a longer sequence to ensure that the complete pilot sequence is found
+        seq = rx_signal[:,(minPart-2)*symb_step_size:(minPart+3)*symb_step_size]
+            
+        # Now test for all polarizations, first pre-convergence from before
+        wx1, err = equalisation.equalise_signal(rx_signal[:,(minPart)*symb_step_size:(minPart+1)*symb_step_size], os, mu, M_pilot,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step)    
+        wx2, err = equalisation.equalise_signal(seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
+        
+        # Apply filter taps to the long sequence
+        symbs_out= equalisation.apply_filter(seq,os,wx2)
+        
+        # Check for pi/2 ambiguties
+        max_phase_rot = np.zeros([1,4])
+        found_delay = np.zeros([1,4])
+        for k in range(4):
+            #Find the variations
+            xcov = np.correlate(np.angle(symbs_out[l,:]*np.exp(1j*k)),np.angle(ref_symbs[l,:]))
+            max_phase_rot[0,k] = np.max(xcov)
+            found_delay[0,k] = np.argmax(xcov)
     
-    # Apply filter taps to the long sequence
-    symbs_out= equalisation.apply_filter(seq,os,wx2)
+        # Select the best one    
+        symb_delay = int(found_delay[0,np.argmax(max_phase_rot[0,:])]) 
+        
+        # New starting sample
+        shift_factor[l,:] = int((minPart-2)*symb_step_size + os*symb_delay)
+        
+        # Tap update and extract the propper pilot sequuence
+        pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+N_taps-1]
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
+        symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
+        eq_pilots[l,:] = symbs_out[l,:]    
     
-    # Check for pi/2 ambiguties
-    max_phase_rot = np.zeros([1,4])
-    found_delay = np.zeros([1,4])
-    for k in range(4):
-        #Find the variations
-        xcov = np.correlate(np.angle(symbs_out[0,:]*np.exp(1j*k)),np.angle(ref_symbs))
-        max_phase_rot[0,k] = np.max(xcov)
-        found_delay[0,k] = np.argmax(xcov)
+    return eq_pilots, shift_factor
 
-    # Select the best one    
-    symb_delay = int(found_delay[0,np.argmax(max_phase_rot[0,:])]) 
-    
-    # New starting sample
-    shift_factor = (minPart-2)*symb_step_size + os*symb_delay
-    
-    # Tap update and extract the propper pilot sequuence
-    pilot_seq = rx_signal[shift_factor:shift_factor+pilot_seq_len*os+N_taps-1]
-    wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = N_taps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
-    pilots_equalized= equalisation.apply_filter(pilot_seq,os,wx)
-       
-    
-    # Verification and plotting    
-    plt.plot(pilots_equalized.real,pilots_equalized.imag,'.')
-    
+#  Verification and plotting    
+    plt.plot(eq_pilots[l,:].real,eq_pilots[l,:].imag,'.')  
     
     a = rec_pilots - ref_symbs
     plt.plot(a.imag)
