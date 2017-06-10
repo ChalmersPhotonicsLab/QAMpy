@@ -92,7 +92,7 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
         
         # Add FOE
         if freqoff is not None:
-            sig[l,:] *= np.exp(2.j * np.pi * np.arange(len(sig[l,:])) * fo / (symb_rate * os))
+            sig[l,:] *= np.exp(2.j * np.pi * np.arange(len(sig[l,:])) * freqoff / (symb_rate * os))
         
         # Verfy normalization
         sig[l,:] = utils.normalise_and_center(sig[l,:])
@@ -110,7 +110,7 @@ os = 2
 symb_rate = 20e9
 snr = None #dB
 linewidth = None # Linewidth symbol-rate product
-fo = 1e7 # Frequency offset MHzout
+fo = 10 # Frequency offset MHz out
 
 # Pilot Settings
 
@@ -128,7 +128,9 @@ PRBSseed=None
 
 frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(128,1)
 
-tx_sig = sim_tx(frame_symbs, os)
+frame_symbs = np.roll(frame_symbs, 7400)
+
+tx_sig = sim_tx(frame_symbs, os,freqoff = 1.1e8)
 
 
 """
