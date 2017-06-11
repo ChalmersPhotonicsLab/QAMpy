@@ -182,7 +182,7 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10, adap_step = True):
+def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10, adap_step = False):
     """
     Locate and extract the pilot starting frame.
     
@@ -271,8 +271,8 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         
         # Tap update and extract the propper pilot sequuence
         pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps-1]
-                       
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
+        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = False) 
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = False) 
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
 #        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse, dual_pol = False) 
         eq_pilots[l,:] = symbs_out[l,:]
