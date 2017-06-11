@@ -232,25 +232,31 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         # Lowest variance of the CMA error
         minPart = np.argmin(sub_var[l,:])
         
-        # Extract a longer sequence to ensure that the complete pilot sequence is found
-        seq = rx_signal[:,(minPart-2)*symb_step_size:(minPart+3)*symb_step_size]
-            
-        # Now test for all polarizations, first pre-convergence from before
-        wx1, err = equalisation.equalise_signal(rx_signal[:,(minPart)*symb_step_size:(minPart+1)*symb_step_size], os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step)    
-        wx2, err = equalisation.equalise_signal(seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
+        # Corresponding sequence
+        shortSeq = rx_signal[:,(minPart)*symb_step_size:(minPart+1)*symb_step_size]
         
+        # Extract a longer sequence to ensure that the complete pilot sequence is found
+        longSeq = rx_signal[:,(minPart-2)*symb_step_size:(minPart+3)*symb_step_size]
+
+        # Use the first estimate to get rid of any large FO and simplify alignment
+        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step)    
+        seq_foe = equalisation.apply_filter(longSeq,os,wx1)
+        foe_corse = phaserecovery.find_freq_offset(seq_foe,dual_pol=False)        
+         
         # Apply filter taps to the long sequence
-        symbs_out= equalisation.apply_filter(seq,os,wx2)
-        test_out = equalisation.apply_filter(rx_signal[:,(minPart)*symb_step_size:(minPart+1)*symb_step_size],os,wx2)
+        symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
+        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse, dual_pol = False)   
+        
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # For DEBUG!!!
+        test_out = equalisation.apply_filter(shortSeq,os,wx1)
+        test_out[l,:] = phaserecovery.comp_freq_offset(test_out[l,:], foe_corse, dual_pol = False)  
+        
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
         # Check for pi/2 ambiguties
         max_phase_rot = np.zeros([1,4])
-        found_delay = np.zeros([1,4])
-
-        # Small internal frequency offset estimation to help convergence            
-        foe_corse = phaserecovery.find_freq_offset(test_out,dual_pol=False)        
-        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:],foe_corse,dual_pol = False)
-        
-        
+        found_delay = np.zeros([1,4])  
         for k in range(4):
             # Find correlation for all 4 possible pi/2 rotations
             xcov = np.correlate(np.angle(symbs_out[l,:]*np.exp(1j*k)),np.angle(ref_symbs[l,:]))
@@ -265,11 +271,14 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         
         # Tap update and extract the propper pilot sequuence
         pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps-1]
+                       
         wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
+#        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse, dual_pol = False) 
         eq_pilots[l,:] = symbs_out[l,:]
     
-    return eq_pilots, shift_factor, wx, corse_foe, test_out
+    
+    return eq_pilots, shift_factor, wx, foe_corse, test_out
 
 
 # Dynamic pilot_based equalization
@@ -280,7 +289,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
 #rec_signal = np.roll(tx_sig2[0,:], 7400)
 rec_signal = tx_sig
 ref_symbs = pilot_symbs[0,0:256]
-eq_pilots, shift_factor , wx,corse_foe,  test_out = frame_sync(rec_signal, ref_symbs, os)
+eq_pilots, shift_factor , wx, corse_foe,  test_out = frame_sync(rec_signal, ref_symbs, os)
 
 foe, foePerMode, condNum = pilot_based_foe(eq_pilots,ref_symbs)
 
