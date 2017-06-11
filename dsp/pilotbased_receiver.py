@@ -245,6 +245,12 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         # Check for pi/2 ambiguties
         max_phase_rot = np.zeros([1,4])
         found_delay = np.zeros([1,4])
+
+        # Small internal frequency offset estimation to help convergence            
+        foe_corse = phaserecovery.find_freq_offset(test_out,dual_pol=False)        
+        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:],foe_corse,dual_pol = False)
+        
+        
         for k in range(4):
             # Find correlation for all 4 possible pi/2 rotations
             xcov = np.correlate(np.angle(symbs_out[l,:]*np.exp(1j*k)),np.angle(ref_symbs[l,:]))
@@ -261,9 +267,9 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps-1]
         wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = True) 
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
-        eq_pilots[l,:] = symbs_out[l,:]    
+        eq_pilots[l,:] = symbs_out[l,:]
     
-    return eq_pilots, shift_factor, wx,test_out
+    return eq_pilots, shift_factor, wx, corse_foe, test_out
 
 
 # Dynamic pilot_based equalization
@@ -274,32 +280,34 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
 #rec_signal = np.roll(tx_sig2[0,:], 7400)
 rec_signal = tx_sig
 ref_symbs = pilot_symbs[0,0:256]
-eq_pilots, shift_factor , wx, test_out = frame_sync(rec_signal, ref_symbs, os)
+eq_pilots, shift_factor , wx,corse_foe,  test_out = frame_sync(rec_signal, ref_symbs, os)
 
 foe, foePerMode, condNum = pilot_based_foe(eq_pilots,ref_symbs)
 
-comp_test = phaserecovery.comp_freq_offset(eq_pilots[0,:],.11/20,dual_pol = 0)
+comp_test = phaserecovery.comp_freq_offset(eq_pilots[0,:],foe,dual_pol = 0)
 
 #  Verification and plotting    
 plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')  
 
-a = rec_pilots - ref_symbs
-plt.plot(a.imag)
-    
-mu = 1e-3
-M_pilot = 4
-N_taps = 25
-adap_step = True
-Niter = 10
+plt.plot(comp_test.real,comp_test.imag,'.')  
 
-
-
-plt.figure()
-plt.plot(symbs_out[0,pilot_seq_len:].real,symbs_out[0,pilot_seq_len:].imag,'.')
-plt.title("Equalized received symbols, including phase pilots")
-plt.figure()
-plt.plot(symbs_out[0,0:pilot_seq_len-5].real,symbs_out[0,0:pilot_seq_len-5].imag,'.')
-plt.title("Equalized Pilots")
-plt.figure()
-plt.plot(np.abs(err[0]))
-plt.tite("CMA Error")
+#a = rec_pilots - ref_symbs
+#plt.plot(a.imag)
+#    
+#mu = 1e-3
+#M_pilot = 4
+#N_taps = 25
+#adap_step = True
+#Niter = 10
+#
+#
+#
+#plt.figure()
+#plt.plot(symbs_out[0,pilot_seq_len:].real,symbs_out[0,pilot_seq_len:].imag,'.')
+#plt.title("Equalized received symbols, including phase pilots")
+#plt.figure()
+#plt.plot(symbs_out[0,0:pilot_seq_len-5].real,symbs_out[0,0:pilot_seq_len-5].imag,'.')
+#plt.title("Equalized Pilots")
+#plt.figure()
+#plt.plot(np.abs(err[0]))
+#plt.tite("CMA Error")
