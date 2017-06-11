@@ -241,7 +241,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(seq,os,wx2)
-        
+        test_out = equalisation.apply_filter(rx_signal[:,(minPart)*symb_step_size:(minPart+1)*symb_step_size],os,wx2)
         # Check for pi/2 ambiguties
         max_phase_rot = np.zeros([1,4])
         found_delay = np.zeros([1,4])
@@ -263,7 +263,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
         eq_pilots[l,:] = symbs_out[l,:]    
     
-    return eq_pilots, shift_factor, wx
+    return eq_pilots, shift_factor, wx,test_out
 
 
 # Dynamic pilot_based equalization
@@ -271,12 +271,17 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
 
 #Code for testing using the transmitter
     
-rec_signal = np.roll(tx_sig[0,:], 7400)
+#rec_signal = np.roll(tx_sig2[0,:], 7400)
+rec_signal = tx_sig
 ref_symbs = pilot_symbs[0,0:256]
-eq_pilots, shift_factor , wx = frame_sync(rec_signal, ref_symbs, os)
+eq_pilots, shift_factor , wx, test_out = frame_sync(rec_signal, ref_symbs, os)
+
+foe, foePerMode, condNum = pilot_based_foe(eq_pilots,ref_symbs)
+
+comp_test = phaserecovery.comp_freq_offset(eq_pilots[0,:],.11/20,dual_pol = 0)
 
 #  Verification and plotting    
-plt.plot(eq_pilots[l,:].real,eq_pilots[l,:].imag,'.')  
+plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')  
 
 a = rec_pilots - ref_symbs
 plt.plot(a.imag)
