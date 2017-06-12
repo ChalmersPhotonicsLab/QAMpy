@@ -241,16 +241,16 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Nit
         # Use the first estimate to get rid of any large FO and simplify alignment
         wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "mcma",adaptive_stepsize = adap_step)    
         seq_foe = equalisation.apply_filter(longSeq,os,wx1)
-        foe_corse = phaserecovery.find_freq_offset(seq_foe,dual_pol=False)        
+        foe_corse = find_freq_offset(seq_foe)        
          
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
-        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse, dual_pol = False)   
+        symbs_out[l,:] = comp_freq_offset(symbs_out[l,:], foe_corse)   
         
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # For DEBUG!!!
         test_out = equalisation.apply_filter(shortSeq,os,wx1)
-        test_out[l,:] = phaserecovery.comp_freq_offset(test_out[l,:], foe_corse, dual_pol = False)  
+        test_out[l,:] = comp_freq_offset(test_out[l,:], foe_corse)  
         
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
@@ -279,6 +279,94 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Nit
     
 
     return eq_pilots, shift_factor, wx, foe_corse, test_out
+
+
+def find_freq_offset(sig, sps=1, average_over_modes = False, fft_size = 4096):
+    """
+    Find the frequency offset by searching in the spectrum of the signal
+    raised to 4. Doing so eliminates the modulation for QPSK but the method also
+    works for higher order M-QAM.
+
+    Parameters
+    ----------
+        sig : array_line
+            signal array with N modes
+        sps: int
+            Samples per symbols in sig
+        average_over_modes : bool
+            Using the field in all modes for estimation
+
+        fft_size: array
+            Size of FFT used to estimate. Should be power of 2, otherwise the
+            next higher power of 2 will be used.
+
+    Returns
+    -------
+        freq_offset : int
+            found frequency offset
+
+    """
+    if not((np.log2(fft_size)%2 == 0) | (np.log2(fft_size)%2 == 1)):
+        fft_size = 2**(np.ceil(np.log2(fft_size)))
+
+    # Fix number of stuff
+    sig = np.atleast_2d(sig)
+    npols = sig.shape[0]
+
+    # Find offset for all modes    
+    freq_sig = np.zeros([npols,fft_size])    
+    for l in range(npols):
+        freq_sig[l,:] = np.abs(np.fft.fft(sig[l,:]**4,fft_size))**2
+    
+    # If selected, sum over all
+    if average_over_modes:
+        freq_sig[:,:] = np.sum(freq_sig,axis = 0)
+
+    # Extract corresponding FO
+    freq_offset = np.zeros([npols,1])
+    freq_vector = np.fft.fftfreq(fft_size,1/sps)/4
+    for k in range(npols):
+        max_freq_bin = np.argmax(freq_sig[k,:])
+        freq_offset[k,0] = freq_vector[max_freq_bin]
+
+    return freq_offset
+
+def comp_freq_offset(sig, freq_offset, sps=1 ):
+    """
+    Compensate for frequency offset in signal
+
+    Parameters
+    ----------
+        sig : array_line
+            signal array with N modes
+        freq_offset: int
+            frequency offset to compensate for
+        sps: int
+            Samples per symbols in sig
+
+
+    Returns
+    -------
+        comp_signal : array with N modes
+            input signal with removed frequency offset
+
+    """    
+    # Fix number of stuff
+    sig = np.atleast_2d(sig)
+    freq_offset = np.atleast_2d(freq_offset)
+    npols = sig.shape[0]
+
+    # Output Vector
+    comp_signal = np.zeros([1,np.shape(sig)[1]],dtype=complex)
+    
+    # Fix output    
+    sig_len = len(sig[0,:])  
+    lin_phase = np.arange(1,sig_len + 1,dtype = float)
+    for l in range(npols):       
+        lin_phase *= 2 * np.pi * freq_offset[0,l] /  sps   
+        comp_signal[l,:] = sig[l,:] * np.exp(-1j * lin_phase)
+
+    return comp_signal
 
 
 # Dynamic pilot_based equalization
