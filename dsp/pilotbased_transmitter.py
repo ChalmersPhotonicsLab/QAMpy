@@ -51,7 +51,7 @@ def gen_dataframe_withpilots(M,npols, frame_length = 2**18, pilot_seq_len = 256,
         
         pilot_symbs[l,:] = pilot_modualtor.modulate(pilot_bits)
         data_symbs[l,:] = data_modulator.modulate(data_bits)
-
+        
         # Insert pilot sequence
         symbol_seq[l,0:pilot_seq_len] = pilot_symbs[l,0:pilot_seq_len]
         symbol_seq\
@@ -95,7 +95,7 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
             sig[l,:] *= np.exp(2.j * np.pi * np.arange(len(sig[l,:])) * freqoff / (symb_rate * os))
         
         # Verfy normalization
-        sig[l,:] = utils.normalise_and_center(sig[l,:])
+        sig = utils.normalise_and_center(sig)
     
 
     
@@ -108,7 +108,7 @@ Testing the transmitter
 M = 64
 os = 2
 symb_rate = 20e9
-snr = None #dB
+snr = 30 #dB
 linewidth = None # Linewidth symbol-rate product
 fo = 10 # Frequency offset MHz out
 
@@ -128,9 +128,9 @@ PRBSseed=None
 
 frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(128,1)
 
-frame_symbs = np.roll(frame_symbs, 7400)
+frame_symbs = np.roll(frame_symbs, 7230)
 
-tx_sig = sim_tx(frame_symbs, os,freqoff = 1.1e8)
+tx_sig = sim_tx(frame_symbs, os,freqoff = 0*2e9)
 
 
 """
