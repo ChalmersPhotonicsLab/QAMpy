@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 import numpy as np
 from .segmentaxis import segment_axis
-from .theory import cal_qam_symbols
+from .theory import cal_symbols_qam
 from .signal_quality import cal_S0
 from .dsp_cython import unwrap_discont
 from .dsp_cython import bps as _bps_idx_pyx
@@ -12,7 +12,7 @@ try:
 except ImportError:
     af = None
 
-SYMBOLS_16QAM = cal_qam_symbols(16)
+SYMBOLS_16QAM = cal_symbols_qam(16)
 NMAX = 4*1024**3
 
 def viterbiviterbi_gen(N, E, M):

@@ -93,16 +93,16 @@ def ser_vs_esn0_4pam(snr):
     return 0.75 * erfc(np.sqrt(snr / 5))
 
 
-def cal_qam_symbols(M):
+def cal_symbols_qam(M):
     """
     Generate the symbols on the constellation diagram for M-QAM
     """
     if np.log2(M) % 2 > 0.5:
-        return cal_cross_qam_symbols(M)
+        return cal_symbols_cross_qam(M)
     else:
-        return cal_square_qam_symbols(M)
+        return cal_symbols_square_qam(M)
 
-def cal_qam_scaling_factor(M):
+def cal_scaling_factor_qam(M):
     """
     Calculate the scaling factor for normalising MQAM symbols to 1 average Power
     """
@@ -110,11 +110,11 @@ def cal_qam_scaling_factor(M):
     if not bits % 2:
         scale = 2 / 3 * (M - 1)
     else:
-        symbols = cal_qam_symbols(M)
+        symbols = cal_symbols_qam(M)
         scale = (abs(symbols)**2).mean()
     return scale
 
-def cal_square_qam_symbols(M):
+def cal_symbols_square_qam(M):
     """
     Generate the symbols on the constellation diagram for square M-QAM
     """
@@ -124,7 +124,7 @@ def cal_square_qam_symbols(M):
     return (qam[0] + 1.j * qam[1]).flatten()
 
 
-def cal_cross_qam_symbols(M):
+def cal_symbols_cross_qam(M):
     """
     Generate the symbols on the constellation diagram for non-square (cross) M-QAM
     """
@@ -144,7 +144,7 @@ def cal_cross_qam_symbols(M):
     return qam.flatten()
 
 
-def gray_code_for_qam(M):
+def gray_code_qam(M):
     """
     Generate gray code map for M-QAM constellations
     """
