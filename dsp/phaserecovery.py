@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import numpy as np
 from .segmentaxis import segment_axis
 from .theory import cal_MQAM_symbols
-from .signal_quality import calS0
+from .signal_quality import cal_S0
 from .dsp_cython import unwrap_discont
 from .dsp_cython import bps as _bps_idx_pyx
 import numba
@@ -372,7 +372,7 @@ def partition_16QAM(E):
        Technol. Lett. …, vol. 22, no. 20, pp. 1515–1517, 2010.
     """
 
-    S0 = calS0(E, 1.32)
+    S0 = cal_S0(E, 1.32)
     inner = (np.sqrt(S0 / 5) + np.sqrt(S0)) / 2.
     outer = (np.sqrt(9 * S0 / 5) + np.sqrt(S0)) / 2.
     Ea = abs(E)

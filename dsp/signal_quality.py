@@ -48,7 +48,7 @@ def quantize_af(signal, symbols, precision=16):
 
 def normalise_sig(sig, M):
     """Normalise signal to average power"""
-    norm = np.sqrt(calS0(sig, M))
+    norm = np.sqrt(cal_S0(sig, M))
     return 1 / norm, sig / norm
 
 
@@ -155,7 +155,7 @@ def cal_Q_16QAM(E):
     return cal_SNR_QAM(E, 16)
 
 
-def calS0(E, M):
+def cal_S0(E, M):
     """Calculate the signal power S0 according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
     pg 865 (2005).
