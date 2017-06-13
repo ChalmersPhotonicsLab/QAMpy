@@ -66,7 +66,7 @@ def _bps_py(E, Mtestangles, symbols, N):
     En = E[N:-N]*np.exp(1.j*ph)
     return En, ph
 
-def bps(E, Mtestangles, symbols, N, method="cython", **kwargs):
+def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     """
     Perform a blind phase search phase recovery after _[1]
 
@@ -86,7 +86,7 @@ def bps(E, Mtestangles, symbols, N, method="cython", **kwargs):
         block length to use for averaging
 
     method      : string, optional
-        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "cython" for a OpenMP based parallel search.
+        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "pyx" for a cython-OpenMP based parallel search.
 
     **kwargs    :
         arguments to be passed to the search function
@@ -102,14 +102,14 @@ def bps(E, Mtestangles, symbols, N, method="cython", **kwargs):
     ----------
     ..[1] Timo Pfau et al, Hardware-Efficient Coherent Digital Receiver Concept With Feedforward Carrier Recovery for M-QAM Constellations, Journal of Lightwave Technology 27, pp 989-999 (2009)
     """
-    if method.lower() == "cython":
+    if method.lower() == "pyx":
         bps_fct = _bps_idx_pyx
     elif method.lower() == "af":
         if af == None:
             raise RuntimeError("Arrayfire was not imported so cannot use it")
         bps_fct = _bps_idx_af
     else:
-        raise("Method needs to be 'cython' or 'af'")
+        raise("Method needs to be 'pyx' or 'af'")
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
     idx =  bps_fct(E, angles, symbols, N, **kwargs)
     ph = select_angles(angles, idx)
@@ -181,7 +181,7 @@ def bps_pyx(E, testangles, symbols, N, **kwargs):
     """
     Cython based blind phase search. See bps for parameters
     """
-    return bps(E, testangles, symbols, N, method="cython", **kwargs)
+    return bps(E, testangles, symbols, N, method="pyx", **kwargs)
 
 
 @numba.jit(nopython=True)
@@ -199,7 +199,7 @@ def select_angles(angles, idx):
             anglesn[i] = angles[0, idx[i]]
         return anglesn
 
-def bps_twostage(E, Mtestangles, symbols, N , B=4, method="cython", **kwargs):
+def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
     """
     Perform a blind phase search phase recovery using two stages after _[1]
 
@@ -222,7 +222,7 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="cython", **kwargs):
         number of second stage test angles
 
     method      : string, optional
-        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "cython" for a OpenMP based parallel search.
+        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "pyx" for a Cython-OpenMP based parallel search.
 
     **kwargs    :
         arguments to be passed to the search function
@@ -238,12 +238,12 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="cython", **kwargs):
     ----------
     ..[1] Qunbi Zhuge and Chen Chen and David V. Plant, Low Computation Complexity Two-Stage Feedforward Carrier Recovery Algorithm for M-QAM, Optical Fiber Communication Conference (OFC, 2011)
     """
-    if method.lower() == "cython":
+    if method.lower() == "pyx":
         bps_fct = _bps_idx_pyx
     elif method.lower() == "af":
         bps_fct = _bps_idx_af
     else:
-        raise("Method needs to be 'cython' or 'af'")
+        raise("Method needs to be 'pyx' or 'af'")
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
     idx = bps_fct(E, angles, symbols, N, **kwargs)
     ph = select_angles(angles, idx)
