@@ -68,7 +68,7 @@ def cal_blind_evm(sig, M):
     evm : float
         Error Vector Magnitude
         """
-        ideal = cal_MQAM_symbols(M).flatten()
+    ideal = cal_MQAM_symbols(M).flatten()
     Ai, Pi = normalise_sig(ideal, M)
     Am, Pm = normalise_sig(sig, M)
     evm = np.mean(np.min(abs(Pm[:,np.newaxis].real-Pi.real)**2 +\
