@@ -1,14 +1,13 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise, rrcos_resample_poly, rrcos_resample_zeroins
+from .utils import apply_phase_noise, bool2bin, cabssquared, convert_iqtosinglebitstream, normalise_and_center, resample, rrcos_resample_zeroins
 from .prbs import make_prbs_extXOR
-from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
+from .theory import calculate_MQAM_scaling_factor, calculate_MQAM_symbols, gray_code_for_qam
 from . import theory
 from . import ber_functions
 from . import utils
 from .signal_quality import quantize
-from .phaserecovery import NMAX
 
 
 class QAMModulator(object):
