@@ -424,7 +424,7 @@ def QPSK_partition_phase_16QAM(Nblock, E):
     return (E * np.exp(-1.j * phi_est))[:(L // Nblock) * Nblock]
 
 
-def find_freq_offset(sig, sps=1, average_over_modes = False, fft_size = 4096):
+def find_freq_offset(sig, os=1, average_over_modes = False, fft_size = 4096):
     """
     Find the frequency offset by searching in the spectrum of the signal
     raised to 4. Doing so eliminates the modulation for QPSK but the method also
@@ -434,8 +434,8 @@ def find_freq_offset(sig, sps=1, average_over_modes = False, fft_size = 4096):
     ----------
         sig : array_line
             signal array with N modes
-        sps: int
-            Samples per symbols in sig
+        os: int
+            oversampling ratio (Samples per symbols in sig)
         average_over_modes : bool
             Using the field in all modes for estimation
 
@@ -467,14 +467,14 @@ def find_freq_offset(sig, sps=1, average_over_modes = False, fft_size = 4096):
 
     # Extract corresponding FO
     freq_offset = np.zeros([npols,1])
-    freq_vector = np.fft.fftfreq(fft_size,1/sps)/4
+    freq_vector = np.fft.fftfreq(fft_size,1/os)/4
     for k in range(npols):
         max_freq_bin = np.argmax(freq_sig[k,:])
         freq_offset[k,0] = freq_vector[max_freq_bin]
 
     return freq_offset
 
-def comp_freq_offset(sig, freq_offset, sps=1 ):
+def comp_freq_offset(sig, freq_offset, os=1 ):
     """
     Compensate for frequency offset in signal
 
@@ -484,8 +484,8 @@ def comp_freq_offset(sig, freq_offset, sps=1 ):
             signal array with N modes
         freq_offset: array_like
             frequency offset to compensate for if 1D apply to all modes
-        sps: int
-            Samples per symbols in sig
+        os: int
+            oversampling ratio (Samples per symbols in sig)
 
 
     Returns
@@ -506,7 +506,7 @@ def comp_freq_offset(sig, freq_offset, sps=1 ):
     sig_len = len(sig[0,:])
     lin_phase = np.arange(1,sig_len + 1,dtype = float)
     for l in range(npols):
-        lin_phase = 2 * np.pi * freq_offset[l] /  sps
+        lin_phase = 2 * np.pi * freq_offset[l] /  os
         comp_signal[l] = sig[l] * np.exp(-1j * lin_phase)
 
     return comp_signal
