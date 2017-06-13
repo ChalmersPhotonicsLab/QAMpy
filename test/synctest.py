@@ -25,7 +25,7 @@ for lw in lw_LO:
     XX = X*np.exp(1.j*pp)
     print("shiftN: %d"%shiftN)
     recoverd,ph= phaserecovery.blindphasesearch(XX, 64, QAM.symbols, 5)
-    ser,s,d = QAM.calc_SER(X, symbol_tx=np.roll(symbolsX, shiftN))
+    ser,s,d = QAM.cal_SER(X, symbol_tx=np.roll(symbolsX, shiftN))
     print("SER=%f"%ser)
     sers.append(ser)
 
