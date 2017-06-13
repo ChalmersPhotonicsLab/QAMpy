@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from .utils import cabssquared
-from .theory import  MQAMScalingFactor,calculate_MQAM_symbols
+from .theory import  calculate_MQAM_symbols, calculate_MQAM_scaling_factor
 from .equalisation import quantize as quantize_pyx
 try:
     import arrayfire as af
@@ -132,7 +132,7 @@ def cal_SNR_QAM(E, M):
 
 def _cal_gamma(M):
     """Calculate the gamma factor for SNR estimation."""
-    A = abs(calculate_MQAM_symbols(M)) / np.sqrt(MQAMScalingFactor(M))
+    A = abs(calculate_MQAM_symbols(M)) / np.sqrt(calculate_MQAM_scaling_factor(M))
     uniq, counts = np.unique(A, return_counts=True)
     return np.sum(uniq**4 * counts / M)
 
