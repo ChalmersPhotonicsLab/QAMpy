@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from . import utils
+from .utils import cabssquared
 from .theory import  MQAMScalingFactor,calculate_MQAM_symbols
 from .equalisation import quantize as quantize_pyx
 try:
@@ -189,7 +189,7 @@ def SNR_QPSK_blind(E):
     E4 = -E**4
     Eref = E4**(1. / 4)
     #P = np.mean(abs(Eref**2))
-    P = np.mean(utils.cabssquared(Eref))
+    P = np.mean(cabssquared(Eref))
     var = np.var(Eref)
     SNR = 10 * np.log10(P / var)
     return SNR
