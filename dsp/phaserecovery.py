@@ -482,8 +482,8 @@ def comp_freq_offset(sig, freq_offset, sps=1 ):
     ----------
         sig : array_line
             signal array with N modes
-        freq_offset: int
-            frequency offset to compensate for
+        freq_offset: array_like
+            frequency offset to compensate for if 1D apply to all modes
         sps: int
             Samples per symbols in sig
 
@@ -506,7 +506,7 @@ def comp_freq_offset(sig, freq_offset, sps=1 ):
     sig_len = len(sig[0,:])
     lin_phase = np.arange(1,sig_len + 1,dtype = float)
     for l in range(npols):
-        lin_phase *= 2 * np.pi * freq_offset[0,l] /  sps
-        comp_signal[l,:] = sig[l,:] * np.exp(-1j * lin_phase)
+        lin_phase = 2 * np.pi * freq_offset[l] /  sps
+        comp_signal[l] = sig[l] * np.exp(-1j * lin_phase)
 
     return comp_signal
