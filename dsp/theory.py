@@ -93,10 +93,6 @@ def FourPAM_SERvsEsN0(snr):
     return 0.75 * erfc(np.sqrt(snr / 5))
 
 
-def mqamScalingFactor(M):
-    """Calculate the factor for scaling the average energy to 1"""
-    return 2 / 3 * (M - 1)
-
 def cal_mqam_symbols(M):
     """
     Generate the symbols on the constellation diagram for M-QAM
@@ -112,7 +108,7 @@ def cal_mqam_scaling_factor(M):
     """
     bits = np.log2(M)
     if not bits % 2:
-        scale = mqamScalingFactor(M)
+        scale = 2 / 3 * (M - 1)
     else:
         symbols = cal_mqam_symbols(M)
         scale = (abs(symbols)**2).mean()
