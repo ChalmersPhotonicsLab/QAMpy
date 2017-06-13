@@ -217,5 +217,5 @@ def cal_ser_QAM(data_rx, symbol_tx, M, method="pyx"):
     SER : float
        Symbol error rate estimate
     """
-    data_demod = quantize(data_rx, M, method)
+    data_demod = quantize(data_rx, M, method=method)
     return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)
