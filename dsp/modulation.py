@@ -1,11 +1,10 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .prbs import make_prbs_extXOR
-from .theory import calculate_MQAM_scaling_factor, calculate_MQAM_symbols, gray_code_for_qam
 from . import theory
 from . import ber_functions
 from . import utils
+from .prbs import make_prbs_extXOR
 from .signal_quality import quantize
 
 
@@ -28,11 +27,11 @@ class QAMModulator(object):
 
         """
         self.M = M
-        self.symbols = calculate_MQAM_symbols(M)
-        self._scale = calculate_MQAM_scaling_factor(M)
+        self.symbols = theory.calculate_MQAM_symbols(M)
+        self._scale = theory.calculate_MQAM_scaling_factor(M)
         self.symbols /= np.sqrt(self._scale)
         self.coding = None
-        self._graycode = gray_code_for_qam(M)
+        self._graycode = theory.gray_code_for_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
         bformat = "0%db" % self.bits
         self._encoding = dict([(self.symbols[i].tobytes(),
