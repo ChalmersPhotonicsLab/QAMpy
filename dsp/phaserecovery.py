@@ -424,7 +424,7 @@ def QPSK_partition_phase_16QAM(Nblock, E):
     return (E * np.exp(-1.j * phi_est))[:(L // Nblock) * Nblock]
 
 
-def find_freq_offset(sig, dual_pol=True, sps=1, fft_size = 4096):
+def find_freq_offset(sig, os=1, average_over_modes = False, fft_size = 4096):
     """
     Find the frequency offset by searching in the spectrum of the signal
     raised to 4. Doing so eliminates the modulation for QPSK but the method also
@@ -434,11 +434,12 @@ def find_freq_offset(sig, dual_pol=True, sps=1, fft_size = 4096):
     ----------
         sig : array_line
             signal array with N modes
-        dual_pol : bool
-            Using the field in both polarizations for estimation
-        sps: int
-            Samples per symbols in sig
-        fft_size: int
+        os: int
+            oversampling ratio (Samples per symbols in sig)
+        average_over_modes : bool
+            Using the field in all modes for estimation
+
+        fft_size: array
             Size of FFT used to estimate. Should be power of 2, otherwise the
             next higher power of 2 will be used.
 
@@ -448,27 +449,32 @@ def find_freq_offset(sig, dual_pol=True, sps=1, fft_size = 4096):
             found frequency offset
 
     """
-
     if not((np.log2(fft_size)%2 == 0) | (np.log2(fft_size)%2 == 1)):
         fft_size = 2**(np.ceil(np.log2(fft_size)))
 
-    if dual_pol:
-        freq_sig_x = np.abs(np.fft.fft(sig[0,:]**4,fft_size))**2
-        freq_sig_y = np.abs(np.fft.fft(sig[1,:]**4,fft_size))**2
-        freq_sig = freq_sig_x + freq_sig_y
+    # Fix number of stuff
+    sig = np.atleast_2d(sig)
+    npols = sig.shape[0]
 
-    else:
-        freq_sig = np.abs(np.fft.fft(sig**4,fft_size))**2 
+    # Find offset for all modes
+    freq_sig = np.zeros([npols,fft_size])
+    for l in range(npols):
+        freq_sig[l,:] = np.abs(np.fft.fft(sig[l,:]**4,fft_size))**2
 
-    max_freq_bin = np.argmax(freq_sig)
+    # If selected, sum over all
+    if average_over_modes:
+        freq_sig[:,:] = np.sum(freq_sig,axis = 0)
 
-    freq_vector = np.fft.fftfreq(fft_size,1/sps)/4
-    freq_offset = freq_vector[max_freq_bin]
-
+    # Extract corresponding FO
+    freq_offset = np.zeros([npols,1])
+    freq_vector = np.fft.fftfreq(fft_size,1/os)/4
+    for k in range(npols):
+        max_freq_bin = np.argmax(freq_sig[k,:])
+        freq_offset[k,0] = freq_vector[max_freq_bin]
 
     return freq_offset
 
-def comp_freq_offset(sig, freq_offset, dual_pol=True, sps=1):
+def comp_freq_offset(sig, freq_offset, os=1 ):
     """
     Compensate for frequency offset in signal
 
@@ -476,35 +482,31 @@ def comp_freq_offset(sig, freq_offset, dual_pol=True, sps=1):
     ----------
         sig : array_line
             signal array with N modes
-        freq_offset: int
-            frequency offset to compensate for
-        dual_pol : bool
-            Using the field in both polarizations for estimation
-        sps: int
-            Samples per symbols in sig
+        freq_offset: array_like
+            frequency offset to compensate for if 1D apply to all modes
+        os: int
+            oversampling ratio (Samples per symbols in sig)
 
 
     Returns
     -------
-        comp_signal : array_line
+        comp_signal : array with N modes
             input signal with removed frequency offset
 
     """
+    # Fix number of stuff
+    sig = np.atleast_2d(sig)
+    freq_offset = np.atleast_2d(freq_offset)
+    npols = sig.shape[0]
 
+    # Output Vector
+    comp_signal = np.zeros([1,np.shape(sig)[1]],dtype=complex)
 
-    if dual_pol:
-        sig_length = len(sig[0,:])
-    else:
-        sig_length = len(sig)
-
-    lin_phase = np.arange(1,sig_length + 1,dtype = float)
-    lin_phase *= 2 * np.pi * freq_offset /  sps
-
-    if dual_pol:
-        comp_signal_x = sig[0,:] * np.exp(-1j * lin_phase)
-        comp_signal_y = sig[1,:] * np.exp(-1j * lin_phase)
-        comp_signal = np.vstack([comp_signal_x,comp_signal_y])
-    else:
-        comp_signal = sig * np.exp(-1j * lin_phase)
+    # Fix output
+    sig_len = len(sig[0,:])
+    lin_phase = np.arange(1,sig_len + 1,dtype = float)
+    for l in range(npols):
+        lin_phase = 2 * np.pi * freq_offset[l] /  os
+        comp_signal[l] = sig[l] * np.exp(-1j * lin_phase)
 
     return comp_signal
