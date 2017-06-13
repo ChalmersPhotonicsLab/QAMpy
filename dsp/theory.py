@@ -16,14 +16,14 @@ def Q_function(x):
     """
     return 0.5*erfc(x/np.sqrt(2))
 
-def MQAM_SERvsEsN0(snr, M):
+def mqam_SERvsEsN0(snr, M):
     """Calculate the symbol error rate (SER) of an M-QAM signal as a function
     of Es/N0 (Symbol energy over noise energy, given in linear units. Works
     only correctly for M > 4"""
     return 2*(1-1/np.sqrt(M))*erfc(np.sqrt(3*snr/(2*(M-1)))) -\
             (1-2/np.sqrt(M)+1/M)*erfc(np.sqrt(3*snr/(2*(M-1))))**2
 
-def MQAM_BERvsEVM(evm_dB, M):
+def mqam_BERvsEVM(evm_dB, M):
     """Calculate the bit-error-rate for a M-QAM signal as a function of EVM. Taken from _[1]. Note that here we miss the square in the definition to match the plots given in the paper.
 
     Parameters
@@ -54,7 +54,7 @@ def MQAM_BERvsEVM(evm_dB, M):
     return ber
 
 
-def MQAM_BERvsEsN0(snr, M):
+def mqam_BERvsEsN0(snr, M):
     """
     Bit-error-rate vs signal to noise ratio after formula in _[1].
 
@@ -93,11 +93,11 @@ def FourPAM_SERvsEsN0(snr):
     return 0.75 * erfc(np.sqrt(snr / 5))
 
 
-def MQAMScalingFactor(M):
+def mqamScalingFactor(M):
     """Calculate the factor for scaling the average energy to 1"""
     return 2 / 3 * (M - 1)
 
-def cal_MQAM_symbols(M):
+def cal_mqam_symbols(M):
     """
     Generate the symbols on the constellation diagram for M-QAM
     """
@@ -106,15 +106,15 @@ def cal_MQAM_symbols(M):
     else:
         return cal_square_QAM_symbols(M)
 
-def cal_MQAM_scaling_factor(M):
+def cal_mqam_scaling_factor(M):
     """
     Calculate the scaling factor for normalising MQAM symbols to 1 average Power
     """
     bits = np.log2(M)
     if not bits % 2:
-        scale = MQAMScalingFactor(M)
+        scale = mqamScalingFactor(M)
     else:
-        symbols = cal_MQAM_symbols(M)
+        symbols = cal_mqam_symbols(M)
         scale = (abs(symbols)**2).mean()
     return scale
 

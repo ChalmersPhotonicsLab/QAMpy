@@ -27,8 +27,8 @@ class QAMModulator(object):
 
         """
         self.M = M
-        self.symbols = theory.cal_MQAM_symbols(M)
-        self._scale = theory.cal_MQAM_scaling_factor(M)
+        self.symbols = theory.cal_mqam_symbols(M)
+        self._scale = theory.cal_mqam_scaling_factor(M)
         self.symbols /= np.sqrt(self._scale)
         self.coding = None
         self._graycode = theory.gray_code_for_qam(M)
@@ -227,7 +227,7 @@ class QAMModulator(object):
         """
         Return the theoretical SER for this modulation format for the given SNR (in linear units)
         """
-        return theory.MQAM_SERvsEsN0(snr, self.M)
+        return theory.mqam_SERvsEsN0(snr, self.M)
 
     def cal_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
