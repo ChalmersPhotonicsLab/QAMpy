@@ -15,8 +15,8 @@ QAM = modulation.QAMModulator(M)
 snr = 14
 mu = 1e-3
 
-X, symbolsX, bitsX = QAM.generateSignal(N, snr, PRBSorder=15, baudrate=fb, samplingrate=fs)
-Y, symbolsY, bitsY = QAM.generateSignal(N, snr, PRBSorder=23, baudrate=fb, samplingrate=fs)
+X, symbolsX, bitsX = QAM.generate_signal(N, snr, PRBSorder=15, baudrate=fb, samplingrate=fs)
+Y, symbolsY, bitsY = QAM.generate_signal(N, snr, PRBSorder=23, baudrate=fb, samplingrate=fs)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, os*N, endpoint=False)
 t_pmd = 75e-12

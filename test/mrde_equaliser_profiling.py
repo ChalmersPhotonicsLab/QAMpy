@@ -18,8 +18,8 @@ ntaps = 30
 trsyms = N//os//2-(ntaps+5) # use full width for training
 methods = ("mcma", "mrde")
 
-X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
-Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+X, Xsymbols, Xbits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
+Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 t_pmd = 50e-12

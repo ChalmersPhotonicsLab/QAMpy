@@ -185,7 +185,7 @@ class QAMModulator(object):
             syms, signal_ad = self._sync_and_adjust(syms, signal)
         return np.sqrt(np.mean(cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
 
-    def generateSignal(self,
+    def generate_signal(self,
                       N,
                        snr,
                        carrier_df=0,
@@ -273,7 +273,7 @@ class QAMModulator(object):
         """
         return theory.MQAM_SERvsEsN0(snr, self.M)
 
-    def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
+    def cal_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
         Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
 

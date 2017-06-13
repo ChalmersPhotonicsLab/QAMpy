@@ -16,8 +16,8 @@ ntaps=40
 
 QAM = modulation.QAMModulator(M)
 
-X, sx, bx = QAM.generateSignal(N, 14, baudrate=fb, samplingrate=fs)
-Y, sy, by = QAM.generateSignal(N, 14, baudrate=fb, samplingrate=fs)
+X, sx, bx = QAM.generate_signal(N, 14, baudrate=fb, samplingrate=fs)
+Y, sy, by = QAM.generate_signal(N, 14, baudrate=fb, samplingrate=fs)
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 
 S = np.vstack([X,Y])

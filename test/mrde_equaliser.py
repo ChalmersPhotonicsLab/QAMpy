@@ -17,8 +17,8 @@ t_pmd = 50e-12
 Ncma = N//6//os -int(1.5*ntaps)
 Nrde = 5*N//6//os -int(1.5*ntaps)
 
-X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
-Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+X, Xsymbols, Xbits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
+Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 S = np.vstack([X,Y])
 SS = utils.apply_PMD_to_field(np.vstack([X,Y]), theta, t_pmd, omega)

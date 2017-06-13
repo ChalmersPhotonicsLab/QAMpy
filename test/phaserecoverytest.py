@@ -19,7 +19,7 @@ lw_LO = np.linspace(10e1, 1000e1, 4)
 sers = []
 
 
-X, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
+X, symbolsX, bitsX = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
 
 for lw in lw_LO:
     shiftN = np.random.randint(-N/2, N/2, 1)
@@ -33,9 +33,9 @@ for lw in lw_LO:
     t3 = timer()
     recoverd_2s,ph= phaserecovery.blindphasesearch_twostage(XX, 28, QAM.symbols, 14, method='cython')
     t4 = timer()
-    ser,s,d = QAM.calculate_SER(recoverd_af, symbol_tx=xtest)
-    ser2,s,d = QAM.calculate_SER(recoverd_pyx, symbol_tx=xtest)
-    ser3,s,d = QAM.calculate_SER(recoverd_2s, symbol_tx=xtest)
+    ser,s,d = QAM.calc_SER(recoverd_af, symbol_tx=xtest)
+    ser2,s,d = QAM.calc_SER(recoverd_pyx, symbol_tx=xtest)
+    ser3,s,d = QAM.calc_SER(recoverd_2s, symbol_tx=xtest)
     print("1 stage af ser=%g"%ser)
     print("1 stage pyx ser=%g"%ser2)
     print("2 stage pyx ser=%g"%ser3)

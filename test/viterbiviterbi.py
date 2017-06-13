@@ -12,7 +12,7 @@ M = 4
 snr = 14
 carrier_f = 1e6
 QAM = modulation.QAMModulator(M)
-X, Sx, Bx = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs , carrier_df=carrier_f)
+X, Sx, Bx = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs , carrier_df=carrier_f)
 
 
 

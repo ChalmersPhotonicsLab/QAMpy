@@ -13,10 +13,10 @@ N = 10**5
 
 for sr in snr:
     data_rx, dataI, dataQ = signals.generateRandomQPSKData(N, sr)
-    data_rx2, symbols2, bits2 = QAM.generateSignal(N, sr, IQsep=True)
+    data_rx2, symbols2, bits2 = QAM.generate_signal(N, sr, IQsep=True)
     data_tx = 2*(dataI+1.j*dataQ-0.5-0.5j)
     ser.append(signal_quality.cal_ser_QAM(data_rx, data_tx, 4))
-    ser2.append(QAM.calculate_SER(data_rx2, symbol_tx=symbols2))
+    ser2.append(QAM.cal_SER(data_rx2, symbol_tx=symbols2))
 plt.figure()
 plt.plot(snr, 10*np.log10(theory.MPSK_SERvsEsN0(10**(snr/10.), 4)), label='theory')
 plt.plot(snr, 10*np.log10(ser), 'or',label='calculation')

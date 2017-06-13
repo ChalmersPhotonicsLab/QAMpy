@@ -20,8 +20,8 @@ t_pmd = 100.e-12
 Ncma = None
 Nrde = None
 
-X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
-Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+X, Xsymbols, Xbits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
+Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 

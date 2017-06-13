@@ -16,7 +16,7 @@ lw_LO = np.linspace(10e1, 1000e1, 10)
 #lw_LO = [100e3]
 sers = []
 
-X, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=False )
+X, symbolsX, bitsX = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBS=False )
 #symbolsX = np.random.randn(2**15-1) + 1.j*np.random.randn(2**15-1)
 
 for lw in lw_LO:
@@ -25,7 +25,7 @@ for lw in lw_LO:
     XX = X*np.exp(1.j*pp)
     print("shiftN: %d"%shiftN)
     recoverd,ph= phaserecovery.blindphasesearch(XX, 64, QAM.symbols, 5)
-    ser,s,d = QAM.calculate_SER(X, symbol_tx=np.roll(symbolsX, shiftN))
+    ser,s,d = QAM.calc_SER(X, symbol_tx=np.roll(symbolsX, shiftN))
     print("SER=%f"%ser)
     sers.append(ser)
 
