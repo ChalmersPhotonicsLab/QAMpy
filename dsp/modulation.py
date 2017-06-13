@@ -31,7 +31,7 @@ class QAMModulator(object):
         self._scale = theory.cal_scaling_factor_qam(M)
         self.symbols /= np.sqrt(self._scale)
         self.coding = None
-        self._graycode = theory.gray_code_for_qam(M)
+        self._graycode = theory.gray_code_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
         bformat = "0%db" % self.bits
         self._encoding = dict([(self.symbols[i].tobytes(),
