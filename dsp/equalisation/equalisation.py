@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 
 from .. import utils
-from ..theory import cal_mqam_symbols, cal_mqam_scaling_factor
+from ..theory import cal_qam_symbols, cal_qam_scaling_factor
 from ..segmentaxis import segment_axis
 
 
@@ -65,13 +65,13 @@ def _init_args(method, M, **kwargs):
     elif method in ["sca"]:
         return _cal_Rsca(M),
     elif method in ["cme"]:
-        syms = cal_mqam_symbols(M)/np.sqrt(cal_mqam_scaling_factor(M))
+        syms = cal_qam_symbols(M)/np.sqrt(cal_qam_scaling_factor(M))
         d = np.min(abs(np.diff(syms.real))) # should be fixed to consider different spacing between real and imag
         R = _cal_Rconstant(M)
         beta = kwargs['beta']
         return (R, d, beta)
     else:
-        return cal_mqam_symbols(M)/np.sqrt(cal_mqam_scaling_factor(M)),
+        return cal_qam_symbols(M)/np.sqrt(cal_qam_scaling_factor(M)),
 
 
 def apply_filter(E, os, wxy):
@@ -118,20 +118,20 @@ def _cal_Rdash(syms):
      return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (np.sign(syms.real + syms.imag) + np.sign(syms.real-syms.imag) + 1.j*(np.sign(syms.real+syms.imag) - np.sign(syms.real-syms.imag)))*syms.conj()
 
 def _cal_Rsca(M):
-    syms = cal_mqam_symbols(M)
-    syms /= np.sqrt(cal_mqam_scaling_factor(M))
+    syms = cal_qam_symbols(M)
+    syms /= np.sqrt(cal_qam_scaling_factor(M))
     Rd = _cal_Rdash(syms)
     return np.mean((abs(syms.real + syms.imag) + abs(syms.real - syms.imag))**2 * Rd)/(4*np.mean(Rd))
 
 def _cal_Rconstant(M):
-    syms = cal_mqam_symbols(M)
-    scale = cal_mqam_scaling_factor(M)
+    syms = cal_qam_symbols(M)
+    scale = cal_qam_scaling_factor(M)
     syms /= np.sqrt(scale)
     return np.mean(abs(syms)**4)/np.mean(abs(syms)**2)
 
 def _cal_Rconstant_complex(M):
-    syms = cal_mqam_symbols(M)
-    scale = cal_mqam_scaling_factor(M)
+    syms = cal_qam_symbols(M)
+    scale = cal_qam_scaling_factor(M)
     syms /= np.sqrt(scale)
     return np.mean(syms.real**4)/np.mean(syms.real**2) + 1.j * np.mean(syms.imag**4)/np.mean(syms.imag**2)
 
@@ -174,8 +174,8 @@ def generate_partition_codes_complex(M):
     codes   : array_like
         the nearest symbol radius 
     """
-    syms = cal_mqam_symbols(M)
-    scale = cal_mqam_scaling_factor(M)
+    syms = cal_qam_symbols(M)
+    scale = cal_qam_scaling_factor(M)
     syms /= np.sqrt(scale)
     syms_r = np.unique(abs(syms.real)**4/abs(syms.real)**2)
     syms_i = np.unique(abs(syms.imag)**4/abs(syms.imag)**2)
@@ -201,8 +201,8 @@ def generate_partition_codes_radius(M):
     codes   : array_like
         the nearest symbol radius 
     """
-    syms = cal_mqam_symbols(M)
-    scale = cal_mqam_scaling_factor(M)
+    syms = cal_qam_symbols(M)
+    scale = cal_qam_scaling_factor(M)
     syms /= np.sqrt(scale)
     codes = np.unique(abs(syms)**4/abs(syms)**2)
     parts = codes[:-1] + np.diff(codes)/2

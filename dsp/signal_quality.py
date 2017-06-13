@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from .utils import cabssquared
-from .theory import  cal_mqam_symbols, cal_mqam_scaling_factor
+from .theory import  cal_qam_symbols, cal_qam_scaling_factor
 from .equalisation import quantize as quantize_pyx
 try:
     import arrayfire as af
@@ -68,7 +68,7 @@ def cal_blind_evm(sig, M):
     evm : float
         Error Vector Magnitude
         """
-    ideal = cal_mqam_symbols(M).flatten()
+    ideal = cal_qam_symbols(M).flatten()
     Ai, Pi = normalise_sig(ideal, M)
     Am, Pm = normalise_sig(sig, M)
     evm = np.mean(np.min(abs(Pm[:,np.newaxis].real-Pi.real)**2 +\
@@ -132,7 +132,7 @@ def cal_SNR_QAM(E, M):
 
 def _cal_gamma(M):
     """Calculate the gamma factor for SNR estimation."""
-    A = abs(cal_mqam_symbols(M)) / np.sqrt(cal_mqam_scaling_factor(M))
+    A = abs(cal_qam_symbols(M)) / np.sqrt(cal_qam_scaling_factor(M))
     uniq, counts = np.unique(A, return_counts=True)
     return np.sum(uniq**4 * counts / M)
 
