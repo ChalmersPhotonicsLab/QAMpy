@@ -83,11 +83,11 @@ for M in Mqams:
         ser[i] = modulator.cal_SER(signalafter[0], symbol_tx=syms)[0]
         ber[i] = modulator.cal_BER(signalafter[0], bits)[0]
         i += 1
-    ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax1.plot(snrf, theory.ber_vs_esn0_qam(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax2.plot(snrf, theory.MQAM_SERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax2.plot(snrf, theory.ser_vs_esn0_qam(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax3.plot(evmf, theory.MQAM_BERvsEVM(evmf, M), color=c[j], label="%d-QAM theory"%M)
+    ax3.plot(evmf, theory.ber_vs_evm_qam(evmf, M), color=c[j], label="%d-QAM theory"%M)
     ax3.plot(utils.lin2dB(evm1**2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
     # illustrate the difference between a blind and non-blind EVM
     ax3.plot(utils.lin2dB(evm_known**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)

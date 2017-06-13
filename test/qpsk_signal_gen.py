@@ -18,7 +18,7 @@ for sr in snr:
     ser.append(signal_quality.cal_ser_QAM(data_rx, data_tx, 4))
     ser2.append(QAM.cal_SER(data_rx2, symbol_tx=symbols2))
 plt.figure()
-plt.plot(snr, 10*np.log10(theory.MPSK_SERvsEsN0(10**(snr/10.), 4)), label='theory')
+plt.plot(snr, 10*np.log10(theory.ser_vs_esn0_mpsk(10**(snr/10.), 4)), label='theory')
 plt.plot(snr, 10*np.log10(ser), 'or',label='calculation')
 plt.plot(snr, 10*np.log10(ser2), 'ob',label='class calculation')
 plt.xlabel('SNR [dB]')
