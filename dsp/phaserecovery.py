@@ -114,6 +114,9 @@ def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
     return Eout, ph
 
 def movavg_af(X, N, axis=0):
+    """
+    Calculate moving average over N samples using arrayfire
+    """
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
