@@ -97,16 +97,16 @@ def MQAMScalingFactor(M):
     """Calculate the factor for scaling the average energy to 1"""
     return 2 / 3 * (M - 1)
 
-def calculate_MQAM_symbols(M):
+def cal_MQAM_symbols(M):
     """
     Generate the symbols on the constellation diagram for M-QAM
     """
     if np.log2(M) % 2 > 0.5:
-        return calculate_cross_QAM_symbols(M)
+        return cal_cross_QAM_symbols(M)
     else:
-        return calculate_square_QAM_symbols(M)
+        return cal_square_QAM_symbols(M)
 
-def calculate_MQAM_scaling_factor(M):
+def cal_MQAM_scaling_factor(M):
     """
     Calculate the scaling factor for normalising MQAM symbols to 1 average Power
     """
@@ -114,11 +114,11 @@ def calculate_MQAM_scaling_factor(M):
     if not bits % 2:
         scale = MQAMScalingFactor(M)
     else:
-        symbols = calculate_MQAM_symbols(M)
+        symbols = cal_MQAM_symbols(M)
         scale = (abs(symbols)**2).mean()
     return scale
 
-def calculate_square_QAM_symbols(M):
+def cal_square_QAM_symbols(M):
     """
     Generate the symbols on the constellation diagram for square M-QAM
     """
@@ -128,7 +128,7 @@ def calculate_square_QAM_symbols(M):
     return (qam[0] + 1.j * qam[1]).flatten()
 
 
-def calculate_cross_QAM_symbols(M):
+def cal_cross_QAM_symbols(M):
     """
     Generate the symbols on the constellation diagram for non-square (cross) M-QAM
     """
