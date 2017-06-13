@@ -456,11 +456,11 @@ def find_freq_offset(sig, sps=1, average_over_modes = False, fft_size = 4096):
     sig = np.atleast_2d(sig)
     npols = sig.shape[0]
 
-    # Find offset for all modes    
-    freq_sig = np.zeros([npols,fft_size])    
+    # Find offset for all modes
+    freq_sig = np.zeros([npols,fft_size])
     for l in range(npols):
         freq_sig[l,:] = np.abs(np.fft.fft(sig[l,:]**4,fft_size))**2
-    
+
     # If selected, sum over all
     if average_over_modes:
         freq_sig[:,:] = np.sum(freq_sig,axis = 0)
@@ -493,7 +493,7 @@ def comp_freq_offset(sig, freq_offset, sps=1 ):
         comp_signal : array with N modes
             input signal with removed frequency offset
 
-    """    
+    """
     # Fix number of stuff
     sig = np.atleast_2d(sig)
     freq_offset = np.atleast_2d(freq_offset)
@@ -501,12 +501,12 @@ def comp_freq_offset(sig, freq_offset, sps=1 ):
 
     # Output Vector
     comp_signal = np.zeros([1,np.shape(sig)[1]],dtype=complex)
-    
-    # Fix output    
-    sig_len = len(sig[0,:])  
+
+    # Fix output
+    sig_len = len(sig[0,:])
     lin_phase = np.arange(1,sig_len + 1,dtype = float)
-    for l in range(npols):       
-        lin_phase *= 2 * np.pi * freq_offset[0,l] /  sps   
+    for l in range(npols):
+        lin_phase *= 2 * np.pi * freq_offset[0,l] /  sps
         comp_signal[l,:] = sig[l,:] * np.exp(-1j * lin_phase)
 
     return comp_signal
