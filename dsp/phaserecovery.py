@@ -113,7 +113,7 @@ def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
     Eout = E*np.exp(1.j*ph)
     return Eout, ph
 
-def afmavg(X, N, axis=0):
+def movavg_af(X, N, axis=0):
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
@@ -134,7 +134,7 @@ def _bps_idx_af(E, angles, symbols, N, precision=16,  applyphase=False):
     if L <= Nmax+N:
         Eaf = af.np_to_af_array(EE.astype(prec_dtype))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[0:L,:], syms))**2, dim=2)
-        cs = afmavg(tmp, 2*N, axis=0)
+        cs = movavg_af(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[N:-N] = np.array(idx)
     else:
