@@ -488,7 +488,7 @@ def QAMquantize(sig, M):
     L = len(sig)
     sym = np.zeros(L, dtype=np.complex128)
     data = np.zeros(L, dtype='int')
-    cons = theory.calculate_MQAM_symbols(M).flatten()
+    cons = theory.cal_MQAM_symbols(M).flatten()
     scal = theory.MQAMScalingFactor(M)
     P = np.mean(utils.cabssquared(sig))
     sig = sig / np.sqrt(P)

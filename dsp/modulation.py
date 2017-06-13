@@ -27,8 +27,8 @@ class QAMModulator(object):
 
         """
         self.M = M
-        self.symbols = theory.calculate_MQAM_symbols(M)
-        self._scale = theory.calculate_MQAM_scaling_factor(M)
+        self.symbols = theory.cal_MQAM_symbols(M)
+        self._scale = theory.cal_MQAM_scaling_factor(M)
         self.symbols /= np.sqrt(self._scale)
         self.coding = None
         self._graycode = theory.gray_code_for_qam(M)
