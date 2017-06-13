@@ -4,7 +4,8 @@ import numpy as np
 from .segmentaxis import segment_axis
 from .theory import calculate_MQAM_symbols
 from .signal_quality import calS0
-from .dsp_cython import unwrap_discont, bps
+from .dsp_cython import unwrap_discont
+from .dsp_cython import bps as _bps_idx_pyx
 import numba
 try:
     import arrayfire as af
@@ -48,7 +49,10 @@ def viterbiviterbi_gen(N, E, M):
     phase_est = phase_est - np.pi
     return E * np.exp(-1.j * phase_est / M)
 
-def blindphasesearch_py(E, Mtestangles, symbols, N):
+def _bps_py(E, Mtestangles, symbols, N):
+    """
+    Blind phase search using Python. This is slow compared to the cython and arrayfire methods and should not be used.
+    """
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     idx = np.zeros(len(E)-2*N, dtype=np.int)
@@ -62,7 +66,7 @@ def blindphasesearch_py(E, Mtestangles, symbols, N):
     En = E[N:-N]*np.exp(1.j*ph)
     return En, ph
 
-def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
+def bps(E, Mtestangles, symbols, N, method="cython", **kwargs):
     """
     Perform a blind phase search phase recovery after _[1]
 
@@ -99,15 +103,16 @@ def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
     ..[1] Timo Pfau et al, Hardware-Efficient Coherent Digital Receiver Concept With Feedforward Carrier Recovery for M-QAM Constellations, Journal of Lightwave Technology 27, pp 989-999 (2009)
     """
     if method.lower() == "cython":
-        bps_fct = bps_pyx
+        bps_fct = _bps_idx_pyx
     elif method.lower() == "af":
         if af == None:
             raise RuntimeError("Arrayfire was not imported so cannot use it")
-        bps_fct = bps_af
+        bps_fct = _bps_idx_af
     else:
         raise("Method needs to be 'cython' or 'af'")
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
-    ph =  bps_fct(E, angles, symbols, N, **kwargs)
+    idx =  bps_fct(E, angles, symbols, N, **kwargs)
+    ph = select_angles(angles, idx)
     # ignore the phases outside the averaging window
     ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
     Eout = E*np.exp(1.j*ph)
@@ -120,7 +125,7 @@ def movavg_af(X, N, axis=0):
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
-def _bps_idx_af(E, angles, symbols, N, precision=16,  applyphase=False):
+def _bps_idx_af(E, angles, symbols, N, precision=16):
     global NMAX
     if precision == 16:
         prec_dtype = np.complex128
@@ -149,29 +154,35 @@ def _bps_idx_af(E, angles, symbols, N, precision=16,  applyphase=False):
         Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(prec_dtype))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         tt = np.array(tmp)
-        cs = afmavg(tmp, 2*N, axis=0)
+        cs = movavg_af(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[N:Nmax] = np.array(idx)
         for i in range(1,K):
             Eaf = af.np_to_af_array(EE[i*Nmax-N:(i+1)*Nmax+N].astype(np.complex128))
             tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
-            cs = afmavg(tmp, 2*N, axis=0)
+            cs = movavg_af(tmp, 2*N, axis=0)
             val, idx = af.imin(cs, dim=1)
             idxnd[i*Nmax:(i+1)*Nmax] = np.array(idx)
         Eaf = af.np_to_af_array(EE[K*Nmax-N:K*Nmax+R].astype(np.complex128))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
-        cs = afmavg(tmp, 2*N, axis=0)
+        cs = movavg_af(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax:-N] = np.array(idx)
     return idxnd
 
 def bps_af(E, testangles, symbols, N, **kwargs):
-    idx = _bps_idx_af(E, testangles, symbols, N, **kwargs)
-    return select_angles(testangles, idx)
+    """
+    Arrayfire based blind phase search. See bps for parameters
+    """
+    return bps(E, testangles, symbols, N, method="af", **kwargs)
 
-def bps_pyx(E, testangles, symbols, N):
-    idx =  bps(E, testangles, symbols, N)
-    return select_angles(testangles, idx)
+
+def bps_pyx(E, testangles, symbols, N, **kwargs):
+    """
+    Cython based blind phase search. See bps for parameters
+    """
+    return bps(E, testangles, symbols, N, method="cython", **kwargs)
+
 
 @numba.jit(nopython=True)
 def select_angles(angles, idx):
@@ -188,7 +199,7 @@ def select_angles(angles, idx):
             anglesn[i] = angles[0, idx[i]]
         return anglesn
 
-def blindphasesearch_twostage(E, Mtestangles, symbols, N , B=4, method="cython", **kwargs):
+def bps_twostage(E, Mtestangles, symbols, N , B=4, method="cython", **kwargs):
     """
     Perform a blind phase search phase recovery using two stages after _[1]
 
@@ -228,16 +239,18 @@ def blindphasesearch_twostage(E, Mtestangles, symbols, N , B=4, method="cython",
     ..[1] Qunbi Zhuge and Chen Chen and David V. Plant, Low Computation Complexity Two-Stage Feedforward Carrier Recovery Algorithm for M-QAM, Optical Fiber Communication Conference (OFC, 2011)
     """
     if method.lower() == "cython":
-        bps_fct = bps_pyx
+        bps_fct = _bps_idx_pyx
     elif method.lower() == "af":
-        bps_fct = bps_af
+        bps_fct = _bps_idx_af
     else:
         raise("Method needs to be 'cython' or 'af'")
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
-    ph = bps_fct(E, angles, symbols, N, **kwargs)
+    idx = bps_fct(E, angles, symbols, N, **kwargs)
+    ph = select_angles(angles, idx)
     b = np.linspace(-B/2, B/2, B)
     phn = ph[:,np.newaxis] + b[np.newaxis,:]/(B*Mtestangles)*np.pi/2
-    phf = bps_fct(E, phn, symbols, N, **kwargs)
+    idx2 = bps_fct(E, phn, symbols, N, **kwargs)
+    phf = select_angles(phn, idx2)
     angles_adj = np.unwrap(phf*4, discont=np.pi*4/4)/4
     En = E*np.exp(1.j*angles_adj)
     return En, angles_adj
