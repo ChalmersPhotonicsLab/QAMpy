@@ -2,7 +2,48 @@ from __future__ import division, print_function
 import numpy as np
 from . import utils
 from .theory import  MQAMScalingFactor,calculate_MQAM_symbols
-from .ber_functions import QAMquantize
+from .equalisation import quantize as quantize_pyx
+try:
+    import arrayfire as af
+except ImportError:
+    af = None
+
+def quantize(signal, symbols, method="pyx", **kwargs):
+    if method == "pyx":
+        return quantize_pyx(signal, symbols, **kwargs)
+    elif method == "af":
+        if af == None:
+            raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
+        return quantize_af(signal, symbols, **kwargs)
+    else:
+        raise ValueError("method '%s' unknown has to be either 'pyx' or 'af'"%(method))
+
+
+def quantize_af(signal, symbols, precision=16):
+    global  NMAX
+    if precision == 16:
+        prec_dtype = np.complex128
+    elif precision == 8:
+        prec_dtype = np.complex64
+    else:
+        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
+    Nmax = NMAX//len(symbols.flatten())//16
+    L = signal.flatten().shape[0]
+    sig = af.np_to_af_array(signal.flatten().astype(prec_dtype))
+    sym = af.transpose(af.np_to_af_array(symbols.flatten().astype(prec_dtype)))
+    tmp = af.constant(0, L, dtype=af.Dtype.c64)
+    if L < Nmax:
+        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig,sym)), dim=1)
+        tmp = af.transpose(sym)[idx]
+    else:
+        steps = L//Nmax
+        rem = L%Nmax
+        for i in range(steps):
+            v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[i*Nmax:(i+1)*Nmax],sym)), dim=1)
+            tmp[i*Nmax:(i+1)*Nmax] = af.transpose(sym)[idx]
+        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[steps*Nmax:],sym)), dim=1)
+        tmp[steps*Nmax:] = af.transpose(sym)[idx]
+    return np.array(tmp)
 
 
 def normalise_sig(sig, M):
@@ -154,7 +195,7 @@ def SNR_QPSK_blind(E):
     return SNR
 
 
-def cal_ser_QAM(data_rx, symbol_tx, M):
+def cal_ser_QAM(data_rx, symbol_tx, M, method="pyx"):
     """
     Calculate the symbol error rate
 
@@ -168,10 +209,13 @@ def cal_ser_QAM(data_rx, symbol_tx, M):
     M       : int
             QAM order
 
+    method : string
+       method to use for quantization (either af for arrayfire or pyx for cython)
+
     Returns
     -------
     SER : float
        Symbol error rate estimate
     """
-    data_demod = QAMquantize(data_rx, M)[0]
+    data_demod = quantize(data_rx, M, method)
     return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)

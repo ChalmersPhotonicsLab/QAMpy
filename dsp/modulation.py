@@ -1,55 +1,14 @@
 from __future__ import division
 import numpy as np
-try:
-    import arrayfire as af
-except ImportError:
-    af = None
 from bitarray import bitarray
 from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise, rrcos_resample_poly, rrcos_resample_zeroins
 from .prbs import make_prbs_extXOR
-from .equalisation import quantize as quantize_pyx
 from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
 from . import theory
 from . import ber_functions
 from . import utils
+from .signal_quality import quantize
 from .phaserecovery import NMAX
-
-def quantize(signal, symbols, method="pyx", **kwargs):
-    if method == "pyx":
-        return quantize_pyx(signal, symbols, **kwargs)
-    elif method == "af":
-        if af == None:
-            raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
-        return quantize_af(signal, symbols, **kwargs)
-    else:
-        raise ValueError("method '%s' unknown has to be either 'pyx' or 'af'"%(method))
-
-
-def quantize_af(signal, symbols, precision=16):
-    global  NMAX
-    if precision == 16:
-        prec_dtype = np.complex128
-    elif precision == 8:
-        prec_dtype = np.complex64
-    else:
-        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
-    Nmax = NMAX//len(symbols.flatten())//16
-    L = signal.flatten().shape[0]
-    sig = af.np_to_af_array(signal.flatten().astype(prec_dtype))
-    sym = af.transpose(af.np_to_af_array(symbols.flatten().astype(prec_dtype)))
-    tmp = af.constant(0, L, dtype=af.Dtype.c64)
-    if L < Nmax:
-        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig,sym)), dim=1)
-        tmp = af.transpose(sym)[idx]
-    else:
-        steps = L//Nmax
-        rem = L%Nmax
-        for i in range(steps):
-            v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[i*Nmax:(i+1)*Nmax],sym)), dim=1)
-            tmp[i*Nmax:(i+1)*Nmax] = af.transpose(sym)[idx]
-        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[steps*Nmax:],sym)), dim=1)
-        tmp[steps*Nmax:] = af.transpose(sym)[idx]
-    return np.array(tmp)
 
 
 class QAMModulator(object):
