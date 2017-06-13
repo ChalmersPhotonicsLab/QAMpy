@@ -1,7 +1,6 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
-from .utils import apply_phase_noise, bool2bin, cabssquared, convert_iqtosinglebitstream, normalise_and_center, resample, rrcos_resample_zeroins
 from .prbs import make_prbs_extXOR
 from .theory import calculate_MQAM_scaling_factor, calculate_MQAM_symbols, gray_code_for_qam
 from . import theory
@@ -105,7 +104,7 @@ class QAMModulator(object):
         idx      : array_like
             1D array of indices into QAMmodulator.symbols
         """
-        signal = normalise_and_center(signal)
+        signal = utils.normalise_and_center(signal)
         return quantize(normalise_and_center(signal), self.symbols)
 
     def cal_EVM(self, signal, syms=None):
@@ -141,7 +140,7 @@ class QAMModulator(object):
             syms = self.quantize(signal)
         else:
             syms, signal_ad = self._sync_and_adjust(syms, signal)
-        return np.sqrt(np.mean(cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
+        return np.sqrt(np.mean(utils.cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
 
     def generate_signal(self,
                       N,
@@ -213,16 +212,16 @@ class QAMModulator(object):
         if resample_noise:
             if snr is not None:
                 outdata = utils.add_awgn(symbols, 10**(-snr/20))
-            outdata = resample(baudrate, samplingrate, outdata)
+            outdata = utils.resample(baudrate, samplingrate, outdata)
         else:
             os = samplingrate/baudrate
-            outdata = rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
+            outdata = utils.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
             if snr is not None:
                 outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
         outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
         # not 100% clear if we should apply before or after resampling
         if lw_LO:
-            outdata = apply_phase_noise(outdata, lw_LO, samplingrate)
+            outdata = utils.apply_phase_noise(outdata, lw_LO, samplingrate)
         return outdata, symbols, bitsq
 
     def theoretical_SER(self, snr):
@@ -281,7 +280,7 @@ class QAMModulator(object):
                 acm = act
         return s_tx_sync
 
-    def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15,bool2bin(np.ones(15)))):
+    def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15, utils.bool2bin(np.ones(15)))):
         """
         Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
 
@@ -360,4 +359,4 @@ def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,Non
     else:
         bitsq1 = np.random.randint(0, high=2, size=Nbits[0]).astype(np.bool)
         bitsq2 = np.random.randint(0, high=2, size=Nbits[1]).astype(np.bool)
-    return convert_iqtosinglebitstream(bitsq1, bitsq2, bits)
+    return utils.convert_iqtosinglebitstream(bitsq1, bitsq2, bits)
