@@ -280,6 +280,39 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Nit
 
     return eq_pilots, shift_factor, wx, foe_corse, test_out
 
+def find_const_phase_offset(rec_pilots, ref_symbs):
+    """
+    Finds and corrects a constant phase offset between the decoded pilot 
+    symbols and the transmitted ones
+    
+    Input:
+        rec_pilots: Complex received pilots (after FOE and alignment)
+        ref_symbs: Corresponding transmitted pilot symbols (aligned!)
+        
+    Output:
+        phase_corr_pilots: Phase corrected pilot symbols
+        phase_corr: Corresponding phase offset per mode
+    
+    """
+    
+    rec_pilots_after_foe = np.atleast_2d(rec_pilots_after_foe)
+    ref_symbs = np.atleast_2d(ref_symbs)
+    npols = rec_pilots_after_foe.shape[0]
+    
+    
+    phase_corr = np.zeros([npols,1],dtype = float)
+    phase_corr_pilots = np.zeros([npols,np.shape(rec_pilots_after_foe)[1]],dtype = complex)
+    
+    for l in range(npols):
+    
+        phase_corr[l] = np.mean(np.angle(ref_symbs[l,:].conj()*rec_pilots_after_foe[l,:]))
+        
+        phase_corr_pilots[l,:] = rec_pilots_after_foe[l,:] * np.exp(-1j*phase_corr[l,0])
+        
+        
+    return phase_corr_pilots, phase_corr
+    
+
 
 
 # Dynamic pilot_based equalization
@@ -300,12 +333,14 @@ foe, foePerMode, condNum = pilot_based_foe(eq_pilots,ref_symbs)
 
 comp_test = phaserecovery.comp_freq_offset(eq_pilots[0,:],foe)
 
+corr_pilots, phase_offset = find_const_phase_offset(comp_test,ref_symbs)
 
 #  Verification and plotting    
 plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')  
 
 plt.plot(comp_test[0,:].real,comp_test[0,:].imag,'.')  
 
+plt.plot(corr_pilots[0,:].real,corr_pilots[0,:].imag,'.')  
 #a = rec_pilots - ref_symbs
 #plt.plot(a.imag)
 #    
