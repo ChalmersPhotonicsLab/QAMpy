@@ -295,19 +295,19 @@ def find_const_phase_offset(rec_pilots, ref_symbs):
     
     """
     
-    rec_pilots_after_foe = np.atleast_2d(rec_pilots_after_foe)
+    rec_pilots = np.atleast_2d(rec_pilots)
     ref_symbs = np.atleast_2d(ref_symbs)
-    npols = rec_pilots_after_foe.shape[0]
+    npols = rec_pilots.shape[0]
     
     
     phase_corr = np.zeros([npols,1],dtype = float)
-    phase_corr_pilots = np.zeros([npols,np.shape(rec_pilots_after_foe)[1]],dtype = complex)
+    phase_corr_pilots = np.zeros([npols,np.shape(rec_pilots)[1]],dtype = complex)
     
     for l in range(npols):
     
-        phase_corr[l] = np.mean(np.angle(ref_symbs[l,:].conj()*rec_pilots_after_foe[l,:]))
+        phase_corr[l] = np.mean(np.angle(ref_symbs[l,:].conj()*rec_pilots[l,:]))
         
-        phase_corr_pilots[l,:] = rec_pilots_after_foe[l,:] * np.exp(-1j*phase_corr[l,0])
+        phase_corr_pilots[l,:] = rec_pilots[l,:] * np.exp(-1j*phase_corr[l,0])
         
         
     return phase_corr_pilots, phase_corr
