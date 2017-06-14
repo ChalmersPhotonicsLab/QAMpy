@@ -245,12 +245,12 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Nit
          
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
-        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse)   
+        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse[l,:])   
         
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # For DEBUG!!!
         test_out = equalisation.apply_filter(shortSeq,os,wx1)
-        test_out[l,:] = phaserecovery.comp_freq_offset(test_out[l,:], foe_corse)  
+        test_out[l,:] = phaserecovery.comp_freq_offset(test_out[l,:], foe_corse[l,:])  
         
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
@@ -304,7 +304,7 @@ comp_test = phaserecovery.comp_freq_offset(eq_pilots[0,:],foe)
 #  Verification and plotting    
 plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')  
 
-plt.plot(comp_test.real,comp_test.imag,'.')  
+plt.plot(comp_test[0,:].real,comp_test[0,:].imag,'.')  
 
 #a = rec_pilots - ref_symbs
 #plt.plot(a.imag)

@@ -130,7 +130,7 @@ frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(128,1)
 
 frame_symbs = np.roll(frame_symbs, 7230)
 
-tx_sig = sim_tx(frame_symbs, os,freqoff = 0*2e9)
+tx_sig = sim_tx(frame_symbs, os,freqoff = 1.8e9)
 
 
 """
