@@ -182,7 +182,7 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Niter = 10, adap_step = True):
+def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10, adap_step = True):
     """
     Locate and extract the pilot starting frame.
     
@@ -220,7 +220,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Nit
     # end to ensure that sufficient symbols can be used for the search
     sub_var = np.ones([npols,num_steps])*1e2        
     for i in np.arange(2,num_steps-3):
-        wx, err = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "mcma",adaptive_stepsize = adap_step) 
+        wx, err = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
         sub_var[:,i] = np.var(err[:,-symb_step_size/os+ntaps:],axis = 1)
     
     
@@ -239,7 +239,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Nit
         longSeq = rx_signal[:,(minPart-2)*symb_step_size:(minPart+3)*symb_step_size]
 
         # Use the first estimate to get rid of any large FO and simplify alignment
-        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "mcma",adaptive_stepsize = adap_step)    
+        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step)    
         seq_foe = equalisation.apply_filter(longSeq,os,wx1)
         foe_corse = phaserecovery.find_freq_offset(seq_foe)        
          
@@ -271,8 +271,8 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-5, M_pilot = 4, ntaps = 45, Nit
         
         # Tap update and extract the propper pilot sequuence
         pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps-1]
-        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "mcma",adaptive_stepsize = adap_step) 
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "mcma",adaptive_stepsize = adap_step) 
+        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
 #        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse, dual_pol = False) 
         eq_pilots[l,:] = symbs_out[l,:]
@@ -298,21 +298,27 @@ def find_const_phase_offset(rec_pilots, ref_symbs):
     rec_pilots = np.atleast_2d(rec_pilots)
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rec_pilots.shape[0]
-    
-    
+       
     phase_corr = np.zeros([npols,1],dtype = float)
     phase_corr_pilots = np.zeros([npols,np.shape(rec_pilots)[1]],dtype = complex)
     
-    for l in range(npols):
-    
+    for l in range(npols):    
         phase_corr[l] = np.mean(np.angle(ref_symbs[l,:].conj()*rec_pilots[l,:]))
         
-        phase_corr_pilots[l,:] = rec_pilots[l,:] * np.exp(-1j*phase_corr[l,0])
         
         
-    return phase_corr_pilots, phase_corr
+    return  phase_corr
     
 
+def correct_const_phase_offset(symbs, phase_offsets):
+    symbs = np.atleast_2d(symbs)
+    phase_offsets = np.atleast_2d(phase_offsets)
+    npols = symbs.shape[0]
+
+    for l in range(npols):
+        symbs[l,:] = symbs[l,:] * np.exp(-1j*phase_offsets[l,0])
+        
+    return symbs
 
 
 # Dynamic pilot_based equalization
@@ -323,17 +329,22 @@ def find_const_phase_offset(rec_pilots, ref_symbs):
 #rec_signal = np.roll(tx_sig2[0,:], 7400)
 rec_signal = tx_sig
 ref_symbs = pilot_symbs[0,0:256]
+
+# Frame sync
 eq_pilots, shift_factor , wx, corse_foe,  test_out = frame_sync(rec_signal, ref_symbs, os)
 
+tmp_signal = rec_signal[:,shift_factor:shift_factor+45]
 
-
-test_sig = rec_signal[:,shift_factor:shift_factor+pilot_seq_len*os+25-1]
-
+# Foe estimate
 foe, foePerMode, condNum = pilot_based_foe(eq_pilots,ref_symbs)
 
+# Remove FOE from pilots
 comp_test = phaserecovery.comp_freq_offset(eq_pilots[0,:],foe)
 
-corr_pilots, phase_offset = find_const_phase_offset(comp_test,ref_symbs)
+# Correct static phase difference between the Tx and Rx pilots
+phase_offset = find_const_phase_offset(comp_test,ref_symbs)
+
+comp_test = correct_const_phase_offset(comp_test,phase_offset)
 
 #  Verification and plotting    
 plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')  
@@ -341,6 +352,23 @@ plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')
 plt.plot(comp_test[0,:].real,comp_test[0,:].imag,'.')  
 
 plt.plot(corr_pilots[0,:].real,corr_pilots[0,:].imag,'.')  
+
+#Extract the real signal
+test_sig = equalisation.apply_filter(rec_signal[:,shift_factor:],os,wx)
+comp_test_sig = phaserecovery.comp_freq_offset(test_sig[0,:],foe)
+comp_test_sig = correct_const_phase_offset(comp_test_sig,phase_offset)
+
+
+
+
+plt.plot(comp_test_sig[0,:1000].real,comp_test_sig[0,:1000].imag,'.')
+
+
+
+
+#wx1, err = equalisation.equalise_signal(pilot_seq, os, mu, 32,Ntaps = ntaps, Niter = Niter, method = "mcma",adaptive_stepsize = adap_step) 
+
+
 #a = rec_pilots - ref_symbs
 #plt.plot(a.imag)
 #    
