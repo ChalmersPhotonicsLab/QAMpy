@@ -128,9 +128,9 @@ PRBSseed=None
 
 frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(32,1)
 
-frame_symbs = np.roll(frame_symbs, 7230)
+frame_symbs = np.roll(frame_symbs, 6523)
 
-tx_sig = sim_tx(frame_symbs, os,freqoff = 1.8e9)
+tx_sig = sim_tx(frame_symbs, os,freqoff = 1.7e9)
 
 
 """

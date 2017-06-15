@@ -73,59 +73,68 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     Output:
         data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
     """
+    
+    rec_symbs = np.atleast_2d(rec_symbs)
+    pilot_symbs = np.atleast_2d(pilot_symbs)
+    npols = rec_symbs.shape[0]
+    
+    
     # Extract the pilot symbols
-    rec_pilots = rec_symbs[::pilot_ins_ratio]
+    rec_pilots = rec_symbs[:,::pilot_ins_ratio]
     
     # Remove every X pilot symbol if selected
-    rec_pilots = rec_pilots[::use_pilot_ratio]
-    
+    rec_pilots = rec_pilots[:,::use_pilot_ratio]
     
     # If not a complete block, remove the remaning symbols
-    if len(pilot_symbs)> np.floor(len(rec_symbs)/(pilot_ins_ratio*use_pilot_ratio)):
-        pilot_symbs = pilot_symbs[:len(rec_symbs)]
-        
+    if len(pilot_symbs[0,:])> np.floor(len(rec_symbs[0,:])/(pilot_ins_ratio*use_pilot_ratio)):
+        pilot_symbs[:,:] = pilot_symbs[:,:len(rec_symbs)]
+    
+    
     # Should be an odd number to keey symmetry in averaging
     if not(num_average % 2):
         num_average += 1
     
-    # Calculate phase respons
-    res_phase = pilot_symbs.conjugate()*rec_pilots
-    pilot_phase = np.unwrap(np.angle(res_phase))
-    
-    # Fix! Need moving average in numpy
-    pilot_phase_average = moving_average(pilot_phase,num_average)
-    pilot_phase = [pilot_phase[:(num_average-1) / 2], pilot_phase_average]
-       
-    # Pilot positions in the received data set
-    pilot_pos = np.arange(0,len(pilot_phase),pilot_ins_ratio*use_pilot_ratio)
-    
-    # Lineary interpolate the phase evolution
-    phase_evol = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio),\
-                           pilot_pos,pilot_phase)
-    
-    # Compensate phase
-    comp_symbs = rec_symbs*np.exp(-1j*phase_evol)
-    
     # Allocate output memory
-    out_size = np.shape(rec_symbs)
-    data_symbs = np.zeros(out_size[0],out_size[1]-len(pilot_symbs))
+    data_symbs = np.zeros([npols,len(rec_symbs[0,:]) -len(pilot_symbs[0,:])], dtype = complex)
     
-    # Allocate output by removing pilots
-    block_len = (pilot_ins_ratio*use_pilot_ratio) - 1
-    for i in range(len(pilot_symbs)):
-        data_symbs[i*block_len:(i+1)*block_len] = \
-                   comp_symbs[i*(pilot_ins_ratio*use_pilot_ratio):\
-                              (i+1)*(pilot_ins_ratio*use_pilot_ratio)]
+    
+    for l in range(npols):
+    
+        # Calculate phase respons
+        res_phase = pilot_symbs[l,:].conjugate()*rec_pilots[l,:]
+        pilot_phase = np.unwrap(np.angle(res_phase))
+        
+        # Fix! Need moving average in numpy
+        pilot_phase_average = moving_average(pilot_phase,num_average)
+        pilot_phase = [pilot_phase[:(num_average-1) / 2], pilot_phase_average]
+           
+        # Pilot positions in the received data set
+        pilot_pos = np.arange(0,len(pilot_phase),pilot_ins_ratio*use_pilot_ratio)
+        
+        # Lineary interpolate the phase evolution
+        phase_evol = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio),\
+                               pilot_pos,pilot_phase)
+        
+        # Compensate phase
+        comp_symbs = rec_symbs[l,:]*np.exp(-1j*phase_evol)
+
+        # Allocate output by removing pilots
+        block_len = (pilot_ins_ratio*use_pilot_ratio) - 1
+        for i in range(len(pilot_symbs)):
+            data_symbs[l,i*block_len:(i+1)*block_len] = \
+                       comp_symbs[i*(pilot_ins_ratio*use_pilot_ratio):\
+                                  (i+1)*(pilot_ins_ratio*use_pilot_ratio)]
+   
     
     # If additional pilots are in between, throw them out
-    pilot_pos = np.arange(0,len(pilot_symbs),pilot_ins_ratio)
+    pilot_pos = np.arange(0,len(pilot_symbs[0,:]),pilot_ins_ratio)
     for i in range(0,len(pilot_pos)):
         if (pilot_pos[i]%(pilot_ins_ratio*use_pilot_ratio)) == 0:
             print(pilot_pos[i])
             pilot_pos[i] = 0
             
     pilot_pos = pilot_pos[pilot_pos != 0]    
-    data_symbs = np.delete(data_symbs,pilot_pos)   
+    data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)   
     
     return data_symbs
     
@@ -338,7 +347,7 @@ comp_test = phaserecovery.comp_freq_offset(eq_pilots[0,:],foe)
 # Correct static phase difference between the Tx and Rx pilots
 phase_offset = find_const_phase_offset(comp_test,ref_symbs)
 
-comp_test = correct_const_phase_offset(comp_test,phase_offset)
+corr_pilots = correct_const_phase_offset(comp_test,phase_offset)
 
 #  Verification and plotting    
 plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')  
