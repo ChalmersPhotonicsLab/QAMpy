@@ -76,7 +76,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     # Extract the pilot symbols
     rec_pilots = rec_symbs[::pilot_ins_ratio]
     
-    # Remove every X pilot symbol if wanted
+    # Remove every X pilot symbol if selected
     rec_pilots = rec_pilots[::use_pilot_ratio]
     
     
@@ -95,8 +95,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     # Fix! Need moving average in numpy
     pilot_phase_average = moving_average(pilot_phase,num_average)
     pilot_phase = [pilot_phase[:(num_average-1) / 2], pilot_phase_average]
-    
-    
+       
     # Pilot positions in the received data set
     pilot_pos = np.arange(0,len(pilot_phase),pilot_ins_ratio*use_pilot_ratio)
     
@@ -125,10 +124,8 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
             print(pilot_pos[i])
             pilot_pos[i] = 0
             
-    pilot_pos = pilot_pos[pilot_pos != 0]
-    
-    data_symbs = np.delete(data_symbs,pilot_pos)
-    
+    pilot_pos = pilot_pos[pilot_pos != 0]    
+    data_symbs = np.delete(data_symbs,pilot_pos)   
     
     return data_symbs
     
@@ -245,12 +242,12 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
          
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
-        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse[l,:])   
+        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse[l,:])
         
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # For DEBUG!!!
         test_out = equalisation.apply_filter(shortSeq,os,wx1)
-        test_out[l,:] = phaserecovery.comp_freq_offset(test_out[l,:], foe_corse[l,:])  
+        test_out[l,:] = phaserecovery.comp_freq_offset(test_out[l,:], foe_corse[l,:])
         
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         
@@ -298,15 +295,12 @@ def find_const_phase_offset(rec_pilots, ref_symbs):
     rec_pilots = np.atleast_2d(rec_pilots)
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rec_pilots.shape[0]
-       
+
     phase_corr = np.zeros([npols,1],dtype = float)
-    phase_corr_pilots = np.zeros([npols,np.shape(rec_pilots)[1]],dtype = complex)
     
     for l in range(npols):    
         phase_corr[l] = np.mean(np.angle(ref_symbs[l,:].conj()*rec_pilots[l,:]))
-        
-        
-        
+
     return  phase_corr
     
 
@@ -317,7 +311,7 @@ def correct_const_phase_offset(symbs, phase_offsets):
 
     for l in range(npols):
         symbs[l,:] = symbs[l,:] * np.exp(-1j*phase_offsets[l,0])
-        
+
     return symbs
 
 
@@ -358,7 +352,7 @@ test_sig = equalisation.apply_filter(rec_signal[:,shift_factor:],os,wx)
 comp_test_sig = phaserecovery.comp_freq_offset(test_sig[0,:],foe)
 comp_test_sig = correct_const_phase_offset(comp_test_sig,phase_offset)
 
-
+pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
 
 
 plt.plot(comp_test_sig[0,:1000].real,comp_test_sig[0,:1000].imag,'.')

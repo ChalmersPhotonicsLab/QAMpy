@@ -108,7 +108,7 @@ Testing the transmitter
 M = 64
 os = 2
 symb_rate = 20e9
-snr = 30 #dB
+snr = 20 #dB
 linewidth = None # Linewidth symbol-rate product
 fo = 10 # Frequency offset MHz out
 
@@ -126,7 +126,7 @@ PRBSorder=15,
 PRBSseed=None
 
 
-frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(128,1)
+frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(32,1)
 
 frame_symbs = np.roll(frame_symbs, 7230)
 
