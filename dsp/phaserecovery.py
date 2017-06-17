@@ -500,13 +500,13 @@ def comp_freq_offset(sig, freq_offset, os=1 ):
     npols = sig.shape[0]
 
     # Output Vector
-    comp_signal = np.zeros([1,np.shape(sig)[1]],dtype=complex)
+    comp_signal = np.zeros([npols,np.shape(sig)[1]],dtype=complex)
 
     # Fix output
     sig_len = len(sig[0,:])
     time_vec = np.arange(1,sig_len + 1,dtype = float)
     for l in range(npols):
         lin_phase = 2 * np.pi * time_vec * freq_offset[l] /  os
-        comp_signal[l] = sig[l] * np.exp(-1j * lin_phase)
+        comp_signal[l,:] = sig[l,:] * np.exp(-1j * lin_phase)
 
     return comp_signal
