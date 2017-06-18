@@ -54,7 +54,7 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     
     return foe, foePerMode, condNum
 
-def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1, max_num_blocks = None):
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1, max_num_blocks = 35):
     """
     Carrier phase recovery using periodically inserted symbols.
     
@@ -82,14 +82,16 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     
     # Extract the pilot symbols
     numBlocks = np.floor(np.shape(rec_symbs)[1]/pilot_ins_ratio)
+    # If selected, only process a limited number of blocks. 
+    if (max_num_blocks is not None) and numBlocks > max_num_blocks:
+        numBlocks = max_num_blocks   
+    
     rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
     rec_pilots = rec_pilots[:,:numBlocks]
     rec_symbs = rec_symbs[:,:pilot_ins_ratio*numBlocks]
     
 
-    # If selected, only process a limited number of blocks. 
-    if (max_num_blocks is not None) and numBlocks > max_num_blocks:
-        numBlocks = max_num_blocks    
+ 
 
     
     numRefPilots = np.shape(pilot_symbs)[1]   
@@ -115,8 +117,9 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
         num_average += 1
     
     # Allocate output memory
-    data_symbs = np.zeros([npols,len(rec_symbs[0,:]) -len(pilot_symbs[0,:])], dtype = complex)
-    data_symbs = np.zeros([npols,len(rec_symbs[0,:])], dtype = complex)
+    data_symbs = np.zeros([npols,np.shape(rec_symbs)[1]], dtype = complex)
+    
+    phase_trace = np.zeros([npols,np.shape(rec_symbs)[1]])
     
     for l in range(npols):
     
@@ -136,12 +139,12 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
 
 
         # Lineary interpolate the phase evolution
-        phase_evol = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio),\
+        phase_trace[l,:] = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio),\
                                pilot_pos,pilot_phase)
 
         
         # Compensate phase
-        comp_symbs = rec_symbs[l,:]*np.exp(-1j*phase_evol)
+        comp_symbs = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
 
         # Allocate output by removing pilots
         block_len = (pilot_ins_ratio*use_pilot_ratio)
@@ -162,7 +165,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     pilot_pos = pilot_pos[pilot_pos != 0]    
     data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)   
     
-    return data_symbs, pilot_pos, comp_symbs
+    return data_symbs, phase_trace
     
     
 def moving_average(sig, n=3):
@@ -390,9 +393,10 @@ comp_test_sig = phaserecovery.comp_freq_offset(test_sig[0,:],foe)
 comp_test_sig = correct_const_phase_offset(comp_test_sig,phase_offset)
 plt.plot(comp_test_sig[0,:1000].real,comp_test_sig[0,:1000].imag,'.')
 
-phase_comp_symbs, pil_pos, comp_symbs = pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
+phase_comp_symbs, phase_trace = pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
 
 plt.hexbin(phase_comp_symbs[0,:].real, phase_comp_symbs[0,:].imag)
+plt.plot(phase_trace[0,:])
 
 
 
