@@ -108,9 +108,6 @@ Testing the transmitter
 M = 64
 os = 2
 symb_rate = 20e9
-snr = 20 #dB
-linewidth = None # Linewidth symbol-rate product
-fo = 10 # Frequency offset MHz out
 
 # Pilot Settings
 
@@ -130,7 +127,7 @@ frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(M,1)
 
 frame_symbs = np.roll(frame_symbs, 6523)
 
-tx_sig = sim_tx(frame_symbs, os,freqoff = 1.7e9)
+tx_sig = sim_tx(frame_symbs, os,snr = 20, linewidth = 100e3, freqoff = 1.7e9)
 
 
 """

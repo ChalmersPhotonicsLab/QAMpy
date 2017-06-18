@@ -54,7 +54,7 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     
     return foe, foePerMode, condNum
 
-def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1, max_num_blocks = None):
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None):
     """
     Carrier phase recovery using periodically inserted symbols.
     
@@ -134,7 +134,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
 
 
         # Lineary interpolate the phase evolution
-        phase_trace[l,:] = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio),\
+        phase_trace[l,:] = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio),\
                                pilot_pos,pilot_phase)
 
         
@@ -322,7 +322,7 @@ def correct_const_phase_offset(symbs, phase_offsets):
 
 
 # Tx Config
-M = 32
+
 os = 2
 symb_rate = 20e9
 snr = None #dB
@@ -392,5 +392,5 @@ plt.title('Phase trace')
 plt.figure()
 plt.hexbin(phase_comp_symbs[0,:].real, phase_comp_symbs[0,:].imag)
 
-
-
+QAM = modulation.QAMModulator(M)
+evmEx = QAM.cal_EVM(phase_comp_symbs[0,:])
