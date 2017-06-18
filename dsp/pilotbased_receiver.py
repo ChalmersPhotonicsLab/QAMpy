@@ -54,7 +54,7 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     
     return foe, foePerMode, condNum
 
-def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1):
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1, max_num_blocks = None):
     """
     Carrier phase recovery using periodically inserted symbols.
     
@@ -69,6 +69,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
             by 15 data symbols
         num_average: Number of pilot symbols to average over to avoid noise. 
         use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
+        max_num_blocks: Maximum number of blocks to process
         
     Output:
         data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
@@ -80,15 +81,34 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     
     
     # Extract the pilot symbols
-    rec_pilots = rec_symbs[:,::pilot_ins_ratio]
+    numBlocks = np.floor(np.shape(rec_symbs)[1]/pilot_ins_ratio)
+    rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
+    rec_pilots = rec_pilots[:,:numBlocks]
+    rec_symbs = rec_symbs[:,:pilot_ins_ratio*numBlocks]
+    
+
+    # If selected, only process a limited number of blocks. 
+    if (max_num_blocks is not None) and numBlocks > max_num_blocks:
+        numBlocks = max_num_blocks    
+
+    
+    numRefPilots = np.shape(pilot_symbs)[1]   
+
+    if numBlocks > numRefPilots:
+        print("HEJ")
+        print("HEJ")
+        numBlocks = numRefPilots
+        rec_symbs = rec_symbs[:,numBlocks*pilot_ins_ratio]
+        rec_pilots = rec_pilots[:,:numBlocks]
+    elif numRefPilots > numBlocks:
+        print("HEJ")
+        print("HEJ")
+        pilot_symbs = pilot_symbs[:,:numBlocks]
     
     # Remove every X pilot symbol if selected
     rec_pilots = rec_pilots[:,::use_pilot_ratio]
-    
-    # If not a complete block, remove the remaning symbols
-    if len(pilot_symbs[0,:])> np.floor(len(rec_symbs[0,:])/(pilot_ins_ratio*use_pilot_ratio)):
-        pilot_symbs[:,:] = pilot_symbs[:,:len(rec_symbs)]
-    
+    pilot_symbs = pilot_symbs[:,::use_pilot_ratio]    
+        
     
     # Should be an odd number to keey symmetry in averaging
     if not(num_average % 2):
@@ -96,7 +116,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     
     # Allocate output memory
     data_symbs = np.zeros([npols,len(rec_symbs[0,:]) -len(pilot_symbs[0,:])], dtype = complex)
-    
+    data_symbs = np.zeros([npols,len(rec_symbs[0,:])], dtype = complex)
     
     for l in range(npols):
     
@@ -104,26 +124,32 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
         res_phase = pilot_symbs[l,:].conjugate()*rec_pilots[l,:]
         pilot_phase = np.unwrap(np.angle(res_phase))
         
+        plt.plot(pilot_phase)
+        
         # Fix! Need moving average in numpy
-        pilot_phase_average = moving_average(pilot_phase,num_average)
-        pilot_phase = [pilot_phase[:(num_average-1) / 2], pilot_phase_average]
+#        pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
+#        pilot_phase = [pilot_phase[:(num_average-1) / 2], pilot_phase_average]
            
         # Pilot positions in the received data set
-        pilot_pos = np.arange(0,len(pilot_phase),pilot_ins_ratio*use_pilot_ratio)
+        pilot_pos = np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
         
+
+
         # Lineary interpolate the phase evolution
         phase_evol = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio),\
                                pilot_pos,pilot_phase)
+
         
         # Compensate phase
         comp_symbs = rec_symbs[l,:]*np.exp(-1j*phase_evol)
 
         # Allocate output by removing pilots
-        block_len = (pilot_ins_ratio*use_pilot_ratio) - 1
-        for i in range(len(pilot_symbs)):
-            data_symbs[l,i*block_len:(i+1)*block_len] = \
-                       comp_symbs[i*(pilot_ins_ratio*use_pilot_ratio):\
-                                  (i+1)*(pilot_ins_ratio*use_pilot_ratio)]
+        block_len = (pilot_ins_ratio*use_pilot_ratio)
+        for i in range(np.shape(pilot_symbs)[1]):
+            print(i)
+            print(np.shape(comp_symbs))
+            data_symbs[l,i*(block_len):(i+1)*(block_len)] = \
+                       comp_symbs[i*block_len:(i+1)*block_len]
    
     
     # If additional pilots are in between, throw them out
@@ -136,7 +162,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     pilot_pos = pilot_pos[pilot_pos != 0]    
     data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)   
     
-    return data_symbs
+    return data_symbs, pilot_pos, comp_symbs
     
     
 def moving_average(sig, n=3):
@@ -157,30 +183,6 @@ def moving_average(sig, n=3):
     return ret[n-1:]/n
 
 
-# Tx Config
-M = 32
-os = 2
-symb_rate = 20e9
-snr = None #dB
-linewidth = None # Linewidth symbol-rate product
-fo = None # Frequency offset MHz
-
-# Pilot Settings
-
-# Total frame length
-frame_length = 2**18
-# Initial number of pilot tones for equalizer pre-convergence
-pilot_seq_len = 256
-# Repetative pilot symbols for phase tracking and equalizer update
-pilot_ins_ratio = 32 
-# Settings if PRBS is seleted for generation
-PRBS = False
-
-# Var names from Tx
-
-#frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(128)
-
-#tx_sig = sim_tx(frame_symbs, os)
 
 """
  
@@ -324,6 +326,32 @@ def correct_const_phase_offset(symbs, phase_offsets):
     return symbs
 
 
+# Tx Config
+M = 32
+os = 2
+symb_rate = 20e9
+snr = None #dB
+linewidth = None # Linewidth symbol-rate product
+fo = None # Frequency offset MHz
+
+# Pilot Settings
+
+# Total frame length
+frame_length = 2**18
+# Initial number of pilot tones for equalizer pre-convergence
+pilot_seq_len = 256
+# Repetative pilot symbols for phase tracking and equalizer update
+pilot_ins_ratio = 32 
+# Settings if PRBS is seleted for generation
+PRBS = False
+
+# Var names from Tx
+
+#frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(128)
+
+#tx_sig = sim_tx(frame_symbs, os)
+
+
 # Dynamic pilot_based equalization
 #def pilotbased_equalization(rx_signal,os,wx, start_point ):
 
@@ -360,11 +388,12 @@ plt.plot(corr_pilots[0,:].real,corr_pilots[0,:].imag,'.')
 test_sig = equalisation.apply_filter(rec_signal[:,shift_factor:],os,wx)
 comp_test_sig = phaserecovery.comp_freq_offset(test_sig[0,:],foe)
 comp_test_sig = correct_const_phase_offset(comp_test_sig,phase_offset)
-
-pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
-
-
 plt.plot(comp_test_sig[0,:1000].real,comp_test_sig[0,:1000].imag,'.')
+
+phase_comp_symbs, pil_pos, comp_symbs = pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
+
+plt.hexbin(phase_comp_symbs[0,:].real, phase_comp_symbs[0,:].imag)
+
 
 
 
