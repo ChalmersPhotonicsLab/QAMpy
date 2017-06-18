@@ -54,7 +54,7 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     
     return foe, foePerMode, condNum
 
-def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1, max_num_blocks = 35):
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, use_pilot_ratio = 1, max_num_blocks = None):
     """
     Carrier phase recovery using periodically inserted symbols.
     
@@ -86,25 +86,20 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     if (max_num_blocks is not None) and numBlocks > max_num_blocks:
         numBlocks = max_num_blocks   
     
+    # Adapt for number of blocks
     rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
     rec_pilots = rec_pilots[:,:numBlocks]
     rec_symbs = rec_symbs[:,:pilot_ins_ratio*numBlocks]
     
 
- 
-
-    
+    # Check that the number of blocks are equal and is valid
     numRefPilots = np.shape(pilot_symbs)[1]   
-
     if numBlocks > numRefPilots:
-        print("HEJ")
-        print("HEJ")
+
         numBlocks = numRefPilots
         rec_symbs = rec_symbs[:,numBlocks*pilot_ins_ratio]
         rec_pilots = rec_pilots[:,:numBlocks]
     elif numRefPilots > numBlocks:
-        print("HEJ")
-        print("HEJ")
         pilot_symbs = pilot_symbs[:,:numBlocks]
     
     # Remove every X pilot symbol if selected
@@ -130,8 +125,8 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
         plt.plot(pilot_phase)
         
         # Fix! Need moving average in numpy
-#        pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
-#        pilot_phase = [pilot_phase[:(num_average-1) / 2], pilot_phase_average]
+        pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
+        pilot_phase = np.hstack([pilot_phase[:(num_average-1) / 2], pilot_phase_average])
            
         # Pilot positions in the received data set
         pilot_pos = np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
@@ -149,8 +144,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
         # Allocate output by removing pilots
         block_len = (pilot_ins_ratio*use_pilot_ratio)
         for i in range(np.shape(pilot_symbs)[1]):
-            print(i)
-            print(np.shape(comp_symbs))
             data_symbs[l,i*(block_len):(i+1)*(block_len)] = \
                        comp_symbs[i*block_len:(i+1)*block_len]
    
@@ -159,7 +152,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
     pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
     for i in range(0,len(pilot_pos)):
         if not((pilot_pos[i]%(pilot_ins_ratio*use_pilot_ratio)) == 0):
-            print(pilot_pos[i])
             pilot_pos[i] = 0
             
     pilot_pos = pilot_pos[pilot_pos != 0]    
@@ -348,15 +340,6 @@ pilot_ins_ratio = 32
 # Settings if PRBS is seleted for generation
 PRBS = False
 
-# Var names from Tx
-
-#frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(128)
-
-#tx_sig = sim_tx(frame_symbs, os)
-
-
-# Dynamic pilot_based equalization
-#def pilotbased_equalization(rx_signal,os,wx, start_point ):
 
 #Code for testing using the transmitter
     
@@ -380,49 +363,34 @@ phase_offset = find_const_phase_offset(comp_test,ref_symbs)
 
 corr_pilots = correct_const_phase_offset(comp_test,phase_offset)
 
-#  Verification and plotting    
-plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')  
 
-plt.plot(comp_test[0,:].real,comp_test[0,:].imag,'.')  
-
-plt.plot(corr_pilots[0,:].real,corr_pilots[0,:].imag,'.')  
 
 #Extract the real signal
 test_sig = equalisation.apply_filter(rec_signal[:,shift_factor:],os,wx)
 comp_test_sig = phaserecovery.comp_freq_offset(test_sig[0,:],foe)
 comp_test_sig = correct_const_phase_offset(comp_test_sig,phase_offset)
-plt.plot(comp_test_sig[0,:1000].real,comp_test_sig[0,:1000].imag,'.')
+
 
 phase_comp_symbs, phase_trace = pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
 
-plt.hexbin(phase_comp_symbs[0,:].real, phase_comp_symbs[0,:].imag)
+
+#  Verification and plotting    
+plt.figure()
+plt.subplot(221)
+plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')
+plt.title('Pilots after Eq')  
+plt.subplot(222)
+plt.plot(comp_test[0,:].real,comp_test[0,:].imag,'.')  
+plt.title('Pilots after FOE')
+plt.subplot(223)
+plt.plot(corr_pilots[0,:].real,corr_pilots[0,:].imag,'.')  
+plt.title('Phase-corrected pilots')
+plt.subplot(224)
 plt.plot(phase_trace[0,:])
+plt.title('Phase trace')
+
+plt.figure()
+plt.hexbin(phase_comp_symbs[0,:].real, phase_comp_symbs[0,:].imag)
 
 
 
-
-
-
-#wx1, err = equalisation.equalise_signal(pilot_seq, os, mu, 32,Ntaps = ntaps, Niter = Niter, method = "mcma",adaptive_stepsize = adap_step) 
-
-
-#a = rec_pilots - ref_symbs
-#plt.plot(a.imag)
-#    
-#mu = 1e-3
-#M_pilot = 4
-#N_taps = 25
-#adap_step = True
-#Niter = 10
-#
-#
-#
-#plt.figure()
-#plt.plot(symbs_out[0,pilot_seq_len:].real,symbs_out[0,pilot_seq_len:].imag,'.')
-#plt.title("Equalized received symbols, including phase pilots")
-#plt.figure()
-#plt.plot(symbs_out[0,0:pilot_seq_len-5].real,symbs_out[0,0:pilot_seq_len-5].imag,'.')
-#plt.title("Equalized Pilots")
-#plt.figure()
-#plt.plot(np.abs(err[0]))
-#plt.tite("CMA Error")
