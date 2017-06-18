@@ -153,9 +153,9 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 3, us
    
     
     # If additional pilots are in between, throw them out
-    pilot_pos = np.arange(0,len(pilot_symbs[0,:]),pilot_ins_ratio)
+    pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
     for i in range(0,len(pilot_pos)):
-        if (pilot_pos[i]%(pilot_ins_ratio*use_pilot_ratio)) == 0:
+        if not((pilot_pos[i]%(pilot_ins_ratio*use_pilot_ratio)) == 0):
             print(pilot_pos[i])
             pilot_pos[i] = 0
             
@@ -393,6 +393,7 @@ plt.plot(comp_test_sig[0,:1000].real,comp_test_sig[0,:1000].imag,'.')
 phase_comp_symbs, pil_pos, comp_symbs = pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
 
 plt.hexbin(phase_comp_symbs[0,:].real, phase_comp_symbs[0,:].imag)
+
 
 
 
