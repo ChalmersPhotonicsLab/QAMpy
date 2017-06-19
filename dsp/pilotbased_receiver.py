@@ -54,7 +54,7 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     
     return foe, foePerMode, condNum
 
-def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None):
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 3, max_num_blocks = None):
     """
     Carrier phase recovery using periodically inserted symbols.
     
@@ -85,6 +85,11 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     # If selected, only process a limited number of blocks. 
     if (max_num_blocks is not None) and numBlocks > max_num_blocks:
         numBlocks = max_num_blocks   
+    
+    # Make sure that a given number of pilots can be used
+    if (numBlocks % use_pilot_ratio):
+        numBlocks -= (numBlocks % use_pilot_ratio)
+            
     
     # Adapt for number of blocks
     rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
