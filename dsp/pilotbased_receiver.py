@@ -54,7 +54,7 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     
     return foe, foePerMode, condNum
 
-def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 3, max_num_blocks = None):
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None):
     """
     Carrier phase recovery using periodically inserted symbols.
     
@@ -88,8 +88,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     
     # Make sure that a given number of pilots can be used
     if (numBlocks % use_pilot_ratio):
-        numBlocks -= (numBlocks % use_pilot_ratio)
-            
+        numBlocks -= (numBlocks % use_pilot_ratio)            
     
     # Adapt for number of blocks
     rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
@@ -135,13 +134,10 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
            
         # Pilot positions in the received data set
         pilot_pos = np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
-        
-
 
         # Lineary interpolate the phase evolution
         phase_trace[l,:] = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio),\
                                pilot_pos,pilot_phase)
-
         
         # Compensate phase
         comp_symbs = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
@@ -181,8 +177,6 @@ def moving_average(sig, n=3):
     ret[n:] = ret[n:] - ret[:-n]
     
     return ret[n-1:]/n
-
-
 
 """
  
@@ -378,6 +372,8 @@ comp_test_sig = correct_const_phase_offset(comp_test_sig,phase_offset)
 
 phase_comp_symbs, phase_trace = pilot_based_cpe(comp_test_sig[0,256:],pilot_symbs[0,256:], pilot_ins_ratio, num_average = 1)
 
+QAM = modulation.QAMModulator(M)
+bps_out = phaserecovery.blindphasesearch(comp_test_sig[0,:],64,QAM.symbols, 128)
 
 #  Verification and plotting    
 plt.figure()
@@ -396,6 +392,8 @@ plt.title('Phase trace')
 
 plt.figure()
 plt.hexbin(phase_comp_symbs[0,:].real, phase_comp_symbs[0,:].imag)
+plt.title('Pilot-based: EVM %2.2f%%'%(QAM.cal_EVM(phase_comp_symbs[0,:])*100))
+plt.figure()
+plt.hexbin(bps_out[0].real, bps_out[0].imag)
+plt.title('BPS:  EVM %2.2f%%'%(QAM.cal_EVM(bps_out[0])*100))
 
-QAM = modulation.QAMModulator(M)
-evmEx = QAM.cal_EVM(phase_comp_symbs[0,:])

@@ -87,7 +87,7 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
             sig[l,:] = utils.add_awgn(sig[l,:],10**(-snr/20)*np.sqrt(os))
         
         # Add Phase Noise
-        if linewidth is not None:       
+        if linewidth is not None:    
             sig[l,:] = sig[l,:]*np.exp(1j*utils.phase_noise(sig[l,:].shape, linewidth, symb_rate * os ))
         
         # Add FOE
@@ -105,7 +105,7 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
 Testing the transmitter
 """
 # Tx Config
-M = 64
+M = 128
 os = 2
 symb_rate = 20e9
 
@@ -127,7 +127,7 @@ frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(M,1)
 
 frame_symbs = np.roll(frame_symbs, 6523)
 
-tx_sig = sim_tx(frame_symbs, os,snr = 20, linewidth = 100e3, freqoff = 1.7e9)
+tx_sig = sim_tx(frame_symbs, os,snr = 25, linewidth = 1e5, freqoff = 5e8)
 
 
 """
