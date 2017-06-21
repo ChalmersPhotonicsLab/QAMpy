@@ -16,7 +16,7 @@ def q_function(x):
     """
     return 0.5*erfc(x/np.sqrt(2))
 
-def ser_vs_esn0_qam(snr, M):
+def ser_vs_es_over_n0_qam(snr, M):
     """Calculate the symbol error rate (SER) of an M-QAM signal as a function
     of Es/N0 (Symbol energy over noise energy, given in linear units. Works
     only correctly for M > 4"""
@@ -54,7 +54,7 @@ def ber_vs_evm_qam(evm_dB, M):
     return ber
 
 
-def ber_vs_esn0_qam(snr, M):
+def ber_vs_es_over_n0_qam(snr, M):
     """
     Bit-error-rate vs signal to noise ratio after formula in _[1].
 
@@ -81,13 +81,13 @@ def ber_vs_esn0_qam(snr, M):
     ber = 2*(1-1/L)/np.log2(L)*q_function(np.sqrt(3*np.log2(L)/(L**2-1)*(2*snr/np.log2(M))))
     return ber
 
-def ser_vs_esn0_psk(snr, M):
+def ser_vs_es_over_n0_psk(snr, M):
     """Calculate the symbol error rate (SER) of an M-PSK signal as a function
     of Es/N0 (Symbol energy over noise energy, given in linear units"""
     return erfc(np.sqrt(snr) * np.sin(np.pi / M))
 
 
-def ser_vs_esn0_4pam(snr):
+def ser_vs_es_over_n0_4pam(snr):
     """Calculate the symbol error rate (SER) of an 4-PAM signal as a function
     of Es/N0 (Symbol energy over noise energy, given in linear units"""
     return 0.75 * erfc(np.sqrt(snr / 5))
