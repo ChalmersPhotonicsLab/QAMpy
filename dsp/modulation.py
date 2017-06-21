@@ -227,7 +227,7 @@ class QAMModulator(object):
         """
         Return the theoretical SER for this modulation format for the given SNR (in linear units)
         """
-        return theory.qam_SERvsEsN0(snr, self.M)
+        return theory.ser_vs_es_over_n0_qam(snr, self.M)
 
     def cal_ser(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
