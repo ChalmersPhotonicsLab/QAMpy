@@ -52,7 +52,7 @@ def normalise_sig(sig, M):
     return 1 / norm, sig / norm
 
 
-def cal_blind_evm(sig, M):
+def cal_evm_blind(sig, M):
     """Blind calculation of the linear Error Vector Magnitude for an M-QAM
     signal. Does not consider Symbol errors.
 
