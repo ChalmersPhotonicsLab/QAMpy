@@ -106,7 +106,7 @@ class QAMModulator(object):
         signal = utils.normalise_and_center(signal)
         return quantize(utils.normalise_and_center(signal), self.symbols)
 
-    def cal_EVM(self, signal, syms=None):
+    def cal_evm(self, signal, syms=None):
         """
         Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1]. The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
 
@@ -223,13 +223,13 @@ class QAMModulator(object):
             outdata = utils.apply_phase_noise(outdata, lw_LO, samplingrate)
         return outdata, symbols, bitsq
 
-    def theoretical_SER(self, snr):
+    def theoretical_ser(self, snr):
         """
         Return the theoretical SER for this modulation format for the given SNR (in linear units)
         """
         return theory.qam_SERvsEsN0(snr, self.M)
 
-    def cal_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
+    def cal_ser(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
         Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
 
@@ -279,7 +279,7 @@ class QAMModulator(object):
                 acm = act
         return s_tx_sync
 
-    def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15, utils.bool2bin(np.ones(15)))):
+    def cal_ber(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15, utils.bool2bin(np.ones(15)))):
         """
         Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
 

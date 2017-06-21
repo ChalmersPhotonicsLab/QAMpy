@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import numpy as np
 from .segmentaxis import segment_axis
 from .theory import cal_symbols_qam
-from .signal_quality import cal_S0
+from .signal_quality import cal_s0
 from .dsp_cython import unwrap_discont
 from .dsp_cython import bps as _bps_idx_pyx
 import numba
