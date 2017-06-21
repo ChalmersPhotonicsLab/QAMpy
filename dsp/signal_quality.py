@@ -104,7 +104,7 @@ def cal_evm_known_data(sig, ideal, M):
     return np.sqrt(evm)
 
 
-def cal_SNR_QAM(E, M):
+def cal_snr_qam(E, M):
     """Calculate the signal to noise ratio SNR according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
     pg 865 (2005).
@@ -137,7 +137,7 @@ def _cal_gamma(M):
     return np.sum(uniq**4 * counts / M)
 
 
-def cal_Q_16QAM(E):
+def cal_snr_blind_16qam(E):
     """Calculate the signal to noise ratio SNR according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
     pg 865 (2005).
@@ -152,10 +152,10 @@ def cal_Q_16QAM(E):
     S0/N   : float
          linear SNR estimate
     """
-    return cal_SNR_QAM(E, 16)
+    return cal_snr_blind_qam(E, 16)
 
 
-def cal_S0(E, M):
+def cal_s0(E, M):
     """Calculate the signal power S0 according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
     pg 865 (2005).
@@ -182,7 +182,7 @@ def cal_S0(E, M):
     return r2 / (1 + S2 / S1)
 
 
-def SNR_QPSK_blind(E):
+def cal_snr_blind_qpsk(E):
     """
     Calculates the SNR of a QPSK signal based on the variance of the constellation
     assmuing no symbol errors"""
@@ -195,7 +195,7 @@ def SNR_QPSK_blind(E):
     return SNR
 
 
-def cal_ser_QAM(data_rx, symbol_tx, M, method="pyx"):
+def cal_ser_qam(data_rx, symbol_tx, M, method="pyx"):
     """
     Calculate the symbol error rate
 
