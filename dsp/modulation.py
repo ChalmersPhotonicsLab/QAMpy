@@ -271,7 +271,7 @@ class QAMModulator(object):
         acm = 0.
         for i in range(4):
             syms_tx = syms_tx*1.j**i
-            s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod)
+            s_sync, idx, ac = ber_functions.sync_tx2rx_xcorr(syms_tx, syms_demod)
             act = abs(ac.max())
             if act > acm:
                 s_tx_sync = s_sync
@@ -323,7 +323,7 @@ class QAMModulator(object):
         s_tx_sync, syms_demod = self._sync_and_adjust(syms_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
-        return ber_functions._cal_BER_only(tx_synced, bits_demod, threshold=0.8)
+        return ber_functions.cal_ber_only(tx_synced, bits_demod, threshold=0.8)
 
 
 def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):

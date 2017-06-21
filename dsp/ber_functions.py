@@ -8,7 +8,7 @@ from . import theory
 class DataSyncError(Exception):
     pass
 
-def sync_Rx2Tx_Xcorr(data_tx, data_rx, N1, N2):
+def sync_rx2tx_xcorr(data_tx, data_rx, N1, N2):
     """
     Sync the received data sequence to the transmitted data, which
     might contain errors, using cross-correlation between data_rx and data_tx.
@@ -46,7 +46,7 @@ def sync_Rx2Tx_Xcorr(data_tx, data_rx, N1, N2):
     idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
     return np.roll(data_rx, idx), idx
 
-def sync_Tx2Rx_Xcorr(data_tx, data_rx):
+def sync_tx2rx_xcorr(data_tx, data_rx):
     """
     Sync the transmitted data sequence to the received data, which
     might contain errors, using cross-correlation between data_rx and data_tx.
@@ -85,7 +85,7 @@ def sync_Tx2Rx_Xcorr(data_tx, data_rx):
     idx = abs(ac).argmax() - 5*N2//2
     return np.roll(data_tx, idx), idx, ac
 
-def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
+def sync_rx2tx(data_tx, data_rx, Lsync, imax=200):
     """Sync the received data sequence to the transmitted data, which
     might contain errors. Starts to with data_rx[:Lsync] if it does not find
     the offset it will iterate through data[i*Lsync:Lsync*(i+1)] until offset is found
@@ -125,7 +125,7 @@ def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
             pass
     raise DataSyncError("maximum iterations exceeded")
 
-def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
+def sync_tx2rx(data_tx, data_rx, Lsync, imax=200):
     """Sync the transmitted data sequence to the received data, which
     might contain errors. Starts to with data_rx[:Lsync] if it does not find
     the offset it will iterate through data[i:Lsync+i] until offset is found
@@ -165,7 +165,7 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
             pass
     raise DataSyncError("maximum iterations exceeded")
 
-def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
+def sync_prbs2rx(data_rx, order, Lsync, imax=200):
     """
     Synchronise a PRBS sequence to a possibly noisy received data stream.
     This is different to the general sync code, because in general the data
@@ -263,7 +263,7 @@ def _extend_by(data, N):
     data = np.hstack([data, data[:rem]])
     return data
 
-def _cal_BER_only(data_rx, data_tx, threshold=0.2):
+def cal_ber_only(data_rx, data_tx, threshold=0.2):
     """Calculate the bit-error rate (BER) between two synchronised binary data
     signals in linear units.
 
@@ -302,7 +302,7 @@ def _cal_BER_only(data_rx, data_tx, threshold=0.2):
 
 # TODO: the parameters of this function should really be changed to
 # (data_rx, data_tx, Lsync, order=None, imax=200)
-def cal_BER(data_rx, Lsync, order=None, data_tx=None, imax=200):
+def cal_ber(data_rx, Lsync, order=None, data_tx=None, imax=200):
     """Calculate the BER between an received binary data stream and a given bit
     sequence or a PRBS. If data_tx is shorter than data_rx it is assumed that
     data_rx is repetitive.
@@ -334,7 +334,7 @@ def cal_BER(data_rx, Lsync, order=None, data_tx=None, imax=200):
         raise ValueError("data_tx and order must not both be None")
 
 
-def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
+def cal_ber_prbs(Data_rx, order, Lsync, imax=200):
     """Calculate the BER between data_tx and a PRBS signal with a given
     order. This function automatically tries the inverted data if it fails
     to sync.
@@ -367,10 +367,10 @@ def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
         # if we cannot sync try to use inverted data
         data_rx = -data_rx
         idx, prbsval = sync_PRBS2Rx(data_rx, order, Lsync, imax)
-    return _cal_BER_only(data_rx[idx:], prbsval), inverted
+    return cal_ber_only(data_rx[idx:], prbsval), inverted
 
 
-def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
+def cal_ber_known_seq(data_rx, data_tx, Lsync, imax=200):
     """Calculate the BER between a received bit stream and a known
     bit sequence. If data_tx is shorter than data_rx it is assumed
     that data_rx is repetitive. This function automatically inverts the data if
@@ -404,11 +404,11 @@ def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
     data_tx_sync = adjust_data_length(data_tx_sync, data_rx)
     #TODO this still returns a slightly smaller value, as if there would be
     # one less error, maybe this happens in the adjust_data_length
-    return _cal_BER_only(data_rx, data_tx_sync)
+    return cal_ber_only(data_rx, data_tx_sync)
 
 
 
-def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
+def cal_ber_qpsk_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     """Calculate the BER for a QPSK signal the I and Q channels can either have
     the same or different orders.
 
@@ -436,7 +436,7 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
         length of data (np.nan if failed to sync)
     """
     #TODO implement offset parameter
-    data_demod = QAMquantize(data_rx, 4)[0]
+    data_demod = quantize_qam(data_rx, 4)[0]
     data_I = (1 + data_demod.real).astype(np.bool)
     data_Q = (1 + data_demod.imag).astype(np.bool)
     if Lsync is None:
@@ -466,7 +466,7 @@ def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
     return (ber_I + ber_Q) / 2., err_Q + err_I, N_Q + N_I
 
 
-def QAMquantize(sig, M):
+def quantize_qam(sig, M):
     """Quantize a QAM signal assuming Grey coding where possible
     using maximum likelyhood. Calculates distance to ideal points.
     Only works for vectors (1D array), not for M-D arrays
