@@ -19,5 +19,5 @@ N = 10**6
 snr = 30
 modulator = modulation.QAMModulator(M)
 signal, syms, bits = modulator.generate_signal(N, snr)
-evm = modulator.cal_EVM(signal)
+evm = modulator.cal_evm(signal)
 print(evm)

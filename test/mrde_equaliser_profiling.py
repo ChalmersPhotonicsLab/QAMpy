@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, modulation, utils
+from dsp import  equalisation, modulation, utils
 
 
 
@@ -29,8 +29,8 @@ SS = utils.apply_PMD_to_field(np.vstack([X,Y]), theta, t_pmd, omega)
 E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, methods=methods)
 
 
-evmX = QAM.cal_EVM(X[::2])
-evmY = QAM.cal_EVM(Y[::2])
-evmEx = QAM.cal_EVM(E[0])
-evmEy = QAM.cal_EVM(E[1])
+evmX = QAM.cal_evm(X[::2])
+evmY = QAM.cal_evm(Y[::2])
+evmEx = QAM.cal_evm(E[0])
+evmEy = QAM.cal_evm(E[1])
 #sys.exit()

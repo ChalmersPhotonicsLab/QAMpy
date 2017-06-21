@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, phaserecovery, modulation, utils
+from dsp import  phaserecovery, modulation, utils
 
 
 fb = 40.e9
@@ -18,8 +18,8 @@ X, Sx, Bx = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs , carrier_d
 
 E = phaserecovery.viterbiviterbi_qpsk(9, X[::2])
 
-evm1 = QAM.cal_EVM(E)
-evm2 = QAM.cal_EVM(X)
+evm1 = QAM.cal_evm(E)
+evm2 = QAM.cal_evm(X)
 
 plt.figure()
 plt.subplot(121)

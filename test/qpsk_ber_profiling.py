@@ -2,8 +2,8 @@
 import numpy as np
 
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, modulation
-from dsp.signal_quality import cal_blind_evm
+from dsp import  equalisation, modulation
+from dsp.signal_quality import cal_evm_blind
 
 
 
@@ -49,20 +49,20 @@ E = equalisation.apply_filter(SS, os, wx)
 E = E[:,1000:-1000]
 
 try:
-    berx = (QAM.cal_BER(E[0], bits_tx=bitsX, Lsync=50))
+    berx = (QAM.cal_ber(E[0], bits_tx=bitsX, Lsync=50))
 except:
-    berx = (QAM.cal_BER(E[1], bits_tx=bitsX, Lsync=50))
+    berx = (QAM.cal_ber(E[1], bits_tx=bitsX, Lsync=50))
 try:
-    bery = (QAM.cal_BER(E[1], bits_tx=bitsY, Lsync=50))
+    bery = (QAM.cal_ber(E[1], bits_tx=bitsY, Lsync=50))
 except:
-    bery = (QAM.cal_BER(E[0], bits_tx=bitsY, Lsync=50))
+    bery = (QAM.cal_ber(E[0], bits_tx=bitsY, Lsync=50))
 
 print("X BER %f dB"%(10*np.log10(berx[0])))
 print("Y BER %f dB"%(10*np.log10(bery[0])))
-evmX = QAM.cal_EVM(X[::os])
-evmY = QAM.cal_EVM(Y[::os])
-evmEx = QAM.cal_EVM(E[0])
-evmEy = QAM.cal_EVM(E[1])
+evmX = QAM.cal_evm(X[::os])
+evmY = QAM.cal_evm(Y[::os])
+evmEx = QAM.cal_evm(E[0])
+evmEy = QAM.cal_evm(E[1])
 print("X EVM %f "%evmEx)
 print("Y EVM %f "%evmEy)
 

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, modulation, utils
+from dsp import  equalisation, modulation, utils
 
 
 
@@ -27,18 +27,18 @@ E = equalisation.apply_filter(SS, os, wxy)
 E = E[:,1000:-1000]
 
 try:
-    berx = QAM.cal_BER(E[0], bits_tx=bitsX)
-    bery = QAM.cal_BER(E[1], bits_tx=bitsY)
+    berx = QAM.cal_ber(E[0], bits_tx=bitsX)
+    bery = QAM.cal_ber(E[1], bits_tx=bitsY)
 except:
-    berx = QAM.cal_BER(E[1], bits_tx=bitsX)
-    bery = QAM.cal_BER(E[0], bits_tx=bitsY)
+    berx = QAM.cal_ber(E[1], bits_tx=bitsX)
+    bery = QAM.cal_ber(E[0], bits_tx=bitsY)
 
 print("X BER %f dB"%(10*np.log10(berx[0])))
 print("Y BER %f dB"%(10*np.log10(bery[0])))
-evmX = QAM.cal_EVM(X[::os])
-evmY = QAM.cal_EVM(Y[::os])
-evmEx = QAM.cal_EVM(E[0]) 
-evmEy = QAM.cal_EVM(E[1])
+evmX = QAM.cal_evm(X[::os])
+evmY = QAM.cal_evm(Y[::os])
+evmEx = QAM.cal_evm(E[0]) 
+evmEy = QAM.cal_evm(E[1])
 
 #sys.exit()
 plt.figure()

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, utils, modulation
+from dsp import  equalisation, utils, modulation
 
 
 fb = 40.e9
@@ -30,12 +30,12 @@ print(E.shape)
 print(SS.shape)
 
 
-evmX = QAM.cal_EVM(X[::2])
-evmY = QAM.cal_EVM(Y[::2])
-evmEx = QAM.cal_EVM(E[0])
-evmEy = QAM.cal_EVM(E[1])
-evmEx_m = QAM.cal_EVM(E_m[0])
-evmEy_m = QAM.cal_EVM(E_m[1])
+evmX = QAM.cal_evm(X[::2])
+evmY = QAM.cal_evm(Y[::2])
+evmEx = QAM.cal_evm(E[0])
+evmEy = QAM.cal_evm(E[1])
+evmEx_m = QAM.cal_evm(E_m[0])
+evmEy_m = QAM.cal_evm(E_m[1])
 #sys.exit()
 plt.figure()
 plt.subplot(131)
