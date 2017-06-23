@@ -109,7 +109,9 @@ def blindphasesearch(E, Mtestangles, symbols, N, method="cython", **kwargs):
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
     ph =  bps_fct(E, angles, symbols, N, **kwargs)
     # ignore the phases outside the averaging window
-    ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
+    # better to use normal unwrap instead of fancy tricks
+    #ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
+    ph[N:-N] = np.unwrap(ph[N:-N]*4)/4
     Eout = E*np.exp(1.j*ph)
     return Eout, ph
 
