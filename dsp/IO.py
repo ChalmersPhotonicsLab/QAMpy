@@ -25,8 +25,6 @@ class Parameters(tb.IsDescription):
     measurementN = tb.Int64Col(dflt=0)
     Psig = tb.Float64Col(dflt=np.nan)
 
-
-
 def create_meas_file(fn, title, description, input_syms=None, input_syms_attrs=None, input_bits=None, input_bits_attrs=None, **attrs):
     h5f = tb.open_file(fn, 'w', title=title)
     gr_meas = h5f.create_group("/", "measurements", description=description)
@@ -93,6 +91,4 @@ def save_recvd(h5file, data, id_meas, oversampling=None, evm=None, ber=None, ser
             row[k] = v
     row.append()
     rec_table.flush()
-
-
 
