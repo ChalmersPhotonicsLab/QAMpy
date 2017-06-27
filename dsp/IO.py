@@ -13,7 +13,7 @@ class RecoveredData(tb.IsDescription):
     data = tb.ComplexCol(itemsize=16)
     evm = tb.Float64Col(dflt=np.nan)
     ber = tb.Float64Col(dflt=np.nan)
-    ser = tb.Float64Col(dfll=np.nan)
+    ser = tb.Float64Col(dflt=np.nan)
     oversampling = tb.Int32Col(dflt=2)
 
 class Parameters(tb.IsDescription):
