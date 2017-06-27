@@ -27,7 +27,7 @@ class Parameters(tb.IsDescription):
 
 def create_meas_file(fn, title, description, input_syms=None, input_syms_attrs=None, input_bits=None, input_bits_attrs=None, **attrs):
     h5f = tb.open_file(fn, 'w', title=title)
-    gr_meas = h5f.create_group("/", "measurements", description=description)
+    gr_meas = h5f.create_group("/", "measurements", title=description)
     t_meas = h5f.create_table(gr_meas, "oscilloscope", OscilloscopeData, "sampled signal")
     t_meas.attrs.samplingrate_unit = "GS/s"
     if input_syms is not None:
@@ -40,7 +40,7 @@ def create_meas_file(fn, title, description, input_syms=None, input_syms_attrs=N
         if input_syms_attrs is not None:
             for k, v in input_bits_attrs:
                 setattr(bits_arr.attrs, k, v)
-    gr_inp = h5f.create_group("/", "inputs", description="input symbols and bits")
+    gr_inp = h5f.create_group("/", "inputs", title="input symbols and bits")
     t_param = h5f.create_table("/", "parameters", Parameters, "measurement parameters")
     t_param.attrs.symbolrate_unit = "Gbaud"
     t_param.attrs.osnr_unit = "dB"
@@ -52,10 +52,10 @@ def create_meas_file(fn, title, description, input_syms=None, input_syms_attrs=N
 
 def create_recvd_data_group(h5f, description, **attrs):
     try:
-        gr = h5f.create_group("/", "analysis", description=description)
+        gr = h5f.create_group("/", "analysis", title=description)
     except AttributeError:
         h5f = tb.open_file(h5f, "r+")
-        gr = h5f.create_group("/", "analysis", description=description)
+        gr = h5f.create_group("/", "analysis", title=description)
     t_rec = h5f.create_table(gr, "recovered", RecoveredData, "signal after DSP")
     for k, v in attrs.items:
         setattr(t_rec.attrs, k, v)
