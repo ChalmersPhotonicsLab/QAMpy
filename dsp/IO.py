@@ -37,36 +37,51 @@ class Parameters(tb.IsDescription):
     measurementN = tb.Int64Col(dflt=0)
     Psig = tb.Float64Col(dflt=np.nan)
 
-
-
-def create_meas_file(fn, title, description, data_shape, input_syms_shape=None, input_attrs=None, input_bits_shape=None, **attrs):
-    h5f = tb.open_file(fn, 'w', title=title)
-    gr_meas = h5f.create_group("/", "measurements", title=description)
-    gr_inp = h5f.create_group("/", "inputs", title="input symbols or bits")
-    t_meas = h5f.create_table(gr_meas, "oscilloscope", osc_data_factory(data_shape), "sampled signal")
-    t_meas.attrs.samplingrate_unit = "GS/s"
-    # if no shape for input syms or bits is given use scalar
-    input_syms_shape = input_syms_shape or 1
-    input_bits_shape = input_bits_shape or 1
-    t_inp = h5f.create_table(gr_inp, "input", input_data_factory(input_syms_shape, input_bits_shape), "input symbols, bits at transmitter")
-    if input_attrs is not None:
-        for k, v in input_attrs:
-            setattr(t_inp.attrs, k, v)
-    t_param = h5f.create_table("/", "parameters", Parameters, "measurement parameters")
+def create_parameter_group(h5f, title, **attrs):
+    try:
+        t_param = h5f.create_table("/", "parameters", Parameters, "measurement parameters")
+    except AttributeError:
+        h5f = tb.open_file(h5f, "a")
+        t_param = h5f.create_table("/", "parameters", Parameters, "measurement parameters")
     t_param.attrs.symbolrate_unit = "Gbaud"
     t_param.attrs.osnr_unit = "dB"
     t_param.attrs.wl_unit = "nm"
     t_param.attrs.Psig_unit = "dBm"
     for k, v in attrs.items():
+        setattr(t_param.attrs, k, v)
+
+
+def create_meas_group(h5f, title,  data_shape, **attrs):
+    try:
+        gr_meas = h5f.create_group("/", "measurements", title=title)
+    except AttributeError:
+        h5f = tb.open_file(h5f, "a")
+        gr_meas = h5f.create_group("/", "measurements", title=title)
+    t_meas = h5f.create_table(gr_meas, "oscilloscope", osc_data_factory(data_shape), "sampled signal")
+    t_meas.attrs.samplingrate_unit = "GS/s"
+    for k, v in attrs.items():
         setattr(t_meas.attrs, k, v)
     return h5f
 
-def create_recvd_data_group(h5f, description, data_shape, **attrs):
+def create_input_group(h5f, title, syms_shape, bits_shape, **attrs):
     try:
-        gr = h5f.create_group("/", "analysis", title=description)
+        gr = h5f.create_group("/", "inputs", title=title)
     except AttributeError:
         h5f = tb.open_file(h5f, "r+")
-        gr = h5f.create_group("/", "analysis", title=description)
+        gr = h5f.create_group("/", "inputs", title=title)
+    # if no shape for input syms or bits is given use scalar
+    syms_shape = syms_shape or 1
+    bits_shape = bits_shape or 1
+    t_inp = h5f.create_table(gr, "input", input_data_factory(syms_shape, bits_shape), "input symbols, bits at transmitter")
+    for k, v in attrs:
+        setattr(t_inp.attrs, k, v)
+
+def create_recvd_data_group(h5f, title, data_shape, **attrs):
+    try:
+        gr = h5f.create_group("/", "analysis", title=title)
+    except AttributeError:
+        h5f = tb.open_file(h5f, "r+")
+        gr = h5f.create_group("/", "analysis", title=title)
     t_rec = h5f.create_table(gr, "recovered", rec_data_factory(data_shape), "signal after DSP")
     for k, v in attrs.items():
         setattr(t_rec.attrs, k, v)
@@ -74,6 +89,17 @@ def create_recvd_data_group(h5f, description, data_shape, **attrs):
     t_rec.attrs.ser_unit = "dB"
     t_rec.attrs.evm_unit = "%"
     return h5f
+
+def save_inputs(h5file, symbols=None, bits=None):
+    assert (symbols is not None) or (bits is not None), "Either input symbols or bits need to be given"
+    input_tb = h5file.root.inputs.input
+    row = input_tb.row
+    if symbols is not None:
+        row['symbols'] = symbols
+    if bits is not None:
+        row['bits'] = bits
+    row.append()
+    input_tb.flush()
 
 def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Psig=None, samplingrate=None, symbolrate=None, MQAM=None):
     meas_table = h5file.root.measurements.oscilloscope
