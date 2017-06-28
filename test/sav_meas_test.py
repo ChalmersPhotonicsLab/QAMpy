@@ -24,13 +24,14 @@ IO.create_parameter_group(h5_sp, "Measurement parameters")
 id_m = 0
 for snr in snrs:
     X, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
+    IO.save_inputs(h5_sp, id_m, symbols=symbolsX)
     IO.save_osc_meas(h5_sp, X, id_m, osnr=snr, wl=1550, samplingrate=fs, symbolrate=fb, MQAM=M)
     id_m += 1
 h5_sp.close()
 
 h5_dp = IO.tb.open_file("sav_meas_test_dual_pol.h5", "w", "singlepol")
 IO.create_meas_group(h5_dp, "dual polarisation generated signal", (2,2*N))
-IO.create_input_group(h5_dp, "input symbols", None, bitsX.shape)
+IO.create_input_group(h5_dp, "input symbols", None, (2,int(N*np.log2(M))))
 IO.create_parameter_group(h5_dp, "Measurement parameters")
 id_m = 0
 for snr in snrs:
@@ -38,6 +39,7 @@ for snr in snrs:
     Y, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
     IO.save_inputs(h5_dp, id_m, bits=bitsX)
     E = np.vstack([X, Y])
+    bits = np.vstack([bitsX, bitsX])
     IO.save_osc_meas(h5_dp, E, id_m, osnr=snr, wl=1550, samplingrate=fs, symbolrate=fb, MQAM=M)
     id_m += 1
 h5_dp.close()
