@@ -31,8 +31,7 @@ def create_parameter_group(h5f, title, description=None, **attrs):
     if description is None:
         description = {"id":tb.Int64Col(), "osnr":tb.Float64Col(dflt=np.nan),
                   "wl":tb.Float64Col(dflt=np.nan), "symbolrate":tb.Float64Col(),
-                  "MQAM": tb.Int64Col(), "measurementN":tb.Int64Col(dflt=0),
-                  "Psig": tb.Float64Col(dflt=np.nan)}
+                  "MQAM": tb.Int64Col(), "Psig": tb.Float64Col(dflt=np.nan)}
     t_param = h5f.create_table(gr, "experiment", description , "measurement parameters")
     if description is None:
         t_param.attrs.symbolrate_unit = "Gbaud"
@@ -214,8 +213,6 @@ def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Ps
         Optical Signal to Noise Ratio of the measurement in dB
     wl: Float, optional
         Wavelength of the measurement in nm
-    measurementN: Int, optional
-        probably not needed
     Psig: Float, optional
         Signal power at the receiver
     samplingrate: Float, optional
@@ -233,7 +230,7 @@ def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Ps
     m_row.append()
     meas_table.flush()
     par_table = h5file.root.parameters.experiment
-    par_cols = {"osnr": osnr, "wl": wl, "measurementN": measurementN, "Psig": Psig, "symbolrate": symbolrate, "MQAM": MQAM}
+    par_cols = {"osnr": osnr, "wl": wl, "Psig": Psig, "symbolrate": symbolrate, "MQAM": MQAM}
     p_row = par_table.row
     p_row['id'] = id_meas
     for k, v in par_cols.items():
