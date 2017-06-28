@@ -39,10 +39,11 @@ class Parameters(tb.IsDescription):
 
 def create_parameter_group(h5f, title, **attrs):
     try:
-        t_param = h5f.create_table("/", "parameters", Parameters, "measurement parameters")
+        gr_meas = h5f.create_group("/", "parameters", title=title)
     except AttributeError:
         h5f = tb.open_file(h5f, "a")
-        t_param = h5f.create_table("/", "parameters", Parameters, "measurement parameters")
+        gr_meas = h5f.create_group("/", "parameters", title=title)
+    t_param = h5f.create_table(gr, "experiment", Parameters, "measurement parameters")
     t_param.attrs.symbolrate_unit = "Gbaud"
     t_param.attrs.osnr_unit = "dB"
     t_param.attrs.wl_unit = "nm"
