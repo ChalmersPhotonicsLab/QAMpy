@@ -262,8 +262,6 @@ def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None,
         Bit Error Rate of the signal in percent
     ser: Float, optional
         Symbol Error Rate of the signal in percent
-    MQAM: Int, optional
-        QAM order of the signal
     """
     rec_table = h5file.root.recovered.analysis
     cols = {"evm": evm, "ber": ber, "ser": ser}
