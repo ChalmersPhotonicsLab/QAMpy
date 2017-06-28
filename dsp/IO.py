@@ -106,7 +106,7 @@ def create_input_group(h5f, title, syms_shape, bits_shape, description=None, **a
     h5f : h5filehandle
         Pytables handle to the hdf file
     """
-    assert (symbols is not None) or (bits is not None), "Either input symbols or bits need to be given"
+    assert (syms_shape is not None) or (bits_shape is not None), "Either syms_shape or bits_shape need to be given"
     try:
         gr = h5f.create_group("/", "inputs", title=title)
     except AttributeError:
@@ -158,7 +158,12 @@ def create_recvd_data_group(h5f, title, data_shape, description=None, **attrs):
         description = {"id":tb.IntCol64(), "data": tb.ComplexCol(itemsize=16, shape=data_shape),
                 "symbols":tb.ComplexCol(itemize=16, shape=data_shape),
                 "evm": tb.Float64Col(dflt=np.nan), "ber":tb.Float64Col(dflt=np.nan),
-                "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col()}
+                       "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col(),
+                       "method": tb.StringCol(shape=20), "freq_offset": tb.Float64Col(dflt=np.nan),
+                       "freq_offset_N": tb.Int64Col(dflt=np.nan), "phase_est": tb.StringCol(shape=20),
+                       "N_angles": tb.Float64Col(dflt=np.nan), "ph_est_blocklength": tb.Int64Col(),
+                       "stepsize": tb.Float64Col(shape=2), "trsyms": tb.Float64Col(shape=2),
+                       "iterations": tb.Int64Col(shape=2)}
     t_rec = h5f.create_table(gr, "recovered", description, "signal after DSP")
     for k, v in attrs.items():
         setattr(t_rec.attrs, k, v)
@@ -239,7 +244,7 @@ def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Ps
     p_row.append()
     par_table.flush()
 
-def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None, ber=None, ser=None):
+def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None, ber=None, ser=None, dsp_params=None):
     """
     Save recovered data after DSP
 
@@ -262,6 +267,8 @@ def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None,
         Bit Error Rate of the signal in percent
     ser: Float, optional
         Symbol Error Rate of the signal in percent
+    dsp_params: dict
+        DSP parameters used for recovery. See the description in the recovery group creation for the definition.
     """
     rec_table = h5file.root.recovered.analysis
     cols = {"evm": evm, "ber": ber, "ser": ser}
@@ -271,6 +278,9 @@ def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None,
     row['oversampling'] = oversampling
     for k, v in cols.items():
         if v is not None:
+            row[k] = v
+    if dsp_params is not None:
+        for k, v in dsp_params:
             row[k] = v
     row.append()
     rec_table.flush()
