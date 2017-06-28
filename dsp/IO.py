@@ -239,7 +239,7 @@ def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Ps
     p_row.append()
     par_table.flush()
 
-def save_recvd(h5file, data, id_meas, oversampling=None, evm=None, ber=None, ser=None):
+def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None, ber=None, ser=None):
     """
     Save recovered data after DSP
 
@@ -252,6 +252,8 @@ def save_recvd(h5file, data, id_meas, oversampling=None, evm=None, ber=None, ser
         The sampled signal array, needs to be the same shape as defined when creating the group
     id_meas: int
         Unique measurement ID this corresponds to
+    symbols: array_like, optional
+        Recovered symbols
     oversampling: Int, optional
         Oversampling used for recovery
     evm: Float, optional
