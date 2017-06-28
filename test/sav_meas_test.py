@@ -36,7 +36,7 @@ id_m = 0
 for snr in snrs:
     X, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
     Y, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
-    IO.save_inputs(h5_dp, bits=bitsX)
+    IO.save_inputs(h5_dp, id_m, bits=bitsX)
     E = np.vstack([X, Y])
     IO.save_osc_meas(h5_dp, E, id_m, osnr=snr, wl=1550, samplingrate=fs, symbolrate=fb, MQAM=M)
     id_m += 1
