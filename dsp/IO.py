@@ -126,7 +126,7 @@ def create_input_group(h5f, title, syms_shape, bits_shape, description=None, **a
         setattr(t_inp.attrs, k, v)
     return h5f
 
-def create_recvd_data_group(h5f, title, data_shape, description=None, **attrs):
+def create_recvd_data_group(h5f, title, data_shape, description=None, maxtaps=1000, **attrs):
     """
     Create the table for saving recovered data and parameters after DSP
 
@@ -141,6 +141,8 @@ def create_recvd_data_group(h5f, title, data_shape, description=None, **attrs):
         Shape of data arrays to save
     description: dict or tables.IsDescription (optional)
         If given use to create the table
+    maxtaps: int, optional
+        maximum number of taps the dsp uses 
     **attrs:
         other attributes for the table
 
@@ -154,16 +156,21 @@ def create_recvd_data_group(h5f, title, data_shape, description=None, **attrs):
     except AttributeError:
         h5f = tb.open_file(h5f, "r+")
         gr = h5f.create_group("/", "analysis", title=title)
+    if len(data_shape) > 1:
+        pols = data_shape[0]
     if description is None:
+        dsp_params = { "freq_offset": tb.Float64Col(dflt=np.nan),
+                       "freq_offset_N": tb.Int64Col(dflt=np.nan), "phase_est": tb.StringCol(shape=20),
+                       "N_angles": tb.Float64Col(dflt=np.nan), "ph_est_blocklength": tb.Int64Col(),
+                       "stepsize": tb.Float64Col(shape=2), "trsyms": tb.Float64Col(shape=2),
+                       "iterations": tb.Int64Col(shape=2), "taps":tb.ComplexCol(itemsize=64, shape=(pols, maxtaps)),
+                       "ntaps": tb.Int64Col()}
         description = {"id":tb.IntCol64(), "data": tb.ComplexCol(itemsize=16, shape=data_shape),
                 "symbols":tb.ComplexCol(itemize=16, shape=data_shape),
                 "evm": tb.Float64Col(dflt=np.nan), "ber":tb.Float64Col(dflt=np.nan),
                        "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col(),
-                       "method": tb.StringCol(shape=20), "freq_offset": tb.Float64Col(dflt=np.nan),
-                       "freq_offset_N": tb.Int64Col(dflt=np.nan), "phase_est": tb.StringCol(shape=20),
-                       "N_angles": tb.Float64Col(dflt=np.nan), "ph_est_blocklength": tb.Int64Col(),
-                       "stepsize": tb.Float64Col(shape=2), "trsyms": tb.Float64Col(shape=2),
-                       "iterations": tb.Int64Col(shape=2)}
+                       "method": tb.StringCol(shape=20)}
+        description.update(dsp_params)
     t_rec = h5f.create_table(gr, "recovered", description, "signal after DSP")
     for k, v in attrs.items():
         setattr(t_rec.attrs, k, v)
@@ -281,7 +288,9 @@ def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None,
             row[k] = v
     if dsp_params is not None:
         for k, v in dsp_params:
+            if k == "taps":
+                vv = np.atleast_2d(v)
+                row[k][:, :vv.shape[1]] = vv
             row[k] = v
     row.append()
     rec_table.flush()
-
