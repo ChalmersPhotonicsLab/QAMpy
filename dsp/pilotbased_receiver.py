@@ -327,7 +327,7 @@ symb_rate = 20e9
 snr = None #dB
 linewidth = None # Linewidth symbol-rate product
 fo = None # Frequency offset MHz
-
+QAM = modulation.QAMModulator(M)
 # Pilot Settings
 
 # Total frame length
@@ -402,7 +402,7 @@ if npols == 2:
     plt.title('Pilot-based Y-Pol: EVM %2.2f%%'%(QAM.cal_EVM(phase_comp_symbs[1][0,:])*100))
 
 # Only verification stuff for BPS
-QAM = modulation.QAMModulator(M)
+
 bps_out = phaserecovery.blindphasesearch(comp_test_sig[0][0,:],64,QAM.symbols, 128)
 plt.figure()
 plt.hexbin(bps_out[0].real, bps_out[0].imag)
