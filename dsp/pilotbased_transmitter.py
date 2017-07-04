@@ -67,7 +67,7 @@ def gen_dataframe_withpilots(M,npols, frame_length = 2**18, pilot_seq_len = 256,
     return symbol_seq, data_symbs, pilot_symbs
 
 
-def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None, freqoff = None):
+def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None, freqoff = None, rot_angle = None):
     """
     Function to simulate transmission distortions to pilot frame
     
@@ -97,7 +97,8 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
         # Verfy normalization
         sig = utils.normalise_and_center(sig)
     
-
+    if (npols == 2) and (rot_angle is not None):
+        sig = utils.rotate_field(sig, rot_angle)
     
     return sig
 
@@ -105,7 +106,7 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
 Testing the transmitter
 """
 # Tx Config
-M = 128
+M = 64
 os = 2
 symb_rate = 20e9
 
@@ -125,9 +126,14 @@ PRBSseed=None
 
 frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(M,1)
 
-frame_symbs = np.roll(frame_symbs, 6523)
+frame_symbs_X = np.roll(frame_symbs, 6523)
+frame_symbs_Y = np.roll(frame_symbs, 6823)
 
-tx_sig = sim_tx(frame_symbs, os,snr = 25, linewidth = 1e5, freqoff = 5e8)
+frame_symbs = np.vstack([frame_symbs_X,frame_symbs_Y])
+pilot_symbs = np.vstack([pilot_symbs,pilot_symbs])
+
+
+tx_sig = sim_tx(frame_symbs, os,snr = 50, linewidth = None, freqoff = None)
 
 
 """
