@@ -2,6 +2,9 @@ from __future__ import division, print_function
 import numpy as np
 import tables as tb
 
+PARAM_UNITS = {"symbolrate_unit": "Gbaud", "osnr_unit": "dB", "wl_unit": "nm", "Psig_unit": "dBm"}
+MEAS_UNITS = {"samplingrate_unit": "GS/s"}
+DSP_UNITS = {"ber_unit": "dB", "ser_unit": "dB", "evm_unit": "%"}
 
 class tVLArray(tb.VLArray):
     """A variable length array that saves and returns the transpose of the arrays passed to it"""
@@ -89,7 +92,7 @@ def create_mdvlarray(self, where, name, atom=None, title="", filters=None, expec
 tb.File.create_mdvlarray = create_mdvlarray
 
 
-def create_parameter_group(h5f, title, description=None, **attrs):
+def create_parameter_group(h5f, title, description=None, attrs=PARAM_UNITS, **kwargs):
     """
     Create the table for saving measurement parameters
 
@@ -102,8 +105,10 @@ def create_parameter_group(h5f, title, description=None, **attrs):
         The title description of the group
     description: dict or tables.IsDescription (optional)
         If given use to create the table
-    **attrs:
-        other attributes for the table
+    attrs: dict, optional
+        dictionary of attributes to set on the table
+    **kwargs:
+        keyword arguments passed to create_table, it is highly recommended to set expectedrows
 
     Returns
     -------
@@ -119,18 +124,13 @@ def create_parameter_group(h5f, title, description=None, **attrs):
         description = {"id":tb.Int64Col(), "osnr":tb.Float64Col(dflt=np.nan),
                   "wl":tb.Float64Col(dflt=np.nan), "symbolrate":tb.Float64Col(),
                   "MQAM": tb.Int64Col(), "Psig": tb.Float64Col(dflt=np.nan)}
-    t_param = h5f.create_table(gr, "experiment", description , "measurement parameters")
-    if description is None:
-        t_param.attrs.symbolrate_unit = "Gbaud"
-        t_param.attrs.osnr_unit = "dB"
-        t_param.attrs.wl_unit = "nm"
-        t_param.attrs.Psig_unit = "dBm"
-    for k, v in attrs.items():
+    t_param = h5f.create_table(gr, "experiment", description , "measurement parameters", **kwargs)
+    for k, v in param_attrs.items():
         setattr(t_param.attrs, k, v)
     return h5f
 
 
-def create_meas_group(h5f, title,  description=None, **attrs):
+def create_meas_group(h5f, title,  description=None, attrs=MEAS_UNITS, **kwargs):
     """
     Create the table for saving oscilloscope measurements
 
@@ -145,8 +145,10 @@ def create_meas_group(h5f, title,  description=None, **attrs):
         Number of modes/polarizations
     description: dict or tables.IsDescription (optional)
         If given use to create the table
-    **attrs:
-        other attributes for the table
+    attrs: dict, optional
+        attributes on the table
+    **kwargs:
+        keyword arguments passed to create_table/array, it is highly recommended to set expectedrows
 
     Returns
     -------
@@ -161,14 +163,13 @@ def create_meas_group(h5f, title,  description=None, **attrs):
     gr_osc = h5f.create_group(gr_osc, "oscilloscope", title=title)
     if description is None:
         description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col()}
-    t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal")
-    arr = h5f.create_mdvlarray(gr_osc, "data", tb.ComplexAtom(itemsize=16))
-    t_meas.attrs.samplingrate_unit = "GS/s"
+    t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal", **kwargs)
+    arr = h5f.create_mdvlarray(gr_osc, "data", tb.ComplexAtom(itemsize=16), **kwargs)
     for k, v in attrs.items():
         setattr(t_meas.attrs, k, v)
     return h5f
 
-def create_input_group(h5f, title, rolloff_dflt=np.nan, **attrs):
+def create_input_group(h5f, title, rolloff_dflt=np.nan, attrs={}, **kwargs):
     """
     Create the table for saving the input symbols and bits
 
@@ -179,8 +180,10 @@ def create_input_group(h5f, title, rolloff_dflt=np.nan, **attrs):
         The file to use, if a string create or open new file
     title: string
         The title description of the group
-    **attrs:
-        other attributes for the table
+    attrs: dict, optional
+        attributes on the table
+    **kwargs:
+        keyword arguments passed to create_table/array, it is highly recommended to set expectedrows
 
     Returns
     -------
@@ -194,14 +197,14 @@ def create_input_group(h5f, title, rolloff_dflt=np.nan, **attrs):
         gr = h5f.create_group("/", "input", title=title)
     # if no shape for input syms or bits is given use scalar
     t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "symbols_id": tb.Int64Col(),
-                                               "bits_id": tb.Int64Col(), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal")
-    arr_syms = h5f.create_mdarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols")
-    arr_bits = h5f.create_mdarray(gr, "bits", tb.BoolAtom(), title="sent bits")
+                                               "bits_id": tb.Int64Col(), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
+    arr_syms = h5f.create_mdarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols", **kwargs)
+    arr_bits = h5f.create_mdarray(gr, "bits", tb.BoolAtom(), title="sent bits", **kwargs)
     for k, v in attrs:
         setattr(t_inp.attrs, k, v)
     return h5f
 
-def create_recvd_data_group(h5f, title, description=None, oversampling_dflt=2, **attrs):
+def create_recvd_data_group(h5f, title, description=None, oversampling_dflt=2, attrs=DSP_UNITS, **kwargs):
     """
     Create the table for saving recovered data and parameters after DSP
 
@@ -215,7 +218,9 @@ def create_recvd_data_group(h5f, title, description=None, oversampling_dflt=2, *
     description: dict or tables.IsDescription (optional)
         If given use to create the table
     **attrs:
-        other attributes for the table
+        attributes for the table
+    **kwargs:
+        keyword arguments passed to create_table/array, it is highly recommended to set expectedrows
 
     Returns
     -------
@@ -241,17 +246,13 @@ def create_recvd_data_group(h5f, title, description=None, oversampling_dflt=2, *
                        "evm": tb.Float64Col(dflt=np.nan), "ber":tb.Float64Col(dflt=np.nan),
                        "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col(dflt=oversampling_dflt)}
         description.update(dsp_params)
-    t_rec = h5f.create_table(gr_dsp, "signal", description, "signal after DSP")
-    data_arr = h5f.create_mdvlarray(gr_dsp, "data", tb.ComplexAtom(itemsize=16), "signal after DSP")
-    syms_arr = h5f.create_mdvlarray(gr_dsp, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), "recovered symbols")
-    syms_arr = h5f.create_mdvlarray(gr_dsp, "taps", tb.ComplexAtom(itemsize=16, dflt=np.nan), "dsp taps")
-    bits_arr = h5f.create_mdvlarray(gr_dsp, "bits", tb.BoolAtom(dflt=False), "recovered bits")
+    t_rec = h5f.create_table(gr_dsp, "signal", description, "signal after DSP", **kwargs)
+    data_arr = h5f.create_mdvlarray(gr_dsp, "data", tb.ComplexAtom(itemsize=16), "signal after DSP", **kwargs)
+    syms_arr = h5f.create_mdvlarray(gr_dsp, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), "recovered symbols", **kwargs)
+    syms_arr = h5f.create_mdvlarray(gr_dsp, "taps", tb.ComplexAtom(itemsize=16, dflt=np.nan), "dsp taps", **kwargs)
+    bits_arr = h5f.create_mdvlarray(gr_dsp, "bits", tb.BoolAtom(dflt=False), "recovered bits", **kwargs)
     for k, v in attrs.items():
         setattr(t_rec.attrs, k, v)
-    if description is None:
-        t_rec.attrs.ber_unit = "dB"
-        t_rec.attrs.ser_unit = "dB"
-        t_rec.attrs.evm_unit = "%"
     return h5f
 
 def save_array_to_table(table, name, array):
