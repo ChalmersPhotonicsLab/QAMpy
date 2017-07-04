@@ -92,7 +92,7 @@ def create_mdvlarray(self, where, name, atom=None, title="", filters=None, expec
 tb.File.create_mdvlarray = create_mdvlarray
 
 
-def create_parameter_group(h5f, title, description=None, attrs=PARAM_UNITS, **kwargs):
+def create_parameter_group(h5f, title="parameters of the measurement", description=None, attrs=PARAM_UNITS, **kwargs):
     """
     Create the table for saving measurement parameters
 
@@ -101,7 +101,7 @@ def create_parameter_group(h5f, title, description=None, attrs=PARAM_UNITS, **kw
 
     h5f : string or h5filehandle
         The file to use, if a string create or open new file
-    title: string
+    title: string, optional
         The title description of the group
     description: dict or tables.IsDescription (optional)
         If given use to create the table
@@ -130,7 +130,7 @@ def create_parameter_group(h5f, title, description=None, attrs=PARAM_UNITS, **kw
     return h5f
 
 
-def create_meas_group(h5f, title,  description=None, attrs=MEAS_UNITS, **kwargs):
+def create_meas_group(h5f, title="measurement data",  description=None, attrs=MEAS_UNITS, **kwargs):
     """
     Create the table for saving oscilloscope measurements
 
@@ -139,7 +139,7 @@ def create_meas_group(h5f, title,  description=None, attrs=MEAS_UNITS, **kwargs)
 
     h5f : string or h5filehandle
         The file to use, if a string create or open new file
-    title: string
+    title: string, optional
         The title description of the group
     data_shape: int
         Number of modes/polarizations
@@ -169,7 +169,7 @@ def create_meas_group(h5f, title,  description=None, attrs=MEAS_UNITS, **kwargs)
         setattr(t_meas.attrs, k, v)
     return h5f
 
-def create_input_group(h5f, title, rolloff_dflt=np.nan, attrs={}, **kwargs):
+def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.nan, attrs={}, **kwargs):
     """
     Create the table for saving the input symbols and bits
 
@@ -178,7 +178,7 @@ def create_input_group(h5f, title, rolloff_dflt=np.nan, attrs={}, **kwargs):
 
     h5f : string or h5filehandle
         The file to use, if a string create or open new file
-    title: string
+    title: string, optional
         The title description of the group
     attrs: dict, optional
         attributes on the table
@@ -204,7 +204,7 @@ def create_input_group(h5f, title, rolloff_dflt=np.nan, attrs={}, **kwargs):
         setattr(t_inp.attrs, k, v)
     return h5f
 
-def create_recvd_data_group(h5f, title, description=None, oversampling_dflt=2, attrs=DSP_UNITS, **kwargs):
+def create_recvd_data_group(h5f, title="data analysis and dsp results", description=None, oversampling_dflt=2, attrs=DSP_UNITS, **kwargs):
     """
     Create the table for saving recovered data and parameters after DSP
 
@@ -302,8 +302,6 @@ def save_osc_meas(h5file, data,  osnr=None, wl=None, measurementN=0, Psig=None, 
         pytables file handle
     data: array_like
         The sampled signal array, needs to be the same shape as defined when creating the group
-    id_meas: int
-        Unique measurement ID
     osnr: Float, optional
         Optical Signal to Noise Ratio of the measurement in dB
     wl: Float, optional
@@ -316,24 +314,30 @@ def save_osc_meas(h5file, data,  osnr=None, wl=None, measurementN=0, Psig=None, 
         Symbolrate of the signal in Gbaud
     MQAM: Int, optional
         QAM order of the signal
+
+    Returns
+    -------
+
+    id_meas: int
+        Unique measurement ID
     """
     meas_table = h5file.root.measurements.oscilloscope.signal
     m_row = meas_table.row
-    m_id = save_array_to_table(meas_table, "data", data)
-    m_row['id'] = m_id
+    id_meas = save_array_to_table(meas_table, "data", data)
+    m_row['id'] = id_meas
     m_row['samplingrate'] = samplingrate
     m_row.append()
     meas_table.flush()
     par_table = h5file.root.parameters.experiment
     par_cols = {"osnr": osnr, "wl": wl, "Psig": Psig, "symbolrate": symbolrate, "MQAM": MQAM}
     p_row = par_table.row
-    p_row['id'] = m_id 
+    p_row['id'] = id_meas
     for k, v in par_cols.items():
         if v is not None:
             p_row[k] = v
     p_row.append()
     par_table.flush()
-    return m_id
+    return id_meas
 
 def save_recvd(h5file, data, id_meas, taps, symbols=None, bits=None, oversampling=None, evm=None, ber=None, ser=None, dsp_params=None):
     """
