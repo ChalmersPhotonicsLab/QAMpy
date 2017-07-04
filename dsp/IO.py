@@ -2,6 +2,93 @@ from __future__ import division, print_function
 import numpy as np
 import tables as tb
 
+
+class tVLArray(tb.VLArray):
+    """A variable length array that saves and returns the transpose of the arrays passed to it"""
+    _c_classid = "TVLARRAY"
+    def __getitem__(self, key):
+        a = super(tVLArray, self).__getitem__(key)
+        if a.dtype is np.dtype("object"):
+            aout = []
+            for i in range(len(a)):
+                aout.append(np.transpose(aout[i]))
+            return np.array(aout)
+        else:
+            return np.transpose(a)
+
+    def __setitem__(self, key, array):
+        if isinstance(key, slice):
+            a = []
+            for i in range(len(array)):
+                a.append(np.transpose(array[i]))
+            super(tVLarray, self).__setitem__(key, np.array(a))
+        else:
+            a = np.transpose(array)
+            super(tVLArray, self).__setitem__(key, a)
+
+    def append(self, arr):
+        a = np.transpose(arr)
+        super(tVLarray, self).append(a)
+
+def create_tvlarray(self, where, name, atom=None, title="", filters=None, expectedrows=None,
+                    chunkshape=None, byteorder=None, createparents=False, obj=None):
+    """Function to create tvlarrays"""
+    pnode = self._get_or_create_path(where, createparents)
+    tb.file._checkfilters(filters)
+    return tVLArray(pnode, name, atom, title=title, filters=filters, expectedrows=expectedrows,
+                chunkshape=chunkshape, byteorder=byteorder)
+
+# register creation of tvlarrays
+tb.File.create_vlarray = create_tvlarray
+
+class reshapeVLarray(tb.VLArray):
+    _c_classid = "RESHAPEVLarray"
+    def __getitem__(self, key):
+        parent = self._g_getparent()
+        shape_array = parent.shapes[key]
+        array = super(reshapeVLarray, self).__getitem__(key)
+        if array.dtype is np.dtype("object"):
+            a = []
+            for i in range(len(shape_array)):
+                a.append(array[i].reshape(shape_array[i]))
+            return np.array(a)
+        else:
+            return array.reshape(shape_array)
+
+    def __setitem__(self, key, array):
+        parent = self._g_getparent()
+        shape_array = parent.shapes
+        if isinstance(key, slice):
+            a = []
+            s = []
+            for i in range(len(array)):
+                s.append(array[i].shape)
+                a.append(array[i].flatten())
+            super(reshapeVLarray, self).__setitem__(key, np.array(a))
+            shape_array[key] = np.array(s)
+        else:
+            shape_array[key] = array.shape
+            super(reshapeVLarray, self).__setitem__(key, array.flatten())
+
+    def append(self, array):
+        parent = self._g_getparent()
+        shape_array = parent.shapes
+        shape_array.append(array.shape)
+        super(reshapeVLarray, self).append(array.flatten())
+
+def create_reshapevlarray(self, where, name, atom=None, title="", filters=None, expectedrows=None,
+                    chunkshape=None, byteorder=None, createparents=False, obj=None):
+    """Function to create tvlarrays"""
+    pnode = self._get_or_create_path(where, createparents)
+    tb.file._checkfilters(filters)
+    sharray = tb.VLArray(pnode, "shapes", tb.Int64Atom(), expectedrows=expectedrows)
+    return reshapeVLarray(pnode, name, atom, title=title, filters=filters, expectedrows=expectedrows,
+                chunkshape=chunkshape, byteorder=byteorder)
+
+# register creation of tvlarrays
+tb.File.create_reshapevlarray = create_reshapevlarray
+
+
 def create_parameter_group(h5f, title, description=None, **attrs):
     """
     Create the table for saving measurement parameters
@@ -43,7 +130,7 @@ def create_parameter_group(h5f, title, description=None, **attrs):
     return h5f
 
 
-def create_meas_group(h5f, title,  data_shape, description=None, **attrs):
+def create_meas_group(h5f, title,  nmodes , description=None, **attrs):
     """
     Create the table for saving oscilloscope measurements
 
@@ -54,8 +141,8 @@ def create_meas_group(h5f, title,  data_shape, description=None, **attrs):
         The file to use, if a string create or open new file
     title: string
         The title description of the group
-    data_shape: tuple
-        Shape of data arrays to save
+    data_shape: int
+        Number of modes/polarizations
     description: dict or tables.IsDescription (optional)
         If given use to create the table
     **attrs:
@@ -71,9 +158,11 @@ def create_meas_group(h5f, title,  data_shape, description=None, **attrs):
     except AttributeError:
         h5f = tb.open_file(h5f, "a")
         gr_meas = h5f.create_group("/", "measurements", title=title)
+    gr_osc = h5f.create_group(gr_osc, "oscilloscope", title=title)
     if description is None:
-        description = { "id":tb.Int64Col(), "data": tb.ComplexCol(itemsize=16, shape=data_shape), "samplingrate": tb.Float64Col()}
-    t_meas = h5f.create_table(gr_meas, "oscilloscope", description, "sampled signal")
+        description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col(), "data_shape":tb.Int64Col(shape=(2,)), "data_id": tb.Int64Col()}
+    t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal")
+    arr = h5f.create_vlarray(gr_osc, "data", tb.ComplexCol(itemsize=16, shape=(nmodes,)))
     t_meas.attrs.samplingrate_unit = "GS/s"
     for k, v in attrs.items():
         setattr(t_meas.attrs, k, v)
