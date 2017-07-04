@@ -48,7 +48,7 @@ class MDVLarray(tb.VLArray):
     _c_classid = "MDVLARRAY"
     def __getitem__(self, key):
         parent = self._g_getparent()
-        shape_array = getattr(parent, name+"_shape")[key]
+        shape_array = getattr(parent, self.name+"_shape")[key]
         array = super(MDVLarray, self).__getitem__(key)
         if array.dtype is np.dtype("object"):
             a = []
@@ -75,7 +75,7 @@ class MDVLarray(tb.VLArray):
 
     def append(self, array):
         parent = self._g_getparent()
-        shape_array = getattr(parent, name+"_shape")
+        shape_array = getattr(parent, self.name+"_shape")
         shape_array.append(array.shape)
         super(MDVLarray, self).append(array.flatten())
 
@@ -125,7 +125,7 @@ def create_parameter_group(h5f, title, description=None, attrs=PARAM_UNITS, **kw
                   "wl":tb.Float64Col(dflt=np.nan), "symbolrate":tb.Float64Col(),
                   "MQAM": tb.Int64Col(), "Psig": tb.Float64Col(dflt=np.nan)}
     t_param = h5f.create_table(gr, "experiment", description , "measurement parameters", **kwargs)
-    for k, v in param_attrs.items():
+    for k, v in attrs.items():
         setattr(t_param.attrs, k, v)
     return h5f
 
@@ -160,7 +160,7 @@ def create_meas_group(h5f, title,  description=None, attrs=MEAS_UNITS, **kwargs)
     except AttributeError:
         h5f = tb.open_file(h5f, "a")
         gr_meas = h5f.create_group("/", "measurements", title=title)
-    gr_osc = h5f.create_group(gr_osc, "oscilloscope", title=title)
+    gr_osc = h5f.create_group(gr_meas, "oscilloscope", title="Data from Realtime oscilloscope")
     if description is None:
         description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col()}
     t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal", **kwargs)
@@ -196,10 +196,10 @@ def create_input_group(h5f, title, rolloff_dflt=np.nan, attrs={}, **kwargs):
         h5f = tb.open_file(h5f, "r+")
         gr = h5f.create_group("/", "input", title=title)
     # if no shape for input syms or bits is given use scalar
-    t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "symbols_id": tb.Int64Col(),
-                                               "bits_id": tb.Int64Col(), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
-    arr_syms = h5f.create_mdarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols", **kwargs)
-    arr_bits = h5f.create_mdarray(gr, "bits", tb.BoolAtom(), title="sent bits", **kwargs)
+    t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "id_symbols": tb.Int64Col(),
+                                               "id_bits": tb.Int64Col(), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
+    arr_syms = h5f.create_mdvlarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols", **kwargs)
+    arr_bits = h5f.create_mdvlarray(gr, "bits", tb.BoolAtom(), title="sent bits", **kwargs)
     for k, v in attrs:
         setattr(t_inp.attrs, k, v)
     return h5f
@@ -258,10 +258,7 @@ def create_recvd_data_group(h5f, title, description=None, oversampling_dflt=2, a
 def save_array_to_table(table, name, array):
     parent = table._g_getparent()
     data_stor = getattr(parent, name)
-    shape_stor = getattr(parent, name+"_shape")
-    shape_stor.append(array.shape)
     data_stor.append(array.flatten())
-    assert shape_stor.nrows == data_stor.nrows, "Error %s and %s_shape have come out of sync"%name
     return data_stor.nrows
 
 
@@ -294,7 +291,7 @@ def save_inputs(h5file, id_meas, symbols=None, bits=None, rolloff=None):
     row.append()
     input_tb.flush()
 
-def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Psig=None, samplingrate=None, symbolrate=None, MQAM=None):
+def save_osc_meas(h5file, data,  osnr=None, wl=None, measurementN=0, Psig=None, samplingrate=None, symbolrate=None, MQAM=None):
     """
     Save measured data from oscilloscope
 
@@ -320,22 +317,23 @@ def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Ps
     MQAM: Int, optional
         QAM order of the signal
     """
-    meas_table = h5file.root.measurements.oscilloscope
+    meas_table = h5file.root.measurements.oscilloscope.signal
     m_row = meas_table.row
-    m_row['id'] = id_meas
-    m_row['id_data'] = save_array_to_table(meas_table, "data", data)
+    m_id = save_array_to_table(meas_table, "data", data)
+    m_row['id'] = m_id
     m_row['samplingrate'] = samplingrate
     m_row.append()
     meas_table.flush()
     par_table = h5file.root.parameters.experiment
     par_cols = {"osnr": osnr, "wl": wl, "Psig": Psig, "symbolrate": symbolrate, "MQAM": MQAM}
     p_row = par_table.row
-    p_row['id'] = id_meas
+    p_row['id'] = m_id 
     for k, v in par_cols.items():
         if v is not None:
             p_row[k] = v
     p_row.append()
     par_table.flush()
+    return m_id
 
 def save_recvd(h5file, data, id_meas, taps, symbols=None, bits=None, oversampling=None, evm=None, ber=None, ser=None, dsp_params=None):
     """
