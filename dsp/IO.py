@@ -41,12 +41,12 @@ def create_tvlarray(self, where, name, atom=None, title="", filters=None, expect
 # register creation of tvlarrays
 tb.File.create_vlarray = create_tvlarray
 
-class reshapeVLarray(tb.VLArray):
-    _c_classid = "RESHAPEVLarray"
+class MDVLarray(tb.VLArray):
+    _c_classid = "MDVLARRAY"
     def __getitem__(self, key):
         parent = self._g_getparent()
         shape_array = parent.shapes[key]
-        array = super(reshapeVLarray, self).__getitem__(key)
+        array = super(MDVLarray, self).__getitem__(key)
         if array.dtype is np.dtype("object"):
             a = []
             for i in range(len(shape_array)):
@@ -64,29 +64,29 @@ class reshapeVLarray(tb.VLArray):
             for i in range(len(array)):
                 s.append(array[i].shape)
                 a.append(array[i].flatten())
-            super(reshapeVLarray, self).__setitem__(key, np.array(a))
+            super(MDVLarray, self).__setitem__(key, np.array(a))
             shape_array[key] = np.array(s)
         else:
             shape_array[key] = array.shape
-            super(reshapeVLarray, self).__setitem__(key, array.flatten())
+            super(MDVLarray, self).__setitem__(key, array.flatten())
 
     def append(self, array):
         parent = self._g_getparent()
         shape_array = parent.shapes
         shape_array.append(array.shape)
-        super(reshapeVLarray, self).append(array.flatten())
+        super(MDVLarray, self).append(array.flatten())
 
-def create_reshapevlarray(self, where, name, atom=None, title="", filters=None, expectedrows=None,
+def create_mdvlarray(self, where, name, atom=None, title="", filters=None, expectedrows=None,
                     chunkshape=None, byteorder=None, createparents=False, obj=None):
-    """Function to create tvlarrays"""
+    """Function to create a multi dimensional VLArray"""
     pnode = self._get_or_create_path(where, createparents)
     tb.file._checkfilters(filters)
     sharray = tb.VLArray(pnode, "shapes", tb.Int64Atom(), expectedrows=expectedrows)
-    return reshapeVLarray(pnode, name, atom, title=title, filters=filters, expectedrows=expectedrows,
+    return MDVLarray(pnode, name, atom, title=title, filters=filters, expectedrows=expectedrows,
                 chunkshape=chunkshape, byteorder=byteorder)
 
-# register creation of tvlarrays
-tb.File.create_reshapevlarray = create_reshapevlarray
+# register creation of mdvlarray
+tb.File.create_mdvlarray = create_mdvlarray
 
 
 def create_parameter_group(h5f, title, description=None, **attrs):
