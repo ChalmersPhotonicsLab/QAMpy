@@ -45,7 +45,7 @@ class MDVLarray(tb.VLArray):
     _c_classid = "MDVLARRAY"
     def __getitem__(self, key):
         parent = self._g_getparent()
-        shape_array = parent.shapes[key]
+        shape_array = getattr(parent, name+"_shape")[key]
         array = super(MDVLarray, self).__getitem__(key)
         if array.dtype is np.dtype("object"):
             a = []
@@ -57,7 +57,7 @@ class MDVLarray(tb.VLArray):
 
     def __setitem__(self, key, array):
         parent = self._g_getparent()
-        shape_array = parent.shapes
+        shape_array = getattr(parent, name+"_shape")
         if isinstance(key, slice):
             a = []
             s = []
@@ -72,7 +72,7 @@ class MDVLarray(tb.VLArray):
 
     def append(self, array):
         parent = self._g_getparent()
-        shape_array = parent.shapes
+        shape_array = getattr(parent, name+"_shape")
         shape_array.append(array.shape)
         super(MDVLarray, self).append(array.flatten())
 
@@ -81,7 +81,7 @@ def create_mdvlarray(self, where, name, atom=None, title="", filters=None, expec
     """Function to create a multi dimensional VLArray"""
     pnode = self._get_or_create_path(where, createparents)
     tb.file._checkfilters(filters)
-    sharray = tb.VLArray(pnode, "shapes", tb.Int64Atom(), expectedrows=expectedrows)
+    sharray = tb.VLArray(pnode, name+"_shape", tb.Int64Atom(), expectedrows=expectedrows)
     return MDVLarray(pnode, name, atom, title=title, filters=filters, expectedrows=expectedrows,
                 chunkshape=chunkshape, byteorder=byteorder)
 
@@ -130,7 +130,7 @@ def create_parameter_group(h5f, title, description=None, **attrs):
     return h5f
 
 
-def create_meas_group(h5f, title,  nmodes , description=None, **attrs):
+def create_meas_group(h5f, title,  description=None, **attrs):
     """
     Create the table for saving oscilloscope measurements
 
@@ -160,15 +160,15 @@ def create_meas_group(h5f, title,  nmodes , description=None, **attrs):
         gr_meas = h5f.create_group("/", "measurements", title=title)
     gr_osc = h5f.create_group(gr_osc, "oscilloscope", title=title)
     if description is None:
-        description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col(), "data_shape":tb.Int64Col(shape=(2,)), "data_id": tb.Int64Col()}
+        description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col()}
     t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal")
-    arr = h5f.create_vlarray(gr_osc, "data", tb.ComplexCol(itemsize=16, shape=(nmodes,)))
+    arr = h5f.create_mdvlarray(gr_osc, "data", tb.ComplexAtom(itemsize=16))
     t_meas.attrs.samplingrate_unit = "GS/s"
     for k, v in attrs.items():
         setattr(t_meas.attrs, k, v)
     return h5f
 
-def create_input_group(h5f, title, syms_shape, bits_shape, description=None, **attrs):
+def create_input_group(h5f, title, rolloff_dflt=np.nan, **attrs):
     """
     Create the table for saving the input symbols and bits
 
@@ -179,14 +179,6 @@ def create_input_group(h5f, title, syms_shape, bits_shape, description=None, **a
         The file to use, if a string create or open new file
     title: string
         The title description of the group
-    syms_shape: tuple or None
-        Shape of symbols arrays to save (can be None, which means input symbols will not be saved,
-        either bits_shape or syms_shape as to be not None)
-    bits_shape: tuple or None
-        Shape of bits arrays to save (can be None, which means input bits will not be saved,
-        either bits_shape or syms_shape as to be not None)
-    description: dict or tables.IsDescription (optional)
-        If given use to create the table
     **attrs:
         other attributes for the table
 
@@ -195,27 +187,21 @@ def create_input_group(h5f, title, syms_shape, bits_shape, description=None, **a
     h5f : h5filehandle
         Pytables handle to the hdf file
     """
-    assert (syms_shape is not None) or (bits_shape is not None), "Either syms_shape or bits_shape need to be given"
     try:
-        gr = h5f.create_group("/", "inputs", title=title)
+        gr = h5f.create_group("/", "input", title=title)
     except AttributeError:
         h5f = tb.open_file(h5f, "r+")
-        gr = h5f.create_group("/", "inputs", title=title)
+        gr = h5f.create_group("/", "input", title=title)
     # if no shape for input syms or bits is given use scalar
-    if description is None:
-        if syms_shape is None and bits_shape is not None:
-            description = {"id":tb.Int64Col(), "bits":tb.BoolCol(shape=bits_shape)}
-        elif syms_shape is not None and bits_shape is None:
-            description = {"id":tb.Int64Col(), "symbols":tb.ComplexCol(itemsize=16, shape=syms_shape)}
-        else:
-            description = {"id":tb.Int64Col(), "symbols":tb.ComplexCol(itemsize=16, shape=syms_shape),
-                  "bits":tb.BoolCol(shape=bits_shape)}
-    t_inp = h5f.create_table(gr, "input", description, "input symbols, bits at transmitter")
+    t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "symbols_id": tb.Int64Col(),
+                                               "bits_id": tb.Int64Col(), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal")
+    arr_syms = h5f.create_mdarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols")
+    arr_bits = h5f.create_mdarray(gr, "bits", tb.BoolAtom(), title="sent bits")
     for k, v in attrs:
         setattr(t_inp.attrs, k, v)
     return h5f
 
-def create_recvd_data_group(h5f, title, data_shape, description=None, maxtaps=1000, **attrs):
+def create_recvd_data_group(h5f, title, description=None, oversampling_dflt=2, **attrs):
     """
     Create the table for saving recovered data and parameters after DSP
 
@@ -226,12 +212,8 @@ def create_recvd_data_group(h5f, title, data_shape, description=None, maxtaps=10
         The file to use, if a string create or open new file
     title: string
         The title description of the group
-    data_shape: tuple
-        Shape of data arrays to save
     description: dict or tables.IsDescription (optional)
         If given use to create the table
-    maxtaps: int, optional
-        maximum number of taps the dsp uses 
     **attrs:
         other attributes for the table
 
@@ -245,22 +227,25 @@ def create_recvd_data_group(h5f, title, data_shape, description=None, maxtaps=10
     except AttributeError:
         h5f = tb.open_file(h5f, "r+")
         gr = h5f.create_group("/", "analysis", title=title)
-    if len(data_shape) > 1:
-        pols = data_shape[0]
+    gr_dsp = h5f.create_group(gr, "dsp", title="Signal from DSP")
     if description is None:
         dsp_params = { "freq_offset": tb.Float64Col(dflt=np.nan),
                        "freq_offset_N": tb.Int64Col(dflt=np.nan), "phase_est": tb.StringCol(shape=20),
                        "N_angles": tb.Float64Col(dflt=np.nan), "ph_est_blocklength": tb.Int64Col(),
                        "stepsize": tb.Float64Col(shape=2), "trsyms": tb.Float64Col(shape=2),
-                       "iterations": tb.Int64Col(shape=2), "taps":tb.ComplexCol(itemsize=64, shape=(pols, maxtaps)),
-                       "ntaps": tb.Int64Col()}
-        description = {"id":tb.IntCol64(), "data": tb.ComplexCol(itemsize=16, shape=data_shape),
-                "symbols":tb.ComplexCol(itemize=16, shape=data_shape),
-                "evm": tb.Float64Col(dflt=np.nan), "ber":tb.Float64Col(dflt=np.nan),
-                       "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col(),
+                       "iterations": tb.Int64Col(shape=2),
+                       "ntaps": tb.Int64Col(),
                        "method": tb.StringCol(shape=20)}
+        description = {"id":tb.IntCol64(), "data_id": tb.IntCol64(), "symbols_id": tb.IntCol64Col(),
+                       "bits_id": tb.Int64Col(), "taps_id": tb.Int64Col(),
+                       "evm": tb.Float64Col(dflt=np.nan), "ber":tb.Float64Col(dflt=np.nan),
+                       "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col(dflt=oversampling_dflt)}
         description.update(dsp_params)
-    t_rec = h5f.create_table(gr, "recovered", description, "signal after DSP")
+    t_rec = h5f.create_table(gr_dsp, "signal", description, "signal after DSP")
+    data_arr = h5f.create_mdvlarray(gr_dsp, "data", tb.ComplexAtom(itemsize=16), "signal after DSP")
+    syms_arr = h5f.create_mdvlarray(gr_dsp, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), "recovered symbols")
+    syms_arr = h5f.create_mdvlarray(gr_dsp, "taps", tb.ComplexAtom(itemsize=16, dflt=np.nan), "dsp taps")
+    bits_arr = h5f.create_mdvlarray(gr_dsp, "bits", tb.BoolAtom(dflt=False), "recovered bits")
     for k, v in attrs.items():
         setattr(t_rec.attrs, k, v)
     if description is None:
@@ -269,7 +254,17 @@ def create_recvd_data_group(h5f, title, data_shape, description=None, maxtaps=10
         t_rec.attrs.evm_unit = "%"
     return h5f
 
-def save_inputs(h5file, id_meas, symbols=None, bits=None):
+def save_array_to_table(table, name, array):
+    parent = table._g_getparent()
+    data_stor = getattr(parent, name)
+    shape_stor = getattr(parent, name+"_shape")
+    shape_stor.append(array.shape)
+    data_stor.append(array.flatten())
+    assert shape_stor.nrows == data_stor.nrows, "Error %s and %s_shape have come out of sync"%name
+    return data_stor.nrows
+
+
+def save_inputs(h5file, id_meas, symbols=None, bits=None, rolloff=None):
     """
     Save input symbols from the transmitter
 
@@ -287,13 +282,14 @@ def save_inputs(h5file, id_meas, symbols=None, bits=None):
 
     """
     assert (symbols is not None) or (bits is not None), "Either input symbols or bits need to be given"
-    input_tb = h5file.root.inputs.input
+    input_tb = h5file.root.input.signal
     row = input_tb.row
     row['id'] = id_meas
     if symbols is not None:
-        row['symbols'] = symbols
+        row['id_symbols'] = save_array_to_table(input_tb, "symbols", symbols)
     if bits is not None:
-        row['bits'] = bits
+        row['id_bits'] = save_array_to_table(input_tb, "bits", bits)
+    row['rolloff'] = rolloff
     row.append()
     input_tb.flush()
 
@@ -326,7 +322,7 @@ def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Ps
     meas_table = h5file.root.measurements.oscilloscope
     m_row = meas_table.row
     m_row['id'] = id_meas
-    m_row['data'] = data
+    m_row['id_data'] = save_array_to_table(meas_table, "data", data)
     m_row['samplingrate'] = samplingrate
     m_row.append()
     meas_table.flush()
@@ -340,7 +336,7 @@ def save_osc_meas(h5file, data, id_meas,  osnr=None, wl=None, measurementN=0, Ps
     p_row.append()
     par_table.flush()
 
-def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None, ber=None, ser=None, dsp_params=None):
+def save_recvd(h5file, data, id_meas, taps, symbols=None, bits=None, oversampling=None, evm=None, ber=None, ser=None, dsp_params=None):
     """
     Save recovered data after DSP
 
@@ -353,8 +349,12 @@ def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None,
         The sampled signal array, needs to be the same shape as defined when creating the group
     id_meas: int
         Unique measurement ID this corresponds to
+    taps: array_like
+        The equaliser taps
     symbols: array_like, optional
         Recovered symbols
+    bits: array_like, optional
+        Recovered bits
     oversampling: Int, optional
         Oversampling used for recovery
     evm: Float, optional
@@ -366,20 +366,22 @@ def save_recvd(h5file, data, id_meas, symbols=None, oversampling=None, evm=None,
     dsp_params: dict
         DSP parameters used for recovery. See the description in the recovery group creation for the definition.
     """
-    rec_table = h5file.root.recovered.analysis
+    rec_table = h5file.root.analysis.dsp
     cols = {"evm": evm, "ber": ber, "ser": ser}
     row = rec_table.row
     row['id'] = id_meas
-    row['data'] = data
     row['oversampling'] = oversampling
+    row['id_data'] = save_array_to_table(rec_table, "data", data)
+    row['id_taps'] = save_array_to_table(rec_table, "taps", taps)
+    if symbols is not None:
+        row['id_symbols'] = save_array_to_table(rec_table, "symbols", symbols)
+    if bits is not None:
+        row['id_bits'] = save_array_to_table(rec_table, "bits", bits)
     for k, v in cols.items():
         if v is not None:
             row[k] = v
     if dsp_params is not None:
         for k, v in dsp_params:
-            if k == "taps":
-                vv = np.atleast_2d(v)
-                row[k][:, :vv.shape[1]] = vv
             row[k] = v
     row.append()
     rec_table.flush()
