@@ -124,13 +124,13 @@ PRBSorder=15,
 PRBSseed=None
 
 
-frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(M,1)
+frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(M,1,frame_length = 2**16)
 
 frame_symbs_X = np.roll(frame_symbs, 6523)
 frame_symbs_Y = np.roll(frame_symbs, 6523)
 
-frame_symbs = np.vstack([frame_symbs_X,frame_symbs_Y])
-pilot_symbs = np.vstack([pilot_symbs,pilot_symbs])
+#frame_symbs = np.vstack([frame_symbs_X,frame_symbs_Y])
+#pilot_symbs = np.vstack([pilot_symbs,pilot_symbs])
 
 
 tx_sig = sim_tx(frame_symbs, os,snr = 50, linewidth = None, freqoff = None, rot_angle=None)

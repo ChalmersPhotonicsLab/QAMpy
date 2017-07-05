@@ -128,9 +128,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         plt.plot(pilot_phase)
         
         # Fix! Need moving average in numpy
-        print(np.shape(pilot_phase))
         pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
-        print(np.shape(pilot_phase_average))
         pilot_phase = np.hstack([pilot_phase[:(num_average-1)], pilot_phase_average])
            
         # Pilot positions in the received data set
@@ -158,7 +156,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
             
     pilot_pos = pilot_pos[pilot_pos != 0]    
     data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)   
-    
     return data_symbs, phase_trace
     
     
@@ -185,7 +182,7 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10, adap_step = True):
+def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-5, M_pilot = 4, ntaps = 45, Niter_Search = 10, Niter_Conv = 10, adap_step = False):
     """
     Locate and extract the pilot starting frame.
     
@@ -216,8 +213,15 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
     # Find the length of the pilot frame
     pilot_seq_len = len(ref_symbs[0,:])
     
-    symb_step_size = int(np.floor(pilot_seq_len / 2 * os))
-    num_steps = int(np.ceil(frame_length / symb_step_size))  
+    symb_step_size = int(np.floor(pilot_seq_len * os))
+    
+    if np.shape(rx_signal)[1] > frame_length*os:
+        max_len = frame_length * os 
+    else:
+        max_len = np.shape(rx_signal)[1]    
+    
+    
+    num_steps = int(np.ceil(max_len / symb_step_size + 5))  
     
     # Now search for every mode independent
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
@@ -230,12 +234,12 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         # end to ensure that sufficient symbols can be used for the search
         sub_var = np.ones(num_steps)*1e2
         for i in np.arange(2,num_steps-3):
-            wx, err = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
+            wx, err = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1)*symb_step_size], os, mu, M_pilot,Ntaps = ntaps, Niter = Niter_Search, method = "cma",adaptive_stepsize = adap_step) 
             sub_var[i] = np.var(err[l,-symb_step_size/os+ntaps:])
-       
+                       
         # Lowest variance of the CMA error
         minPart = np.argmin(sub_var)
-        
+               
         # Corresponding sequence
         shortSeq = rx_signal[:,(minPart)*symb_step_size:(minPart+1)*symb_step_size]
         
@@ -243,7 +247,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         longSeq = rx_signal[:,(minPart-2)*symb_step_size:(minPart+3)*symb_step_size]
 
         # Use the first estimate to get rid of any large FO and simplify alignment
-        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step)    
+        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter_Conv, method = "cma",adaptive_stepsize = adap_step)    
         seq_foe = equalisation.apply_filter(longSeq,os,wx1)
         foe_corse = phaserecovery.find_freq_offset(seq_foe)        
          
@@ -262,7 +266,7 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         found_delay = np.zeros([4])
         for k in range(4):
             # Find correlation for all 4 possible pi/2 rotations
-            xcov = np.correlate(np.angle(symbs_out[l,:]*np.exp(1j*k)),np.angle(ref_symbs[l,:]))
+            xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[l,:]))
             max_phase_rot[k] = np.max(xcov)
             found_delay[k] = np.argmax(xcov)
     
@@ -274,18 +278,18 @@ def frame_sync(rx_signal, ref_symbs, os, mu = 1e-3, M_pilot = 4, ntaps = 25, Nit
         
         # Tap update and extract the propper pilot sequuence
         pilot_seq = rx_signal[:,shift_factor[l]:shift_factor[l]+pilot_seq_len*os+ntaps-1]
-        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu/10, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter, method = "cma",adaptive_stepsize = adap_step) 
+        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter_Conv, method = "cma",adaptive_stepsize = adap_step) 
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu, M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter_Conv, method = "sbd",adaptive_stepsize = adap_step) 
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
         
         out_taps.append(wx)        
         eq_pilots[l,:] = symbs_out[l,:]
     
-    return eq_pilots, shift_factor, out_taps, foe_corse, test_out
+    return eq_pilots, shift_factor, out_taps, foe_corse
 
 def find_const_phase_offset(rec_pilots, ref_symbs):
     """
-    Finds and corrects a constant phase offset between the decoded pilot 
+    Finds a constant phase offset between the decoded pilot 
     symbols and the transmitted ones
     
     Input:
@@ -311,6 +315,18 @@ def find_const_phase_offset(rec_pilots, ref_symbs):
     
 
 def correct_const_phase_offset(symbs, phase_offsets):
+    """
+    Corrects a constant phase offset between the decoded pilot 
+    symbols and the transmitted ones
+    
+    Input:
+        symbs: Complex symbols to be compensated
+        phase_offsets: Phase offset for each mode
+        
+    Output:
+        symbs: Symbols after phase rotation
+    """
+    
     symbs = np.atleast_2d(symbs)
     phase_offsets = np.atleast_2d(phase_offsets)
     npols = symbs.shape[0]
@@ -328,11 +344,14 @@ symb_rate = 20e9
 snr = None #dB
 linewidth = None # Linewidth symbol-rate product
 fo = None # Frequency offset MHz
+M=64
 QAM = modulation.QAMModulator(M)
 # Pilot Settings
+npols = 2
+
 
 # Total frame length
-frame_length = 2**18
+frame_length = 2**16
 # Initial number of pilot tones for equalizer pre-convergence
 pilot_seq_len = 256
 # Repetative pilot symbols for phase tracking and equalizer update
@@ -340,57 +359,85 @@ pilot_ins_ratio = 32
 # Settings if PRBS is seleted for generation
 PRBS = False
 
+Numtaps = 45
 
-#Code for testing using the transmitter
-rec_signal = tx_sig
-npols = rec_signal.shape[0]
-ref_symbs = pilot_symbs[:,0:256]
+rec_signal = meas['Meas3']
+pilot_symbs = res['pilot_symbs']
+
+X = rec_signal[0,:]
+Y = rec_signal[1,:]
+
+X = X.flatten()
+Y = Y.flatten()
+
+X = utils.resample(X, 2.5, 2, renormalise = True)
+Y = utils.resample(Y, 2.5, 2, renormalise = True)
+X = utils.comp_IQbalance(X)
+Y = utils.comp_IQbalance(Y)
+
+delay = 26e4
+
+SS = np.vstack([X[delay:delay+frame_length*os*4],Y[delay:delay+frame_length*os*4]])
+
+SS2 = np.vstack([X[delay:delay+frame_length*os*3],Y[delay:delay+frame_length*os*3]])
+
+pilot_symbs = -np.conj(np.vstack([(pilot_symbs),pilot_symbs]))
+ref_symbs = (pilot_symbs[:,:pilot_seq_len])
+
 
 # Frame sync
-eq_pilots, shift_factor , taps, corse_foe,  test_out = frame_sync(rec_signal, ref_symbs, os)
+eq_pilots, shift_factor , taps, corse_foe = frame_sync(SS, ref_symbs, os, frame_length, mu=1e-3, ntaps=Numtaps, adap_step = True, Niter_Search = 20, Niter_Conv = 30)
 
+phase_offset = find_const_phase_offset(eq_pilots,ref_symbs)   
+eq_pilots = correct_const_phase_offset(eq_pilots,phase_offset)
 
 # Foe estimate
 foe, foePerMode, condNum = pilot_based_foe(eq_pilots,ref_symbs)
 corr_pilots = np.zeros(np.shape(eq_pilots),dtype=complex)
+phase_offset = np.zeros(npols,dtype=float)
 for l in range(npols):
     # Remove FOE from pilots
-    comp_test = phaserecovery.comp_freq_offset(eq_pilots[l,:],foe)    
+    comp_test = phaserecovery.comp_freq_offset(eq_pilots[l,:],foePerMode[l])    
     # Correct static phase difference between the Tx and Rx pilots
-    phase_offset = find_const_phase_offset(comp_test,ref_symbs[l,:])    
+    phase_offset[l] = find_const_phase_offset(comp_test,ref_symbs[l,:])    
     corr_pilots[l,:] = correct_const_phase_offset(comp_test,phase_offset)
 
 # Equalize the signal
 comp_test_sig = []
 for l in range(npols):
-    test_sig = equalisation.apply_filter(rec_signal[:,shift_factor[l]:],os,taps[l])
-    comp_test = correct_const_phase_offset(phaserecovery.comp_freq_offset(test_sig[l,:],foe), phase_offset)
+    test_sig = equalisation.apply_filter(SS[:,shift_factor[l]:shift_factor[l]+frame_length*os+Numtaps-1],os,taps[l])   
+    comp_test = correct_const_phase_offset(phaserecovery.comp_freq_offset(test_sig[l,:],foePerMode[l]), phase_offset[l])
     comp_test_sig.append(comp_test)
-
 
 # Pilot-aided CPE
 phase_comp_symbs = []
 phase_trace = []
 for l in range(npols):   
-    symbs, trace = pilot_based_cpe(comp_test_sig[l][:,pilot_seq_len:], pilot_symbs[l,pilot_seq_len:], pilot_ins_ratio, num_average = 3)
+    symbs, trace = pilot_based_cpe(comp_test_sig[l][:,pilot_seq_len:], pilot_symbs[l,pilot_seq_len:], pilot_ins_ratio,use_pilot_ratio=1, num_average = 5, max_num_blocks = None)
     phase_comp_symbs.append(symbs)
     phase_trace.append(trace)
+
+#for l in range(npols):
+#    wx, err_both = equalisation.equalise_signal(phase_comp_symbs[l], 1,1e-3, M,Niter=4, Ntaps=Numtaps, method="sbd" , adaptive_stepsize=True)
+#    phase_trace[l] = equalisation.apply_filter(phase_comp_symbs[l], 1, wx)
 
 
 #  Verification and plotting    
 plt.figure()
 plt.subplot(221)
 plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')
-plt.title('Pilots after Eq')  
+plt.title('Pilots after Eq X-Pol')  
 plt.subplot(222)
+plt.plot(eq_pilots[1,:].real,eq_pilots[1,:].imag,'.')
+plt.title('Pilots after Eq Y-Pol')  
 #plt.plot(comp_test[0,:].real,comp_test[0,:].imag,'.')  
 #plt.title('Pilots after FOE')
 plt.subplot(223)
 plt.plot(corr_pilots[0,:].real,corr_pilots[0,:].imag,'.')  
-plt.title('Phase-corrected pilots')
+plt.title('Phase-corrected pilots X-Pol')
 plt.subplot(224)
-plt.plot(phase_trace[0][0,:])
-plt.title('Phase trace')
+plt.plot(corr_pilots[1,:].real,corr_pilots[1,:].imag,'.')  
+plt.title('Phase-corrected pilots X-Pol')
 
 # Plot constellation
 plt.figure()
@@ -403,7 +450,7 @@ if npols == 2:
     plt.title('Pilot-based Y-Pol: EVM %2.2f%%'%(QAM.cal_EVM(phase_comp_symbs[1][0,:])*100))
 
 # Only verification stuff for BPS
-
+#
 bps_out = phaserecovery.blindphasesearch(comp_test_sig[0][0,:],64,QAM.symbols, 128)
 plt.figure()
 plt.hexbin(bps_out[0].real, bps_out[0].imag)
