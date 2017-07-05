@@ -45,6 +45,11 @@ def create_tvlarray(self, where, name, atom=None, title="", filters=None, expect
 tb.File.create_vlarray = create_tvlarray
 
 class MDVLarray(tb.VLArray):
+    """
+    A multi dimensional variable length array. The shape of the array is saved as "name"_shape
+    in the same group as this array. To create it automatically use the create_mdvlarray function
+    of the h5 file.
+    """
     _c_classid = "MDVLARRAY"
     def __getitem__(self, key):
         parent = self._g_getparent()
@@ -92,6 +97,28 @@ def create_mdvlarray(self, where, name, atom=None, title="", filters=None, expec
 tb.File.create_mdvlarray = create_mdvlarray
 
 def create_h5_meas_file(fn, title, filters=tb.Filters(complevel=9, complib="blosc:lz4", fletcher32=True), create_rec_group=False, **kwargs):
+    """
+    Create a h5 file for saving measurement data.
+
+    Parameters
+    ----------
+
+    fn : string
+        file name
+    title: string
+        description title for the file
+    filters: tables.Filters instance, optional
+        compression filters used by h5f2
+    create_rec_group: bool, optional
+        whether to create the recovered data group, default is not to do this
+    **kwargs
+        kword arguments to be passed to the group creation (best to set expectedrows to a sensible value)
+
+    Returns
+    -------
+    h5f: tables file instance
+        the hdf file instance for pytables 
+    """
     h5f = tb.open_file(fn, "w", title, filters=filters)
     h5f = create_parameter_group(h5f, **kwargs)
     h5f = create_meas_group(h5f, **kwargs)
@@ -204,8 +231,8 @@ def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.n
         h5f = tb.open_file(h5f, "r+")
         gr = h5f.create_group("/", "input", title=title)
     # if no shape for input syms or bits is given use scalar
-    t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "id_symbols": tb.Int64Col(),
-                                               "id_bits": tb.Int64Col(), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
+    t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "id_symbols": tb.Int64Col(dflt=0),
+                                               "id_bits": tb.Int64Col(dflt=0), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
     arr_syms = h5f.create_mdvlarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols", **kwargs)
     arr_bits = h5f.create_mdvlarray(gr, "bits", tb.BoolAtom(), title="sent bits", **kwargs)
     for k, v in attrs:
