@@ -91,6 +91,14 @@ def create_mdvlarray(self, where, name, atom=None, title="", filters=None, expec
 # register creation of mdvlarray
 tb.File.create_mdvlarray = create_mdvlarray
 
+def create_h5_meas_file(fn, title, filters=tb.Filters(complevel=9, complib="blosc:lz4", fletcher32=True), create_rec_group=False, **kwargs):
+    h5f = tb.open_file(fn, "w", title, filters=filters)
+    h5f = create_parameter_group(h5f, **kwargs)
+    h5f = create_meas_group(h5f, **kwargs)
+    h5f = create_input_group(h5f, **kwargs)
+    if create_rec_group:
+        h5f = create_recvd_data_group(h5f, **kwargs)
+    return h5f
 
 def create_parameter_group(h5f, title="parameters of the measurement", description=None, attrs=PARAM_UNITS, **kwargs):
     """
