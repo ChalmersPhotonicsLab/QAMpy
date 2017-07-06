@@ -296,7 +296,6 @@ def save_array_to_table(table, name, array):
     data_stor.append(array.flatten())
     return data_stor.nrows
 
-
 def save_inputs(h5file, id_meas, symbols=None, bits=None, rolloff=None):
     """
     Save input symbols from the transmitter
@@ -423,3 +422,104 @@ def save_recvd(h5file, data, id_meas, taps, symbols=None, bits=None, oversamplin
             row[k] = v
     row.append()
     rec_table.flush()
+
+def _array_idx_iterator(array, idxs):
+    i = 0
+    while i < len(idxs):
+        yield array[idxs[i]]
+        i += 1
+
+def array_from_table(table, name, query=None):
+    """
+    Get arrays from table
+
+    Parameters
+    ----------
+    table : pytables table
+        table to get this from
+    name : string
+        name of the array to get
+    query: string, optional
+        query string for selecting specific array rows (default=None select all rows)
+
+    Returns
+    -------
+    arrays: iterator
+       iterator over the arrays 
+    """
+    pnode = table._g_getparent()
+    arr_stor = getattr(pnode, name)
+    colname = "id_"+name
+    if query is None:
+        idx = table.cols[colname]
+    else:
+        idx = table.where(query)
+    return _array_idx_iterator(arr_stor, idx)
+
+def construct_id_query(ids, name="id"):
+    """
+    Construct a query for a table based on a list of given ids (e.g. from a different table)
+
+    Parameters
+    ----------
+    ids : list
+        list of integer ids to use
+    name: string, optional
+        column name of the ids to query
+
+    Returns
+    -------
+    query: string
+        query string that can be used with table.where
+    """
+    return "&".join(["({0}=={1})".format(name,id) for id in ids])
+
+def get_from_table(table, ids, name, id_col="id"):
+    """
+    Get arrays for a given list of ids from table
+
+    Parameters
+    ----------
+    table: pytables table
+        table containing the array reference
+    ids: list
+        list of array reference ids
+    arr_name: string
+        name of array
+    id_col: string, optional
+        column containing the array references
+
+    Returns
+    -------
+    arrays: iterator
+       an iterator over the arrays
+    """
+    return array_from_table(table, arr_name, query=construct_id_query(ids, name=id_col))
+
+def query_table_for_references(table_query, table_res, colname, query, id_col="id"):
+    """
+    Query a table for references and get result from second table based on query on another table, for example query theoretical
+    parameter table for a given OSNR range and get the corresponding 
+
+    Parameters
+    ----------
+    table_query: pytables table
+        table to query for references
+    table_res: pytables table
+        table to get the result from
+    colname: string
+        column name of the result
+    query: string
+        query to run on table_query
+    id_col: string, optional
+        name of the reference id column
+
+    Returns
+    -------
+    res_iterator: iterator
+        iterator over the results 
+    """
+
+    ids = table_query.read_where(query)[id_col]
+    return get_arrays_from_table(table_arr, ids, arr_name, id_col=id_col)
+
