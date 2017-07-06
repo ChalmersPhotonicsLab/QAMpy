@@ -216,25 +216,24 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     
     symb_step_size = int(np.floor(pilot_seq_len * os / search_overlap))
     
-    if ((np.shape(rx_signal)[1]) > (frame_length*os)):
-        max_len = int(frame_length * os)
+    # Adapt signal length
+    sig_len = (np.shape(rx_signal)[1])
+    if (sig_len > (frame_length + (search_overlap*2 + 5)*pilot_seq_len)*os):
+        num_steps = int((frame_length + (search_overlap*2 + 5) *pilot_seq_len)*os)
     else:
-        max_len = np.shape(rx_signal)[1]    
+        num_steps = int(np.ceil(np.shape(rx_signal)[1] / symb_step_size))
     
-    
-    num_steps = int(np.ceil(max_len / symb_step_size))
-    
+
     # Now search for every mode independent
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     shift_factor = np.zeros(npols,dtype = int)
     out_taps = []
     for l in range(npols):
-        
-        
+
         # Search based on equalizer error. Avoid certain part in the beginning and
         # end to ensure that sufficient symbols can be used for the search
         sub_var = np.ones(num_steps)*1e2
-        for i in np.arange(2,num_steps-3):
+        for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
             err_out = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size], os, mu[0], M_pilot,Ntaps = ntaps, Niter = Niter[0], method = "cma",adaptive_stepsize = adap_step[0])[1] 
             sub_var[i] = np.var(err_out[l,-symb_step_size/os+ntaps*0:])
                        
