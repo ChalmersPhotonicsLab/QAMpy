@@ -9,7 +9,6 @@ Pilot-Based DSP Transmitter for MQAM with M>4
 """
 import numpy as np
 from dsp import signals, equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality
-from scipy.io import loadmat, savemat
 from dsp.prbs import make_prbs_extXOR
 import matplotlib.pylab as plt
 
@@ -101,51 +100,4 @@ def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None
         sig = utils.rotate_field(sig, rot_angle)
     
     return sig
-
-""" 
-Testing the transmitter
-"""
-# Tx Config
-M = 64
-os = 2
-symb_rate = 20e9
-
-# Pilot Settings
-
-# Total frame length
-frame_length = 2**18
-# Initial number of pilot tones for equalizer pre-convergence
-pilot_seq_len = 256
-# Repetative pilot symbols for phase tracking and equalizer update
-pilot_ins_ratio = 32 
-# Settings if PRBS is seleted for generation
-PRBS = False
-PRBSorder=15,
-PRBSseed=None
-
-
-frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(M,1,frame_length = 2**16)
-
-frame_symbs_X = np.roll(frame_symbs, 6523)
-frame_symbs_Y = np.roll(frame_symbs, 6523)
-
-#frame_symbs = np.vstack([frame_symbs_X,frame_symbs_Y])
-#pilot_symbs = np.vstack([pilot_symbs,pilot_symbs])
-
-
-tx_sig = sim_tx(frame_symbs, os,snr = 50, linewidth = None, freqoff = None, rot_angle=None)
-
-
-"""
-Plotting section to check transmitter
-"""
-
-# Plot Result
-plt.figure()
-plt.semilogy(np.fft.fftshift(np.fft.fftfreq(len(tx_sig[0,:]),1/os)), np.fft.fftshift(np.abs(np.fft.fft(tx_sig[0,:]))**2))
-
-#plt.figure()
-#plt.plot([symbol_seq[:100].real,symbol_seq[:100].imag],'.')
-
-
 

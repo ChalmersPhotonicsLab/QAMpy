@@ -99,7 +99,7 @@ PRBS = False
 
 Numtaps = 45
 
-rec_signal = meas['Meas3']
+rec_signal = meas['Meas2']
 pilot_symbs = res['pilot_symbs']
 pilot_symbs = -np.conj(np.vstack([(pilot_symbs),pilot_symbs])) # NeoPhotonics Hybrid
 data_symbs = -np.conj(res['data_symbs'])
