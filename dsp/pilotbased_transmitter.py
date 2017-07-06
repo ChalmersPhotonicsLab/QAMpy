@@ -13,8 +13,6 @@ from dsp.prbs import make_prbs_extXOR
 import matplotlib.pylab as plt
 
 
-
-
 def gen_dataframe_withpilots(M,npols, frame_length = 2**18, pilot_seq_len = 256, pilot_ins_ratio = 32, PRBS = False, PRBSorder=15, PRBSseed=None):
 
     data_modulator = modulation.QAMModulator(M)
