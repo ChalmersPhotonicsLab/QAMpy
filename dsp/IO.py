@@ -165,7 +165,7 @@ def create_parameter_group(h5f, title="parameters of the measurement", descripti
     return h5f
 
 
-def create_meas_group(h5f, title="measurement data",  description=None, attrs=MEAS_UNITS, **kwargs):
+def create_meas_group(h5f, title="measurement data",  description=None, attrs=MEAS_UNITS, arrays=["data"], **kwargs):
     """
     Create the table for saving oscilloscope measurements
 
@@ -180,6 +180,8 @@ def create_meas_group(h5f, title="measurement data",  description=None, attrs=ME
         Number of modes/polarizations
     description: dict or tables.IsDescription (optional)
         If given use to create the table
+    arrays: list, optional
+        name of arrays referenced in the table
     attrs: dict, optional
         attributes on the table
     **kwargs:
@@ -199,12 +201,13 @@ def create_meas_group(h5f, title="measurement data",  description=None, attrs=ME
     if description is None:
         description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col()}
     t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal", **kwargs)
+    setattr(t_meas.attrs, "arrays", arrays)
     arr = h5f.create_mdvlarray(gr_osc, "data", tb.ComplexAtom(itemsize=16), **kwargs)
     for k, v in attrs.items():
         setattr(t_meas.attrs, k, v)
     return h5f
 
-def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.nan, attrs={}, **kwargs):
+def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.nan, attrs={}, arrays=["symbols", "bits"], **kwargs):
     """
     Create the table for saving the input symbols and bits
 
@@ -217,6 +220,8 @@ def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.n
         The title description of the group
     attrs: dict, optional
         attributes on the table
+    arrays: list, optional
+        name of arrays referenced in the table
     **kwargs:
         keyword arguments passed to create_table/array, it is highly recommended to set expectedrows
 
@@ -233,13 +238,15 @@ def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.n
     # if no shape for input syms or bits is given use scalar
     t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "id_symbols": tb.Int64Col(dflt=0),
                                                "id_bits": tb.Int64Col(dflt=0), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
+    setattr(t_in.attrs, "arrays", arrays)
     arr_syms = h5f.create_mdvlarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols", **kwargs)
     arr_bits = h5f.create_mdvlarray(gr, "bits", tb.BoolAtom(), title="sent bits", **kwargs)
     for k, v in attrs:
-        setattr(t_inp.attrs, k, v)
+        setattr(t_in.attrs, k, v)
     return h5f
 
-def create_recvd_data_group(h5f, title="data analysis and dsp results", description=None, oversampling_dflt=2, attrs=DSP_UNITS, **kwargs):
+def create_recvd_data_group(h5f, title="data analysis and dsp results", description=None, oversampling_dflt=2,
+                            attrs=DSP_UNITS, arrays=["data", "symbols", "taps", "bits"], **kwargs):
     """
     Create the table for saving recovered data and parameters after DSP
 
@@ -252,8 +259,10 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
         The title description of the group
     description: dict or tables.IsDescription (optional)
         If given use to create the table
-    **attrs:
+    attrs: dict, optional
         attributes for the table
+    arrays: list, optional
+        name of arrays referenced in the table
     **kwargs:
         keyword arguments passed to create_table/array, it is highly recommended to set expectedrows
 
@@ -282,9 +291,10 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
                        "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col(dflt=oversampling_dflt)}
         description.update(dsp_params)
     t_rec = h5f.create_table(gr_dsp, "signal", description, "signal after DSP", **kwargs)
+    setattr(t_rec.attrs, "arrays", arrays)
     data_arr = h5f.create_mdvlarray(gr_dsp, "data", tb.ComplexAtom(itemsize=16), "signal after DSP", **kwargs)
     syms_arr = h5f.create_mdvlarray(gr_dsp, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), "recovered symbols", **kwargs)
-    syms_arr = h5f.create_mdvlarray(gr_dsp, "taps", tb.ComplexAtom(itemsize=16, dflt=np.nan), "dsp taps", **kwargs)
+    taps_arr = h5f.create_mdvlarray(gr_dsp, "taps", tb.ComplexAtom(itemsize=16, dflt=np.nan), "dsp taps", **kwargs)
     bits_arr = h5f.create_mdvlarray(gr_dsp, "bits", tb.BoolAtom(dflt=False), "recovered bits", **kwargs)
     for k, v in attrs.items():
         setattr(t_rec.attrs, k, v)
@@ -476,7 +486,7 @@ def construct_id_query(ids, name="id"):
 
 def get_from_table(table, ids, name, id_col="id"):
     """
-    Get arrays for a given list of ids from table
+    Get values for a given list of ids from table
 
     Parameters
     ----------
@@ -484,17 +494,20 @@ def get_from_table(table, ids, name, id_col="id"):
         table containing the array reference
     ids: list
         list of array reference ids
-    arr_name: string
-        name of array
+    name: string
+        name of desired values column
     id_col: string, optional
         column containing the array references
 
     Returns
     -------
-    arrays: iterator
-       an iterator over the arrays
+    result: iterator or list
+       values at the desired ids. If results are an array this is an iterator otherwise it is a list
     """
-    return array_from_table(table, arr_name, query=construct_id_query(ids, name=id_col))
+    if name in table.attrs.arrays:
+        return array_from_table(table, arr_name, query=construct_id_query(ids, name=id_col))
+    else:
+        return [x[name] for x in table.where(construct_id_query(ids))]
 
 def query_table_for_references(table_query, table_res, colname, query, id_col="id"):
     """
@@ -516,10 +529,9 @@ def query_table_for_references(table_query, table_res, colname, query, id_col="i
 
     Returns
     -------
-    res_iterator: iterator
-        iterator over the results 
+    results: iterator or list
+        query results. If the results are arrays this is an iterator, otherwise a list
     """
 
     ids = table_query.read_where(query)[id_col]
-    return get_arrays_from_table(table_arr, ids, arr_name, id_col=id_col)
-
+    return get_from_table(table_arr, ids, colname, id_col=id_col)
