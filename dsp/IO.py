@@ -233,7 +233,7 @@ def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.n
     try:
         gr = h5f.create_group("/", "input", title=title)
     except AttributeError:
-        h5f = tb.open_file(h5f, "r+")
+        h5f = tb.open_file(h5f, "a")
         gr = h5f.create_group("/", "input", title=title)
     # if no shape for input syms or bits is given use scalar
     t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "id_symbols": tb.Int64Col(dflt=0),
@@ -246,7 +246,7 @@ def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.n
     return h5f
 
 def create_recvd_data_group(h5f, title="data analysis and dsp results", description=None, oversampling_dflt=2,
-                            attrs=DSP_UNITS, arrays=["data", "symbols", "taps", "bits"], **kwargs):
+                            attrs=DSP_UNITS, arrays=["data", "symbols", "taps", "bits"], nmodes=2, **kwargs):
     """
     Create the table for saving recovered data and parameters after DSP
 
@@ -263,6 +263,8 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
         attributes for the table
     arrays: list, optional
         name of arrays referenced in the table
+    nmodes: int, optional
+        number of modes/polarisations
     **kwargs:
         keyword arguments passed to create_table/array, it is highly recommended to set expectedrows
 
@@ -274,21 +276,21 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
     try:
         gr = h5f.create_group("/", "analysis", title=title)
     except AttributeError:
-        h5f = tb.open_file(h5f, "r+")
+        h5f = tb.open_file(h5f, "a")
         gr = h5f.create_group("/", "analysis", title=title)
     gr_dsp = h5f.create_group(gr, "dsp", title="Signal from DSP")
     if description is None:
         dsp_params = { "freq_offset": tb.Float64Col(dflt=np.nan),
-                       "freq_offset_N": tb.Int64Col(dflt=np.nan), "phase_est": tb.StringCol(shape=20),
+                       "freq_offset_N": tb.Int64Col(dflt=0), "phase_est": tb.StringCol(itemsize=20),
                        "N_angles": tb.Float64Col(dflt=np.nan), "ph_est_blocklength": tb.Int64Col(),
                        "stepsize": tb.Float64Col(shape=2), "trsyms": tb.Float64Col(shape=2),
                        "iterations": tb.Int64Col(shape=2),
                        "ntaps": tb.Int64Col(),
-                       "method": tb.StringCol(shape=20)}
-        description = {"id":tb.IntCol64(), "data_id": tb.IntCol64(), "symbols_id": tb.IntCol64Col(),
+                       "method": tb.StringCol(itemsize=20)}
+        description = {"id":tb.Int64Col(), "data_id": tb.Int64Col(), "symbols_id": tb.Int64Col(),
                        "bits_id": tb.Int64Col(), "taps_id": tb.Int64Col(),
-                       "evm": tb.Float64Col(dflt=np.nan), "ber":tb.Float64Col(dflt=np.nan),
-                       "ser":tb.Float64Col(dflt=np.nan), "oversampling":tb.Int64Col(dflt=oversampling_dflt)}
+                       "evm": tb.Float64Col(dflt=np.nan, shape=nmodes), "ber":tb.Float64Col(dflt=np.nan, shape=nmodes),
+                       "ser":tb.Float64Col(dflt=np.nan, shape=nmodes), "oversampling":tb.Int64Col(dflt=oversampling_dflt)}
         description.update(dsp_params)
     t_rec = h5f.create_table(gr_dsp, "signal", description, "signal after DSP", **kwargs)
     setattr(t_rec.attrs, "arrays", arrays)
@@ -505,7 +507,7 @@ def get_from_table(table, ids, name, id_col="id"):
        values at the desired ids. If results are an array this is an iterator otherwise it is a list
     """
     if name in table.attrs.arrays:
-        return array_from_table(table, arr_name, query=construct_id_query(ids, name=id_col))
+        return array_from_table(table, name, query=construct_id_query(ids, name=id_col))
     else:
         return [x[name] for x in table.where(construct_id_query(ids))]
 
