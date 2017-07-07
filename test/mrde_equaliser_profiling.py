@@ -18,19 +18,18 @@ ntaps = 30
 trsyms = N//os//2-(ntaps+5) # use full width for training
 methods = ("mcma", "mrde")
 
-X, Xsymbols, Xbits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
-Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+S, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 t_pmd = 50e-12
 
-SS = utils.apply_PMD_to_field(np.vstack([X,Y]), theta, t_pmd, omega)
+SS = utils.apply_PMD_to_field(S, theta, t_pmd, omega)
 
 E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, methods=methods)
 
 
-evmX = QAM.cal_evm(X[::2])
-evmY = QAM.cal_evm(Y[::2])
+evmX = QAM.cal_evm(S[0,::2])
+evmY = QAM.cal_evm(S[1,::2])
 evmEx = QAM.cal_evm(E[0])
 evmEy = QAM.cal_evm(E[1])
 #sys.exit()

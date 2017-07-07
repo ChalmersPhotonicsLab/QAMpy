@@ -19,7 +19,7 @@ lw_LO = np.linspace(10e1, 1000e1, 4)
 sers = []
 
 
-X, symbolsX, bitsX = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
+X, symbolsX, bitsX = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True, dual_pol=False)
 
 for lw in lw_LO:
     shiftN = np.random.randint(-N/2, N/2, 1)

@@ -18,6 +18,6 @@ M = 128
 N = 10**6
 snr = 30
 modulator = modulation.QAMModulator(M)
-signal, syms, bits = modulator.generate_signal(N, snr)
+signal, syms, bits = modulator.generate_signal(N, snr, dual_pol=False)
 evm = modulator.cal_evm(signal)
 print(evm)

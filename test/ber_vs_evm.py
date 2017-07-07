@@ -73,7 +73,7 @@ for M in Mqams:
     for sr in snr:
         print("SNR = %2f.0 dB"%sr)
         modulator = modulation.QAMModulator(M)
-        signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
+        signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta, dual_pol=False)
         signalx = np.atleast_2d(utils.rrcos_pulseshaping(signal, fs, 1/fb, beta))
         signalafter = np.atleast_2d(signalx[0,::2])
         evm1[i] = modulator.cal_evm(signalafter[0])

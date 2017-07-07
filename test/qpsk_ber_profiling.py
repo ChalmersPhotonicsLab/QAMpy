@@ -28,15 +28,13 @@ snr = 12
 mu = 1e-3
 ntaps = 30
 
-X, symbolsX, bitsX = QAM.generate_signal(N, snr, PRBSorder=15, baudrate=fb, samplingrate=fs)
-Y, symbolsY, bitsY = QAM.generate_signal(N, snr, PRBSorder=23, baudrate=fb, samplingrate=fs)
+S, symbols, bits = QAM.generate_signal(N, snr, PRBSorder=(15,23), baudrate=fb, samplingrate=fs)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, os*N, endpoint=False)
 t_pmd = 75e-12
 
 H = H_PMD(theta, t_pmd, omega)
 
-S = np.vstack([X,Y])
 Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
 SSf = np.einsum('ijk,ik -> ik',H , Sf)
 SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
@@ -49,18 +47,18 @@ E = equalisation.apply_filter(SS, os, wx)
 E = E[:,1000:-1000]
 
 try:
-    berx = (QAM.cal_ber(E[0], bits_tx=bitsX, Lsync=50))
+    berx = QAM.cal_ber(E[0], bits_tx=bits[0])
 except:
-    berx = (QAM.cal_ber(E[1], bits_tx=bitsX, Lsync=50))
+    berx = QAM.cal_ber(E[1], bits_tx=bits[0])
 try:
-    bery = (QAM.cal_ber(E[1], bits_tx=bitsY, Lsync=50))
+    bery = QAM.cal_ber(E[1], bits_tx=bits[1])
 except:
-    bery = (QAM.cal_ber(E[0], bits_tx=bitsY, Lsync=50))
+    bery = QAM.cal_ber(E[0], bits_tx=bits[1])
 
 print("X BER %f dB"%(10*np.log10(berx[0])))
 print("Y BER %f dB"%(10*np.log10(bery[0])))
-evmX = QAM.cal_evm(X[::os])
-evmY = QAM.cal_evm(Y[::os])
+evmX = QAM.cal_evm(S[0,::os])
+evmY = QAM.cal_evm(S[1,::os])
 evmEx = QAM.cal_evm(E[0])
 evmEy = QAM.cal_evm(E[1])
 print("X EVM %f "%evmEx)
@@ -79,8 +77,8 @@ plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
 plt.legend()
 plt.subplot(122)
 plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.plot(S[0,::2].real, S[0,::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.plot(S[1,::2].real, S[1,::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
 plt.legend()
 plt.show()
 

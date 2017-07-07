@@ -20,12 +20,13 @@ t_pmd = 100.e-12
 Ncma = None
 Nrde = None
 
-X, Xsymbols, Xbits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
-Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
+#Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+print(sig.shape)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 
-SS = utils.apply_PMD_to_field(np.vstack([X,Y]), theta, t_pmd, omega)
+SS = utils.apply_PMD_to_field(sig, theta, t_pmd, omega)
 #SS = np.vstack([X,Y])
 
 E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
@@ -33,8 +34,8 @@ E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, 
 E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
-evmX = QAM.cal_evm(X[::2])
-evmY = QAM.cal_evm(Y[::2])
+evmX = QAM.cal_evm(sig[0,::2])
+evmY = QAM.cal_evm(sig[1,::2])
 evmEx = QAM.cal_evm(E[0])
 evmEy = QAM.cal_evm(E[1])
 evmEx_m = QAM.cal_evm(E_m[0])
@@ -67,10 +68,10 @@ plt.hexbin(E_s[0].real, E_s[0].imag, label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
 plt.legend()
 plt.subplot(247)
 plt.title('Original')
-plt.hexbin(X[::2].real, X[::2].imag, label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.hexbin(sig[0,::2].real, sig[0,::2].imag, label=r"$EVM_x=%.1f\%%$"%(100*evmX))
 plt.legend()
 plt.subplot(248)
-plt.hexbin(Y[::2].real, Y[::2].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.hexbin(sig[1,::2].real, sig[1,::2].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmY))
 plt.legend()
 
 plt.figure()

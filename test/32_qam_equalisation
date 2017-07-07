@@ -40,15 +40,13 @@ t_pmd = 20.e-12
 Ncma = 10000
 Nrde = N//2//os -int(1.5*ntaps)
 
-X, Xsymbols, Xbits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
-Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+S, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 
 H = H_PMD(theta, t_pmd, omega)
 H2 = H_PMD(-theta, -t_pmd, omega)
 
-S = np.vstack([X,Y])
 
 SS = applyPMD(S, H)
 
@@ -59,8 +57,8 @@ E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, 
 print("equalised")
 
 
-evmX = cal_evm_blind(X[::2], M)
-evmY = cal_evm_blind(Y[::2], M)
+evmX = cal_evm_blind(S[0,::2], M)
+evmY = cal_evm_blind(S[1,::2], M)
 evmEx = cal_evm_blind(E[0], M)
 evmEy = cal_evm_blind(E[1], M)
 evmEx_m = cal_evm_blind(E_m[0], M)
@@ -87,8 +85,8 @@ plt.plot(E_s[0].real, E_s[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
 plt.legend()
 plt.subplot(224)
 plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'r.', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.plot(S[0,::2].real, S[0,::2].imag, 'r.', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.plot(S[1,::2].real, S[1,::2].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
 plt.legend()
 
 plt.figure()

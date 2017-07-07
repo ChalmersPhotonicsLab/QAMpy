@@ -15,28 +15,27 @@ QAM = modulation.QAMModulator(M)
 snr = 14
 mu = 1e-3
 
-X, symbolsX, bitsX = QAM.generate_signal(N, snr, PRBSorder=15, baudrate=fb, samplingrate=fs)
-Y, symbolsY, bitsY = QAM.generate_signal(N, snr, PRBSorder=23, baudrate=fb, samplingrate=fs)
+S, symbols, bits = QAM.generate_signal(N, snr, PRBSorder=(15,23), baudrate=fb, samplingrate=fs)
 
 omega = 2*np.pi*np.linspace(-fs/2, fs/2, os*N, endpoint=False)
 t_pmd = 75e-12
-SS = utils.apply_PMD_to_field(np.vstack([X,Y]), theta, t_pmd, omega)
+SS = utils.apply_PMD_to_field(S, theta, t_pmd, omega)
 
 wxy, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=30)
 E = equalisation.apply_filter(SS, os, wxy)
 E = E[:,1000:-1000]
 
 try:
-    berx = QAM.cal_ber(E[0], bits_tx=bitsX)
-    bery = QAM.cal_ber(E[1], bits_tx=bitsY)
+    berx = QAM.cal_ber(E[0], bits_tx=bits[0])
+    bery = QAM.cal_ber(E[1], bits_tx=bits[1])
 except:
-    berx = QAM.cal_ber(E[1], bits_tx=bitsX)
-    bery = QAM.cal_ber(E[0], bits_tx=bitsY)
+    berx = QAM.cal_ber(E[1], bits_tx=bits[0])
+    bery = QAM.cal_ber(E[0], bits_tx=bits[1])
 
 print("X BER %f dB"%(10*np.log10(berx[0])))
 print("Y BER %f dB"%(10*np.log10(bery[0])))
-evmX = QAM.cal_evm(X[::os])
-evmY = QAM.cal_evm(Y[::os])
+evmX = QAM.cal_evm(S[0,::os])
+evmY = QAM.cal_evm(S[1,::os])
 evmEx = QAM.cal_evm(E[0]) 
 evmEy = QAM.cal_evm(E[1])
 
@@ -49,8 +48,8 @@ plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
 plt.legend()
 plt.subplot(122)
 plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.plot(S[0,::2].real, S[0,::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.plot(S[1,::2].real, S[1,::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
 plt.legend()
 
 plt.figure()

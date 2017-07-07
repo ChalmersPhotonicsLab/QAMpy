@@ -16,7 +16,7 @@ lw_LO = np.linspace(10e1, 1000e1, 10)
 #lw_LO = [100e3]
 sers = []
 
-X, symbolsX, bitsX = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBS=False )
+X, symbolsX, bitsX = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBS=False , dual_pol=False)
 #symbolsX = np.random.randn(2**15-1) + 1.j*np.random.randn(2**15-1)
 
 for lw in lw_LO:

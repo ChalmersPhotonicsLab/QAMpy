@@ -69,7 +69,7 @@ for M in Mqams:
     for sr in snr:
         print("SNR = %2f.0 dB"%sr)
         modulator = modulation.QAMModulator(M)
-        signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
+        signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta, dual_pol=False)
         signal = np.atleast_2d(signal)
         signalx = np.atleast_2d(utils.rrcos_pulseshaping(signal[0], fs, 1/fb, beta))
         wx, er =  equalisation.equalise_signal(signalx, os, 3e-4, M, Ntaps=ntaps, adaptive_step=True, method="mcma")

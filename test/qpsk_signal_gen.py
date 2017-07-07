@@ -12,7 +12,7 @@ QAM = modulation.QAMModulator(4)
 N = 10**5
 
 for sr in snr:
-    data_rx, data_tx, bits2 = QAM.generate_signal(N, sr, IQsep=True)
+    data_rx, data_tx, bits2 = QAM.generate_signal(N, sr, IQsep=True, dual_pol=False)
     ser.append(signal_quality.cal_ser_QAM(data_rx, data_tx, 4))
 plt.figure()
 plt.plot(snr, 10*np.log10(theory.ser_vs_es_over_n0_mpsk(10**(snr/10.), 4)), label='theory')
