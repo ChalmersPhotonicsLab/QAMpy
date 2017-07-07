@@ -1,7 +1,7 @@
 #import cProfile
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation, utils, phaserecovery, IO
+from dsp import equalisation, modulation, utils, phaserecovery, io
 from timeit import default_timer as timer
 import arrayfire as af
 import os as os_mod
@@ -23,22 +23,22 @@ if os_mod.path.exists(hdfn1):
     os_mod.remove(hdfn1)
 
 #single pol
-h5_sp = IO.create_h5_meas_file(hdfn1, "single polarisation test save")
+h5_sp = io.create_h5_meas_file(hdfn1, "single polarisation test save")
 for snr in snrs:
     X, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
-    id_m = IO.save_osc_meas(h5_sp, X, osnr=snr, wl=1550, samplingrate=fs, symbolrate=fb, MQAM=M)
-    IO.save_inputs(h5_sp, id_m, symbols=symbolsX)
+    id_m = io.save_osc_meas(h5_sp, X, osnr=snr, wl=1550, samplingrate=fs, symbolrate=fb, MQAM=M)
+    io.save_inputs(h5_sp, id_m, symbols=symbolsX)
 h5_sp.close()
 
 if os_mod.path.exists(hdfn2):
     os_mod.remove(hdfn2)
 
-h5_dp = IO.create_h5_meas_file(hdfn2, "dual polarisation test save")
+h5_dp = io.create_h5_meas_file(hdfn2, "dual polarisation test save")
 for snr in snrs:
     X, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
     Y, symbolsX, bitsX = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBS=True)
     E = np.vstack([X, Y])
     bits = np.vstack([bitsX, bitsX])
-    id_m = IO.save_osc_meas(h5_dp, E, osnr=snr, wl=1550, samplingrate=fs, symbolrate=fb, MQAM=M)
-    IO.save_inputs(h5_dp, id_m, bits=bits)
+    id_m = io.save_osc_meas(h5_dp, E, osnr=snr, wl=1550, samplingrate=fs, symbolrate=fb, MQAM=M)
+    io.save_inputs(h5_dp, id_m, bits=bits)
 h5_dp.close()
