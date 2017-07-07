@@ -323,4 +323,4 @@ class QAMModulator(object):
         s_tx_sync, syms_demod = self._sync_and_adjust(syms_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
-        return ber_functions.cal_ber_only(tx_synced, bits_demod, threshold=0.8)
+        return ber_functions.cal_ber_syncd(tx_synced, bits_demod, threshold=0.8)
