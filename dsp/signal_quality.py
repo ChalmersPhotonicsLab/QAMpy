@@ -48,7 +48,7 @@ def quantize_af(signal, symbols, precision=16):
 
 def normalise_sig(sig, M):
     """Normalise signal to average power"""
-    norm = np.sqrt(cal_S0(sig, M))
+    norm = np.sqrt(cal_s0(sig, M))
     return 1 / norm, sig / norm
 
 
