@@ -256,7 +256,7 @@ def cal_ber_syncd(data_rx, data_tx, threshold=0.2):
     return ber, errs, N
 
 
-def cal_ber_nosync(data_rx, data_tx, Lsync, imax=200):
+def cal_ber_nosyncd(data_rx, data_tx):
     """
     Calculate the BER between a received bit stream and a known
     bit sequence which is not synchronised. If data_tx is shorter than data_rx it is assumed
@@ -284,10 +284,10 @@ def cal_ber_nosync(data_rx, data_tx, Lsync, imax=200):
         length of data
     """
     try:
-        idx, data_tx_sync = sync_Tx2Rx(data_tx, data_rx, Lsync, imax)
+        idx, data_tx_sync = sync_tx2rx_xcorr(data_tx, data_rx)
     except DataSyncError:
         # if we cannot sync try to use inverted data
-        idx, data_tx_sync = sync_Tx2Rx(-data_tx, data_rx, Lsync, imax)
+        idx, data_tx_sync = sync_tx2rx_xcorr(-data_tx, data_rx)
     data_tx_sync = adjust_data_length(data_tx_sync, data_rx)
     #TODO this still returns a slightly smaller value, as if there would be
     # one less error, maybe this happens in the adjust_data_length
