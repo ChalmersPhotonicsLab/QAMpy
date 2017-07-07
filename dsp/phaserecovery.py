@@ -335,7 +335,7 @@ def partition_16qam(E):
        Technol. Lett. …, vol. 22, no. 20, pp. 1515–1517, 2010.
     """
 
-    S0 = cal_S0(E, 1.32)
+    S0 = cal_s0(E, 1.32)
     inner = (np.sqrt(S0 / 5) + np.sqrt(S0)) / 2.
     outer = (np.sqrt(9 * S0 / 5) + np.sqrt(S0)) / 2.
     Ea = abs(E)
