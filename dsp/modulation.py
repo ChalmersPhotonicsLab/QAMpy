@@ -271,7 +271,7 @@ class QAMModulator(object):
             #symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
             #symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
             symbol_tx, data_demod = self._sync_and_adjust(symbol_tx, data_demod)
-        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod), symbol_tx, data_demod
+        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod)
 
     def _sync_and_adjust(self, syms_tx, syms_rx):
         syms_tx = self._sync_symbol2signal(syms_tx, syms_rx)
