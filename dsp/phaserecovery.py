@@ -15,16 +15,16 @@ except ImportError:
 SYMBOLS_16QAM = cal_symbols_qam(16)
 NMAX = 4*1024**3
 
-def viterbiviterbi_gen(N, E, M):
+def viterbiviterbi(E, N, M):
     """
     Viterbi-Viterbi blind phase recovery for an M-PSK signal
 
     Parameters
     ----------
-    N : int
-        number of samples to average over
     E : array_like
         the electric field of the signal
+    N : int
+        number of samples to average over
     M : int
         order of the M-PSK
 
@@ -255,51 +255,13 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
     En = E*np.exp(1.j*angles_adj)
     return En, angles_adj
 
-def viterbiviterbi_qpsk(N, E):
-    """
-    Viterbi-Viterbi blind phase recovery for QPSK signal
-
-    Parameters
-    ----------
-    N : int
-        number of samples to average over
-    E : array_like
-        the electric field of the signal
-
-    Returns
-    -------
-    Eout : array_like
-        Field with compensated phases
-    """
-    return viterbiviterbi_gen(N, E, 4)
-
-
-def viterbiviterbi_bpsk(N, E):
-    """
-    Viterbi-Viterbi for BPSK signal
-
-    Parameters
-    ----------
-    N : int
-        number of samples to average over
-    E : array_like
-        the electric field of the signal
-
-    Returns
-    -------
-    Eout : array_like
-        Field with compensated phases
-    """
-    return viterbiviterbi_gen(N, E, 2)
-
-
-def __findmax_16QAM(rk, ci, vk):
+def __findmax_16qam(rk, ci, vk):
     mkk = np.real(rk * np.conj(ci) * np.conj(vk) - abs(ci)**2 / 2)
     pk = np.argmax(mkk)
     return ci[pk]
 
 
-def ML_phase_16QAM(X, Y, pix, piy, cfactor):
+def ml_phase_16qam(X, Y, pix, piy, cfactor):
     """
     Maximum-likelihood phase recovery for 16-QAM signal
     using pilots for starting the estimator on a dual-pol 16 QAM signal.
@@ -337,17 +299,18 @@ def ML_phase_16QAM(X, Y, pix, piy, cfactor):
             np.sum(np.conj(pilotX[k - cfactor:k]) * X[k - cfactor:k]))
         pcoeY[k] = np.angle(
             np.sum(np.conj(pilotY[k - cfactor:k]) * Y[k - cfactor:k]))
-        pilotX[k] = __findmax_16QAM(X[k], SYMBOLS_16QAM,\
+        pilotX[k] = __findmax_16qam(X[k], SYMBOLS_16QAM,\
                     np.sum(np.conj(pilotX[k-cfactor:k])*X[k-cfactor:k])/\
                     np.sum(np.abs(pilotX[k-cfactor:k])**2))
-        pilotY[k] = __findmax_16QAM(Y[k], SYMBOLS_16QAM,
+        pilotY[k] = __findmax_16Qqam(Y[k], SYMBOLS_16QAM,
                     np.sum(np.conj(pilotY[k-cfactor:k])*Y[k-cfactor:k])/\
                     np.sum(np.abs(pilotY[k-cfactor:k])**2))
     return X * np.exp(-1.j * pcoeX), Y * np.exp(-1.j * pcoeY)
 
 
-def partition_16QAM(E):
-    r"""Partition a 16-QAM signal into the inner and outer circles.
+def partition_16qam(E):
+    r"""
+    Partition a 16-QAM signal into the inner and outer circles.
 
     Separates a 16-QAM signal into the inner and outer rings, which have
     different phase orientations. Detailed in _[1].
@@ -381,7 +344,7 @@ def partition_16QAM(E):
     return class1_mask, class2_mask
 
 
-def ff_Phase_recovery_16QAM(E, Nangles, Nsymbols):
+def ff_phase_recovery_16qam(E, Nangles, Nsymbols):
     phi = np.linspace(0, np.pi, Nangles)
     N = len(E)
     d = (abs(E[:, np.newaxis, np.newaxis] * np.exp(1.j * phi)[:, np.newaxis] -
@@ -392,7 +355,7 @@ def ff_Phase_recovery_16QAM(E, Nangles, Nsymbols):
     return E[Nsymbols:] * np.exp(1.j * phinew)
 
 
-def QPSK_partition_phase_16QAM(Nblock, E):
+def phase_partition_16qam(E, N):
     r"""16-QAM blind phase recovery using QPSK partitioning.
 
     A blind phase estimator for 16-QAM signals based on partitioning the signal
@@ -401,10 +364,10 @@ def QPSK_partition_phase_16QAM(Nblock, E):
 
     Parameters
     ----------
-        Nblock : int
-            number of samples in an averaging block
         E : array_like
             electric field of the signal
+        N : int
+            number of samples in an averaging block
 
     Returns
     -------
@@ -421,7 +384,7 @@ def QPSK_partition_phase_16QAM(Nblock, E):
     dphi = np.pi / 4 + np.arctan(1 / 3)
     L = len(E)
     # partition QPSK signal into qpsk constellation and non-qpsk const
-    c1_m, c2_m = partition_16QAM(E)
+    c1_m, c2_m = partition_16qam(E)
     Sx = np.zeros(len(E), dtype=np.complex128)
     Sx[c2_m] = (E[c2_m] * np.exp(1.j * dphi))**4
     So = np.zeros(len(E), dtype=np.complex128)

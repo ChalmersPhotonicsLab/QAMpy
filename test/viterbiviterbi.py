@@ -16,7 +16,7 @@ X, Sx, Bx = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs , carrier_d
 
 
 
-E = phaserecovery.viterbiviterbi_qpsk(9, X[::2])
+E = phaserecovery.viterbiviterbi(X[::2], 9, 4)
 
 evm1 = QAM.cal_evm(E)
 evm2 = QAM.cal_evm(X)
