@@ -292,34 +292,3 @@ def cal_ber_nosyncd(data_rx, data_tx):
     #TODO this still returns a slightly smaller value, as if there would be
     # one less error, maybe this happens in the adjust_data_length
     return cal_ber_syncd(data_rx, data_tx_sync)
-
-
-def quantize_qam(sig, M):
-    """Quantize a QAM signal assuming Grey coding where possible
-    using maximum likelyhood. Calculates distance to ideal points.
-    Only works for vectors (1D array), not for M-D arrays
-
-    Parameters
-    ----------
-    sig : array_like
-        signal data
-    M : int
-        QAM order (currently has to be 4)
-
-    Returns
-    -------
-    sym : array_like
-        symbols after demodulation (complex numbers)
-    idx : array_like
-        indices of the data items in the constellation diagram
-    """
-    L = len(sig)
-    sym = np.zeros(L, dtype=np.complex128)
-    data = np.zeros(L, dtype='int')
-    cons = theory.cal_symbols_qam(M).flatten()
-    scal = theory.cal_scaling_factor_qam(M)
-    P = np.mean(utils.cabssquared(sig))
-    sig = sig / np.sqrt(P)
-    idx = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
-    sym = cons[idx]
-    return sym, idx
