@@ -3,18 +3,16 @@ import matplotlib.pyplot as plt
 from dsp import theory, ber_functions, modulation, utils, equalisation, IO
 from scipy.signal import fftconvolve
 import sys
+import os as os_mod
 
 
 
 """
-Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]
+Test saving and recalling data to hdf files using pytables
 
-
-References
-----------
-...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
 """
 
+hdfn = "/tmp/testsave_load.h5"
 snr = np.linspace(5, 30, 4)
 wls = [1550, 1552, 1554]
 N = 2**16
@@ -27,80 +25,57 @@ astep = True
 method=("mcma","")
 ntaps = 13
 beta = 0.1
-h5f = IO.tb.open_file("sav_recall.h5", "w", "multi wl and OSN msr")
-IO.create_meas_group(h5f, "single polarisation generated signal", (1,N))
-IO.create_input_group(h5f, "input symbols", N, int(N*np.log2(M)))
-IO.create_parameter_group(h5f, "Measurement parameters")
-IO.create_recvd_data_group(h5f, "Received data", 
+erows = len(wls)+len(snr)
+if os_mod.path.exists(hdfn):
+    os_mod.remove(hdfn)
+h5f = IO.create_h5_meas_file(hdfn, "w", expectedrows=erows)
+#h5f = IO.tb.open_file("sav_recall.h5", "w", "multi wl and OSN msr")
+dsp_dict = {"stepsize":(mu, 0), "trsyms":(None, None), "iterations":(1,1), "ntaps":ntaps, "method": ", ".join(method)}
+#IO.create_meas_group(h5f, "dual polarisation generated signal", expectedrows=erows)
+#IO.create_input_group(h5f, "input symbols", rolloff_dflt=beta, expectedrows=erows)
+#IO.create_parameter_group(h5f, "Measurement parameters", expectedrows=erows)
 
-id = 0
 for wl in wls:
     for sr in snr:
         modulator = modulation.QAMModulator(M)
-        signal, syms, bits = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
-        IO.save_osc_meas(h5f, signal, id, osnr=sr, wl=wl, samplingrate=fs, symbolrate=fb, MQAM=M)
+        signalX, symsX, bitsX = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
+        signalY, symsY, bitsY = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
+        signal = np.vstack([signalX, signalY])
+        syms = np.vstack([symsX, symsY])
+        bits = np.vstack([bitsX, bitsY])
+        id = IO.save_osc_meas(h5f, signal, osnr=sr, wl=wl, samplingrate=fs, symbolrate=fb, MQAM=M)
         IO.save_inputs(h5f, id, symbols=syms, bits=bits)
-        signal = np.atleast_2d(signal)
-        signalx = np.atleast_2d(utils.rrcos_pulseshaping(signal[0], fs, 1/fb, beta))
-        wx, er =  equalisation.equalise_signal(signalx, os, mu, M, Ntaps=ntaps, adaptive_step=astep, method=method[0])
-        signalafter = equalisation.apply_filter(signalx, os, wx )
-        evm_known[i] = modulator.cal_EVM(signalafter[0], syms)
-        # check to see that we can recovery timing delay
-        #signalafter = np.roll(signalafter * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
-        ser[i] = modulator.calculate_SER(signalafter[0], symbol_tx=syms)[0]
-        ber[i] = modulator.cal_BER(signalafter[0], bits)[0]
+h5f.close()
 
-        id += 1
+hf = IO.tb.open_file(hdfn, "a")
+hf = IO.create_recvd_data_group(hf, oversampling_dflt=os)
+meas_table = hf.root.measurements.oscilloscope.signal
+inp_table = hf.root.input.signal
+ids = meas_table.cols.id[:]
+m_arrays = IO.get_from_table(meas_table, ids, "data")
+syms = list(IO.get_from_table(inp_table, ids, "symbols"))
+bits = list(IO.get_from_table(inp_table, ids, "bits"))
+i = 0
+for d_array in m_arrays:
+    wx, er =  equalisation.equalise_signal(d_array, os, mu, M, Ntaps=ntaps, adaptive_step=astep, method=method[0])
+    signalafter = equalisation.apply_filter(d_array, os, wx )
+    evm_x = modulator.cal_EVM(signalafter[0], syms[ids[i]][0])
+    evm_y = modulator.cal_EVM(signalafter[1], syms[ids[i]][1])
+    ser_x,tmp, data_demod_x = modulator.calculate_SER(signalafter[0], symbol_tx=syms[ids[i]][0])
+    ser_y,tmp, data_demod_y = modulator.calculate_SER(signalafter[1], symbol_tx=syms[ids[i]][1])
+    ber_x = modulator.cal_BER(signalafter[0], bits[ids[i]][0])[0]
+    ber_y = modulator.cal_BER(signalafter[1], bits[ids[i]][1])[0]
+    IO.save_recvd(hf, signalafter, ids[i], wx, symbols=np.vstack([data_demod_x, data_demod_y]), evm=(evm_x, evm_y), ber=(ber_x, ber_y), ser=(ser_x, ser_y), dsp_params=dsp_dict)
+    i += 1
+hf.close()
 
-plt.figure()
-ax1 = plt.subplot(221)
-ax2 = plt.subplot(222)
-ax3 = plt.subplot(223)
-ax4 = plt.subplot(224)
-
-ax1.set_title("BER vs SNR")
-ax2.set_title("SER vs SNR")
-ax3.set_title("BER vs EVM")
-ax4.set_title("EVM vs SNR")
-ax1.set_xlabel('SNR [dB]')
-ax1.set_ylabel('BER [dB]')
-ax1.set_yscale('log')
-ax1.set_xlim(0,30)
-ax1.set_ylim(1e-5,1)
-ax2.set_xlabel('SNR [dB]')
-ax2.set_ylabel('SER [dB]')
-ax2.set_yscale('log')
-ax2.set_xlim(0,30)
-ax2.set_ylim(1e-5,1)
-ax3.set_xlabel('EVM [dB]')
-ax3.set_ylabel('BER [dB]')
-ax3.set_yscale('log')
-ax3.set_xlim(-30,0)
-ax3.set_ylim(1e-6,1)
-ax4.set_xlabel('SNR [dB]')
-ax4.set_ylabel('EVM [dB]')
-ax4.set_xlim(0, 30)
-ax4.set_ylim(-30, 0)
-
-c = ['b', 'r', 'g', 'c', 'k']
-s = ['o', '<', 's', '+', 'd']
-j = 0
-ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
-ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-ax2.plot(snrf, theory.MQAM_SERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
-ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-ax3.plot(evmf, theory.MQAM_BERvsEVM(evmf, M), color=c[j], label="%d-QAM theory"%M)
-ax3.plot(utils.lin2dB(evm1**2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-# illustrate the difference between a blind and non-blind EVM
-ax3.plot(utils.lin2dB(evm_known**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
-ax4.plot(snr, utils.lin2dB(evm1**2), color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-ax4.plot(snr, utils.lin2dB(evm_known**2), color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
-#ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
-j += 1
-ax1.legend()
-ax2.legend()
-#ax3.legend()
-ax4.legend()
+hf = IO.tb.open_file(hdfn, "r")
+pms = hf.root.parameters.experiment.read_where("wl == 1550")
+osnr = pms['osnr']
+ber = IO.query_table_for_references(hf.root.parameters.experiment, hf.root.analysis.dsp.signal, 'ber', "wl==1550")
+snrf = np.linspace(osnr[0], osnr[-1], 100)
+plt.plot(osnr, ber, 'o')
+plt.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M))
 plt.show()
-
+hf.close()
 
