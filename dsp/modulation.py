@@ -150,10 +150,10 @@ class QAMModulator(object):
                        samplingrate=1,
                        IQsep=False,
                        PRBS=True,
-                       PRBSorder=15,
-                       PRBSseed=None,
+                       PRBSorder=(15, 23),
+                       PRBSseed=(None, None),
                        beta=0.1,
-                       resample_noise=False):
+                        resample_noise=False, dual_pol=True):
         """
         Generate a M-QAM data signal array
 
@@ -177,51 +177,62 @@ class QAMModulator(object):
             different to baudrate the length of the returned array is not N. (Default is 1.)
         IQsep  : bool, optional
             Whether to generate two independent data streams for I and Q (Default is False)
-        PRBS: bool, optional
+        PRBS: bool or tuple, optional
             If True the bits are generated as standard PRBS sequences, if False
-            random bits are generated using numpy.random.randint.
+            random bits are generated using numpy.random.randint. If the signal is dual_pol this needs
+            be a tuple for each pol.
             (Default is True)
         PRBSOrder: int or tuple of bool, optional
             The PRBS order i.e. the length 2**order of the PRBS to use
-            If IQsep is True this needs to be a tuple of two ints for the I and Q sequence generation.
+            If IQsep is True this needs to be a tuple of two ints for the I and Q sequence generation or dual pol.
             (Default is 15)
         PRBSseed: array_like, optional
-            Seed to the PRBS generator needs to be a 1D array of booleans of length order.
+            Seed to the PRBS generator needs to be a 1D array of booleans of length order. If dual pol it this needs to be a 2D array
           . (Default=None, which corresponds to a seed of all 1's)
         beta   : float, optional
             roll-off factor for the root raised cosine pulseshaping filter, value needs to be in range [0,1]
         resample_noise : bool
             whether to add the noise before resampling or after (default: False add noise after resampling)
         """
-        if IQsep:
-            if np.isscalar(PRBSorder):
-                if np.isscalar(PRBSseed) or PRBSseed is None:
-                    bitsq = twostreamPRBS(N, self.bits, PRBS)
+        out = []
+        syms = []
+        bits = []
+        for i in range(2):
+            if IQsep:
+                if np.isscalar(PRBSorder):
+                    if np.isscalar(PRBSseed) or PRBSseed is None:
+                        bitsq = twostreamPRBS(N, self.bits, PRBS)
+                    else:
+                        bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed)
                 else:
-                    bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed)
+                    bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed, PRBSorder=PRBSorder)
             else:
-                bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed, PRBSorder=PRBSorder)
-        else:
-            Nbits = N * self.bits
-            if PRBS == True:
-                bitsq = make_prbs_extXOR(PRBSorder, Nbits, PRBSseed)
+                Nbits = N * self.bits
+                if PRBS == True:
+                    bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
+                else:
+                    bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
+            symbols = self.modulate(bitsq)
+            if resample_noise:
+                if snr is not None:
+                    outdata = utils.add_awgn(symbols, 10**(-snr/20))
+                outdata = utils.resample(baudrate, samplingrate, outdata)
             else:
-                bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
-        symbols = self.modulate(bitsq)
-        if resample_noise:
-            if snr is not None:
-                outdata = utils.add_awgn(symbols, 10**(-snr/20))
-            outdata = utils.resample(baudrate, samplingrate, outdata)
-        else:
-            os = samplingrate/baudrate
-            outdata = utils.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
-            if snr is not None:
-                outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
-        outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
-        # not 100% clear if we should apply before or after resampling
-        if lw_LO:
-            outdata = utils.apply_phase_noise(outdata, lw_LO, samplingrate)
-        return outdata, symbols, bitsq
+                os = samplingrate/baudrate
+                outdata = utils.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
+                if snr is not None:
+                    outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
+            outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
+            # not 100% clear if we should apply before or after resampling
+            if lw_LO:
+                outdata = utils.apply_phase_noise(outdata, lw_LO, samplingrate)
+            if dual_pol:
+                out.append(outdata)
+                syms.append(symbols)
+                bits.append(bitsq)
+            else:
+                return outdata, symbols, bitsq
+        return np.array(out), np.array(syms), np.array(bits)
 
     def theoretical_ser(self, snr):
         """
