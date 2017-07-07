@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, utils, phaserecovery
+from dsp import  equalisation, modulation, utils, phaserecovery, signal_quality
 from scipy.io import loadmat
 
 
@@ -24,10 +24,12 @@ Y = Y.flatten()
 #X = X[len(X)//2:]
 #Y = Y[len(Y)//2:]
 
-X = utils.pre_filter(X, 2*3.9)
-Y = utils.pre_filter(Y, 2*3.9)
-X = utils.resample(X, 2.5, 2)
-Y = utils.resample(Y, 2.5, 2)
+#X = utils.pre_filter(X, 2*3.9)
+#Y = utils.pre_filter(Y, 2*3.9)
+#X = utils.resample(X, 2.5, 2)
+#Y = utils.resample(Y, 2.5, 2)
+X = utils.rrcos_resample_zeroins(X, 2.5, 2, beta=0.05, Ts=1)
+Y = utils.rrcos_resample_zeroins(Y, 2.5, 2, beta=0.05, Ts=1)
 X = utils.comp_IQbalance(X)
 Y = utils.comp_IQbalance(Y)
 print(X.shape)
@@ -48,8 +50,12 @@ evmX = QAM.cal_evm(X[::2])
 evmY = QAM.cal_evm(Y[::2])
 evmEx = QAM.cal_evm(E[0])
 evmEy = QAM.cal_evm(E[1])
+#Ec[0] = signal_quality.normalise_sig(Ec[0], M)[1]
+#Ec[1] = signal_quality.normalise_sig(Ec[1], M)[1]
 evmEx_c = QAM.cal_evm(Ec[0])
 evmEy_c = QAM.cal_evm(Ec[1])
+print(evmEy_c)
+print(evmEx_c)
 #sys.exit()
 plt.figure()
 plt.subplot(221)
