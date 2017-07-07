@@ -118,7 +118,7 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     Eout = E*np.exp(1.j*ph)
     return Eout, ph
 
-def movavg_af(X, N, axis=0):
+def _movavg_af(X, N, axis=0):
     """
     Calculate moving average over N samples using arrayfire
     """
@@ -142,7 +142,7 @@ def _bps_idx_af(E, angles, symbols, N, precision=16):
     if L <= Nmax+N:
         Eaf = af.np_to_af_array(EE.astype(prec_dtype))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf[0:L,:], syms))**2, dim=2)
-        cs = movavg_af(tmp, 2*N, axis=0)
+        cs = _movavg_af(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[N:-N] = np.array(idx)
     else:
@@ -154,18 +154,18 @@ def _bps_idx_af(E, angles, symbols, N, precision=16):
         Eaf = af.np_to_af_array(EE[0:Nmax+N].astype(prec_dtype))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
         tt = np.array(tmp)
-        cs = movavg_af(tmp, 2*N, axis=0)
+        cs = _movavg_af(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[N:Nmax] = np.array(idx)
         for i in range(1,K):
             Eaf = af.np_to_af_array(EE[i*Nmax-N:(i+1)*Nmax+N].astype(np.complex128))
             tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
-            cs = movavg_af(tmp, 2*N, axis=0)
+            cs = _movavg_af(tmp, 2*N, axis=0)
             val, idx = af.imin(cs, dim=1)
             idxnd[i*Nmax:(i+1)*Nmax] = np.array(idx)
         Eaf = af.np_to_af_array(EE[K*Nmax-N:K*Nmax+R].astype(np.complex128))
         tmp = af.min(af.abs(af.broadcast(lambda x,y: x-y, Eaf, syms))**2, dim=2)
-        cs = movavg_af(tmp, 2*N, axis=0)
+        cs = _movavg_af(tmp, 2*N, axis=0)
         val, idx = af.imin(cs, dim=1)
         idxnd[K*Nmax:-N] = np.array(idx)
     return idxnd
