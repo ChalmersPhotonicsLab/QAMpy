@@ -199,7 +199,7 @@ def create_meas_group(h5f, title="measurement data",  description=None, attrs=ME
         gr_meas = h5f.create_group("/", "measurements", title=title)
     gr_osc = h5f.create_group(gr_meas, "oscilloscope", title="Data from Realtime oscilloscope")
     if description is None:
-        description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col()}
+        description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col(), "id_data": tb.Int64Col()}
     t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal", **kwargs)
     setattr(t_meas.attrs, "arrays", arrays)
     arr = h5f.create_mdvlarray(gr_osc, "data", tb.ComplexAtom(itemsize=16), **kwargs)
@@ -287,8 +287,8 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
                        "iterations": tb.Int64Col(shape=2),
                        "ntaps": tb.Int64Col(),
                        "method": tb.StringCol(itemsize=20)}
-        description = {"id":tb.Int64Col(), "data_id": tb.Int64Col(), "symbols_id": tb.Int64Col(),
-                       "bits_id": tb.Int64Col(), "taps_id": tb.Int64Col(),
+        description = {"id":tb.Int64Col(), "id_data": tb.Int64Col(), "id_symbols": tb.Int64Col(),
+                       "id_bits": tb.Int64Col(), "id_taps": tb.Int64Col(),
                        "evm": tb.Float64Col(dflt=np.nan, shape=nmodes), "ber":tb.Float64Col(dflt=np.nan, shape=nmodes),
                        "ser":tb.Float64Col(dflt=np.nan, shape=nmodes), "oversampling":tb.Int64Col(dflt=oversampling_dflt)}
         description.update(dsp_params)
@@ -305,8 +305,9 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
 def save_array_to_table(table, name, array):
     parent = table._g_getparent()
     data_stor = getattr(parent, name)
-    data_stor.append(array.flatten())
-    return data_stor.nrows
+    array = np.asarray(array)
+    data_stor.append(array)
+    return data_stor.nrows - 1 # index from 0
 
 def save_inputs(h5file, id_meas, symbols=None, bits=None, rolloff=None):
     """
@@ -371,6 +372,7 @@ def save_osc_meas(h5file, data,  osnr=None, wl=None, measurementN=0, Psig=None, 
     m_row = meas_table.row
     id_meas = save_array_to_table(meas_table, "data", data)
     m_row['id'] = id_meas
+    m_row['id_data'] = id_meas
     m_row['samplingrate'] = samplingrate
     m_row.append()
     meas_table.flush()
@@ -415,11 +417,12 @@ def save_recvd(h5file, data, id_meas, taps, symbols=None, bits=None, oversamplin
     dsp_params: dict
         DSP parameters used for recovery. See the description in the recovery group creation for the definition.
     """
-    rec_table = h5file.root.analysis.dsp
+    rec_table = h5file.root.analysis.dsp.signal
     cols = {"evm": evm, "ber": ber, "ser": ser}
     row = rec_table.row
     row['id'] = id_meas
-    row['oversampling'] = oversampling
+    if oversampling is not None:
+        row['oversampling'] = oversampling
     row['id_data'] = save_array_to_table(rec_table, "data", data)
     row['id_taps'] = save_array_to_table(rec_table, "taps", taps)
     if symbols is not None:
@@ -430,7 +433,7 @@ def save_recvd(h5file, data, id_meas, taps, symbols=None, bits=None, oversamplin
         if v is not None:
             row[k] = v
     if dsp_params is not None:
-        for k, v in dsp_params:
+        for k, v in dsp_params.items():
             row[k] = v
     row.append()
     rec_table.flush()
@@ -457,15 +460,15 @@ def array_from_table(table, name, query=None):
     Returns
     -------
     arrays: iterator
-       iterator over the arrays 
+       iterator over the arrays
     """
     pnode = table._g_getparent()
     arr_stor = getattr(pnode, name)
     colname = "id_"+name
     if query is None:
-        idx = table.cols[colname]
+        idx = getattr(table.cols, colname)[:]
     else:
-        idx = table.where(query)
+        idx = [r[colname] for r in table.where(query)]
     return _array_idx_iterator(arr_stor, idx)
 
 def construct_id_query(ids, name="id"):
@@ -484,7 +487,7 @@ def construct_id_query(ids, name="id"):
     query: string
         query string that can be used with table.where
     """
-    return "&".join(["({0}=={1})".format(name,id) for id in ids])
+    return "|".join(["({0}=={1})".format(name,id) for id in ids])
 
 def get_from_table(table, ids, name, id_col="id"):
     """
@@ -536,4 +539,4 @@ def query_table_for_references(table_query, table_res, colname, query, id_col="i
     """
 
     ids = table_query.read_where(query)[id_col]
-    return get_from_table(table_arr, ids, colname, id_col=id_col)
+    return get_from_table(table_res, ids, colname, id_col=id_col)
