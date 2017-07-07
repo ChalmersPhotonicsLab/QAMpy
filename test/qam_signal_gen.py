@@ -14,8 +14,8 @@ ser2 = []
 modl = modulation.QAMModulator(M)
 for sr in snr:
     data_rx, symbols, bits = modl.generate_signal(N, sr)
-    ser.append(modl.cal_ser(data_rx, symbol_tx=symbols)[0])
-    ser2.append(modl.cal_ser(data_rx, bits_tx=bits)[0])
+    ser.append(modl.cal_ser(data_rx, symbol_tx=symbols))
+    ser2.append(modl.cal_ser(data_rx, bits_tx=bits))
 
 ser = 10*np.log10(np.array(ser))
 ser2 = 10*np.log10(np.array(ser2))
