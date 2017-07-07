@@ -175,8 +175,6 @@ class QAMModulator(object):
             the rate at which the signal is sampled. Together with the baudrate
             this is used for calculating the oversampling factor. Note that if samplingrate is
             different to baudrate the length of the returned array is not N. (Default is 1.)
-        IQsep  : bool, optional
-            Whether to generate two independent data streams for I and Q (Default is False)
         PRBS: bool or tuple, optional
             If True the bits are generated as standard PRBS sequences, if False
             random bits are generated using numpy.random.randint. If the signal is dual_pol this needs
@@ -184,10 +182,10 @@ class QAMModulator(object):
             (Default is True)
         PRBSOrder: int or tuple of bool, optional
             The PRBS order i.e. the length 2**order of the PRBS to use
-            If IQsep is True this needs to be a tuple of two ints for the I and Q sequence generation or dual pol.
+            If dual_pol is True this needs to be a tuple of two ints for the polarisations
             (Default is 15)
         PRBSseed: array_like, optional
-            Seed to the PRBS generator needs to be a 1D array of booleans of length order. If dual pol it this needs to be a 2D array
+            Seed to the PRBS generator needs to be a 1D array of booleans of length order. If dual pol this needs to be a 2D array
           . (Default=None, which corresponds to a seed of all 1's)
         beta   : float, optional
             roll-off factor for the root raised cosine pulseshaping filter, value needs to be in range [0,1]
@@ -198,20 +196,11 @@ class QAMModulator(object):
         syms = []
         bits = []
         for i in range(2):
-            if IQsep:
-                if np.isscalar(PRBSorder):
-                    if np.isscalar(PRBSseed) or PRBSseed is None:
-                        bitsq = twostreamPRBS(N, self.bits, PRBS)
-                    else:
-                        bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed)
-                else:
-                    bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed, PRBSorder=PRBSorder)
+            Nbits = N * self.bits
+            if PRBS == True:
+                bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
             else:
-                Nbits = N * self.bits
-                if PRBS == True:
-                    bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
-                else:
-                    bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
+                bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
             symbols = self.modulate(bitsq)
             if resample_noise:
                 if snr is not None:
@@ -335,38 +324,3 @@ class QAMModulator(object):
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
         return ber_functions.cal_ber_only(tx_synced, bits_demod, threshold=0.8)
-
-
-def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):
-    """
-    Generata a PRBS from two independent PRBS generators.
-
-    Parameters
-    ----------
-    Nsyms   : int
-        the number of symbols at the output
-    bits    : ints
-        the bits per symbol
-    PRBS    : bool, optional
-        whether to use PRBS signal generation or np.random.randint (Default True use PRBS)
-    PRBSorder : tuple(int, int), optional
-        The PRBS order for each generated sequence (Default is (15,23))
-    PRBSseed  : tuple(int, int), optional
-        The seed for each PRBS
-
-    Returns
-    -------
-    bitseq  : array_like
-        1D array of booleans that are the interleaved PRBS sequence
-    """
-    if bits % 2:
-        Nbits = (Nsyms * (bits // 2 + 1), Nsyms * bits // 2)
-    else:
-        Nbits = (Nsyms * bits // 2, Nsyms * bits // 2)
-    if PRBS:
-        bitsq1 = make_prbs_extXOR(PRBSorder[0], Nbits[0], PRBSseed[0])
-        bitsq2 = make_prbs_extXOR(PRBSorder[0], Nbits[1], PRBSseed[1])
-    else:
-        bitsq1 = np.random.randint(0, high=2, size=Nbits[0]).astype(np.bool)
-        bitsq2 = np.random.randint(0, high=2, size=Nbits[1]).astype(np.bool)
-    return utils.convert_iqtosinglebitstream(bitsq1, bitsq2, bits)
