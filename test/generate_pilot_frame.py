@@ -32,7 +32,7 @@ PRBSorder=15,
 PRBSseed=None
 
 
-frame_symbs, data_symbs, pilot_symbs = gen_dataframe_withpilots(M,1,frame_length = frame_length, pilot_seq_len = pilot_seq_len)
+frame_symbs, data_symbs, pilot_symbs = pilotbased_transmitter.gen_dataframe_with_phasepilots(M,1,frame_length = frame_length, pilot_seq_len = pilot_seq_len)
 savemat('pilot_pattern_2e16_64qam.mat',{'frame_symbs':frame_symbs, 'data_symbs':data_symbs, 'pilot_symbs':pilot_symbs})
 
 
