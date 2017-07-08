@@ -11,7 +11,7 @@ from scipy.io import loadmat, savemat
 import matplotlib.pylab as plt
 
 
-def run_pilot_receiver_measdata(rec_signal, pilot_symbs, sys_config):
+def run_pilot_receiver_measdata(rec_signal, pilot_symbs, sys_config, do_blind_eq = False):
 
     os = sys_config['os']
     M = sys_config['M']
@@ -21,6 +21,7 @@ def run_pilot_receiver_measdata(rec_signal, pilot_symbs, sys_config):
     pilot_ins_ratio = sys_config['pilot_ins_ratio']
     
     
+    npols = 2
     # Fix the signal
 
     X = rec_signal[0,:]
@@ -74,9 +75,11 @@ def run_pilot_receiver_measdata(rec_signal, pilot_symbs, sys_config):
         phase_comp_symbs.append(symbs)
         phase_trace.append(trace)
 
-    #for l in range(npols):
-    #    wx, err_both = equalisation.equalise_signal(phase_comp_symbs[l], 1,1e-3, M,Niter=4, Ntaps=Numtaps, method="sbd" , adaptive_stepsize=True)
-    #    phase_trace[l] = equalisation.apply_filter(phase_comp_symbs[l], 1, wx)
+
+    if do_blind_eq:
+        for l in range(npols):
+            wx, err_both = equalisation.equalise_signal(phase_comp_symbs[l], 1,1e-3, M,Niter=4, Ntaps=Numtaps, method="sbd" , adaptive_stepsize=True)
+            phase_trace[l] = equalisation.apply_filter(phase_comp_symbs[l], 1, wx)
 
 
     return eq_pilots, corr_pilots, phase_comp_symbs, phase_trace, shift_factor
@@ -163,7 +166,7 @@ eq_pilots, corr_pilots, symbs_out, phase_trace, shift_factor = run_pilot_receive
 
 
 # Verify stuff rot the result
-QAM = modulation.QAMModulator(sys_config[M])
+QAM = modulation.QAMModulator(sys_config['M'])
 serX = QAM.calculate_SER(symbs_out[0][0,:-1], symbol_tx=data_symbs[0,:])[0]
 serY = QAM.calculate_SER(symbs_out[1][0,:-1], symbol_tx=data_symbs[0,:])[0]
 
