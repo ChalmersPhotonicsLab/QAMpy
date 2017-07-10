@@ -81,7 +81,7 @@ def apply_PMD_to_field(field, theta, t_dgd, fs):
     out  : array_like
        new dual polarisation field with PMD
     """
-    omega = 2*np.pi*np.linspace(-fs/2, fs/2, field.shape[1], endpoints=False)
+    omega = 2*np.pi*np.linspace(-fs/2, fs/2, field.shape[1], endpoint=False)
     H = H_PMD(theta, t_dgd, omega)
     return _applyPMD(field, H)
 
