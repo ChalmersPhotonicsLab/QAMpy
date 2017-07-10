@@ -57,7 +57,7 @@ def _applyPMD(field, H):
     SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
     return SS
 
-def apply_PMD_to_field(field, theta, t_dgd, omega):
+def apply_PMD_to_field(field, theta, t_dgd, fs):
     """
     Apply PMD to a given input field
 
@@ -73,14 +73,15 @@ def apply_PMD_to_field(field, theta, t_dgd, omega):
     t_dgd : float
         differential group delay between the polarisation axes
 
-    omega : array_like
-        angular frequency of the light field
+    fs : float
+        sampling rate of the field
 
     Returns
     -------
     out  : array_like
        new dual polarisation field with PMD
     """
+    omega = 2*np.pi*np.linspace(-fs/2, fs/2, field.shape[1], endpoints=False)
     H = H_PMD(theta, t_dgd, omega)
     return _applyPMD(field, H)
 
