@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, utils, modulation
+from dsp import  equalisation, impairments, modulation
 
 
 fb = 40.e9
@@ -17,9 +17,8 @@ ntaps=40
 QAM = modulation.QAMModulator(M)
 
 S, s, b = QAM.generate_signal(N, 14, baudrate=fb, samplingrate=fs)
-omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
 
-SS = utils.apply_PMD_to_field(S, theta, t_pmd, omega)
+SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 wxy, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="cma")
 wxy_m, err_m = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="mcma")
 E = equalisation.apply_filter(SS, os, wxy)

@@ -1,28 +1,9 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation
+from dsp import  equalisation, modulation, impairments
 from dsp.signal_quality import cal_evm_blind
 
 
-
-def H_PMD(theta, t, omega): #see Ip and Kahn JLT 25, 2033 (2007)
-    """"""
-    h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    h2 = np.array([[np.exp(1.j*omega*t/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t/2)]])
-    h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    H = np.einsum('ij,jkl->ikl', h1, h2)
-    H = np.einsum('ijl,jk->ikl', H, h3)
-    return H
-
-def rotate_field(theta, field):
-    h = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    return np.dot(h, field)
-
-def applyPMD(field, H):
-    Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(field, axes=1),axis=1), axes=1)
-    SSf = np.einsum('ijk,ik -> ik',H , Sf)
-    SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
-    return SS
 
 fb = 40.e9
 os = 2
@@ -42,13 +23,7 @@ Nrde = N//2//os -int(1.5*ntaps)
 
 S, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
 
-omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
-
-H = H_PMD(theta, t_pmd, omega)
-H2 = H_PMD(-theta, -t_pmd, omega)
-
-
-SS = applyPMD(S, H)
+SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 
 E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)

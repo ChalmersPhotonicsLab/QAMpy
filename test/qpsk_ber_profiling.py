@@ -2,19 +2,11 @@
 import numpy as np
 
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation
+from dsp import  equalisation, modulation, impairments
 from dsp.signal_quality import cal_evm_blind
 
 
 
-def H_PMD(theta, t, omega): #see Ip and Kahn JLT 25, 2033 (2007)
-    """"""
-    h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    h2 = np.array([[np.exp(1.j*omega*t/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t/2)]])
-    h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    H = np.einsum('ij,jkl->ikl', h1, h2)
-    H = np.einsum('ijl,jk->ikl', H, h3)
-    return H
 #pr = cProfile.Profile()
 fb = 40.e9
 os = 2
@@ -30,15 +22,9 @@ ntaps = 30
 
 S, symbols, bits = QAM.generate_signal(N, snr, PRBSorder=(15,23), baudrate=fb, samplingrate=fs)
 
-omega = 2*np.pi*np.linspace(-fs/2, fs/2, os*N, endpoint=False)
 t_pmd = 75e-12
 
-H = H_PMD(theta, t_pmd, omega)
-
-Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(S, axes=1),axis=1), axes=1)
-SSf = np.einsum('ijk,ik -> ik',H , Sf)
-SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
-
+SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 #pr.enable()
 wx, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="mcma", adaptive_stepsize=True)
 E = equalisation.apply_filter(SS, os, wx)
