@@ -4,9 +4,9 @@ from bitarray import bitarray
 from . import theory
 from . import ber_functions
 from . import utils
+from . import impairments
 from .prbs import make_prbs_extXOR
 from .signal_quality import quantize
-
 
 class QAMModulator(object):
     """
@@ -204,17 +204,17 @@ class QAMModulator(object):
             symbols = self.modulate(bitsq)
             if resample_noise:
                 if snr is not None:
-                    outdata = utils.add_awgn(symbols, 10**(-snr/20))
+                    outdata = impairments.add_awgn(symbols, 10**(-snr/20))
                 outdata = utils.resample(baudrate, samplingrate, outdata)
             else:
                 os = samplingrate/baudrate
                 outdata = utils.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
                 if snr is not None:
-                    outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
+                    outdata = impairments.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
             outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
             # not 100% clear if we should apply before or after resampling
             if lw_LO:
-                outdata = utils.apply_phase_noise(outdata, lw_LO, samplingrate)
+                outdata = impairments.apply_phase_noise(outdata, lw_LO, samplingrate)
             if dual_pol:
                 out.append(outdata)
                 syms.append(symbols)
