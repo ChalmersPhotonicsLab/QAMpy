@@ -681,7 +681,7 @@ def comp_IQbalance(signal):
     Q_comp = Q_balcd * np.sqrt(am_bal)
     return I + 1.j * Q_comp
 
-def pre_filter(signal, bw):
+def pre_filter(signal, bw, os):
     """
     Low-pass pre-filter signal with square shape filter
 
@@ -695,9 +695,14 @@ def pre_filter(signal, bw):
         bandwidth of the rejected part, given as fraction of overall length
     """
     N = len(signal)
+    freq_axis = np.fft.fftfreq(N,1/os)
+    
+    idx = np.where(abs(freq_axis)<bw/2)
+    
     h = np.zeros(N, dtype=np.float64)
-    h[int(N/(bw/2)):-int(N/(bw/2))] = 1
-    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
+    #h[int(N/(bw/2)):-int(N/(bw/2))] = 1
+    h[idx] = 1
+    s = np.fft.ifftshift(np.fft.ifft(np.fft.fft(signal)*h))
     return s
 
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
