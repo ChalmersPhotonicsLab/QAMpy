@@ -91,8 +91,8 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     
     # Adapt for number of blocks
     rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
-    rec_pilots = rec_pilots[:,:numBlocks]
-    rec_symbs = rec_symbs[:,:pilot_ins_ratio*numBlocks]
+    rec_pilots = rec_pilots[:,:int(numBlocks)]
+    rec_symbs = rec_symbs[:,:int(pilot_ins_ratio*numBlocks)]
     
 
     # Check that the number of blocks are equal and is valid
@@ -235,7 +235,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         sub_var = np.ones(num_steps)*1e2
         for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
             err_out = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size], os, mu[0], M_pilot,Ntaps = ntaps, Niter = Niter[0], method = method[0],adaptive_stepsize = adap_step[0])[1] 
-            sub_var[i] = np.var(err_out[l,-symb_step_size/os+ntaps*0:])
+            sub_var[i] = np.var(err_out[l,int(-symb_step_size/os+ntaps):])
                        
         # Lowest variance of the CMA error
         minPart = np.argmin(sub_var)
