@@ -73,6 +73,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         
     Output:
         data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
+        phase_trace: Resulting phase trace of the CPE
     """
     
     rec_symbs = np.atleast_2d(rec_symbs)
@@ -182,7 +183,7 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = 45, Niter = (10,30), adap_step = (False,False), method=('cma','sbd'),search_overlap = 2):
+def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = 45, Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
     """
     Locate and extract the pilot starting frame.
     
@@ -199,14 +200,18 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         ntaps: Number of T/2-spaced taps for equalization
         Niter: Number of iterations for the equalizer.Tuple(Search, Convergence)
         adap_step: Use adaptive step size (bool). Tuple(Search, Convergence)
+        method: Equalizer mehtods to be used. Tuple(Search, Convergence)
+        search_overlap: Overlap of subsequences in the test 
+        
         
     Output:
         eq_pilots: Found pilot sequence after equalization
         shift_factor: New starting point for initial equalization
-        wx: Taps for equalization of the whole signal
+        out_taps: Taps for equalization of the whole signal
+        foe_course: Result of blind FOE used to sync the pilot sequence. 
     
     """
-    # Fix number of stuff
+    # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]
