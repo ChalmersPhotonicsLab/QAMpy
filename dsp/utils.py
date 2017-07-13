@@ -94,6 +94,35 @@ def supergauss(x, A, x0, w, o):
     """
     return A * np.exp(-((x - x0) / w)**(2 * o) / 2.)
 
+def orthonormalize_signal(E, os=1):
+    """ 
+    Orthogonalizing signal using the Gram-Schmidt process. See for example:
+        https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process for more
+        detailed description. 
+    """
+    
+    E = np.atleast_2d(E)
+    E_out = np.zeros(E.shape, dtype=complex)
+    for l in range(E.shape[0]):
+        # Center
+        real_out = E[l,:].real - E[l,:].real.mean()
+        tmp_imag = E[l,:].imag - E[l,:].imag.mean()
+        
+        # Calculate scalar products
+        mean_pow_inphase = np.mean(E[l,:].real**2)
+        mean_pow_quadphase = np.mean(E[l,:].imag**2)
+        mean_pow_imb = np.mean(E[l,:].real * E[l,:].imag)
+        
+        # Output, Imag orthogonal to Real part of signal
+        sig_out = real_out / np.sqrt(mean_pow_inphase) +\
+        1j*(tmp_imag - mean_pow_imb * real_out / mean_pow_inphase) / np.sqrt(mean_pow_quadphase)
+        print(sig_out.shape)
+        # Final total normalization to ensure IQ-power equals 1
+        E_out[l,:] = sig_out - np.mean(sig_out[::os])
+        E_out[l,:] = E_out[l,:] / np.sqrt(np.mean(np.abs(E_out[l,::os])**2))
+            
+    return E_out
+
 def normalise_and_center(E):
     """
     Normalise and center the input field, by calculating the mean power for each polarisation separate and dividing by its square-root
