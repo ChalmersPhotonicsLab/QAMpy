@@ -23,14 +23,11 @@ def gen_dataframe_with_phasepilots(M,npols, frame_length = 2**18, pilot_seq_len 
     if (N_data_frames%1) != 0:
         print("Pilot insertion ratio not propper selected")
     
-    N_pilot_symbs = pilot_seq_len + N_data_frames
-    
-    N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)
-    
+    N_pilot_symbs = pilot_seq_len + N_data_frames    
+    N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)    
     N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.bits
     N_data_bits = N_data_symbs * data_modulator.bits
-    
-    
+       
     # Set sequence together
     symbol_seq = np.zeros([npols,frame_length], dtype = complex)
     data_symbs = np.zeros([npols,N_data_symbs], dtype = complex)
