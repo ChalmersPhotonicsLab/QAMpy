@@ -79,7 +79,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     rec_symbs = np.atleast_2d(rec_symbs)
     pilot_symbs = np.atleast_2d(pilot_symbs)
     npols = rec_symbs.shape[0]
-    
+
     # Extract the pilot symbols
     numBlocks = np.floor(np.shape(rec_symbs)[1]/pilot_ins_ratio)
     # If selected, only process a limited number of blocks. 
@@ -125,9 +125,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         # Calculate phase respons
         res_phase = pilot_symbs[l,:].conjugate()*rec_pilots[l,:]
         pilot_phase = np.unwrap(np.angle(res_phase))
-        
-        plt.plot(pilot_phase)
-        
+
         # Fix! Need moving average in numpy
         pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
         pilot_phase = np.hstack([pilot_phase[:(num_average-1)], pilot_phase_average])
