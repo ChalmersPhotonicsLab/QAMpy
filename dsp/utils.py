@@ -116,7 +116,6 @@ def orthonormalize_signal(E, os=1):
         # Output, Imag orthogonal to Real part of signal
         sig_out = real_out / np.sqrt(mean_pow_inphase) +\
         1j*(tmp_imag - mean_pow_imb * real_out / mean_pow_inphase) / np.sqrt(mean_pow_quadphase)
-        print(sig_out.shape)
         # Final total normalization to ensure IQ-power equals 1
         E_out[l,:] = sig_out - np.mean(sig_out[::os])
         E_out[l,:] = E_out[l,:] / np.sqrt(np.mean(np.abs(E_out[l,::os])**2))
