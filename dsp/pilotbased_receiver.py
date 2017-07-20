@@ -181,7 +181,7 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = 45, Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
+def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
     """
     Locate and extract the pilot starting frame.
     
@@ -226,6 +226,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     else:
         num_steps = int(np.ceil(np.shape(rx_signal)[1] / symb_step_size))
     
+    if not((ntaps[1]-ntaps[0])/os % 2 ==  0):
+        raise ValueError("Taps Inpropperly configured")
 
     # Now search for every mode independent
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
@@ -237,8 +239,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         # end to ensure that sufficient symbols can be used for the search
         sub_var = np.ones(num_steps)*1e2
         for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
-            err_out = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size], os, mu[0], M_pilot,Ntaps = ntaps, Niter = Niter[0], method = method[0],adaptive_stepsize = adap_step[0])[1] 
-            sub_var[i] = np.var(err_out[l,int(-symb_step_size/os+ntaps):])
+            err_out = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size], os, mu[0], M_pilot,Ntaps = ntaps[0], Niter = Niter[0], method = method[0],adaptive_stepsize = adap_step[0])[1] 
+            sub_var[i] = np.var(err_out[l,int(-symb_step_size/os+ntaps[0]):])
                        
         # Lowest variance of the CMA error
         minPart = np.argmin(sub_var)
@@ -250,14 +252,13 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         longSeq = rx_signal[:,(minPart-2-search_overlap)*symb_step_size:(minPart+3+search_overlap)*symb_step_size]
 
         # Use the first estimate to get rid of any large FO and simplify alignment
-        wx1, err = equalisation.equalise_signal(shortSeq, os, mu[0], M_pilot,Ntaps = ntaps, Niter = Niter[0], method = method[0],adaptive_stepsize = adap_step[0])    
+        wx1, err = equalisation.equalise_signal(shortSeq, os, mu[0], M_pilot,Ntaps = ntaps[0], Niter = Niter[0], method = method[0],adaptive_stepsize = adap_step[0])    
         seq_foe = equalisation.apply_filter(longSeq,os,wx1)
         foe_corse = phaserecovery.find_freq_offset(seq_foe)        
          
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
         symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse[l,:])
-               
         # Check for pi/2 ambiguties
         max_phase_rot = np.zeros([4])
         found_delay = np.zeros([4])
@@ -274,9 +275,10 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
         
         # Tap update and extract the propper pilot sequuence
-        pilot_seq = rx_signal[:,shift_factor[l]:shift_factor[l]+pilot_seq_len*os+ntaps-1]
-        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps, Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,wxy=wx1,Ntaps = ntaps, Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        tap_cor = int((ntaps[1]-ntaps[0])/2)
+        pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,wxy=wx1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
        
         out_taps.append(wx)        
