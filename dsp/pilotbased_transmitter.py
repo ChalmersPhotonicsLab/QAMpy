@@ -21,7 +21,7 @@ def gen_dataframe_with_phasepilots(M,npols, frame_length = 2**18, pilot_seq_len 
     N_data_frames = (frame_length - pilot_seq_len) / pilot_ins_ratio
     
     if (N_data_frames%1) != 0:
-        print("Pilot insertion ratio not propper selected")
+        raise ValueError("Pilot insertion ratio not propper selected")
     
     N_pilot_symbs = pilot_seq_len + N_data_frames    
     N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)    
