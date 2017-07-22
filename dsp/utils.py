@@ -5,6 +5,7 @@ import fractions
 """ a number of convenience functions"""
 
 
+
 def cabssquared(x):
     """Calculate the absolute squared of a complex number"""
     return x.real**2 + x.imag**2
@@ -837,3 +838,31 @@ def add_awgn(sig, strgth):
         N = sig.shape[0]
         sigout = sig + strgth * (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because of var vs std
     return sigout
+
+
+def comp_rf_delay(sig, delay, sampling_rate = 50e9 ):
+    """
+    Adds a delay of X picoseconds to the signal in frequency domain. Can be 
+    used to compensate for impairments such as RF cables of different length 
+    between the optical hybrid and ADC. 
+    
+    Input:
+        sig: Real-valued input signal
+        sampling_ratev: ADC sampling rate
+        delay: Delay in ps 
+        
+        
+    Output
+        sig_out: Signal after compensating for delay
+    
+    """
+    
+    # Frequency base vector
+    freqVector = np.fft.fftfreq(sig.size, sampling_rate/2)
+    
+    # Phase-dealyed version
+    sig_out = np.fft.ifft(np.exp(-1j*2*np.pi*delay*1e-12*freqVector)*\
+                          np.fft.fft(sig))
+    
+    # Real part of output
+    return sig_out.real
