@@ -54,8 +54,11 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     
     return foe, foePerMode, condNum
 
-def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None):
+def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
     """
+# Generate some data for this demonstration.
+data = norm.rvs(10.0, 2.5, size=500)
+
     Carrier phase recovery using periodically inserted symbols.
     
     Performs a linear interpolation with averaging over n symbols to estimate
@@ -70,6 +73,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         num_average: Number of pilot symbols to average over to avoid noise. 
         use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
         max_num_blocks: Maximum number of blocks to process
+        remove_phase_pilots: Remove phase pilots after CPE. Default: True
         
     Output:
         data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
@@ -95,7 +99,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     rec_pilots = rec_pilots[:,:int(numBlocks)]
     rec_symbs = rec_symbs[:,:int(pilot_ins_ratio*numBlocks)]
     
-
     # Check that the number of blocks are equal and is valid
     numRefPilots = np.shape(pilot_symbs)[1]   
     if numBlocks > numRefPilots:
@@ -110,16 +113,13 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     rec_pilots = rec_pilots[:,::use_pilot_ratio]
     pilot_symbs = pilot_symbs[:,::use_pilot_ratio]    
         
-    
     # Should be an odd number to keey symmetry in averaging
     if not(num_average % 2):
         num_average += 1
     
-    # Allocate output memory
+    # Allocate output memory and process modes
     data_symbs = np.zeros([npols,np.shape(rec_symbs)[1]], dtype = complex)
-    
     phase_trace = np.zeros([npols,np.shape(rec_symbs)[1]])
-    
     for l in range(npols):
     
         # Calculate phase respons
@@ -140,8 +140,10 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         # Compensate phase
         data_symbs[l,:] = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
     
-    pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
-    data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)   
+    if remove_phase_pilots:
+        pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
+        data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
+        
     return data_symbs, phase_trace
     
     
