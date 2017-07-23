@@ -138,22 +138,9 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
                                pilot_pos,pilot_phase)
         
         # Compensate phase
-        comp_symbs = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
-
-        # Allocate output by removing pilots
-        block_len = (pilot_ins_ratio*use_pilot_ratio)
-        for i in range(np.shape(pilot_symbs)[1]):
-            data_symbs[l,i*(block_len):(i+1)*(block_len)] = \
-                       comp_symbs[i*block_len:(i+1)*block_len]
-   
+        data_symbs[l,:] = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
     
-    # If additional pilots are in between, throw them out
     pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
-    for i in range(0,len(pilot_pos)):
-        if not((pilot_pos[i]%(pilot_ins_ratio)) == 0):
-            pilot_pos[i] = 0
-            
-    pilot_pos = pilot_pos[pilot_pos != 0]    
     data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)   
     return data_symbs, phase_trace
     
