@@ -87,7 +87,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'scipy'],
+    install_requires=['numpy', 'scipy', 'bitarray', 'tables'],
 
     ext_modules = [equaliser_cython, dsp_cython],
     # List additional groups of dependencies here (e.g. development
