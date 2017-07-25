@@ -77,7 +77,7 @@ def select_angle_index(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
             for k in range(M):
                 csum[i,k] = csum[i,k]+x[i,k]
         else:
-            for k in range(x.shape[1]):
+            for k in range(M):
                 csum[i,k] = csum[i-1,k]+x[i,k]
                 dtmp = csum[i,k]  - csum[i-N,k]
                 if dtmp < dmin:
