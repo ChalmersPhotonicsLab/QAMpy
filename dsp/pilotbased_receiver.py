@@ -10,7 +10,7 @@ import numpy as np
 from dsp import signals, equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality, ber_functions
 from scipy.io import loadmat, savemat
 import matplotlib.pylab as plt
-
+from scipy.interpolate import interp1d
 def pilot_based_foe(rec_symbs,pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
@@ -132,14 +132,19 @@ data = norm.rvs(10.0, 2.5, size=500)
            
         # Pilot positions in the received data set
         pilot_pos = np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
-
+#        pilot_pos_int = np.arange(0,(len(pilot_phase)+1)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
+        
         # Lineary interpolate the phase evolution
         phase_trace[l,:] = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio),\
                                pilot_pos,pilot_phase)
+
+#        phase_func = interp1d(pilot_pos_int,np.hstack([pilot_phase,pilot_phase[-1]]),kind='linear')
+#        phase_trace[l,:] = phase_func(np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio))
         
         # Compensate phase
         data_symbs[l,:] = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
-    
+        
+        
     if remove_phase_pilots:
         pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
         data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
