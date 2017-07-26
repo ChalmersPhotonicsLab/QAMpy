@@ -215,8 +215,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     else:
         num_steps = int(np.ceil(np.shape(rx_signal)[1] / symb_step_size))
     
-    if not((ntaps[1]-ntaps[0])/os % 2 ==  0):
-        raise ValueError("Taps Inpropperly configured")
+    if not((ntaps[1]-ntaps[0])%os  ==  0):
+        raise ValueError("Taps for search and convergence impropper configured")
 
     # Now search for every mode independent
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
