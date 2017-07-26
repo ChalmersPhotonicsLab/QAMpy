@@ -4,22 +4,15 @@ import msgpack
 import msgpack_numpy as msgp_npy
 from .phaserecovery import blindphasesearch
 
+# careful we cannot use the unpatched msgpack because it messes up dictionary keys to bytes
+msgp_npy.patch()
+
 
 def pack_array(A):
-    return msgpack.packb(A, default=msgp_npy.encode)
+    return msgpack.packb(A)
 
 def unpack_array(A):
-    out = msgpack.unpackb(A, object_hook=msgp_npy.decode)
-    if isinstance(out, dict):
-        outn = {}
-        for k, v in out.items():
-            if isinstance(k, bytes):
-                outn[k.decode("utf-8")] = v
-            else:
-                outn[k] = v
-        return outn
-    else:
-        return out
+    return msgpack.unpackb(A)
 
 def send_array(socket, A, flags=0, copy=True, track=False):
     socket.send(pack_array(A), flags=flags, copy=copy, track=track)
