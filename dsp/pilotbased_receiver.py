@@ -128,7 +128,7 @@ data = norm.rvs(10.0, 2.5, size=500)
 
         # Fix! Need moving average in numpy
         pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
-        pilot_phase = np.hstack([pilot_phase[:(num_average-1)], pilot_phase_average])
+        pilot_phase = np.hstack([pilot_phase[:int((num_average-1)/2)], pilot_phase_average,np.ones(pilot_phase[:int((num_average-1)/2)].shape)*pilot_phase_average[-1]])
            
         # Pilot positions in the received data set
         pilot_pos = np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
