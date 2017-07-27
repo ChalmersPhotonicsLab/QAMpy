@@ -21,16 +21,13 @@ def gen_dataframe_with_phasepilots(M,npols, frame_length = 2**18, pilot_seq_len 
     N_data_frames = (frame_length - pilot_seq_len) / pilot_ins_ratio
     
     if (N_data_frames%1) != 0:
-        print("Pilot insertion ratio not propper selected")
+        raise ValueError("Pilot insertion ratio not propper selected")
     
-    N_pilot_symbs = pilot_seq_len + N_data_frames
-    
-    N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)
-    
+    N_pilot_symbs = pilot_seq_len + N_data_frames    
+    N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)    
     N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.bits
     N_data_bits = N_data_symbs * data_modulator.bits
-    
-    
+       
     # Set sequence together
     symbol_seq = np.zeros([npols,frame_length], dtype = complex)
     data_symbs = np.zeros([npols,N_data_symbs], dtype = complex)
@@ -105,40 +102,3 @@ def gen_dataframe_without_phasepilots(M,npols, frame_length = 2**18, pilot_seq_l
         symbol_seq[l,pilot_seq_len:] = data_symbs[l,:]
     
     return symbol_seq, data_symbs, pilot_symbs
-
-
-def sim_tx(frame, os, symb_rate = 20e9, beta = 0.1, snr = None, linewidth = None, freqoff = None, rot_angle = None):
-    """
-    Function to simulate transmission distortions to pilot frame
-    
-    """
-    
-    npols = frame.shape[0]
-    sig = np.zeros([npols,len(frame[0,:])*os],dtype = complex)
-    
-    for l in range(npols):
-    
-        # Upsample and pulse shaping
-        if os > 1:
-            sig[l,:] = utils.rrcos_resample_zeroins(frame[l,:], 1, os, beta = beta, renormalise = True)
-        
-        # Add AWGN
-        if snr is not None:
-            sig[l,:] = utils.add_awgn(sig[l,:],10**(-snr/20)*np.sqrt(os))
-        
-        # Add Phase Noise
-        if linewidth is not None:    
-            sig[l,:] = sig[l,:]*np.exp(1j*utils.phase_noise(sig[l,:].shape, linewidth, symb_rate * os ))
-        
-        # Add FOE
-        if freqoff is not None:
-            sig[l,:] *= np.exp(2.j * np.pi * np.arange(len(sig[l,:])) * freqoff / (symb_rate * os))
-        
-        # Verfy normalization
-        sig = utils.normalise_and_center(sig)
-    
-    if (npols == 2) and (rot_angle is not None):
-        sig = utils.rotate_field(sig, rot_angle)
-    
-    return sig
-
