@@ -411,15 +411,14 @@ def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e
         return resample(signal, fold, fnew)
     if Ts is None:
         Ts = 1/fold
-    else:
-        ratn = fractions.Fraction(fnew/fold).limit_denominator()
-        fup = ratn.numerator*fold
-        Nup = signal.shape[0]*ratn.numerator
-        t = np.linspace(-Nup/2, Nup/2, Nup, endpoint=False)*1/fup
-        nqf = rrcos_time(t, beta, Ts)
-        nqf /= nqf.max()
-        nqf = nqf[np.where(abs(nqf)>discardfactor)]
-        return resample(signal, fold, fnew, window=nqf)
+    ratn = fractions.Fraction(fnew/fold).limit_denominator()
+    fup = ratn.numerator*fold
+    Nup = signal.shape[0]*ratn.numerator
+    t = np.linspace(-Nup/2, Nup/2, Nup, endpoint=False)*1/fup
+    nqf = rrcos_time(t, beta, Ts)
+    nqf /= nqf.max()
+    nqf = nqf[np.where(abs(nqf)>discardfactor)]
+    return resample(signal, fold, fnew, window=nqf)
 
 def rcos_time(t, beta, T):
     """Time response of a raised cosine filter with a given roll-off factor and width """
