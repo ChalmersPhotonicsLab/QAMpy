@@ -144,10 +144,7 @@ def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
     wy = -np.conj(wx)[::-1,::-1]
-<<<<<<< HEAD
-#    wy = wx[::-1,::-1]
-=======
->>>>>>> zmq_workers
+
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
