@@ -158,7 +158,7 @@ def create_parameter_group(h5f, title="parameters of the measurement", descripti
     if description is None:
         description = {"id":tb.Int64Col(), "osnr":tb.Float64Col(dflt=np.nan),
                   "wl":tb.Float64Col(dflt=np.nan), "symbolrate":tb.Float64Col(),
-                  "MQAM": tb.Int64Col(), "Psig": tb.Float64Col(dflt=np.nan)}
+                       "MQAM": tb.Int64Col(), "Psig": tb.Float64Col(dflt=np.nan), "L":tb.Float64Col(dflt=0)}
     t_param = h5f.create_table(gr, "experiment", description , "measurement parameters", **kwargs)
     for k, v in attrs.items():
         setattr(t_param.attrs, k, v)
