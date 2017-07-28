@@ -72,7 +72,8 @@ class RepWorker(object):
         except Exception as err:
             success = b"ERR"
             result = repr(err).encode("ascii")
-        self.send_msg(result, success)
+        finally:
+            self.send_msg(result, success)
 
     def run(self):
         while True:
@@ -105,7 +106,7 @@ class DataDealer(object):
             if msg[1] == b"OK":
                 return unpack_array(msg[2])
             else:
-                raise Exception(msg[2:])
+                raise Exception(msg)
         else:
             pass
 
