@@ -179,7 +179,7 @@ class QAMModulator(object):
 
         The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
         """
-        if syms == None:
+        if syms is None:
             syms = self.quantize(signal)
         else:
             syms, signal_ad = self._sync_and_adjust(syms, signal)
