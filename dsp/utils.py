@@ -411,7 +411,7 @@ def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=0., renormalise=Fal
         sig_new = sig_new[::down]
     return sig_new
 
-def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e-3):
+def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, taps=4000, renormalise=False, tdomain_filter=False):
     """
     Resample a signal using a root raised cosine filter. This performs pulse shaping and resampling a the same time.
     The resampling is done by scipy.signal.resample_poly. This function can be quite slow.
@@ -428,9 +428,10 @@ def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e
         time width of the RRCOS filter (default:None makes this 1/fold)
     beta     : float, optional
         filter roll off factor between [0,1] (default:None will use the default filter in poly_resample)
-    discardfactor : float, optional
-        discard filter elements below this threshold, this causes the filter to be significantly shorter
-        and thus speeds up the function significantly
+    taps : float, optional
+        taps of the interpolation filter
+    tdomain_filter: bool, optional
+        whether to calculate the RRCOS filter in the time or frequency domain (with fft). Frequency domain seems to work slightly better
 
     Returns
     -------
@@ -442,14 +443,19 @@ def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e
         return resample(signal, fold, fnew)
     if Ts is None:
         Ts = 1/fold
-    ratn = fractions.Fraction(fnew/fold).limit_denominator()
-    fup = ratn.numerator*fold
-    Nup = signal.shape[0]*ratn.numerator
-    t = np.linspace(-Nup/2, Nup/2, Nup, endpoint=False)*1/fup
-    nqf = rrcos_time(t, beta, Ts)
+    up, down = _resamplingfactors(fold, fnew)
+    fup = up*fold
+    if tdomain_filter:
+        t = np.linspace(-taps/2, taps/2, taps, endpoint=False)/fup
+        nqf = rrcos_time(t, beta, Ts)
+    else:
+        f = np.linspace(-1/2, 1/2, taps, endpoint=False)*fup
+        nqf = np.fft.fftshift(np.fft.fft(rrcos_freq(f, beta, Ts)))
     nqf /= nqf.max()
-    nqf = nqf[np.where(abs(nqf)>discardfactor)]
-    return resample(signal, fold, fnew, window=nqf)
+    sig_new = scisig.resample_poly(signal, up, down, window=nqf)
+    if renormalise:
+        sig_new = normalise_and_center(sig_new)
+    return sig_new
 
 def rcos_time(t, beta, T):
     """Time response of a raised cosine filter with a given roll-off factor and width """
