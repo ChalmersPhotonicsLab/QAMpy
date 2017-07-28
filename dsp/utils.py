@@ -406,8 +406,10 @@ def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=0., renormalise=Fal
     #sig_new = scisig.fftconvolve(sig_new, nqf, 'same')
     sig_new = rrcos_pulseshaping(sig_new, up*fold, Ts, beta)
     if renormalise:
-        sig_new = normalise_and_center(sig_new)
-    return sig_new[::down]
+        sig_new = normalise_and_center(sig_new[::down])
+    else:
+        sig_new = sig_new[::down]
+    return sig_new
 
 def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, discardfactor=1e-3):
     """
