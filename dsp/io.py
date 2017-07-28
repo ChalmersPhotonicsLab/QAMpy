@@ -158,7 +158,7 @@ def create_parameter_group(h5f, title="parameters of the measurement", descripti
     if description is None:
         description = {"id":tb.Int64Col(), "osnr":tb.Float64Col(dflt=np.nan),
                   "wl":tb.Float64Col(dflt=np.nan), "symbolrate":tb.Float64Col(),
-                  "MQAM": tb.Int64Col(), "Psig": tb.Float64Col(dflt=np.nan)}
+                       "MQAM": tb.Int64Col(), "Psig": tb.Float64Col(dflt=np.nan), "L":tb.Float64Col(dflt=0)}
     t_param = h5f.create_table(gr, "experiment", description , "measurement parameters", **kwargs)
     for k, v in attrs.items():
         setattr(t_param.attrs, k, v)
@@ -199,7 +199,7 @@ def create_meas_group(h5f, title="measurement data",  description=None, attrs=ME
         gr_meas = h5f.create_group("/", "measurements", title=title)
     gr_osc = h5f.create_group(gr_meas, "oscilloscope", title="Data from Realtime oscilloscope")
     if description is None:
-        description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col(), "id_data": tb.Int64Col()}
+        description = { "id":tb.Int64Col(), "samplingrate": tb.Float64Col(), "idx_data": tb.Int64Col()}
     t_meas = h5f.create_table(gr_osc, "signal", description, "sampled signal", **kwargs)
     setattr(t_meas.attrs, "arrays", arrays)
     arr = h5f.create_mdvlarray(gr_osc, "data", tb.ComplexAtom(itemsize=16), **kwargs)
@@ -236,8 +236,8 @@ def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.n
         h5f = tb.open_file(h5f, "a")
         gr = h5f.create_group("/", "input", title=title)
     # if no shape for input syms or bits is given use scalar
-    t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "id_symbols": tb.Int64Col(dflt=0),
-                                               "id_bits": tb.Int64Col(dflt=0), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
+    t_in = h5f.create_table(gr, "signal", {"id": tb.Int64Col(), "idx_symbols": tb.Int64Col(dflt=0),
+                                               "idx_bits": tb.Int64Col(dflt=0), "rolloff": tb.Float64Col(dflt=rolloff_dflt)}, title="parameters of input signal", **kwargs)
     setattr(t_in.attrs, "arrays", arrays)
     arr_syms = h5f.create_mdvlarray(gr, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), title="sent symbols", **kwargs)
     arr_bits = h5f.create_mdvlarray(gr, "bits", tb.BoolAtom(), title="sent bits", **kwargs)
@@ -287,8 +287,8 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
                        "iterations": tb.Int64Col(shape=2),
                        "ntaps": tb.Int64Col(),
                        "method": tb.StringCol(itemsize=20)}
-        description = {"id":tb.Int64Col(), "id_data": tb.Int64Col(), "id_symbols": tb.Int64Col(),
-                       "id_bits": tb.Int64Col(), "id_taps": tb.Int64Col(),
+        description = {"id":tb.Int64Col(), "idx_data": tb.Int64Col(), "idx_symbols": tb.Int64Col(),
+                       "idx_bits": tb.Int64Col(), "idx_taps": tb.Int64Col(),
                        "evm": tb.Float64Col(dflt=np.nan, shape=nmodes), "ber":tb.Float64Col(dflt=np.nan, shape=nmodes),
                        "ser":tb.Float64Col(dflt=np.nan, shape=nmodes), "oversampling":tb.Int64Col(dflt=oversampling_dflt)}
         description.update(dsp_params)
@@ -331,9 +331,9 @@ def save_inputs(h5file, id_meas, symbols=None, bits=None, rolloff=None):
     row = input_tb.row
     row['id'] = id_meas
     if symbols is not None:
-        row['id_symbols'] = save_array_to_table(input_tb, "symbols", symbols)
+        row['idx_symbols'] = save_array_to_table(input_tb, "symbols", symbols)
     if bits is not None:
-        row['id_bits'] = save_array_to_table(input_tb, "bits", bits)
+        row['idx_bits'] = save_array_to_table(input_tb, "bits", bits)
     row['rolloff'] = rolloff
     row.append()
     input_tb.flush()
@@ -372,7 +372,7 @@ def save_osc_meas(h5file, data,  osnr=None, wl=None, measurementN=0, Psig=None, 
     m_row = meas_table.row
     id_meas = save_array_to_table(meas_table, "data", data)
     m_row['id'] = id_meas
-    m_row['id_data'] = id_meas
+    m_row['idx_data'] = id_meas
     m_row['samplingrate'] = samplingrate
     m_row.append()
     meas_table.flush()
@@ -423,12 +423,12 @@ def save_recvd(h5file, data, id_meas, taps, symbols=None, bits=None, oversamplin
     row['id'] = id_meas
     if oversampling is not None:
         row['oversampling'] = oversampling
-    row['id_data'] = save_array_to_table(rec_table, "data", data)
-    row['id_taps'] = save_array_to_table(rec_table, "taps", taps)
+    row['idx_data'] = save_array_to_table(rec_table, "data", data)
+    row['idx_taps'] = save_array_to_table(rec_table, "taps", taps)
     if symbols is not None:
-        row['id_symbols'] = save_array_to_table(rec_table, "symbols", symbols)
+        row['idx_symbols'] = save_array_to_table(rec_table, "symbols", symbols)
     if bits is not None:
-        row['id_bits'] = save_array_to_table(rec_table, "bits", bits)
+        row['idx_bits'] = save_array_to_table(rec_table, "bits", bits)
     for k, v in cols.items():
         if v is not None:
             row[k] = v
@@ -464,7 +464,7 @@ def array_from_table(table, name, query=None):
     """
     pnode = table._g_getparent()
     arr_stor = getattr(pnode, name)
-    colname = "id_"+name
+    colname = "idx_"+name
     if query is None:
         idx = getattr(table.cols, colname)[:]
     else:
