@@ -28,15 +28,15 @@ class PPWorker(object):
         self.receive_socket = self.context.socket(zmq.PULL)
         self.receive_socket.connect(receive_url)
 
-    def send_msg(self, msg, success=b"OK"):
-        self.send_socket.send_multipart([success, pack_array(A)])
+    def send_msg(self, msg, success=b"OK", flags=None):
+        self.send_socket.send_multipart([success, pack_array(A)], flags=flags)
 
-    def recv_msg(self):
-        header, msg = self.collect_socket.recv_multipart()
+    def recv_msg(self, flags=None):
+        header, msg = self.collect_socket.recv_multipart(flags=flags)
         return header, unpack_array(msg)
 
-    def process(self):
-        header, msg = self.recv_msg()
+    def process(self, flags=None):
+        header, msg = self.recv_msg(flags=flags)
         try:
             result = getattr(self, header)(**msg)
             success = b"OK"
@@ -57,11 +57,11 @@ class RepWorker(object):
         self.socket.connect(url)
         print("started on %s"%url)
 
-    def send_msg(self, msg, success=b"OK"):
-        self.socket.send_multipart([success, pack_array(msg)])
+    def send_msg(self, msg, success=b"OK", flags=None):
+        self.socket.send_multipart([success, pack_array(msg)], flags=flags)
 
-    def recv_msg(self):
-        header, msg = self.socket.recv_multipart()
+    def recv_msg(self, flags=None):
+        header, msg = self.socket.recv_multipart(flags=flags)
         return header, unpack_array(msg)
 
     def process(self):
@@ -92,16 +92,16 @@ class DataDealer(object):
             self.socket.bind(u"{}:{}".format(url, port))
             self.port = port
 
-    def send_msg(self, header, msg, identity=None):
+    def send_msg(self, header, msg, identity=None, flags=None):
         msg = pack_array(msg)
         if identity is None:
-            self.socket.send_multipart([b"", header, msg])
+            self.socket.send_multipart([b"", header, msg], flags=flags)
             #self.socket.send_multipart([b"", header])
         else:
-            self.socket.send_multipart([identity, b"", header, msg])
+            self.socket.send_multipart([identity, b"", header, msg], flags=flags)
 
-    def recv_msg(self):
-        msg = self.socket.recv_multipart()
+    def recv_msg(self, flags=None):
+        msg = self.socket.recv_multipart(flags=flags)
         if msg[0] == b"":
             if msg[1] == b"OK":
                 return unpack_array(msg[2])
