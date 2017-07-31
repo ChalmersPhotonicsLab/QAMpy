@@ -865,7 +865,7 @@ def comp_rf_delay(sig, delay, sampling_rate = 50e9 ):
     """
     
     # Frequency base vector
-    freqVector = np.fft.fftfreq(sig.size, sampling_rate/2)
+    freqVector = np.fft.fftfreq(sig.size, 2/sampling_rate)
     
     # Phase-dealyed version
     sig_out = np.fft.ifft(np.exp(-1j*2*np.pi*delay*1e-12*freqVector)*\
