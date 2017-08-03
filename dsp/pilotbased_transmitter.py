@@ -117,14 +117,14 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
     # Modulators to generate hybrid QAM
     pilot_modualtor = modulation.QAMModulator(4)
     data_modulators = []
-    for mod in len(M):
-        data_modulators.append(modulation.QAMModulator(mod)
+    for mod in M:
+        data_modulators.append(modulation.QAMModulator(mod))
         
     # Arrange to have same average power of both
-    N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)    
-    norm_factors = np.zeros(len(mod))
+    N_data_symbs = int(N_data_frames * (pilot_ins_ratio - 1))
+    norm_factors = np.zeros(len(M))
     for i in range(len(M)):
-        norm_factors[i] = np.min(np.abs(data_mod[i].symbols[0]-data_mod[i].symbols[1:]))/2
+        norm_factors[i] = np.min(np.abs(data_modulators[i].symbols[0]-data_modulators[i].symbols[1:]))/2
 
     # Pilot symbols    
     N_pilot_symbs = pilot_seq_len + N_data_frames    
@@ -142,7 +142,7 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
     for l in range(npols):
         # Generate modulated symbols
         mod_symbs = []
-        for i in range(M):
+        for i in range(len(M)):
             if rem_symbs- sum(mod_ratio[:i+1]) > 0:
                 if sum(mod_ratio[:i+1]) < rem_symbs:
                     add_symbs = sum(mod_ratio[:i+1])
@@ -153,15 +153,18 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
             else:
                 tmp_bits = np.random.randint(0,high=2, size = sub_blocks*mod_ratio[i]*M[i]).astype(np.bool)
             
-            mod_symbs[i] = data_modulators.modulate(tmp_bits)/norm_factors[i] 
+            mod_symbs.append(data_modulators[i].modulate(tmp_bits)/norm_factors[i]) 
         
+        place_ind = np.cumsum(mod_ratio)
         for i in range(N_data_symbs):
-            data_symbs[l,i] = mod_symbs[i%len(M)][i//len(M)]
+            place = np.argmax(i%place_ind != 0)
+            data_symbs[l,i] = mod_symbs[place][i//sum(mod_ratio)]
         
         # Normalize output symbols to have a unit energy of 1
-        data_symbs[l,:] = data_symbs[l,:]./np.sqrt(np.mean(np.abs(data_symbs[l,:])**2))        
+        data_symbs[l,:] = data_symbs[l,:]/np.sqrt(np.mean(np.abs(data_symbs[l,:])**2))        
         
         # Modulate the pilot symbols
+        pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(np.bool)
         pilot_symbs[l,:] = pilot_modualtor.modulate(pilot_bits)
         
         # Insert pilot sequence
