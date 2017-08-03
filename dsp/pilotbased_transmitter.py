@@ -68,7 +68,7 @@ def gen_dataframe_without_phasepilots(M,npols, frame_length = 2**18, pilot_seq_l
     
     
     if (pilot_seq_len >= frame_length):
-        print("Number of pilots longer than available data frame")
+        raise ValueError("Pilot insertion ratio not propper selected")
     
     
     N_data_symbs = frame_length - pilot_seq_len
@@ -100,5 +100,80 @@ def gen_dataframe_without_phasepilots(M,npols, frame_length = 2**18, pilot_seq_l
 
         # Insert data symbols
         symbol_seq[l,pilot_seq_len:] = data_symbs[l,:]
+    
+    return symbol_seq, data_symbs, pilot_symbs
+
+def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1),npols=2, frame_length = 2**18, pilot_seq_len = 256, pilot_ins_ratio = 32):
+
+
+    if len(M) != len(mod_ratio):
+        raise ValueError("Number of moduation formats and insertion ratios does not match")
+
+    
+    N_data_frames = (frame_length - pilot_seq_len) / pilot_ins_ratio
+    if (N_data_frames%1) != 0:
+        raise ValueError("Pilot insertion ratio not propper selected")
+
+    # Modulators to generate hybrid QAM
+    pilot_modualtor = modulation.QAMModulator(4)
+    data_modulators = []
+    for mod in len(M):
+        data_modulators.append(modulation.QAMModulator(mod)
+        
+    # Arrange to have same average power of both
+    N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)    
+    norm_factors = np.zeros(len(mod))
+    for i in range(len(M)):
+        norm_factors[i] = np.min(np.abs(data_mod[i].symbols[0]-data_mod[i].symbols[1:]))/2
+
+    # Pilot symbols    
+    N_pilot_symbs = pilot_seq_len + N_data_frames    
+    N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.bits
+
+    # Number of symbols per modulation format, correction added later
+    sub_blocks = N_data_symbs // sum(mod_ratio)
+    rem_symbs = N_data_symbs % sum(mod_ratio)
+
+    # Set sequence together
+    symbol_seq = np.zeros([npols,frame_length], dtype = complex)
+    data_symbs = np.zeros([npols,N_data_symbs], dtype = complex)
+    pilot_symbs = np.zeros([npols,N_pilot_symbs], dtype = complex)
+
+    for l in range(npols):
+        # Generate modulated symbols
+        mod_symbs = []
+        for i in range(M):
+            if rem_symbs- sum(mod_ratio[:i+1]) > 0:
+                if sum(mod_ratio[:i+1]) < rem_symbs:
+                    add_symbs = sum(mod_ratio[:i+1])
+                else:
+                    add_symbs = rem_symbs - sum(mod_ratio[:i])
+                    
+                tmp_bits = np.random.randint(0,high=2, size = (sub_blocks*mod_ratio[i]+add_symbs)*M[i]).astype(np.bool)
+            else:
+                tmp_bits = np.random.randint(0,high=2, size = sub_blocks*mod_ratio[i]*M[i]).astype(np.bool)
+            
+            mod_symbs[i] = data_modulators.modulate(tmp_bits)/norm_factors[i] 
+        
+        for i in range(N_data_symbs):
+            data_symbs[l,i] = mod_symbs[i%len(M)][i//len(M)]
+        
+        # Normalize output symbols to have a unit energy of 1
+        data_symbs[l,:] = data_symbs[l,:]./np.sqrt(np.mean(np.abs(data_symbs[l,:])**2))        
+        
+        # Modulate the pilot symbols
+        pilot_symbs[l,:] = pilot_modualtor.modulate(pilot_bits)
+        
+        # Insert pilot sequence
+        symbol_seq[l,0:pilot_seq_len] = pilot_symbs[l,0:pilot_seq_len]
+        symbol_seq\
+        [l,(pilot_seq_len)::pilot_ins_ratio] \
+        = pilot_symbs[l,pilot_seq_len:]
+        
+        # Insert data symbols
+        for j in np.arange(N_data_frames):
+            symbol_seq[l,pilot_seq_len + j*pilot_ins_ratio + 1:\
+                            pilot_seq_len + (j+1)*pilot_ins_ratio ] = \
+                            data_symbs[l,j*(pilot_ins_ratio-1):(j+1)*(pilot_ins_ratio-1)]
     
     return symbol_seq, data_symbs, pilot_symbs
