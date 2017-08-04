@@ -124,8 +124,11 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
     N_data_symbs = int(N_data_frames * (pilot_ins_ratio - 1))
     norm_factors = np.zeros(len(M))
     for i in range(len(M)):
-        norm_factors[i] = np.min(np.abs(data_modulators[i].symbols[0]-data_modulators[i].symbols[1:]))/2
-
+#        norm_factors[i] = np.min(np.abs(data_modulators[i].symbols[0]-data_modulators[i].symbols[1:]))/2
+        norm_factors[i] = np.max(np.abs(data_modulators[i].symbols.real))
+#    norm_factors[0] = np.sqrt(1.213)
+    norm_factors[0] = 1
+    norm_factors[1] = 1
     # Pilot symbols    
     N_pilot_symbs = pilot_seq_len + N_data_frames    
     N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.bits
