@@ -57,10 +57,10 @@ class RepWorker(object):
         self.socket.connect(url)
         print("started on %s"%url)
 
-    def send_msg(self, msg, success=b"OK", flags=None):
+    def send_msg(self, msg, success=b"OK", flags=0):
         self.socket.send_multipart([success, pack_array(msg)], flags=flags)
 
-    def recv_msg(self, flags=None):
+    def recv_msg(self, flags=0):
         header, msg = self.socket.recv_multipart(flags=flags)
         return header, unpack_array(msg)
 
@@ -92,7 +92,7 @@ class DataDealer(object):
             self.socket.bind(u"{}:{}".format(url, port))
             self.port = port
 
-    def send_msg(self, header, msg, identity=None, flags=None):
+    def send_msg(self, header, msg, identity=None, flags=0):
         msg = pack_array(msg)
         if identity is None:
             self.socket.send_multipart([b"", header, msg], flags=flags)
@@ -100,7 +100,7 @@ class DataDealer(object):
         else:
             self.socket.send_multipart([identity, b"", header, msg], flags=flags)
 
-    def recv_msg(self, flags=None):
+    def recv_msg(self, flags=0):
         msg = self.socket.recv_multipart(flags=flags)
         if msg[0] == b"":
             if msg[1] == b"OK":
