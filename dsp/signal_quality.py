@@ -137,24 +137,6 @@ def _cal_gamma(M):
     return np.sum(uniq**4 * counts / M)
 
 
-def cal_snr_blind_16qam(E):
-    """Calculate the signal to noise ratio SNR according to formula given in
-    Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
-    pg 865 (2005).
-
-    Parameters:
-    ----------
-    E  : array_like
-       input field
-
-    Returns:
-    --------
-    S0/N   : float
-         linear SNR estimate
-    """
-    return cal_snr_blind_qam(E, 16)
-
-
 def cal_s0(E, M):
     """Calculate the signal power S0 according to formula given in
     Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
