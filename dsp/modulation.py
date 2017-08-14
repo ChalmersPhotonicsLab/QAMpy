@@ -109,7 +109,6 @@ class QAMModulator(object):
         idx      : array_like
             1D array of indices into QAMmodulator.symbols
         """
-        signal = utils.normalise_and_center(signal)
         return quantize(utils.normalise_and_center(signal), self.symbols)
 
     def cal_evm(self, signal, syms=None):
