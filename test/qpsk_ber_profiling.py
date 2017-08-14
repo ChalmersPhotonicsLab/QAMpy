@@ -3,7 +3,6 @@ import numpy as np
 
 import matplotlib.pylab as plt
 from dsp import  equalisation, modulation, impairments
-from dsp.signal_quality import cal_evm_blind
 
 
 
