@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
 from dsp import  equalisation, modulation, impairments
-from dsp.signal_quality import cal_evm_blind
+from dsp.signal_quality import cal_evm
 
 
 
@@ -32,14 +32,14 @@ E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, 
 print("equalised")
 
 
-evmX = cal_evm_blind(S[0,::2], M)
-evmY = cal_evm_blind(S[1,::2], M)
-evmEx = cal_evm_blind(E[0], M)
-evmEy = cal_evm_blind(E[1], M)
-evmEx_m = cal_evm_blind(E_m[0], M)
-evmEy_m = cal_evm_blind(E_m[1], M)
-evmEx_s = cal_evm_blind(E_s[0], M)
-evmEy_s = cal_evm_blind(E_s[1], M)
+evmX = cal_evm(S[0,::2], M)
+evmY = cal_evm(S[1,::2], M)
+evmEx = cal_evm(E[0], M)
+evmEy = cal_evm(E[1], M)
+evmEx_m = cal_evm(E_m[0], M)
+evmEy_m = cal_evm(E_m[1], M)
+evmEx_s = cal_evm(E_s[0], M)
+evmEy_s = cal_evm(E_s[1], M)
 
 #sys.exit()
 plt.figure()

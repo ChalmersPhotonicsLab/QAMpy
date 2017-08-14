@@ -52,7 +52,7 @@ def normalise_sig(sig, M):
     return 1 / norm, sig / norm
 
 
-def cal_evm_blind(sig, M):
+def _cal_evm_blind(sig, M):
     """Blind calculation of the linear Error Vector Magnitude for an M-QAM
     signal. Does not consider Symbol errors.
 
@@ -77,31 +77,33 @@ def cal_evm_blind(sig, M):
     return np.sqrt(evm)
 
 
-def cal_evm_known_data(sig, ideal, M):
-    """Blind calculation of the linear Error Vector Magnitude for an M-QAM
-    signal. This function calculates the EVM while calculating longer distances if
-    there are symbol errors.
+def cal_evm(sig, M, known=None):
+    """Calculation of the linear Error Vector Magnitude for an M-QAM
+    signal.
 
     Parameters
     ----------
     sig : array_like
         input signal
-    ideal : array_like
-        the error-free signal
     M : int
        QAM order
+    known : array_like
+        the error-free symbols
 
     Returns
     -------
     evm : float
         Error Vector Magnitude
     """
-    Ai, Pi = normalise_sig(ideal, M)
-    As, Ps = normalise_sig(sig, M)
-    evm = np.mean(abs(Pi.real - Ps.real)**2 + \
+    if known is None:
+        return _cal_evm_blind(sig, M)
+    else:
+        Ai, Pi = normalise_sig(known, M)
+        As, Ps = normalise_sig(sig, M)
+        evm = np.mean(abs(Pi.real - Ps.real)**2 + \
                   abs(Pi.imag - Ps.imag)**2)
-    evm /= np.mean(abs(Pi)**2)
-    return np.sqrt(evm)
+        evm /= np.mean(abs(Pi)**2)
+        return np.sqrt(evm)
 
 
 def cal_snr_qam(E, M):
