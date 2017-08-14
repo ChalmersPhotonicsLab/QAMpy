@@ -94,6 +94,34 @@ def supergauss(x, A, x0, w, o):
     """
     return A * np.exp(-((x - x0) / w)**(2 * o) / 2.)
 
+def orthonormalize_signal(E, os=1):
+    """
+    Orthogonalizing signal using the Gram-Schmidt process. See for example:
+        https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process for more
+        detailed description.
+    """
+
+    E = np.atleast_2d(E)
+    E_out = np.zeros(E.shape, dtype=complex)
+    for l in range(E.shape[0]):
+        # Center
+        real_out = E[l,:].real - E[l,:].real.mean()
+        tmp_imag = E[l,:].imag - E[l,:].imag.mean()
+
+        # Calculate scalar products
+        mean_pow_inphase = np.mean(real_out**2)
+        mean_pow_quadphase = np.mean(tmp_imag**2)
+        mean_pow_imb = np.mean(real_out*tmp_imag)
+
+        # Output, Imag orthogonal to Real part of signal
+        sig_out = real_out / np.sqrt(mean_pow_inphase) +\
+                                    1j*(tmp_imag - mean_pow_imb * real_out / mean_pow_inphase) / np.sqrt(mean_pow_quadphase)
+        # Final total normalization to ensure IQ-power equals 1
+        E_out[l,:] = sig_out - np.mean(sig_out[::os])
+        E_out[l,:] = E_out[l,:] / np.sqrt(np.mean(np.abs(E_out[l,::os])**2))
+
+    return E_out
+
 def normalise_and_center(E):
     """
     Normalise and center the input field, by calculating the mean power for each polarisation separate and dividing by its square-root
@@ -553,7 +581,7 @@ def comp_IQbalance(signal):
     Q_comp = Q_balcd * np.sqrt(am_bal)
     return I + 1.j * Q_comp
 
-def pre_filter(signal, bw):
+def pre_filter(signal, bw, os):
     """
     Low-pass pre-filter signal with square shape filter
 
@@ -567,9 +595,14 @@ def pre_filter(signal, bw):
         bandwidth of the rejected part, given as fraction of overall length
     """
     N = len(signal)
+    freq_axis = np.fft.fftfreq(N,1/os)
+
+    idx = np.where(abs(freq_axis)<bw/2)
+
     h = np.zeros(N, dtype=np.float64)
-    h[int(N/(bw/2)):-int(N/(bw/2))] = 1
-    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
+    #h[int(N/(bw/2)):-int(N/(bw/2))] = 1
+    h[idx] = 1
+    s = np.fft.ifftshift(np.fft.ifft(np.fft.fft(signal)*h))
     return s
 
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
@@ -649,3 +682,58 @@ def rrcos_pulseshaping(sig, fs, T, beta):
     sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig)))
     sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
     return sig_out
+
+def add_awgn(sig, strgth):
+    """
+    Add additive white Gaussian noise to a signal.
+
+    Parameters
+    ----------
+    sig    : array_like
+        signal input array can be 1d or 2d, if 2d noise will be added to every dimension
+    strgth : float
+        the strength of the noise to be added to each dimension
+
+    Returns
+    -------
+    sigout : array_like
+       output signal with added noise
+
+    """
+    sigout = np.zeros(sig.shape, dtype=sig.dtype)
+    if sig.ndim > 1:
+        N = sig.shape[1]
+        for i in range(sig.shape[0]):
+            sigout[i] = sig[i] + strgth * (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because of var vs std
+    else:
+        N = sig.shape[0]
+        sigout = sig + strgth * (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because of var vs std
+    return sigout
+
+
+def comp_rf_delay(sig, delay, sampling_rate = 50e9 ):
+    """
+    Adds a delay of X picoseconds to the signal in frequency domain. Can be
+    used to compensate for impairments such as RF cables of different length
+    between the optical hybrid and ADC.
+
+    Input:
+        sig: Real-valued input signal
+        sampling_ratev: ADC sampling rate
+        delay: Delay in ps
+
+
+    Output
+        sig_out: Signal after compensating for delay
+
+    """
+
+    # Frequency base vector
+    freqVector = np.fft.fftfreq(sig.size, 2/sampling_rate)
+
+    # Phase-dealyed version
+    sig_out = np.fft.ifft(np.exp(-1j*2*np.pi*delay*1e-12*freqVector)*\
+                          np.fft.fft(sig))
+
+    # Real part of output
+    return sig_out.real
