@@ -114,7 +114,9 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     idx =  bps_fct(E, angles, symbols, N, **kwargs)
     ph = select_angles(angles, idx)
     # ignore the phases outside the averaging window
-    ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
+    # better to use normal unwrap instead of fancy tricks
+    #ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
+    ph[N:-N] = np.unwrap(ph[N:-N]*4)/4
     Eout = E*np.exp(1.j*ph)
     return Eout, ph
 
@@ -479,13 +481,13 @@ def comp_freq_offset(sig, freq_offset, os=1 ):
     npols = sig.shape[0]
 
     # Output Vector
-    comp_signal = np.zeros([1,np.shape(sig)[1]],dtype=complex)
+    comp_signal = np.zeros([npols,np.shape(sig)[1]],dtype=complex)
 
     # Fix output
     sig_len = len(sig[0,:])
-    lin_phase = np.arange(1,sig_len + 1,dtype = float)
+    time_vec = np.arange(1,sig_len + 1,dtype = float)
     for l in range(npols):
-        lin_phase = 2 * np.pi * freq_offset[l] /  os
-        comp_signal[l] = sig[l] * np.exp(-1j * lin_phase)
+        lin_phase = 2 * np.pi * time_vec * freq_offset[l] /  os
+        comp_signal[l,:] = sig[l,:] * np.exp(-1j * lin_phase)
 
     return comp_signal

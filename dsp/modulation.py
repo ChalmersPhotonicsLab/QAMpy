@@ -13,7 +13,7 @@ class QAMModulator(object):
     A modulator object for modulating and demodulating rectangular QAM signals (without carrier frequency and equalisation). Currently only Gray coding of bits is supported.
     """
 
-    def __init__(self, M, coding=None):
+    def __init__(self, M, scaling_factor=None, coding=None):
         """
         Initialise QAM modulator
 
@@ -22,13 +22,19 @@ class QAMModulator(object):
         M        :  int
             number of constellation points, indicates QAM order
 
+        scaling_factor: float, optional
+            scaling factor to scale QAM symbols, if not given the symbols will
+            scaled to an average power of 1
         coding   : string, optional
            coding method currently only the default gray coding is supported
 
         """
         self.M = M
         self.symbols = theory.cal_symbols_qam(M)
-        self._scale = theory.cal_scaling_factor_qam(M)
+        if not scaling_factor:
+            self._scale = theory.cal_scaling_factor_qam(M)
+        else:
+            self._scale = scaling_factor
         self.symbols /= np.sqrt(self._scale)
         self.coding = None
         self._graycode = theory.gray_code_qam(M)
