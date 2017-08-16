@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, utils, phaserecovery, signal_quality
+from dsp import  equalisation, modulation, utils, phaserecovery, signal_quality, analog_frontend
 from scipy.io import loadmat
 
 
@@ -30,8 +30,8 @@ Y = Y.flatten()
 #Y = utils.resample(Y, 2.5, 2)
 X = utils.rrcos_resample_zeroins(X, 2.5, 2, beta=0.05, Ts=1)
 Y = utils.rrcos_resample_zeroins(Y, 2.5, 2, beta=0.05, Ts=1)
-X = utils.comp_IQbalance(X)
-Y = utils.comp_IQbalance(Y)
+X = analog_frontend.comp_IQ_inbalance(X)
+Y = analog_frontend.comp_IQbalance(Y)
 print(X.shape)
 print(Y.shape)
 SS = np.vstack([X[5000:-5000],Y[5000:-5000]])
