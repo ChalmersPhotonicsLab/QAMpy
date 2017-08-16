@@ -168,26 +168,41 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     Uses a CMA-based search scheme to located the initiial pilot sequence in
     the long data frame. 
     
-    Input:
-        rx_signal: Received Rx signal
-        ref_symbs: Pilot sequence
-        os: Oversampling
-        frame_length: Total frame length including pilots and payload
-        mu: CMA step size. Tuple(Search, Convergence)
-        M_pilot: Order for pilot symbols. Should normally be QPSK and M=4
-        ntaps: Number of T/2-spaced taps for equalization
-        Niter: Number of iterations for the equalizer.Tuple(Search, Convergence)
-        adap_step: Use adaptive step size (bool). Tuple(Search, Convergence)
-        method: Equalizer mehtods to be used. Tuple(Search, Convergence)
-        search_overlap: Overlap of subsequences in the test 
-        
-        
-    Output:
-        eq_pilots: Found pilot sequence after equalization
-        shift_factor: New starting point for initial equalization
-        out_taps: Taps for equalization of the whole signal
-        foe_course: Result of blind FOE used to sync the pilot sequence. 
-    
+    Parameters
+    ----------
+    rx_signal : array_like
+        Received Rx signal
+    ref_symbs : array_like
+        Pilot sequence
+    os : int
+        Oversampling ratio
+    frame_length : int, optional
+        Total frame length including pilots and payload
+    mu : tuple, optional
+        CMA step size. Tuple(Search, Convergence)
+    M_pilot : int, optional
+        Order for pilot symbols. Should normally be QPSK and M=4
+    ntaps : tuple, optional
+        Number of T/2-spaced taps for equalization. Tuple(search, convergence)
+    Niter : tuple, optional
+        Number of iterations for the equalizer. Tuple(search, convergence)
+    adap_step : tuple, optional
+        Use adaptive step size.  Tuple(search, convergence)
+    method : tuple, optional
+        Equalizer methods to be used. See dsp equalisation of possible methods. Tuple(Search, Convergence)
+    search_overlap : int, optional
+        Overlap of subsequences in the test
+
+    Returns
+    -------
+    eq_pilots : array_like
+        Found pilot sequence after equalization
+    shift_factor : array_like
+        New starting point for initial equalization
+    out_taps : array_like
+        Taps for equalization of the whole signal
+    foe_coarse : tuple
+        Result of blind FOE used to sync the pilot sequence.
     """
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -234,7 +249,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         # Use the first estimate to get rid of any large FO and simplify alignment
         wx1, err = equalisation.equalise_signal(shortSeq, os, mu[0], M_pilot,Ntaps = ntaps[0], Niter = Niter[0], method = method[0],adaptive_stepsize = adap_step[0])    
         seq_foe = equalisation.apply_filter(longSeq,os,wx1)
-        foe_corse = phaserecovery.find_freq_offset(seq_foe)        
+        foe_coarse = phaserecovery.find_freq_offset(seq_foe)
          
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
@@ -247,37 +262,43 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
             xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[l,:]))
             max_phase_rot[k] = np.max(xcov)
             found_delay[k] = np.argmax(xcov)
-    
-        # Select the best one    
-        symb_delay = int(found_delay[np.argmax(max_phase_rot)]) 
-        
+
+        # Select the best one
+        symb_delay = int(found_delay[np.argmax(max_phase_rot)])
+
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
-        
+
         # Tap update and extract the propper pilot sequuence
         tap_cor = int((ntaps[1]-ntaps[0])/2)
         pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,wxy=wx1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,wxy=wx1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
-       
-        out_taps.append(wx)        
+
+        out_taps.append(wx)
         eq_pilots[l,:] = symbs_out[l,:]
-    return eq_pilots, shift_factor, out_taps, foe_corse
+    return eq_pilots, shift_factor, out_taps, foe_coarse
 
 def find_const_phase_offset(rec_pilots, ref_symbs):
     """
-    Finds a constant phase offset between the decoded pilot 
+    Finds a constant phase offset between the decoded pilot
     symbols and the transmitted ones
-    
-    Input:
-        rec_pilots: Complex received pilots (after FOE and alignment)
-        ref_symbs: Corresponding transmitted pilot symbols (aligned!)
-        
-    Output:
-        phase_corr_pilots: Phase corrected pilot symbols
-        phase_corr: Corresponding phase offset per mode
-    
+
+    Paramters
+    ---------
+
+    rec_pilots : array_like
+        Complex received pilots (after FOE and alignment)
+    ref_symbs : array_like
+        Corresponding transmitted pilot symbols (aligned!)
+
+    Returns
+    -------
+    phase_corr_pilots : array_like
+        Phase corrected pilot symbols
+    phase_corr : array_like
+        Corresponding phase offset per mode
     """
     
     rec_pilots = np.atleast_2d(rec_pilots)
@@ -297,12 +318,19 @@ def correct_const_phase_offset(symbs, phase_offsets):
     Corrects a constant phase offset between the decoded pilot 
     symbols and the transmitted ones
     
-    Input:
-        symbs: Complex symbols to be compensated
-        phase_offsets: Phase offset for each mode
+    Parameters
+    ----------
+
+    symbs : array_like
+        Complex symbols to be compensated
+    phase_offsets : array_like
+        Phase offset for each mode
         
-    Output:
-        symbs: Symbols after phase rotation
+    Returns
+    -------
+
+    symbs : array_like
+        Symbols after phase rotation
     """
     
     symbs = np.atleast_2d(symbs)
