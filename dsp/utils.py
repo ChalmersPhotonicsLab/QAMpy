@@ -537,20 +537,4 @@ def convert_iqtosinglebitstream(idat, qdat, nbits):
     l = min(len(idat_n[0]), len(qdat_n[0]))
     return np.hstack([idat_n[:l], qdat_n[:l]]).flatten()
 
-def comp_IQbalance(signal):
-    """
-    Compensate IQ imbalance of a signal
-    """
-    signal -= np.mean(signal)
-    I = signal.real
-    Q = signal.imag
-
-    # phase balance
-    mon_signal = np.sum(I*Q)/np.sum(I**2)
-    phase_inbalance = np.arcsin(-mon_signal)
-    Q_balcd = (Q + np.sin(phase_inbalance)*I)/np.cos(phase_inbalance)
-    am_bal = np.sum(I**2)/np.sum(Q_balcd**2)
-    Q_comp = Q_balcd * np.sqrt(am_bal)
-    return I + 1.j * Q_comp
-
 
