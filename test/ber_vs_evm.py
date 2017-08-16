@@ -81,7 +81,7 @@ for M in Mqams:
         # check to see that we can recovery timing delay
         signalafter = np.roll(signalafter * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
         ser[i] = modulator.cal_ser(signalafter[0], symbol_tx=syms)
-        ber[i] = modulator.cal_ber(signalafter[0], bits)[0]
+        ber[i] = modulator.cal_ber(signalafter[0], bits_tx=bits)[0]
         i += 1
     ax1.plot(snrf, theory.ber_vs_es_over_n0_qam(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
