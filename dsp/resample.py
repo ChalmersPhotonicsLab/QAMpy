@@ -5,6 +5,11 @@ from scipy import signal as scisig
 from dsp.utils import normalise_and_center, rrcos_time, rrcos_freq
 
 
+def _resamplingfactors(fold, fnew):
+    ratn = fractions.Fraction(fnew/fold).limit_denominator()
+    return ratn.numerator, ratn.denominator
+
+
 def resample(signal, fold, fnew, window=None, renormalise=False):
     """
     Resamples a signal from an old frequency to a new. Preserves the whole data
@@ -39,11 +44,6 @@ def resample(signal, fold, fnew, window=None, renormalise=False):
     if renormalise:
         signal = normalise_and_center(signal)
     return signal
-
-
-def _resamplingfactors(fold, fnew):
-    ratn = fractions.Fraction(fnew/fold).limit_denominator()
-    return ratn.numerator, ratn.denominator
 
 
 def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=0., renormalise=False):
