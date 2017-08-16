@@ -56,30 +56,37 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
 
 def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
     """
-# Generate some data for this demonstration.
-data = norm.rvs(10.0, 2.5, size=500)
-
     Carrier phase recovery using periodically inserted symbols.
     
     Performs a linear interpolation with averaging over n symbols to estimate
     the phase drift from laser phase noise to compensate for this.
     
-    Input: 
-        rec_symbs: Received symbols in block (first of each block is the pilot)
-        pilot_symbs: Corresponding pilot symbols. 
-            Index N is the first symbol in transmitted block N.
-        pilot_ins_ratio: Length of each block. Ex. 16 -> 1 pilot symbol followed
-            by 15 data symbols
-        num_average: Number of pilot symbols to average over to avoid noise. 
-        use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
-        max_num_blocks: Maximum number of blocks to process
-        remove_phase_pilots: Remove phase pilots after CPE. Default: True
+    Parameters
+    ----------
+    rec_symbs : array_like
+        Received symbols in block (first of each block is the pilot)
+    pilot_symbs : array_like
+        Corresponding pilot symbols. Index N is the first symbol in transmitted block N.
+    pilot_ins_ratio : int
+        Length of each block. Ex. 16 -> 1 pilot symbol followed by 15 data symbols
+    num_average : int, optional
+        Number of pilot symbols to average over to avoid noise. (Default: do not average)
+    use_pilot_ratio :  int, optional
+        Use ever n pilots. Can be used to sweep required rate.
+    max_num_blocks : int, optional
+        Maximum number of blocks to process. (Default: None, use all blocks in sequence)
+    remove_phase_pilots : bool, optional
+        Remove phase pilots after CPE
         
-    Output:
-        data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
-        phase_trace: Resulting phase trace of the CPE
+    Returns
+    -------
+
+    data_symbs : array_like
+        Complex data symbols after pilot-aided CPE. Pilot symbols removed
+    phase_trace : array_like
+        Resulting phase trace of the CPE
     """
-    
+
     rec_symbs = np.atleast_2d(rec_symbs)
     pilot_symbs = np.atleast_2d(pilot_symbs)
     npols = rec_symbs.shape[0]
