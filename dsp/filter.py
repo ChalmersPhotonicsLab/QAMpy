@@ -100,19 +100,22 @@ def rrcos_pulseshaping(sig, fs, T, beta):
     return sig_out
 
 
-def moving_average(sig, n=3):
+def moving_average(sig, N=3):
     """
     Moving average of signal
 
-    Input:
-        sig: Signal for moving average
-        n: number of averaging samples
+    Parameters
+    ----------
 
-    Output:
-        ret: Returned average signal of length len(sig)-n+1
+    sig : array_like
+        Signal for moving average
+    N: number of averaging samples
+
+    Returns
+    -------
+
+    mvg : array_like
+        Average signal of length len(sig)-n+1
     """
-
     ret = np.cumsum(sig,dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-
-    return ret[n-1:]/n
+    return (ret[N:] - ret[:-N])/N
