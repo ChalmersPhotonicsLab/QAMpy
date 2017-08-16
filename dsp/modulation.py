@@ -137,7 +137,6 @@ class QAMModulator(object):
                        lw_LO = 0,
                        baudrate=1,
                        samplingrate=1,
-                       IQsep=False,
                        PRBS=True,
                        PRBSorder=(15, 23),
                        PRBSseed=(None, None),
