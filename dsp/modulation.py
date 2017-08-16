@@ -211,7 +211,7 @@ class QAMModulator(object):
                 return outdata, symbols, bitsq
         return np.array(out), np.array(syms), np.array(bits)
 
-    def cal_ser(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
+    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
         Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
 
@@ -234,15 +234,15 @@ class QAMModulator(object):
         SER   : float
             symbol error rate
         """
-        assert symbol_tx is not None or bits_tx is not None, "data_tx or symbol_tx must be given"
-        if symbol_tx is None:
-            symbol_tx = self.modulate(bits_tx)
+        assert symbols_tx is not None or bits_tx is not None, "data_tx or symbol_tx must be given"
+        if symbols_tx is None:
+            symbols_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
             #symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
             #symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
-            symbol_tx, data_demod = self._sync_and_adjust(symbol_tx, data_demod)
-        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod)
+            symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
+        return np.count_nonzero(data_demod - symbols_tx)/len(data_demod)
 
     def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, PRBS=(15, utils.bool2bin(np.ones(15)))):
         """
@@ -320,7 +320,7 @@ class QAMModulator(object):
 
         The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
         """
-        if symbols_tx == None:
+        if symbols_tx is None:
             symbols_tx = self.quantize(signal_rx)
         else:
             symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
