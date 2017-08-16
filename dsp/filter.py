@@ -117,5 +117,5 @@ def moving_average(sig, N=3):
     mvg : array_like
         Average signal of length len(sig)-n+1
     """
-    ret = np.cumsum(sig,dtype=float)
+    ret = np.cumsum(np.insert(sig, 0,0), dtype=float)
     return (ret[N:] - ret[:-N])/N
