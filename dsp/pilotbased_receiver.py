@@ -161,12 +161,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     return data_symbs, phase_trace
 
 
-"""
- 
-Locate pilot sequence
-
-"""
-
 def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
     """
     Locate and extract the pilot starting frame.
