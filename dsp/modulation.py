@@ -245,7 +245,7 @@ class QAMModulator(object):
             symbol_tx, data_demod = self._sync_and_adjust(symbol_tx, data_demod)
         return np.count_nonzero(data_demod - symbol_tx)/len(data_demod)
 
-    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, PRBS=(15, utils.bool2bin(np.ones(15)))):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, PRBS=(15, utils.bool2bin(np.ones(15)))):
         """
         Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
 
@@ -260,6 +260,9 @@ class QAMModulator(object):
 
         symbols_tx      : array_like, optional
             transmitted bit sequence to compare against. (default is None, which means bits_tx or PRBS has to be given)
+
+        synced    : bool, optional
+            whether signal_tx and symbol_tx are synchronised.
 
         PRBS         : tuple(int, int), optional
             tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
@@ -286,7 +289,8 @@ class QAMModulator(object):
             # TODO check if this needs to be put below the synchronization
             #syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
         #s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod)
-        s_tx_sync, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
+        if not synced:
+            s_tx_sync, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
         return ber_functions.cal_ber_syncd(tx_synced, bits_demod, threshold=0.8)
