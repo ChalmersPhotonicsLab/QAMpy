@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 from bitarray import bitarray
 
-import dsp.resample
+from . import resample
 from . import theory
 from . import ber_functions
 from . import utils
@@ -212,10 +212,10 @@ class QAMModulator(object):
             if resample_noise:
                 if snr is not None:
                     outdata = impairments.add_awgn(symbols, 10**(-snr/20))
-                outdata = dsp.resample.resample_poly(baudrate, samplingrate, outdata)
+                outdata = resample.resample_poly(baudrate, samplingrate, outdata)
             else:
                 os = samplingrate/baudrate
-                outdata = dsp.resample.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
+                outdata = resample.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
                 if snr is not None:
                     outdata = impairments.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
             outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
