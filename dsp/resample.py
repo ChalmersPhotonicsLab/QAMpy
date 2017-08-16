@@ -10,7 +10,7 @@ def _resamplingfactors(fold, fnew):
     return ratn.numerator, ratn.denominator
 
 
-def resample(signal, fold, fnew, window=None, renormalise=False):
+def resample_poly(signal, fold, fnew, window=None, renormalise=False):
     """
     Resamples a signal from an old frequency to a new. Preserves the whole data
     but adjusts the length of the array in the process.
@@ -120,7 +120,7 @@ def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, taps=4000, renor
 
     """
     if beta is None:
-        return resample(signal, fold, fnew)
+        return resample_poly(signal, fold, fnew)
     if Ts is None:
         Ts = 1/fold
     up, down = _resamplingfactors(fold, fnew)
