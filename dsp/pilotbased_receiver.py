@@ -7,7 +7,7 @@ Created on Sat May 27 17:11:02 2017
 """
 
 import numpy as np
-from dsp import signals, equalisation, phaserecovery
+from dsp import equalisation, phaserecovery
 
 
 def pilot_based_foe(rec_symbs,pilot_symbs):
