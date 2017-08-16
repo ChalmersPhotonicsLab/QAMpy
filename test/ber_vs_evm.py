@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import theory, ber_functions, modulation, utils, equalisation
+from dsp import theory, ber_functions, modulation, utils, equalisation, filter
 from scipy.signal import fftconvolve
 import sys
 
@@ -74,7 +74,7 @@ for M in Mqams:
         print("SNR = %2f.0 dB"%sr)
         modulator = modulation.QAMModulator(M)
         signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta, dual_pol=False)
-        signalx = np.atleast_2d(utils.rrcos_pulseshaping(signal, fs, 1/fb, beta))
+        signalx = np.atleast_2d(filter.rrcos_pulseshaping(signal, fs, 1/fb, beta))
         signalafter = np.atleast_2d(signalx[0,::2])
         evm1[i] = modulator.cal_evm(signalafter[0])
         evm_known[i] = modulator.cal_evm(signalafter[0], syms)
