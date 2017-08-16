@@ -46,10 +46,24 @@ def _quantize_af(signal, symbols, precision=16):
     return np.array(tmp)
 
 
-def normalise_sig(sig, M):
-    """Normalise signal to power """
+def norm_to_s0(sig, M):
+    """
+    Normalise signal to signal power calculated according to _[1]
+
+    Parameters:
+    ----------
+    sig : array_like
+        signal to me normalised
+    M   : integer
+        QAM order of the signal
+
+    Returns
+    -------
+    sig_out : array_like
+        normalised signal
+    """
     norm = np.sqrt(cal_s0(sig, M))
-    return 1 / norm, sig / norm
+    return sig / norm
 
 
 def _cal_evm_blind(sig, M):
@@ -69,8 +83,8 @@ def _cal_evm_blind(sig, M):
         Error Vector Magnitude
         """
     ideal = cal_symbols_qam(M).flatten()
-    Ai, Pi = normalise_sig(ideal, M)
-    Am, Pm = normalise_sig(sig, M)
+    Pi = norm_to_s0(ideal, M)
+    Pm = norm_to_s0(sig, M)
     evm = np.mean(np.min(abs(Pm[:,np.newaxis].real-Pi.real)**2 +\
             abs(Pm[:,np.newaxis].imag-Pi.imag)**2, axis=1))
     evm /= np.mean(abs(Pi)**2)
@@ -98,8 +112,8 @@ def cal_evm(sig, M, known=None):
     if known is None:
         return _cal_evm_blind(sig, M)
     else:
-        Ai, Pi = normalise_sig(known, M)
-        As, Ps = normalise_sig(sig, M)
+        Pi = norm_to_s0(known, M)
+        Ps = norm_to_s0(sig, M)
         evm = np.mean(abs(Pi.real - Ps.real)**2 + \
                   abs(Pi.imag - Ps.imag)**2)
         evm /= np.mean(abs(Pi)**2)

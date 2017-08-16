@@ -40,8 +40,8 @@ SS = SS[:,:int(2e5)]
 
 E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(5,5), methods=("mcma", "sbd"), adaptive_stepsize=(True,True) )
 
-X = signal_quality.normalise_sig(E[0,:],M)[1]
-Y = signal_quality.normalise_sig(E[1,:],M)[1]    
+X = signal_quality.norm_to_s0(E[0, :], M)
+Y = signal_quality.norm_to_s0(E[1, :], M)
 E = np.vstack([X,Y])
 
 foe = phaserecovery.find_freq_offset(E,fft_size = 2**10)
