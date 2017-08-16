@@ -47,7 +47,7 @@ def _quantize_af(signal, symbols, precision=16):
 
 
 def normalise_sig(sig, M):
-    """Normalise signal to average power"""
+    """Normalise signal to power """
     norm = np.sqrt(cal_s0(sig, M))
     return 1 / norm, sig / norm
 
@@ -108,8 +108,7 @@ def cal_evm(sig, M, known=None):
 
 def cal_snr_qam(E, M):
     """Calculate the signal to noise ratio SNR according to formula given in
-    Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
-    pg 865 (2005).
+    _[1]
 
     Parameters:
     ----------
@@ -122,6 +121,12 @@ def cal_snr_qam(E, M):
     -------
     S0/N: : float
         linear SNR estimate
+
+    References:
+    ----------
+    ...[1] Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
+    pg 865 (2005).
+
     """
     gamma = _cal_gamma(M)
     r2 = np.mean(abs(E)**2)
