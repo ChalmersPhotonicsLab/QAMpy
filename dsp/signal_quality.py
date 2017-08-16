@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from .utils import cabssquared
 from .theory import  cal_symbols_qam, cal_scaling_factor_qam
-from .equalisation import quantize as quantize_pyx
+from .equalisation import quantize as _quantize_pyx
 try:
     import arrayfire as af
 except ImportError:
@@ -10,16 +10,16 @@ except ImportError:
 
 def quantize(signal, symbols, method="pyx", **kwargs):
     if method == "pyx":
-        return quantize_pyx(signal, symbols, **kwargs)
+        return _quantize_pyx(signal, symbols, **kwargs)
     elif method == "af":
         if af == None:
             raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
-        return quantize_af(signal, symbols, **kwargs)
+        return _quantize_af(signal, symbols, **kwargs)
     else:
         raise ValueError("method '%s' unknown has to be either 'pyx' or 'af'"%(method))
 
 
-def quantize_af(signal, symbols, precision=16):
+def _quantize_af(signal, symbols, precision=16):
     global  NMAX
     if precision == 16:
         prec_dtype = np.complex128
