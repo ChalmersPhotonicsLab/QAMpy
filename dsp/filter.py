@@ -1,5 +1,5 @@
 import numpy as np
-from utils import rrcos_freq
+from .utils import rrcos_freq
 import scipy.signal as scisig
 
 def pre_filter(signal, bw):
