@@ -285,9 +285,6 @@ class QAMModulator(object):
             if bits_tx is None:
                 bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
             symbols_tx = self.modulate(bits_tx)
-            # TODO check if this needs to be put below the synchronization
-            #syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
-        #s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod)
         if not synced:
             s_tx_sync, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
