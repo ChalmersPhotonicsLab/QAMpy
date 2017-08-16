@@ -230,12 +230,6 @@ class QAMModulator(object):
                 return outdata, symbols, bitsq
         return np.array(out), np.array(syms), np.array(bits)
 
-    def theoretical_ser(self, snr):
-        """
-        Return the theoretical SER for this modulation format for the given SNR (in linear units)
-        """
-        return theory.ser_vs_es_over_n0_qam(snr, self.M)
-
     def cal_ser(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
         Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
