@@ -295,17 +295,17 @@ class QAMModulator(object):
         tx_synced = self.decode(s_tx_sync)
         return ber_functions.cal_ber_syncd(tx_synced, bits_demod, threshold=0.8)
 
-    def cal_evm(self, signal, syms=None):
+    def cal_evm(self, signal_rx, symbols_tx=None):
         """
         Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1]. The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
 
         Parameters
         ----------
 
-        signal    : array_like
+        signal_rx    : array_like
             input signal to measure the EVM offset
 
-        syms      : array_like, optional
+        symbols_tx      : array_like, optional
             known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly. For low SNRs this will underestimate the real EVM, because detection errors are not counted.
 
         Returns
@@ -324,9 +324,9 @@ class QAMModulator(object):
 
         The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
         """
-        if syms == None:
-            syms = self.quantize(signal)
+        if symbols_tx == None:
+            symbols_tx = self.quantize(signal_rx)
         else:
-            syms, signal_ad = self._sync_and_adjust(syms, signal)
-        return np.sqrt(np.mean(utils.cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
+            symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
+        return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
 
