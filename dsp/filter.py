@@ -93,7 +93,7 @@ def rrcos_pulseshaping(sig, fs, T, beta):
         filtered signal in time domain
     """
     f = np.linspace(-fs/2, fs/2, sig.shape[0], endpoint=False)
-    nyq_fil = rrcos_freq(f, beta, T))
+    nyq_fil = rrcos_freq(f, beta, T)
     nyq_fil /= nyq_fil.max()
     sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig)))
     sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
