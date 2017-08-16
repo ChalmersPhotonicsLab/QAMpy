@@ -19,38 +19,39 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     Calculates the phase variations between the batches and does a linear fit
     to find the corresponding frequency offset. 
     
-    Input:
-        rec_symbs:  Complex symbols after initial Rx DSP
-        pilot_symbs: Complex pilot symbols transmitted
-        
-    
-    Output:
-        foe:    Estimated FO in terms of complex phase. Average over all modes
-        foePerMode: FO estimate for each mode
-        condNum:   Condition number of linear fit. Gives accuracy of estimation
+    Parameters
+    ----------
+
+    rec_symbs : array_like
+        Complex symbols after initial Rx DSP
+    pilot_symbs : array_like
+        Complex pilot symbols transmitted
+
+    Returns
+    -------
+    foe : float
+        Estimated FO in terms of complex phase. Average over all modes
+    foePerMode : array_like
+        a FO estimate for each mode
+    condNum : array_like
+        Condition number of linear fit. Gives accuracy of estimation
     
     """
 
     rec_symbs = np.atleast_2d(rec_symbs)
     pilot_symbs = np.atleast_2d(pilot_symbs)
     npols = rec_symbs.shape[0]
-    
-    condNum = np.zeros([npols,1])
-    foePerMode = np.zeros([npols,1])
-    
+    condNum = np.zeros([npols])
+    foePerMode = np.zeros([npol])
     # Search over all polarization
     for l in range(npols):    
         phaseEvolution = np.unwrap(np.angle(pilot_symbs[l,:].conj()*rec_symbs[l,:]))
-        
         # fit a first order polynomial to the unwrapped phase evolution
         freqFit = np.polyfit(np.arange(0,len(phaseEvolution)),phaseEvolution,1)
-    
-        foePerMode[l,0] = freqFit[0]/(2*np.pi)
-        condNum[l,0] = freqFit[1]                 
-    
+        foePerMode[l] = freqFit[0]/(2*np.pi)
+        condNum[l] = freqFit[1]
     # Average over all modes used
     foe = np.mean(foePerMode)
-    
     return foe, foePerMode, condNum
 
 def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
