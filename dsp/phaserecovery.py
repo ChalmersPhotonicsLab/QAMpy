@@ -346,17 +346,6 @@ def partition_16qam(E):
     return class1_mask, class2_mask
 
 
-def ff_phase_recovery_16qam(E, Nangles, Nsymbols):
-    phi = np.linspace(0, np.pi, Nangles)
-    N = len(E)
-    d = (abs(E[:, np.newaxis, np.newaxis] * np.exp(1.j * phi)[:, np.newaxis] -
-             SYMBOLS_16QAM)**2).min(axis=2)
-    phinew = np.zeros(N - Nsymbols, dtype=np.float)
-    for k in range(Nsymbols, N - Nsymbols):
-        phinew[k] = phi[np.sum(d[k - Nsymbols:k + Nsymbols], axis=0).argmin()]
-    return E[Nsymbols:] * np.exp(1.j * phinew)
-
-
 def phase_partition_16qam(E, N):
     r"""16-QAM blind phase recovery using QPSK partitioning.
 
