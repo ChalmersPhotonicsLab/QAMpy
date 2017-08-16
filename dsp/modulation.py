@@ -212,7 +212,7 @@ class QAMModulator(object):
             if resample_noise:
                 if snr is not None:
                     outdata = impairments.add_awgn(symbols, 10**(-snr/20))
-                outdata = dsp.resample.resample(baudrate, samplingrate, outdata)
+                outdata = dsp.resample.resample_poly(baudrate, samplingrate, outdata)
             else:
                 os = samplingrate/baudrate
                 outdata = dsp.resample.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
