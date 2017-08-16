@@ -7,7 +7,9 @@ Created on Sat May 27 17:11:02 2017
 """
 
 import numpy as np
+
 from dsp import equalisation, phaserecovery
+from dsp.filter import moving_average
 
 
 def pilot_based_foe(rec_symbs,pilot_symbs):
@@ -96,11 +98,11 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     # If selected, only process a limited number of blocks. 
     if (max_num_blocks is not None) and numBlocks > max_num_blocks:
         numBlocks = max_num_blocks   
-    
+
     # Make sure that a given number of pilots can be used
     if (numBlocks % use_pilot_ratio):
         numBlocks -= (numBlocks % use_pilot_ratio)            
-    
+
     # Adapt for number of blocks
     rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
     rec_pilots = rec_pilots[:,:int(numBlocks)]
@@ -134,7 +136,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         pilot_phase = np.unwrap(np.angle(res_phase))
 
         # Fix! Need moving average in numpy
-        pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
+        pilot_phase_average = np.transpose(moving_average(pilot_phase, num_average))
         pilot_phase = np.hstack([pilot_phase[:int((num_average-1)/2)], pilot_phase_average,np.ones(pilot_phase[:int((num_average-1)/2)].shape)*pilot_phase_average[-1]])
            
         # Pilot positions in the received data set
@@ -157,24 +159,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
         
     return data_symbs, phase_trace
-    
-    
-def moving_average(sig, n=3):
-    """
-    Moving average of signal
-    
-    Input:
-        sig: Signal for moving average
-        n: number of averaging samples
-        
-    Output:
-        ret: Returned average signal of length len(sig)-n+1
-    """
-    
-    ret = np.cumsum(sig,dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    
-    return ret[n-1:]/n
+
 
 """
  

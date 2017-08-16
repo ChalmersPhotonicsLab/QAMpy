@@ -98,3 +98,21 @@ def rrcos_pulseshaping(sig, fs, T, beta):
     sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig)))
     sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
     return sig_out
+
+
+def moving_average(sig, n=3):
+    """
+    Moving average of signal
+
+    Input:
+        sig: Signal for moving average
+        n: number of averaging samples
+
+    Output:
+        ret: Returned average signal of length len(sig)-n+1
+    """
+
+    ret = np.cumsum(sig,dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+
+    return ret[n-1:]/n

@@ -23,8 +23,8 @@ SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma","mrde" ))
 
 
-evmX = QAM.cal_evm(S[0,::2])
-evmY = QAM.cal_evm(S[1,::2])
+evmX = QAM.cal_evm(S[0, ::2])
+evmY = QAM.cal_evm(S[1, ::2])
 evmEx_m = QAM.cal_evm(E_m[0])
 evmEy_m = QAM.cal_evm(E_m[1])
 #sys.exit()
