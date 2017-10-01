@@ -289,10 +289,17 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
         eq_pilots[l,:] = symbs_out[l,:]
     
+    plt.figure()
+    plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')
+    plt.show() 
+    
     # FOE Estimation
-    foe, foePerMode, cond = pilot_based_foe(eq_pilots, ref_symbs)
+    foe, foePerMode, cond = pilot_based_foe(eq_pilots*np.exp(1j*np.pi/2), ref_symbs)
+    phase_offset = find_const_phase_offset(eq_pilots, ref_symbs)
+    eq_pilots = correct_const_phase_offset(eq_pilots, phase_offset)
+    
     print(foePerMode)
-    foePerMode = np.zeros(foePerMode.shape)
+#    foePerMode = np.zeros(foePerMode.shape)
     
     # First step Eq
     for l in range(npols):
