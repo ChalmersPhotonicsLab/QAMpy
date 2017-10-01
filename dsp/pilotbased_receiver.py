@@ -56,9 +56,6 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
 
 def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
     """
-# Generate some data for this demonstration.
-data = norm.rvs(10.0, 2.5, size=500)
-
     Carrier phase recovery using periodically inserted symbols.
     
     Performs a linear interpolation with averaging over n symbols to estimate
@@ -175,7 +172,7 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma'),search_overlap = 2):
+def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method='cma',search_overlap = 2):
     """
     Locate and extract the pilot starting frame.
     
@@ -288,12 +285,14 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
     # First Eq, extract pilot sequence
     for l in range(npols):
         pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method,adaptive_stepsize = adap_step[1]) 
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
         eq_pilots[l,:] = symbs_out[l,:]
     
     # FOE Estimation
     foe, foePerMode, cond = pilot_based_foe(eq_pilots, ref_symbs)
+    print(foePerMode)
+    foePerMode = np.zeros(foePerMode.shape)
     
     # First step Eq
     for l in range(npols):
@@ -301,7 +300,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
         pilot_seq = phaserecovery.comp_freq_offset(pilot_seq,foePerMode)
         wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
         wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wxy_init,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
-        out_taps[l] = wx
+        out_taps.append(wx)
         symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps[l])
         eq_pilots[l,:] = symbs_out[l,:]
 
@@ -318,10 +317,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
                 symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps[l])
                 eq_pilots[l,:] = symbs_out[l,:]
                 shift_factor[l] = shift_factor[l] + process_frame_id*os*frame_length  
-    
 
-  
-    
     return eq_pilots, foePerMode, out_taps, shift_factor
 
 
