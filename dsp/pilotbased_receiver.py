@@ -283,7 +283,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
     # Tap update and extract the propper pilot sequuence
     tap_cor = int((ntaps[1]-ntaps[0])/2)
     
-    # First Eq, extract pilot sequence
+    # First Eq, extract pilot sequence to do FOE
     for l in range(npols):
         pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
         wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
@@ -293,9 +293,10 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
 
     # FOE Estimation
     foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
+    tmp_pilots = phaserecovery.comp_freq_offset(tmp_pilots,foePerMode)
     phase_offset = find_const_phase_offset(tmp_pilots, ref_symbs)
     tmp_pilots = correct_const_phase_offset(tmp_pilots, phase_offset)
-    tmp_pilots = phaserecovery.comp_freq_offset(tmp_pilots,foePerMode)
+
 
     plt.figure()
     plt.plot(tmp_pilots[0,:].real,tmp_pilots[0,:].imag,'.')
@@ -306,9 +307,8 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
     print(foePerMode)
     print("")
     print("")
-#    foePerMode = np.zeros(foePerMode.shape)
+    foePerMode = np.zeros(foePerMode.shape)
     
-    pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1] 
     foe = phaserecovery.find_freq_offset(pilot_seq,os=os)
     print(foe)
     pilot_seq_foe = phaserecovery.comp_freq_offset(pilot_seq,foePerMode,os=os)
@@ -316,7 +316,8 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
     print(foe)
 
 
-    freq_comp_sig = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
+#    freq_comp_sig = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
+    freq_comp_sig = rx_signal
     # First step Eq
     for l in range(npols):
         pilot_seq = freq_comp_sig[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
