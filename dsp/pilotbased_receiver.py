@@ -268,7 +268,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
     
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -283,44 +283,32 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
     # Tap update and extract the propper pilot sequuence
     tap_cor = int((ntaps[1]-ntaps[0])/2)
     
-    # First Eq, extract pilot sequence to do FOE
-    for l in range(npols):
-        pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
-        symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
-        tmp_pilots[l,:] = symbs_out[l,:]
+    # Run FOE and shift spectrum
+    if not sh:    
+        # First Eq, extract pilot sequence to do FOE
+        for l in range(npols):
+            pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
+            symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
+            tmp_pilots[l,:] = symbs_out[l,:]
+        
     
+        # FOE Estimation
+        foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
+#        tmp_pilots = phaserecovery.comp_freq_offset(tmp_pilots,foePerMode)
+#        phase_offset = find_const_phase_offset(tmp_pilots, ref_symbs)
+#        tmp_pilots = correct_const_phase_offset(tmp_pilots, phase_offset)
 
-    # FOE Estimation
-    foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
-    tmp_pilots = phaserecovery.comp_freq_offset(tmp_pilots,foePerMode)
-    phase_offset = find_const_phase_offset(tmp_pilots, ref_symbs)
-    tmp_pilots = correct_const_phase_offset(tmp_pilots, phase_offset)
-
-
-    plt.figure()
-    plt.plot(tmp_pilots[0,:].real,tmp_pilots[0,:].imag,'.')
-    plt.show() 
-    
-    
-    print(cond)
-    print(foePerMode)
-    print("")
-    print("")
-    foePerMode = np.zeros(foePerMode.shape)
-    
-    foe = phaserecovery.find_freq_offset(pilot_seq,os=os)
-    print(foe)
-    pilot_seq_foe = phaserecovery.comp_freq_offset(pilot_seq,foePerMode,os=os)
-    foe = phaserecovery.find_freq_offset(pilot_seq_foe,os=os)
-    print(foe)
-
-
-#    freq_comp_sig = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
-    freq_comp_sig = rx_signal
+        # Apply FO-compensation
+        sig_dc_center = phaserecovery.comp_freq_offset(pilot_seq,foePerMode,os=os)
+    else:
+        # Signal should be DC-centered. Do nothing
+        sig_dc_center = rx_signal
+        foePerMode = np.zeros([npols,1])
+        
     # First step Eq
     for l in range(npols):
-        pilot_seq = freq_comp_sig[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
+        pilot_seq = sig_dc_center[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
         wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
         wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wxy_init,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
         out_taps.append(wx)
@@ -334,7 +322,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
     # Equalize using additional frames if selected
     for frame_id in range(0,process_frame_id+1):
         for l in range(npols):
-            pilot_seq = freq_comp_sig[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
+            pilot_seq = sig_dc_center[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
             wx_1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=out_taps[l],Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
             wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wx_1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
             out_taps[l] = wx
@@ -345,16 +333,6 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os,process_frame
                 shift_factor[l] = shift_factor[l] + process_frame_id*os*frame_length  
 
     return eq_pilots, foePerMode, out_taps, shift_factor
-
-
-
-#    
-#    corr_pilots = np.zeros(np.shape(eq_pilots),dtype=complex)
-#    for l in range(npols):
-#        # Remove FOE from pilots
-#        comp_test = phaserecovery.comp_freq_offset(eq_pilots[l,:],foePerMode[l]) 
-#        # Correct static phase difference between the Tx and Rx pilots
-#        corr_pilots[l,:] = pilotbased_receiver.correct_const_phase_offset(comp_test,phase_offset[l])
 
 
 def find_const_phase_offset(rec_pilots, ref_symbs):
