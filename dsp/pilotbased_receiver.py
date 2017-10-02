@@ -279,7 +279,6 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
     tmp_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     out_taps = []
     
-    # Fix frequency offset
     # Tap update and extract the propper pilot sequuence
     tap_cor = int((ntaps[1]-ntaps[0])/2)
     
@@ -291,13 +290,9 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
             wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
             symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
             tmp_pilots[l,:] = symbs_out[l,:]
-        
-    
+            
         # FOE Estimation
         foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
-#        tmp_pilots = phaserecovery.comp_freq_offset(tmp_pilots,foePerMode)
-#        phase_offset = find_const_phase_offset(tmp_pilots, ref_symbs)
-#        tmp_pilots = correct_const_phase_offset(tmp_pilots, phase_offset)
 
         # Apply FO-compensation
         sig_dc_center = phaserecovery.comp_freq_offset(pilot_seq,foePerMode,os=os)
@@ -314,10 +309,6 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
         out_taps.append(wx)
         symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps[l])
         eq_pilots[l,:] = symbs_out[l,:]
-
-    plt.figure()
-    plt.plot(eq_pilots[0,:].real,eq_pilots[0,:].imag,'.')
-    plt.show() 
 
     # Equalize using additional frames if selected
     for frame_id in range(0,process_frame_id+1):
