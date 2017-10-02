@@ -294,7 +294,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
         foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
 
         # Apply FO-compensation
-        sig_dc_center = phaserecovery.comp_freq_offset(pilot_seq,foePerMode,os=os)
+        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
     else:
         # Signal should be DC-centered. Do nothing
         sig_dc_center = rx_signal
