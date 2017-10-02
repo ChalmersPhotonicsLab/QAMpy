@@ -263,8 +263,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
-        
-    print(foe_corse)
+
     return  shift_factor, foe_corse
 
 
