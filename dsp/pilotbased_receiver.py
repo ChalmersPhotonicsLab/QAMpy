@@ -90,25 +90,24 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     # Make sure that a given number of pilots can be used
     if (numBlocks % use_pilot_ratio):
         numBlocks -= (numBlocks % use_pilot_ratio)            
-    
+
     # Adapt for number of blocks
-    rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
+    rec_pilots = rec_symbs[:,::int(pilot_ins_ratio)]
     rec_pilots = rec_pilots[:,:int(numBlocks)]
     rec_symbs = rec_symbs[:,:int(pilot_ins_ratio*numBlocks)]
-    
-    # Check that the number of blocks are equal and is valid
-    numRefPilots = np.shape(pilot_symbs)[1]   
-    if numBlocks > numRefPilots:
 
+    # Check that the number of blocks are equal and is valid
+    numRefPilots = np.shape(pilot_symbs)[1]
+    if numBlocks > numRefPilots:
         numBlocks = numRefPilots
-        rec_symbs = rec_symbs[:,numBlocks*pilot_ins_ratio]
-        rec_pilots = rec_pilots[:,:numBlocks]
+        rec_symbs = rec_symbs[:,int(numBlocks*pilot_ins_ratio)]
+        rec_pilots = rec_pilots[:,:int(numBlocks)]
     elif numRefPilots > numBlocks:
-        pilot_symbs = pilot_symbs[:,:numBlocks]
+        pilot_symbs = pilot_symbs[:,:int(numBlocks)]
     
     # Remove every X pilot symbol if selected
-    rec_pilots = rec_pilots[:,::use_pilot_ratio]
-    pilot_symbs = pilot_symbs[:,::use_pilot_ratio]    
+    rec_pilots = rec_pilots[:,::int(use_pilot_ratio)]
+    pilot_symbs = pilot_symbs[:,::int(use_pilot_ratio)]
         
     # Should be an odd number to keey symmetry in averaging
     if not(num_average % 2):
