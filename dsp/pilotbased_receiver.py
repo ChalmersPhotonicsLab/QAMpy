@@ -134,9 +134,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         phase_trace[l,:] = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio),\
                                pilot_pos,pilot_phase)
 
-#        phase_func = interp1d(pilot_pos_int,np.hstack([pilot_phase,pilot_phase[-1]]),kind='linear')
-#        phase_trace[l,:] = phase_func(np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio))
-        
         # Compensate phase
         data_symbs[l,:] = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
         
