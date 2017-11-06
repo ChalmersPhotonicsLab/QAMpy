@@ -170,7 +170,7 @@ Locate pilot sequence
 
 """
 
-def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method='cma',search_overlap = 2):
+def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10, adap_step = True, method='cma' ,search_overlap = 2):
     """
     Locate and extract the pilot starting frame.
     
@@ -240,7 +240,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         longSeq = rx_signal[:,(minPart-2-search_overlap)*symb_step_size:(minPart+3+search_overlap)*symb_step_size]
 
         # Use the first estimate to get rid of any large FO and simplify alignment
-        wx1, err = equalisation.equalise_signal(shortSeq, os, mu[0], M_pilot,Ntaps = ntaps[0], Niter = Niter[0], method = method,adaptive_stepsize = adap_step[0])    
+        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)    
         seq_foe = equalisation.apply_filter(longSeq,os,wx1)
         foe_corse = phaserecovery.find_freq_offset(seq_foe)        
          
@@ -265,7 +265,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2,pilot_based_foe=True,max_foe_symbs = None):
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),pilot_based_foe=True,max_foe_symbs = None):
     
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
