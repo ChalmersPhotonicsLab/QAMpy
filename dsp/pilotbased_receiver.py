@@ -215,11 +215,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     else:
         num_steps = int(np.ceil(np.shape(rx_signal)[1] / symb_step_size))
     
-    if not((ntaps[1]-ntaps[0])%os  ==  0):
-        raise ValueError("Taps for search and convergence impropper configured")
-
     # Now search for every mode independent
-
     shift_factor = np.zeros(npols,dtype = int)
     for l in range(npols):
 
@@ -275,8 +271,10 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     tmp_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     out_taps = []
-    
-    # Tap update and extract the propper pilot sequuence
+
+    # Tap update and extract the propper pilot sequuence    
+    if not((ntaps[1]-ntaps[0])%os  ==  0):
+        raise ValueError("Taps for search and convergence impropper configured")
     tap_cor = int((ntaps[1]-ntaps[0])/2)
     
     # Run FOE and shift spectrum
