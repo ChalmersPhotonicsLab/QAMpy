@@ -289,10 +289,12 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
             symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
             tmp_pilots[l,:] = symbs_out[l,:]
             
-        # FOE Estimation
+        # FOE Estimation, several options available
         if max_foe_symbs is not None:
             num_symbs = int(max_foe_symbs)
-            foe, foePerMode, cond = pilot_based_foe(tmp_pilots[:num_symbs], ref_symbs[:num_symbs])
+            if num_symbs > pilot_seq_len:
+                raise ValueError("Required number of symbols for FOE is larger than availabe sequence length. Maximum length available is %d"%pilot_seq_len)
+            foe, foePerMode, cond = pilot_based_foe(tmp_pilots[:num_symbs], ref_symbs[l,:num_symbs])
         else:
             foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
 
