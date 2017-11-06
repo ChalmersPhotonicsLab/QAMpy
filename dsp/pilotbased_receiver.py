@@ -103,9 +103,15 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         pilot_symbs = pilot_symbs[:,:int(numBlocks)]
     
     # Remove every X pilot symbol if selected
+    if use_pilot_ratio >= pilot_symbs.shape[1]:
+        raise ValueError("Can not use every %d pilots since only %d pilot symbols are present"%(use_pilot_ratio,pilot_symbs.shape[1]))
     rec_pilots = rec_pilots[:,::int(use_pilot_ratio)]
     pilot_symbs = pilot_symbs[:,::int(use_pilot_ratio)]
-        
+    
+    # Check for a out of bounch error
+    if pilot_symbs.shape[1] <= num_average:
+        raise ValueError("Inpropper pilot symbol configuration. Larger averaging block size than total number of pilot symbols")
+    
     # Should be an odd number to keey symmetry in averaging
     if not(num_average % 2):
         num_average += 1
@@ -114,7 +120,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     data_symbs = np.zeros([npols,np.shape(rec_symbs)[1]], dtype = complex)
     phase_trace = np.zeros([npols,np.shape(rec_symbs)[1]])
     for l in range(npols):
-    
         # Calculate phase respons
         res_phase = pilot_symbs[l,:].conjugate()*rec_pilots[l,:]
         pilot_phase = np.unwrap(np.angle(res_phase))
