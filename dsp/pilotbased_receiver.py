@@ -266,7 +266,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2,max_foe_symbs = None):
     
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -290,7 +290,11 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
             tmp_pilots[l,:] = symbs_out[l,:]
             
         # FOE Estimation
-        foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
+        if max_foe_symbs is not None:
+            num_symbs = int(max_foe_symbs)
+            foe, foePerMode, cond = pilot_based_foe(tmp_pilots[:num_symbs], ref_symbs[:num_symbs])
+        else:
+            foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
 
         # Apply FO-compensation
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
