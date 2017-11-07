@@ -295,7 +295,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
                 num_symbs = int(max_foe_symbs)
                 if num_symbs > pilot_seq_len:
                     raise ValueError("Required number of symbols for FOE is larger than availabe sequence length. Maximum length available is %d"%pilot_seq_len)
-                foe, foePerMode, cond = pilot_based_foe(tmp_pilots[:num_symbs], ref_symbs[:,:num_symbs])
+                foe, foePerMode, cond = pilot_based_foe(tmp_pilots[:,:num_symbs], ref_symbs[:,:num_symbs])
         # Equalize 1 frame and do blind 4:th power FFT-based estimation
         else:
             foe_est_symbs = np.zeros([npols, frame_length])
