@@ -261,7 +261,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),pilot_based_foe=True,max_foe_symbs = None):
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),do_pilot_based_foe=True,max_foe_symbs = None):
     
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -287,10 +287,10 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
             tmp_pilots[l,:] = symbs_out[l,:]
             
         # FOE Estimation, several options available. Default is pilot aided
-        if pilot_based_foe:
+        if do_pilot_based_foe:
             # Use the pilot-based FOE. Requires a pilot sequence of sufficient length    
             if max_foe_symbs is None:
-                foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)       
+                foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
             else:
                 num_symbs = int(max_foe_symbs)
                 if num_symbs > pilot_seq_len:
