@@ -223,8 +223,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         # end to ensure that sufficient symbols can be used for the search
         sub_var = np.ones(num_steps)*1e2
         for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
-            err_out = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size], os, mu[0], M_pilot,Ntaps = ntaps[0], Niter = Niter[0], method = method,adaptive_stepsize = adap_step[0])[1] 
-            sub_var[i] = np.var(err_out[l,int(-symb_step_size/os+ntaps[0]):])
+            err_out = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size], os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)[1]
+            sub_var[i] = np.var(err_out[l,int(-symb_step_size/os+ntaps):])
                        
         # Lowest variance of the CMA error
         minPart = np.argmin(sub_var)
