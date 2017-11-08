@@ -261,7 +261,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),do_pilot_based_foe=True,max_foe_symbs = None):
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),do_pilot_based_foe=True,foe_symbs = None):
     
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -289,21 +289,24 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
         # FOE Estimation, several options available. Default is pilot aided
         if do_pilot_based_foe:
             # Use the pilot-based FOE. Requires a pilot sequence of sufficient length    
-            if max_foe_symbs is None:
+            if foe_symbs is None:
                 foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
             else:
-                num_symbs = int(max_foe_symbs)
+                num_symbs = int(foe_symbs)
                 if num_symbs > pilot_seq_len:
                     raise ValueError("Required number of symbols for FOE is larger than availabe sequence length. Maximum length available is %d"%pilot_seq_len)
                 foe, foePerMode, cond = pilot_based_foe(tmp_pilots[:,:num_symbs], ref_symbs[:,:num_symbs])
         # Equalize 1 frame and do blind 4:th power FFT-based estimation
         else:
-            foe_est_symbs = np.zeros([npols, frame_length])
+            foe_est_symbs = np.zeros([npols, frame_length],dtype=complex)
             for l in range(npols):
                 est_sig = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+frame_length*os+ntaps[1]-1]
                 est_frame = equalisation.apply_filter(est_sig,os,wx)
                 foe_est_symbs[l,:] = est_frame[l,:]
-            foePerMode = phaserecovery.find_freq_offset(foe_est_symbs) 
+            if foe_symbs is None:
+                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs)
+            else:
+                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs,fft_size=foe_symbs)
                 
         # Apply FO-compensation
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
