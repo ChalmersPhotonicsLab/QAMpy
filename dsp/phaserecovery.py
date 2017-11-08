@@ -471,7 +471,7 @@ def find_freq_offset(sig, os=1, average_over_modes = False, fft_size = 4096):
     freq_offset = np.zeros([npols,1])
     freq_vector = np.fft.fftfreq(fft_size,1/os)/4
     for k in range(npols):
-        max_freq_bin = np.argmax(freq_sig[k,:])
+        max_freq_bin = np.argmax(np.abs(freq_sig[k,:]))
         freq_offset[k,0] = freq_vector[max_freq_bin]
 
     return freq_offset
