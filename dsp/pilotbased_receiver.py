@@ -261,7 +261,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),do_pilot_based_foe=True,foe_symbs = None):
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None):
     
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -282,7 +282,9 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
         # First Eq, extract pilot sequence to do FOE
         for l in range(npols):
             pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
+            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
+            # wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot, wxy = wx, Ntaps=ntaps[1], Niter=Niter[1],
+            #                                        method=method[0], adaptive_stepsize=adap_step[1])
             symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
             tmp_pilots[l,:] = symbs_out[l,:]
             
@@ -307,7 +309,9 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
                 foePerMode = phaserecovery.find_freq_offset(foe_est_symbs)
             else:
                 foePerMode = phaserecovery.find_freq_offset(foe_est_symbs,fft_size=foe_symbs)
-                
+        if avg_foe_modes:
+            foe = np.mean(foePerMode)
+            foePerMode = np.ones(foePerMode.shape)*foe
         # Apply FO-compensation
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
     else:
@@ -328,7 +332,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
     for frame_id in range(0,process_frame_id+1):
         for l in range(npols):
             pilot_seq = sig_dc_center[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
-            wx_1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=out_taps[l],Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
+            wx_1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=out_taps[l],Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
             wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wx_1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
             out_taps[l] = wx
 
