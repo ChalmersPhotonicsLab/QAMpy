@@ -10,3 +10,4 @@ __pycache__
 *.egg-info
 dsp_cython.c
 equaliser_cython.c*
+.idea
