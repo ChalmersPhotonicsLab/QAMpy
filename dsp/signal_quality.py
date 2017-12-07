@@ -9,6 +9,26 @@ except ImportError:
     af = None
 
 def quantize(signal, symbols, method="pyx", **kwargs):
+    """
+    Quantize signal array onto symbols.
+
+    Parameters
+    ----------
+    signal : array_like
+        input signal array
+    symbols : array_like
+        array of symbols to quantize onto
+    method : string, optional
+        what method to use ('af' for arrayfire or 'pyx' for python)
+    kwargs
+        keyword arguments passed to pyx or af functions
+
+    Returns
+    -------
+    out : array_like
+        array of quantized symbols
+
+    """
     if method == "pyx":
         return _quantize_pyx(signal, symbols, **kwargs)
     elif method == "af":
@@ -20,6 +40,24 @@ def quantize(signal, symbols, method="pyx", **kwargs):
 
 
 def _quantize_af(signal, symbols, precision=16):
+    """
+    Quantize signal array  onto symbols. Arrayfire function.
+
+    Parameters
+    ----------
+    signal : array_like
+        input signal array
+    symbols : array_like
+        array of symbols to quantize onto
+    precision : int, optional
+        bit precision either 16 for complex128 or 8 for complex 64
+
+    Returns
+    -------
+    out : array_like
+        array of quantized symbols
+
+    """
     global  NMAX
     if precision == 16:
         prec_dtype = np.complex128
@@ -206,19 +244,18 @@ def cal_ser_qam(data_rx, symbol_tx, M, method="pyx"):
     ----------
 
     data_rx : array_like
-            received signal
+        received signal
     symbols_tx : array_like
             original symbols
     M       : int
-            QAM order
-
-    method : string
-       method to use for quantization (either af for arrayfire or pyx for cython)
+        QAM order
+    method : string, option
+        method to use for quantization (either `af` for arrayfire or `pyx` for cython)
 
     Returns
     -------
     SER : float
-       Symbol error rate estimate
+        Symbol error rate estimate
     """
     data_demod = quantize(data_rx, M, method=method)
     return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)
