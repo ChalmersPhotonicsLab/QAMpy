@@ -12,6 +12,7 @@ dsp_cython.c
 equaliser_cython.c*
 
 # Pycharm specific files
+.cache/
 
 # User-specific stuff:
 .idea/**/workspace.xml
