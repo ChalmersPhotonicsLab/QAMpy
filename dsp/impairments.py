@@ -1,9 +1,9 @@
 import numpy as np
 
 
-def H_PMD(theta, t_dgd, omega): #see Ip and Kahn JLT 25, 2033 (2007)
+def H_PMD(theta, t_dgd, omega):
     """
-    Calculate the response for PMD applied to the signal
+    Calculate the response for PMD applied to the signal (see e.g. _[1])
 
     Parameters
     ----------
@@ -22,6 +22,9 @@ def H_PMD(theta, t_dgd, omega): #see Ip and Kahn JLT 25, 2033 (2007)
     H : matrix
         response matrix for applying dgd
 
+    References
+    ----------
+    .. [1] Ip and Kahn JLT 25, 2033 (2007)
     """
     h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
     h2 = np.array([[np.exp(1.j*omega*t_dgd/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t_dgd/2)]])
@@ -87,7 +90,7 @@ def apply_PMD_to_field(field, theta, t_dgd, fs):
 
 def phase_noise(N, df, fs):
     """
-    Calculate phase noise from local oscillators, based on a Wiener noise process.
+    Calculate phase noise from local oscillators, based on a Wiener noise process with a variance given by :math:`\sigma^2=2\pi df/fs`
 
     Parameters
     ----------
