@@ -42,8 +42,8 @@ except:
 
 print("X BER %f dB"%(10*np.log10(berx[0])))
 print("Y BER %f dB"%(10*np.log10(bery[0])))
-evmX = QAM.cal_evm(S[0,::os])
-evmY = QAM.cal_evm(S[1,::os])
+evmX = QAM.cal_evm(S[0, ::os])
+evmY = QAM.cal_evm(S[1, ::os])
 evmEx = QAM.cal_evm(E[0])
 evmEy = QAM.cal_evm(E[1])
 print("X EVM %f "%evmEx)

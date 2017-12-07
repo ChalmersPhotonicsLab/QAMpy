@@ -2,9 +2,7 @@
 from __future__ import division, print_function
 import numpy as np
 from .segmentaxis import segment_axis
-from .theory import cal_symbols_qam
 from .signal_quality import cal_s0
-from .dsp_cython import unwrap_discont
 from .dsp_cython import bps as _bps_idx_pyx
 import numba
 try:
@@ -12,7 +10,6 @@ try:
 except ImportError:
     af = None
 
-SYMBOLS_16QAM = cal_symbols_qam(16)
 NMAX = 4*1024**3
 
 def viterbiviterbi(E, N, M):
@@ -257,58 +254,6 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
     En = E*np.exp(1.j*angles_adj)
     return En, angles_adj
 
-def __findmax_16qam(rk, ci, vk):
-    mkk = np.real(rk * np.conj(ci) * np.conj(vk) - abs(ci)**2 / 2)
-    pk = np.argmax(mkk)
-    return ci[pk]
-
-
-def ml_phase_16qam(X, Y, pix, piy, cfactor):
-    """
-    Maximum-likelihood phase recovery for 16-QAM signal
-    using pilots for starting the estimator on a dual-pol 16 QAM signal.
-
-    Parameters
-    ----------
-    X : array_like
-        X polarisation of the input signal field
-    Y : array_like
-        Y polarisation of the input signal field
-    pix : array_like
-        Known pilot data (X polarisation)
-    piy : array_like
-        Known pilot data (Y polarisation)
-
-    Returns
-    -------
-    RecoveredX : array_like
-        Phase recovered signal field (X polarisation)
-    RecoveredY : array_like
-        Phase recovered signal field (Y polarisation)
-    """
-    N = len(X)
-    cfactor = len(pix)
-    pilotX = np.zeros(N, dtype=np.complex)
-    pilotY = np.zeros(N, dtype=np.complex)
-    pilotX[:cfactor] = pix
-    pilotY[:cfactor] = piy
-    pcoeX = np.zeros(N, dtype=np.complex)
-    pcoeY = np.zeros(N, dtype=np.complex)
-    pcoeX[:cfactor] = np.angle(np.conj(pilotX[:cfactor]) * X[:cfactor])
-    pcoeY[:cfactor] = np.angle(np.conj(pilotY[:cfactor]) * Y[:cfactor])
-    for k in range(cfactor, N):
-        pcoeX[k] = np.angle(
-            np.sum(np.conj(pilotX[k - cfactor:k]) * X[k - cfactor:k]))
-        pcoeY[k] = np.angle(
-            np.sum(np.conj(pilotY[k - cfactor:k]) * Y[k - cfactor:k]))
-        pilotX[k] = __findmax_16qam(X[k], SYMBOLS_16QAM,\
-                    np.sum(np.conj(pilotX[k-cfactor:k])*X[k-cfactor:k])/\
-                    np.sum(np.abs(pilotX[k-cfactor:k])**2))
-        pilotY[k] = __findmax_16Qqam(Y[k], SYMBOLS_16QAM,
-                    np.sum(np.conj(pilotY[k-cfactor:k])*Y[k-cfactor:k])/\
-                    np.sum(np.abs(pilotY[k-cfactor:k])**2))
-    return X * np.exp(-1.j * pcoeX), Y * np.exp(-1.j * pcoeY)
-
 
 def partition_16qam(E):
     r"""
@@ -344,17 +289,6 @@ def partition_16qam(E):
     class1_mask = (Ea < inner) | (Ea > outer)
     class2_mask = ~class1_mask
     return class1_mask, class2_mask
-
-
-def ff_phase_recovery_16qam(E, Nangles, Nsymbols):
-    phi = np.linspace(0, np.pi, Nangles)
-    N = len(E)
-    d = (abs(E[:, np.newaxis, np.newaxis] * np.exp(1.j * phi)[:, np.newaxis] -
-             SYMBOLS_16QAM)**2).min(axis=2)
-    phinew = np.zeros(N - Nsymbols, dtype=np.float)
-    for k in range(Nsymbols, N - Nsymbols):
-        phinew[k] = phi[np.sum(d[k - Nsymbols:k + Nsymbols], axis=0).argmin()]
-    return E[Nsymbols:] * np.exp(1.j * phinew)
 
 
 def phase_partition_16qam(E, N):

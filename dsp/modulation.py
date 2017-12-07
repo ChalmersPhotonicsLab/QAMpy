@@ -1,6 +1,8 @@
 from __future__ import division
 import numpy as np
 from bitarray import bitarray
+
+from . import resample
 from . import theory
 from . import ber_functions
 from . import utils
@@ -43,6 +45,23 @@ class QAMModulator(object):
         self._encoding = dict([(self.symbols[i].tobytes(),
                                 bitarray(format(self._graycode[i], bformat)))
                                for i in range(len(self._graycode))])
+
+    def _sync_and_adjust(self, syms_tx, syms_rx):
+        syms_tx = self._sync_symbol2signal(syms_tx, syms_rx)
+        syms_tx, syms_rx = ber_functions.adjust_data_length(syms_tx, syms_rx)
+        return syms_tx, syms_rx
+
+    def _sync_symbol2signal(self, syms_tx, syms_demod):
+        acm = 0.
+        for i in range(4):
+            syms_tx = syms_tx*1.j**i
+            s_sync, idx, ac = ber_functions.sync_tx2rx_xcorr(syms_tx, syms_demod)
+            act = abs(ac.max())
+            if act > acm:
+                s_tx_sync = s_sync
+                ix = idx
+                acm = act
+        return s_tx_sync
 
     @property
     def bits(self):
@@ -111,41 +130,6 @@ class QAMModulator(object):
         """
         return quantize(utils.normalise_and_center(signal), self.symbols)
 
-    def cal_evm(self, signal, syms=None):
-        """
-        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1]. The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
-
-        Parameters
-        ----------
-
-        signal    : array_like
-            input signal to measure the EVM offset
-
-        syms      : array_like, optional
-            known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly. For low SNRs this will underestimate the real EVM, because detection errors are not counted.
-
-        Returns
-        -------
-
-        evm       : array_like
-            RMS EVM
-
-        References
-        ----------
-        ...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
-
-
-        Note
-        ----
-
-        The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
-        """
-        if syms is None:
-            syms = self.quantize(signal)
-        else:
-            syms, signal_ad = self._sync_and_adjust(syms, signal)
-        return np.sqrt(np.mean(utils.cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
-
     def generate_signal(self,
                       N,
                        snr,
@@ -153,7 +137,6 @@ class QAMModulator(object):
                        lw_LO = 0,
                        baudrate=1,
                        samplingrate=1,
-                       IQsep=False,
                        PRBS=True,
                        PRBSorder=(15, 23),
                        PRBSseed=(None, None),
@@ -210,10 +193,10 @@ class QAMModulator(object):
             if resample_noise:
                 if snr is not None:
                     outdata = impairments.add_awgn(symbols, 10**(-snr/20))
-                outdata = utils.resample(baudrate, samplingrate, outdata)
+                outdata = resample.resample_poly(baudrate, samplingrate, outdata)
             else:
                 os = samplingrate/baudrate
-                outdata = utils.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
+                outdata = resample.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
                 if snr is not None:
                     outdata = impairments.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
             outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
@@ -227,12 +210,6 @@ class QAMModulator(object):
             else:
                 return outdata, symbols, bitsq
         return np.array(out), np.array(syms), np.array(bits)
-
-    def theoretical_ser(self, snr):
-        """
-        Return the theoretical SER for this modulation format for the given SNR (in linear units)
-        """
-        return theory.ser_vs_es_over_n0_qam(snr, self.M)
 
     def cal_ser(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
         """
@@ -267,24 +244,7 @@ class QAMModulator(object):
             symbol_tx, data_demod = self._sync_and_adjust(symbol_tx, data_demod)
         return np.count_nonzero(data_demod - symbol_tx)/len(data_demod)
 
-    def _sync_and_adjust(self, syms_tx, syms_rx):
-        syms_tx = self._sync_symbol2signal(syms_tx, syms_rx)
-        syms_tx, syms_rx = ber_functions.adjust_data_length(syms_tx, syms_rx)
-        return syms_tx, syms_rx
-
-    def _sync_symbol2signal(self, syms_tx, syms_demod):
-        acm = 0.
-        for i in range(4):
-            syms_tx = syms_tx*1.j**i
-            s_sync, idx, ac = ber_functions.sync_tx2rx_xcorr(syms_tx, syms_demod)
-            act = abs(ac.max())
-            if act > acm:
-                s_tx_sync = s_sync
-                ix = idx
-                acm = act
-        return s_tx_sync
-
-    def cal_ber(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15, utils.bool2bin(np.ones(15)))):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, PRBS=(15, utils.bool2bin(np.ones(15)))):
         """
         Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
 
@@ -297,8 +257,11 @@ class QAMModulator(object):
         bits_tx      : array_like, optional
             transmitted bit sequence to compare against. (default is None, which either PRBS or syms_tx has to be given)
 
-        syms_tx      : array_like, optional
+        symbols_tx      : array_like, optional
             transmitted bit sequence to compare against. (default is None, which means bits_tx or PRBS has to be given)
+
+        synced    : bool, optional
+            whether signal_tx and symbol_tx are synchronised.
 
         PRBS         : tuple(int, int), optional
             tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
@@ -318,14 +281,48 @@ class QAMModulator(object):
         """
         assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
         syms_demod = self.quantize(signal_rx)
-        if syms_tx is None:
+        if symbols_tx is None:
             if bits_tx is None:
                 bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
-            syms_tx = self.modulate(bits_tx)
-            # TODO check if this needs to be put below the synchronization
-            #syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
-        #s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod)
-        s_tx_sync, syms_demod = self._sync_and_adjust(syms_tx, syms_demod)
+            symbols_tx = self.modulate(bits_tx)
+        if not synced:
+            s_tx_sync, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
         return ber_functions.cal_ber_syncd(tx_synced, bits_demod, threshold=0.8)
+
+    def cal_evm(self, signal_rx, symbols_tx=None):
+        """
+        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1]. The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
+
+        Parameters
+        ----------
+
+        signal_rx    : array_like
+            input signal to measure the EVM offset
+
+        symbols_tx      : array_like, optional
+            known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly. For low SNRs this will underestimate the real EVM, because detection errors are not counted.
+
+        Returns
+        -------
+
+        evm       : array_like
+            RMS EVM
+
+        References
+        ----------
+        ...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
+
+
+        Note
+        ----
+
+        The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
+        """
+        if symbols_tx == None:
+            symbols_tx = self.quantize(signal_rx)
+        else:
+            symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
+        return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
+

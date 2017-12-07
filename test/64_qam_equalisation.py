@@ -32,8 +32,8 @@ E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, 
 E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
-evmX = QAM.cal_evm(sig[0,::2])
-evmY = QAM.cal_evm(sig[1,::2])
+evmX = QAM.cal_evm(sig[0, ::2])
+evmY = QAM.cal_evm(sig[1, ::2])
 evmEx = QAM.cal_evm(E[0])
 evmEy = QAM.cal_evm(E[1])
 evmEx_m = QAM.cal_evm(E_m[0])

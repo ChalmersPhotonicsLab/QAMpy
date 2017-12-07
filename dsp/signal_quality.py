@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from .utils import cabssquared
 from .theory import  cal_symbols_qam, cal_scaling_factor_qam
-from .equalisation import quantize as quantize_pyx
+from .equalisation import quantize as _quantize_pyx
 try:
     import arrayfire as af
 except ImportError:
@@ -10,16 +10,16 @@ except ImportError:
 
 def quantize(signal, symbols, method="pyx", **kwargs):
     if method == "pyx":
-        return quantize_pyx(signal, symbols, **kwargs)
+        return _quantize_pyx(signal, symbols, **kwargs)
     elif method == "af":
         if af == None:
             raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
-        return quantize_af(signal, symbols, **kwargs)
+        return _quantize_af(signal, symbols, **kwargs)
     else:
         raise ValueError("method '%s' unknown has to be either 'pyx' or 'af'"%(method))
 
 
-def quantize_af(signal, symbols, precision=16):
+def _quantize_af(signal, symbols, precision=16):
     global  NMAX
     if precision == 16:
         prec_dtype = np.complex128
@@ -46,10 +46,24 @@ def quantize_af(signal, symbols, precision=16):
     return np.array(tmp)
 
 
-def normalise_sig(sig, M):
-    """Normalise signal to average power"""
+def norm_to_s0(sig, M):
+    """
+    Normalise signal to signal power calculated according to _[1]
+
+    Parameters:
+    ----------
+    sig : array_like
+        signal to me normalised
+    M   : integer
+        QAM order of the signal
+
+    Returns
+    -------
+    sig_out : array_like
+        normalised signal
+    """
     norm = np.sqrt(cal_s0(sig, M))
-    return 1 / norm, sig / norm
+    return sig / norm
 
 
 def _cal_evm_blind(sig, M):
@@ -69,8 +83,8 @@ def _cal_evm_blind(sig, M):
         Error Vector Magnitude
         """
     ideal = cal_symbols_qam(M).flatten()
-    Ai, Pi = normalise_sig(ideal, M)
-    Am, Pm = normalise_sig(sig, M)
+    Pi = norm_to_s0(ideal, M)
+    Pm = norm_to_s0(sig, M)
     evm = np.mean(np.min(abs(Pm[:,np.newaxis].real-Pi.real)**2 +\
             abs(Pm[:,np.newaxis].imag-Pi.imag)**2, axis=1))
     evm /= np.mean(abs(Pi)**2)
@@ -98,8 +112,8 @@ def cal_evm(sig, M, known=None):
     if known is None:
         return _cal_evm_blind(sig, M)
     else:
-        Ai, Pi = normalise_sig(known, M)
-        As, Ps = normalise_sig(sig, M)
+        Pi = norm_to_s0(known, M)
+        Ps = norm_to_s0(sig, M)
         evm = np.mean(abs(Pi.real - Ps.real)**2 + \
                   abs(Pi.imag - Ps.imag)**2)
         evm /= np.mean(abs(Pi)**2)
@@ -108,8 +122,7 @@ def cal_evm(sig, M, known=None):
 
 def cal_snr_qam(E, M):
     """Calculate the signal to noise ratio SNR according to formula given in
-    Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
-    pg 865 (2005).
+    _[1]
 
     Parameters:
     ----------
@@ -122,6 +135,12 @@ def cal_snr_qam(E, M):
     -------
     S0/N: : float
         linear SNR estimate
+
+    References:
+    ----------
+    ...[1] Gao and Tepedelenlioglu in IEEE Trans in Signal Processing Vol 53,
+    pg 865 (2005).
+
     """
     gamma = _cal_gamma(M)
     r2 = np.mean(abs(E)**2)

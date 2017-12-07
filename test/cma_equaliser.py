@@ -27,8 +27,8 @@ print(E.shape)
 print(SS.shape)
 
 
-evmX = QAM.cal_evm(S[0,::2])
-evmY = QAM.cal_evm(S[1,::2])
+evmX = QAM.cal_evm(S[0, ::2])
+evmY = QAM.cal_evm(S[1, ::2])
 evmEx = QAM.cal_evm(E[0])
 evmEy = QAM.cal_evm(E[1])
 evmEx_m = QAM.cal_evm(E_m[0])

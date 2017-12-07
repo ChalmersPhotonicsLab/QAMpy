@@ -7,10 +7,11 @@ Created on Sat May 27 17:11:02 2017
 """
 
 import numpy as np
-from dsp import signals, equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality, ber_functions
-from scipy.io import loadmat, savemat
-import matplotlib.pylab as plt
-from scipy.interpolate import interp1d
+
+from dsp import equalisation, phaserecovery
+from dsp.filter import moving_average
+
+
 def pilot_based_foe(rec_symbs,pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
@@ -20,66 +21,74 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     Calculates the phase variations between the batches and does a linear fit
     to find the corresponding frequency offset. 
     
-    Input:
-        rec_symbs:  Complex symbols after initial Rx DSP
-        pilot_symbs: Complex pilot symbols transmitted
-        
-    
-    Output:
-        foe:    Estimated FO in terms of complex phase. Average over all modes
-        foePerMode: FO estimate for each mode
-        condNum:   Condition number of linear fit. Gives accuracy of estimation
+    Parameters
+    ----------
+
+    rec_symbs : array_like
+        Complex symbols after initial Rx DSP
+    pilot_symbs : array_like
+        Complex pilot symbols transmitted
+
+    Returns
+    -------
+    foe : float
+        Estimated FO in terms of complex phase. Average over all modes
+    foePerMode : array_like
+        a FO estimate for each mode
+    condNum : array_like
+        Condition number of linear fit. Gives accuracy of estimation
     
     """
 
     rec_symbs = np.atleast_2d(rec_symbs)
     pilot_symbs = np.atleast_2d(pilot_symbs)
     npols = rec_symbs.shape[0]
-    
-    condNum = np.zeros([npols,1])
-    foePerMode = np.zeros([npols,1])
-    
+    condNum = np.zeros([npols])
+    foePerMode = np.zeros([npol])
     # Search over all polarization
     for l in range(npols):    
         phaseEvolution = np.unwrap(np.angle(pilot_symbs[l,:].conj()*rec_symbs[l,:]))
-        
         # fit a first order polynomial to the unwrapped phase evolution
         freqFit = np.polyfit(np.arange(0,len(phaseEvolution)),phaseEvolution,1)
-    
-        foePerMode[l,0] = freqFit[0]/(2*np.pi)
-        condNum[l,0] = freqFit[1]                 
-    
+        foePerMode[l] = freqFit[0]/(2*np.pi)
+        condNum[l] = freqFit[1]
     # Average over all modes used
     foe = np.mean(foePerMode)
-    
     return foe, foePerMode, condNum
 
 def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
     """
-# Generate some data for this demonstration.
-data = norm.rvs(10.0, 2.5, size=500)
-
     Carrier phase recovery using periodically inserted symbols.
     
     Performs a linear interpolation with averaging over n symbols to estimate
     the phase drift from laser phase noise to compensate for this.
     
-    Input: 
-        rec_symbs: Received symbols in block (first of each block is the pilot)
-        pilot_symbs: Corresponding pilot symbols. 
-            Index N is the first symbol in transmitted block N.
-        pilot_ins_ratio: Length of each block. Ex. 16 -> 1 pilot symbol followed
-            by 15 data symbols
-        num_average: Number of pilot symbols to average over to avoid noise. 
-        use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
-        max_num_blocks: Maximum number of blocks to process
-        remove_phase_pilots: Remove phase pilots after CPE. Default: True
+    Parameters
+    ----------
+    rec_symbs : array_like
+        Received symbols in block (first of each block is the pilot)
+    pilot_symbs : array_like
+        Corresponding pilot symbols. Index N is the first symbol in transmitted block N.
+    pilot_ins_ratio : int
+        Length of each block. Ex. 16 -> 1 pilot symbol followed by 15 data symbols
+    num_average : int, optional
+        Number of pilot symbols to average over to avoid noise. (Default: do not average)
+    use_pilot_ratio :  int, optional
+        Use ever n pilots. Can be used to sweep required rate.
+    max_num_blocks : int, optional
+        Maximum number of blocks to process. (Default: None, use all blocks in sequence)
+    remove_phase_pilots : bool, optional
+        Remove phase pilots after CPE
         
-    Output:
-        data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
-        phase_trace: Resulting phase trace of the CPE
+    Returns
+    -------
+
+    data_symbs : array_like
+        Complex data symbols after pilot-aided CPE. Pilot symbols removed
+    phase_trace : array_like
+        Resulting phase trace of the CPE
     """
-    
+
     rec_symbs = np.atleast_2d(rec_symbs)
     pilot_symbs = np.atleast_2d(pilot_symbs)
     npols = rec_symbs.shape[0]
@@ -89,11 +98,11 @@ data = norm.rvs(10.0, 2.5, size=500)
     # If selected, only process a limited number of blocks. 
     if (max_num_blocks is not None) and numBlocks > max_num_blocks:
         numBlocks = max_num_blocks   
-    
+
     # Make sure that a given number of pilots can be used
     if (numBlocks % use_pilot_ratio):
         numBlocks -= (numBlocks % use_pilot_ratio)            
-    
+
     # Adapt for number of blocks
     rec_pilots = rec_symbs[:,::pilot_ins_ratio] 
     rec_pilots = rec_pilots[:,:int(numBlocks)]
@@ -127,7 +136,7 @@ data = norm.rvs(10.0, 2.5, size=500)
         pilot_phase = np.unwrap(np.angle(res_phase))
 
         # Fix! Need moving average in numpy
-        pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
+        pilot_phase_average = np.transpose(moving_average(pilot_phase, num_average))
         pilot_phase = np.hstack([pilot_phase[:int((num_average-1)/2)], pilot_phase_average,np.ones(pilot_phase[:int((num_average-1)/2)].shape)*pilot_phase_average[-1]])
            
         # Pilot positions in the received data set
@@ -150,30 +159,7 @@ data = norm.rvs(10.0, 2.5, size=500)
         data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
         
     return data_symbs, phase_trace
-    
-    
-def moving_average(sig, n=3):
-    """
-    Moving average of signal
-    
-    Input:
-        sig: Signal for moving average
-        n: number of averaging samples
-        
-    Output:
-        ret: Returned average signal of length len(sig)-n+1
-    """
-    
-    ret = np.cumsum(sig,dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    
-    return ret[n-1:]/n
 
-"""
- 
-Locate pilot sequence
-
-"""
 
 def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','sbd'),search_overlap = 2):
     """
@@ -182,26 +168,41 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
     Uses a CMA-based search scheme to located the initiial pilot sequence in
     the long data frame. 
     
-    Input:
-        rx_signal: Received Rx signal
-        ref_symbs: Pilot sequence
-        os: Oversampling
-        frame_length: Total frame length including pilots and payload
-        mu: CMA step size. Tuple(Search, Convergence)
-        M_pilot: Order for pilot symbols. Should normally be QPSK and M=4
-        ntaps: Number of T/2-spaced taps for equalization
-        Niter: Number of iterations for the equalizer.Tuple(Search, Convergence)
-        adap_step: Use adaptive step size (bool). Tuple(Search, Convergence)
-        method: Equalizer mehtods to be used. Tuple(Search, Convergence)
-        search_overlap: Overlap of subsequences in the test 
-        
-        
-    Output:
-        eq_pilots: Found pilot sequence after equalization
-        shift_factor: New starting point for initial equalization
-        out_taps: Taps for equalization of the whole signal
-        foe_course: Result of blind FOE used to sync the pilot sequence. 
-    
+    Parameters
+    ----------
+    rx_signal : array_like
+        Received Rx signal
+    ref_symbs : array_like
+        Pilot sequence
+    os : int
+        Oversampling ratio
+    frame_length : int, optional
+        Total frame length including pilots and payload
+    mu : tuple, optional
+        CMA step size. Tuple(Search, Convergence)
+    M_pilot : int, optional
+        Order for pilot symbols. Should normally be QPSK and M=4
+    ntaps : tuple, optional
+        Number of T/2-spaced taps for equalization. Tuple(search, convergence)
+    Niter : tuple, optional
+        Number of iterations for the equalizer. Tuple(search, convergence)
+    adap_step : tuple, optional
+        Use adaptive step size.  Tuple(search, convergence)
+    method : tuple, optional
+        Equalizer methods to be used. See dsp equalisation of possible methods. Tuple(Search, Convergence)
+    search_overlap : int, optional
+        Overlap of subsequences in the test
+
+    Returns
+    -------
+    eq_pilots : array_like
+        Found pilot sequence after equalization
+    shift_factor : array_like
+        New starting point for initial equalization
+    out_taps : array_like
+        Taps for equalization of the whole signal
+    foe_coarse : tuple
+        Result of blind FOE used to sync the pilot sequence.
     """
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -248,7 +249,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
         # Use the first estimate to get rid of any large FO and simplify alignment
         wx1, err = equalisation.equalise_signal(shortSeq, os, mu[0], M_pilot,Ntaps = ntaps[0], Niter = Niter[0], method = method[0],adaptive_stepsize = adap_step[0])    
         seq_foe = equalisation.apply_filter(longSeq,os,wx1)
-        foe_corse = phaserecovery.find_freq_offset(seq_foe)        
+        foe_coarse = phaserecovery.find_freq_offset(seq_foe)
          
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
@@ -261,37 +262,43 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = (1e-3,1e-3),
             xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[l,:]))
             max_phase_rot[k] = np.max(xcov)
             found_delay[k] = np.argmax(xcov)
-    
-        # Select the best one    
-        symb_delay = int(found_delay[np.argmax(max_phase_rot)]) 
-        
+
+        # Select the best one
+        symb_delay = int(found_delay[np.argmax(max_phase_rot)])
+
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
-        
+
         # Tap update and extract the propper pilot sequuence
         tap_cor = int((ntaps[1]-ntaps[0])/2)
         pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,wxy=wx1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        wx1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
+        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot,wxy=wx1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
         symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
-       
-        out_taps.append(wx)        
+
+        out_taps.append(wx)
         eq_pilots[l,:] = symbs_out[l,:]
-    return eq_pilots, shift_factor, out_taps, foe_corse
+    return eq_pilots, shift_factor, out_taps, foe_coarse
 
 def find_const_phase_offset(rec_pilots, ref_symbs):
     """
-    Finds a constant phase offset between the decoded pilot 
+    Finds a constant phase offset between the decoded pilot
     symbols and the transmitted ones
-    
-    Input:
-        rec_pilots: Complex received pilots (after FOE and alignment)
-        ref_symbs: Corresponding transmitted pilot symbols (aligned!)
-        
-    Output:
-        phase_corr_pilots: Phase corrected pilot symbols
-        phase_corr: Corresponding phase offset per mode
-    
+
+    Paramters
+    ---------
+
+    rec_pilots : array_like
+        Complex received pilots (after FOE and alignment)
+    ref_symbs : array_like
+        Corresponding transmitted pilot symbols (aligned!)
+
+    Returns
+    -------
+    phase_corr_pilots : array_like
+        Phase corrected pilot symbols
+    phase_corr : array_like
+        Corresponding phase offset per mode
     """
     
     rec_pilots = np.atleast_2d(rec_pilots)
@@ -311,12 +318,19 @@ def correct_const_phase_offset(symbs, phase_offsets):
     Corrects a constant phase offset between the decoded pilot 
     symbols and the transmitted ones
     
-    Input:
-        symbs: Complex symbols to be compensated
-        phase_offsets: Phase offset for each mode
+    Parameters
+    ----------
+
+    symbs : array_like
+        Complex symbols to be compensated
+    phase_offsets : array_like
+        Phase offset for each mode
         
-    Output:
-        symbs: Symbols after phase rotation
+    Returns
+    -------
+
+    symbs : array_like
+        Symbols after phase rotation
     """
     
     symbs = np.atleast_2d(symbs)
