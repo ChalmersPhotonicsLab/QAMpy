@@ -95,9 +95,24 @@ def supergauss(x, A, x0, w, o):
 
 def orthonormalize_signal(E, os=1):
     """
-    Orthogonalizing signal using the Gram-Schmidt process. See for example:
-        https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process for more
-        detailed description.
+    Orthogonalizing signal using the Gram-Schmidt process _[1].
+
+    Parameters
+    ----------
+    E : array_like
+       input signal
+    os : int, optional
+        oversampling ratio of the signal
+
+    Returns
+    -------
+    E_out : array_like
+        orthonormalized signal
+
+    References
+    ----------
+    .. [1] https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process for more
+       detailed description.
     """
 
     E = np.atleast_2d(E)
