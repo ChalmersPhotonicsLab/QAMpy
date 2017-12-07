@@ -1,5 +1,5 @@
 import numpy as np
-from utils import rrcos_freq
+from .utils import rrcos_freq
 import scipy.signal as scisig
 
 def pre_filter(signal, bw):
@@ -93,7 +93,7 @@ def rrcos_pulseshaping(sig, fs, T, beta):
         filtered signal in time domain
     """
     f = np.linspace(-fs/2, fs/2, sig.shape[0], endpoint=False)
-    nyq_fil = rrcos_freq(f, beta, T))
+    nyq_fil = rrcos_freq(f, beta, T)
     nyq_fil /= nyq_fil.max()
     sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig)))
     sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
@@ -117,5 +117,5 @@ def moving_average(sig, N=3):
     mvg : array_like
         Average signal of length len(sig)-n+1
     """
-    ret = np.cumsum(sig,dtype=float)
+    ret = np.cumsum(np.insert(sig, 0,0), dtype=float)
     return (ret[N:] - ret[:-N])/N
