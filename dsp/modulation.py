@@ -320,7 +320,7 @@ class QAMModulator(object):
 
         The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
         """
-        if symbols_tx == None:
+        if symbols_tx is None:
             symbols_tx = self.quantize(signal_rx)
         else:
             symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
