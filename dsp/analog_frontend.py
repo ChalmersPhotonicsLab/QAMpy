@@ -35,7 +35,7 @@ def comp_IQ_inbalance(signal):
     # Build output
     comp_singal = I + 1.j * (Q_balcd * np.sqrt(amp_inbalance))
     
-    return comp_singal, phase_inbalance, amp_inbalance
+    return comp_singal
 
 
 def comp_rf_delay(signal, delay, sampling_rate = 50e9 ):
