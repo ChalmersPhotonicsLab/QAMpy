@@ -261,7 +261,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None):
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None,blind_foe_payload=False):
     
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
@@ -302,7 +302,12 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
         else:
             foe_est_symbs = np.zeros([npols, frame_length],dtype=complex)
             for l in range(npols):
-                est_sig = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+frame_length*os+ntaps[1]-1]
+                # If blind_foe_payload is true, use the payload for FOE estimation and not the pilot sequence. Aims at comparing blind power of 4 FOE to pilot-based
+                if blind_foe_payload:
+                    est_sig = rx_signal[:,
+                              shift_factor[l] - tap_cor + pilot_seq_len:shift_factor[l] - tap_cor + frame_length * os + ntaps[1] - 1 + pilot_seq_len]
+                else:
+                    est_sig = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+frame_length*os+ntaps[1]-1]
                 est_frame = equalisation.apply_filter(est_sig,os,wx)
                 foe_est_symbs[l,:] = est_frame[l,:]
             if foe_symbs is None:
