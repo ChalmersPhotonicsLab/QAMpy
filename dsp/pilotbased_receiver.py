@@ -139,7 +139,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         # Compensate phase
         data_symbs[l,:] = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
         
-        
+    # Remove the phase pilots after compensation. This is an option since they can be used for SNR estimation e.g.
     if remove_phase_pilots:
         pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
         data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
@@ -308,7 +308,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
             if foe_symbs is None:
                 foePerMode = phaserecovery.find_freq_offset(foe_est_symbs)
             else:
-                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs,fft_size=foe_symbs)
+                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs[:,:foe_symbs],fft_size=foe_symbs)
         if avg_foe_modes:
             foe = np.mean(foePerMode)
             foePerMode = np.ones(foePerMode.shape)*foe
