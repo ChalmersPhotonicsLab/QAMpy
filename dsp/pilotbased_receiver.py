@@ -305,7 +305,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
                 # If blind_foe_payload is true, use the payload for FOE estimation and not the pilot sequence. Aims at comparing blind power of 4 FOE to pilot-based
                 if blind_foe_payload:
                     est_sig = rx_signal[:,
-                              shift_factor[l] - tap_cor + pilot_seq_len:shift_factor[l] - tap_cor + frame_length * os + ntaps[1] - 1 + pilot_seq_len]
+                              shift_factor[l] - tap_cor + pilot_seq_len*os:shift_factor[l] - tap_cor + frame_length * os + ntaps[1] - 1 + pilot_seq_len*os]
                 else:
                     est_sig = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+frame_length*os+ntaps[1]-1]
                 est_frame = equalisation.apply_filter(est_sig,os,wx)
