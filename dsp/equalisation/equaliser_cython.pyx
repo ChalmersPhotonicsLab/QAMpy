@@ -44,9 +44,27 @@ def quantize(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dty
         det_syms[i] = det_symbol(<double complex *>symbols.data, M, E[i], &dists)
     return det_syms
 
-def partition_value(double signal,
-                    np.ndarray[ndim=1, dtype=np.float64_t] partitions,
-                    np.ndarray[ndim=1, dtype=np.float64_t] codebook):
+def mrde_err(a, b):
+    cdef np.float64_t[:] partition_real = a.real
+    cdef np.float64_t[:] partition_imag = a.imag
+    cdef np.float64_t[:] codebook_real = b.real
+    cdef np.float64_t[:] codebook_imag = b.imag
+    #cdef complex double[:] codebook = a
+    def mrde_fct(double complex Xest):
+        cdef double complex Ssq
+        cdef double complex S_DD
+        #pp = np.asarray(partition)
+        #cc = np.asarray(codebook)
+        Ssq = Xest.real**2 + 1.j * Xest.imag**2
+        S_DD = partition_value(Ssq.real, partition_real, codebook_real) + 1.j * partition_value(Ssq.imag, partition_imag, codebook_imag)
+        return (Ssq.real - S_DD.real)*Xest.real + 1.j*(Ssq.imag - S_DD.imag)*Xest.imag
+    return mrde_fct
+
+cdef partition_value(double signal,
+                     np.float64_t[:] partitions,
+                     np.float64_t[:] codebook):
+                    #np.ndarray[ndim=1, dtype=np.float64_t] partitions,
+                    #np.ndarray[ndim=1, dtype=np.float64_t] codebook):
     cdef unsigned int index = 0
     cdef unsigned int L = len(partitions)
     while index < L and signal > partitions[index]:
@@ -81,6 +99,74 @@ def FS_CMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])
     return err, wx
+
+cdef class ErrFct:
+    cdef double complex calc_error(self, double complex Xest)  except *:
+        return 0
+
+cdef class MCMAErr(ErrFct):
+    cdef double complex R
+    def __init__(self, double complex R):
+        self.R = R
+    cdef double complex calc_error(self, double complex Xest)  except *:
+        return (Xest.real**2 - self.R.real)*Xest.real + 1.j*(Xest.imag**2 -self.R.imag)*Xest.imag
+
+cdef class MRDEErr(ErrFct):
+    cdef np.float64_t[:] partition_real
+    cdef np.float64_t[:] partition_imag
+    cdef np.float64_t[:] codebook_real
+    cdef np.float64_t[:] codebook_imag
+    def __init__(self, np.ndarray[ndim=1, dtype=np.complex128_t] partition,
+                                              np.ndarray[ndim=1, dtype=np.complex128_t] codebook):
+        self.partition_real = partition.real
+        self.partition_imag = partition.imag
+        self.codebook_real = codebook.real
+        self.codebook_imag = codebook.imag
+    cdef double complex calc_error(self, double complex Xest)  except *:
+        cdef double complex Ssq
+        cdef double complex S_DD
+        Ssq = Xest.real**2 + 1.j * Xest.imag**2
+        S_DD = partition_value(Ssq.real, self.partition_real, self.codebook_real) + 1.j * self.partition_value(Ssq.imag, self.partition_imag, self.codebook_imag)
+        return (Ssq.real - S_DD.real)*Xest.real + 1.j*(Ssq.imag - S_DD.imag)*Xest.imag
+
+
+def mcma_err(double complex R):
+    def mcma_fct(double complex Xest):
+        return (Xest.real**2 - R.real)*Xest.real + 1.j*(Xest.imag**2 -R.imag)*Xest.imag
+    return mcma_fct
+
+def select_err(method, args):
+    if method == "mcma":
+        return mcma_err(args['R'])
+    elif method == "mrde":
+        return mrde_err(args['partition'], args['codebook'])
+        #return MRDEErr(args['partions'], args['codebook'])
+    else:
+        return mcma_err(args['R'])
+
+def generic_eq(np.ndarray[ndim=2, dtype=np.complex128_t] E,
+                    int TrSyms,
+                    int Ntaps,
+                    unsigned int os,
+                    double mu,
+                    np.ndarray[ndim=2, dtype=np.complex128_t] wx,
+                    object errfct,
+                    bool adaptive=False):
+    cdef np.ndarray[ndim=1, dtype=np.complex128_t] err = np.zeros(TrSyms, dtype=np.complex128)
+    cdef unsigned int i, j, k
+    cdef unsigned int pols = E.shape[0]
+    cdef unsigned int L = E.shape[1]
+    cdef np.complex128_t Xest
+    for i in range(0, TrSyms):
+        Xest = apply_filter(&E[0, i*os], Ntaps, &wx[0,0], pols, L)
+        #err[i] = errfct.calc_error(Xest)
+        err[i] = errfct(Xest)
+        update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
+        if adaptive and i > 0:
+            mu = adapt_step(mu, err[i-1], err[i])
+    return err, wx
+
+
 
 def FS_MCMA(np.ndarray[ndim=2, dtype=np.complex128_t] E,
                      int TrSyms,

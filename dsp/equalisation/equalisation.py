@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
 import numpy as np
 
@@ -45,9 +46,10 @@ except:
     raise Warning("can not use cython training functions")
     from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
 from .training_python import FS_SCA, FS_CME
+from .equaliser_cython import select_err, generic_eq
 
-TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
-                 "rde": FS_RDE, "mrde": FS_MRDE,
+TRAINING_FCTS = {"cma": FS_CMA, "mcma": generic_eq,
+                 "rde": FS_RDE, "mrde": generic_eq,
                  "sbd": FS_SBD, "mddma": FS_MDDMA,
                  "sca": FS_SCA, "cme": FS_CME,
                  "dd": FS_DD}
@@ -55,13 +57,18 @@ TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
 
 def _init_args(method, M, **kwargs):
     if method in ["mcma"]:
-        return _cal_Rconstant_complex(M),
+        #return _cal_Rconstant_complex(M),
+        mth= select_err(method, {'R':_cal_Rconstant_complex(M)}),
+        print(mth[0])
+        return mth
     elif method in ["cma"]:
         return _cal_Rconstant(M),
     elif method in ["rde"]:
         return generate_partition_codes_radius(M)
     elif method in ["mrde"]:
-        return generate_partition_codes_complex(M)
+        #return generate_partition_codes_complex(M)
+        p, c = generate_partition_codes_complex(M)
+        return select_err(method, {'partition':p, 'codebook':c}),
     elif method in ["sca"]:
         return _cal_Rsca(M),
     elif method in ["cme"]:
