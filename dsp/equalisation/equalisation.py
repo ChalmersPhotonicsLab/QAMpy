@@ -56,17 +56,13 @@ TRAINING_FCTS = {"cma": train_eq, "mcma": train_eq,
 
 def _init_args(method, M, **kwargs):
     if method in ["mcma"]:
-        #return _cal_Rconstant_complex(M),
-        #mth= select_err(method, {'R':_cal_Rconstant_complex(M)}),
         return ErrorFctMCMA(_cal_Rconstant_complex(M)),
     elif method in ["cma"]:
         return ErrorFctCMA(_cal_Rconstant(M)),
     elif method in ["rde"]:
-        #p, c = generate_partition_codes_radius(M)
-        #return RDEErr(p, c),
-        return generate_partition_codes_radius(M)
+        p, c = generate_partition_codes_radius(M)
+        return RDEErr(p, c),
     elif method in ["mrde"]:
-        #return generate_partition_codes_complex(M)
         p, c = generate_partition_codes_complex(M)
         return ErrorFctMRDE(partition=p, codebook=c),
     elif method in ["sca"]:
@@ -79,8 +75,13 @@ def _init_args(method, M, **kwargs):
         r4 = np.mean(abs(syms)**4)
         A = r4/r2
         bb = np.max(abs(syms*abs(syms)**2-A))
-        #beta = kwargs['beta']
-        beta = bb/2
+        try:
+            beta = kwargs['beta']
+        except:
+            r2 = np.mean(abs(syms)**2)
+            r4 = np.mean(abs(syms)**4)
+            A = r4/r2
+            beta = np.max(abs(syms*abs(syms)**2-A))/2
         return CMEErr(R, d, beta),
     elif method in ['sbd']:
         return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
@@ -89,7 +90,7 @@ def _init_args(method, M, **kwargs):
     elif method in ['dd']:
         return ErrorFctDD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
     else:
-        return cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M)),
+        raise ValueError("%s is unknown method"%method)
 
 
 def apply_filter(E, os, wxy):
