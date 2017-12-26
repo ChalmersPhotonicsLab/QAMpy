@@ -75,13 +75,13 @@ cdef double adapt_step(double mu, double complex err_p, double complex err):
     mu = mu/(1+lm*mu*(err.real*err.real + err.imag*err.imag))
     return mu
 
-cdef class ErrFct:
+cdef class ErrorFct:
     cpdef double complex calc_error(self, double complex Xest)  except *:
         return 0
 
 cdef double complex I=1.j
 
-cdef class MCMAErr(ErrFct):
+cdef class ErrorFctMCMA(ErrorFct):
     cdef double R_real
     cdef double R_imag
     def __init__(self, double complex R):
@@ -90,14 +90,14 @@ cdef class MCMAErr(ErrFct):
     cpdef double complex calc_error(self, double complex Xest)  except *:
         return (creal(Xest)**2 - self.R_real)*creal(Xest) + I*(cimag(Xest)**2 -self.R_imag)*cimag(Xest)
 
-cdef class CMAErr(ErrFct):
+cdef class ErrorFctCMA(ErrorFct):
     cdef double R
     def __init__(self, double R):
         self.R = R
     cpdef double complex calc_error(self, double complex Xest)  except *:
         return (creal(Xest)**2 + cimag(Xest)**2 - self.R)*Xest
 
-cdef class RDEErr(ErrFct):
+cdef class ErrorFctRDE(ErrorFct):
     cdef np.float64_t[:] partition
     cdef np.float64_t[:] codebook
     def __init__(self, np.ndarray[ndim=1, dtype=np.float64_t] partition,
@@ -111,7 +111,7 @@ cdef class RDEErr(ErrFct):
         S_DD = partition_value(Ssq, self.partition, self.codebook)
         return Xest*(Ssq - S_DD)
 
-cdef class MRDEErr(ErrFct):
+cdef class ErrorFctMRDE(ErrorFct):
     cdef np.float64_t[:] partition_real
     cdef np.float64_t[:] partition_imag
     cdef np.float64_t[:] codebook_real
@@ -129,31 +129,33 @@ cdef class MRDEErr(ErrFct):
         S_DD = partition_value(Ssq.real, self.partition_real, self.codebook_real) + 1.j * partition_value(Ssq.imag, self.partition_imag, self.codebook_imag)
         return (Ssq.real - S_DD.real)*Xest.real + 1.j*(Ssq.imag - S_DD.imag)*Xest.imag
 
-cdef class SBDErr(ErrFct):
+cdef class ErrorFctGenericDD(ErrorFct):
     cdef double complex[:] symbols
     cdef double dist
     cdef int N
     def __init__(self, np.ndarray[ndim=1, dtype=double complex] symbols):
         self.symbols = symbols
         self.N = symbols.shape[0]
+
+cdef class ErrorFctSBD(ErrorFctGenericDD):
     cpdef double complex calc_error(self, double complex Xest)  except *:
         cdef double complex R
         R = det_symbol(&self.symbols[0], self.N, Xest, &self.dist)
         return (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
 
-cdef class MDDMAErr(SBDErr):
+cdef class ErrorFctMDDMA(ErrorFctGenericDD):
     cpdef double complex calc_error(self, double complex Xest)  except *:
         cdef double complex R
         R = det_symbol(&self.symbols[0], self.N, Xest, &self.dist)
         return (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
 
-cdef class DDErr(SBDErr):
+cdef class ErrorFctDD(ErrorFctGenericDD):
     cpdef double complex calc_error(self, double complex Xest)  except *:
         cdef double complex R
         R = det_symbol(&self.symbols[0], self.N, Xest, &self.dist)
         return Xest - R
 
-cdef class SCAErr(ErrFct):
+cdef class SCAErr(ErrorFct):
     cdef double complex R
     def __init__(self, double complex R):
         self.R = R
@@ -171,7 +173,7 @@ cdef class SCAErr(ErrFct):
             B = 1
         return 4*Xest.real*(4*Xest.real**2 - 4*self.R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*self.R**2)*B
 
-cdef class CMEErr(ErrFct):
+cdef class CMEErr(ErrorFct):
     cdef double beta
     cdef double d
     cdef double R
@@ -182,13 +184,13 @@ cdef class CMEErr(ErrFct):
     cpdef double complex calc_error(self, double complex Xest) except *:
         return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
 
-def generic_eq(np.ndarray[ndim=2, dtype=double complex] E,
+def train_eq(np.ndarray[ndim=2, dtype=double complex] E,
                     int TrSyms,
                     int Ntaps,
                     unsigned int os,
                     double mu,
                     np.ndarray[ndim=2, dtype=double complex] wx,
-                    ErrFct errfct,
+                    ErrorFct errfct,
                     bool adaptive=False):
     cdef np.ndarray[ndim=1, dtype=double complex] err = np.zeros(TrSyms, dtype=np.complex128)
     cdef unsigned int i, j, k

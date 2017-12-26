@@ -39,28 +39,28 @@ References
 
 """
 
-try:
-    from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA, FS_DD
-except:
+#try:
+    #from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA, FS_DD
+#except:
     #use python code if cython code is not available
-    raise Warning("can not use cython training functions")
-    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
+    #raise Warning("can not use cython training functions")
+    #from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
 from .training_python import FS_SCA, FS_CME
-from .equaliser_cython import select_err, generic_eq, MCMAErr, MRDEErr, SBDErr, MDDMAErr, DDErr, CMAErr, RDEErr, SCAErr, CMEErr
+from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD, ErrorFctCMA, ErrorFctRDE, SCAErr, CMEErr
 
-TRAINING_FCTS = {"cma": generic_eq, "mcma": generic_eq,
-                 "rde": generic_eq, "mrde": generic_eq,
-                 "sbd": generic_eq, "mddma": generic_eq,
-                 "sca": generic_eq, "cme": generic_eq,
-                 "dd": generic_eq}
+TRAINING_FCTS = {"cma": train_eq, "mcma": train_eq,
+                 "rde": train_eq, "mrde": train_eq,
+                 "sbd": train_eq, "mddma": train_eq,
+                 "sca": train_eq, "cme": train_eq,
+                 "dd": train_eq}
 
 def _init_args(method, M, **kwargs):
     if method in ["mcma"]:
         #return _cal_Rconstant_complex(M),
         #mth= select_err(method, {'R':_cal_Rconstant_complex(M)}),
-        return MCMAErr(_cal_Rconstant_complex(M)),
+        return ErrorFctMCMA(_cal_Rconstant_complex(M)),
     elif method in ["cma"]:
-        return CMAErr(_cal_Rconstant(M)),
+        return ErrorFctCMA(_cal_Rconstant(M)),
     elif method in ["rde"]:
         #p, c = generate_partition_codes_radius(M)
         #return RDEErr(p, c),
@@ -68,7 +68,7 @@ def _init_args(method, M, **kwargs):
     elif method in ["mrde"]:
         #return generate_partition_codes_complex(M)
         p, c = generate_partition_codes_complex(M)
-        return MRDEErr(partition=p, codebook=c),
+        return ErrorFctMRDE(partition=p, codebook=c),
     elif method in ["sca"]:
         return SCAErr(_cal_Rsca(M)),
     elif method in ["cme"]:
@@ -83,11 +83,11 @@ def _init_args(method, M, **kwargs):
         beta = bb/2
         return CMEErr(R, d, beta),
     elif method in ['sbd']:
-        return SBDErr(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))),
+        return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
     elif method in ['mddma']:
-        return MDDMAErr(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))),
+        return ErrorFctMDDMA(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
     elif method in ['dd']:
-        return DDErr(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))),
+        return ErrorFctDD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
     else:
         return cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M)),
 
