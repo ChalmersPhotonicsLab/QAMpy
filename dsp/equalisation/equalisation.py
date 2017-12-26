@@ -39,14 +39,14 @@ References
 
 """
 
-#try:
-    #from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA, FS_DD
-#except:
+try:
+    from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD, ErrorFctCMA, ErrorFctRDE, SCAErr, CMEErr
+    training_fct = train_eq
+except:
     #use python code if cython code is not available
     #raise Warning("can not use cython training functions")
-    #from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
+    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
 from .training_python import FS_SCA, FS_CME
-from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD, ErrorFctCMA, ErrorFctRDE, SCAErr, CMEErr
 
 TRAINING_FCTS = {"cma": train_eq, "mcma": train_eq,
                  "rde": train_eq, "mrde": train_eq,
@@ -54,19 +54,19 @@ TRAINING_FCTS = {"cma": train_eq, "mcma": train_eq,
                  "sca": train_eq, "cme": train_eq,
                  "dd": train_eq}
 
-def _init_args(method, M, **kwargs):
+def _select_errorfct(method, M, **kwargs):
     if method in ["mcma"]:
-        return ErrorFctMCMA(_cal_Rconstant_complex(M)),
+        return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
-        return ErrorFctCMA(_cal_Rconstant(M)),
+        return ErrorFctCMA(_cal_Rconstant(M))
     elif method in ["rde"]:
         p, c = generate_partition_codes_radius(M)
-        return RDEErr(p, c),
+        return RDEErr(p, c)
     elif method in ["mrde"]:
         p, c = generate_partition_codes_complex(M)
-        return ErrorFctMRDE(partition=p, codebook=c),
+        return ErrorFctMRDE(partition=p, codebook=c)
     elif method in ["sca"]:
-        return SCAErr(_cal_Rsca(M)),
+        return SCAErr(_cal_Rsca(M))
     elif method in ["cme"]:
         syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
         d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
@@ -82,13 +82,13 @@ def _init_args(method, M, **kwargs):
             r4 = np.mean(abs(syms)**4)
             A = r4/r2
             beta = np.max(abs(syms*abs(syms)**2-A))/2
-        return CMEErr(R, d, beta),
+        return CMEErr(R, d, beta)
     elif method in ['sbd']:
-        return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
+        return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
     elif method in ['mddma']:
-        return ErrorFctMDDMA(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
+        return ErrorFctMDDMA(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
     elif method in ['dd']:
-        return ErrorFctDD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))),
+        return ErrorFctDD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
     else:
         raise ValueError("%s is unknown method"%method)
 
@@ -355,15 +355,14 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     """
     method = method.lower()
-    training_fct = TRAINING_FCTS[method]
-    args = _init_args(method, M, **kwargs)
+    errfct = _select_errorfct(method, M, **kwargs)
     # scale signal
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     for i in range(Niter):
         if print_itt:
             print("LMS iteration %d"%i)
         for l in range(pols):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args, adaptive=adaptive_stepsize)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], errfct, adaptive=adaptive_stepsize)
     return wxy, err
 
 #
