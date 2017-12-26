@@ -77,7 +77,6 @@ cdef double adapt_step(double mu, double complex err_p, double complex err):
 
 cdef class ErrFct:
     cpdef double complex calc_error(self, double complex Xest)  except *:
-    #cdef double complex calc_error(self, double complex Xest):
         return 0
 
 cdef double complex I=1.j
