@@ -78,6 +78,8 @@ cdef double adapt_step(double mu, double complex err_p, double complex err):
 cdef class ErrorFct:
     cpdef double complex calc_error(self, double complex Xest)  except *:
         return 0
+    def __call__(self, double complex Xest):
+        return self.calc_error(Xest)
 
 cdef double complex I=1.j
 
