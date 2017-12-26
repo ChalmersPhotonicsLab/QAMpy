@@ -46,36 +46,48 @@ except:
     raise Warning("can not use cython training functions")
     from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
 from .training_python import FS_SCA, FS_CME
-from .equaliser_cython import select_err, generic_eq
+from .equaliser_cython import select_err, generic_eq, MCMAErr, MRDEErr, SBDErr, MDDMAErr, DDErr, CMAErr, RDEErr, SCAErr, CMEErr
 
-TRAINING_FCTS = {"cma": FS_CMA, "mcma": generic_eq,
-                 "rde": FS_RDE, "mrde": FS_MRDE,
-                 "sbd": FS_SBD, "mddma": FS_MDDMA,
-                 "sca": FS_SCA, "cme": FS_CME,
-                 "dd": FS_DD}
-
+TRAINING_FCTS = {"cma": generic_eq, "mcma": generic_eq,
+                 "rde": generic_eq, "mrde": generic_eq,
+                 "sbd": generic_eq, "mddma": generic_eq,
+                 "sca": generic_eq, "cme": generic_eq,
+                 "dd": generic_eq}
 
 def _init_args(method, M, **kwargs):
     if method in ["mcma"]:
         #return _cal_Rconstant_complex(M),
-        mth= select_err(method, {'R':_cal_Rconstant_complex(M)}),
-        return mth
+        #mth= select_err(method, {'R':_cal_Rconstant_complex(M)}),
+        return MCMAErr(_cal_Rconstant_complex(M)),
     elif method in ["cma"]:
-        return _cal_Rconstant(M),
+        return CMAErr(_cal_Rconstant(M)),
     elif method in ["rde"]:
+        #p, c = generate_partition_codes_radius(M)
+        #return RDEErr(p, c),
         return generate_partition_codes_radius(M)
     elif method in ["mrde"]:
-        return generate_partition_codes_complex(M)
-        #p, c = generate_partition_codes_complex(M)
-        #return select_err(method, {'partition':p, 'codebook':c}),
+        #return generate_partition_codes_complex(M)
+        p, c = generate_partition_codes_complex(M)
+        return MRDEErr(partition=p, codebook=c),
     elif method in ["sca"]:
-        return _cal_Rsca(M),
+        return SCAErr(_cal_Rsca(M)),
     elif method in ["cme"]:
         syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
-        d = np.min(abs(np.diff(syms.real))) # should be fixed to consider different spacing between real and imag
+        d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
         R = _cal_Rconstant(M)
-        beta = kwargs['beta']
-        return (R, d, beta)
+        r2 = np.mean(abs(syms)**2)
+        r4 = np.mean(abs(syms)**4)
+        A = r4/r2
+        bb = np.max(abs(syms*abs(syms)**2-A))
+        #beta = kwargs['beta']
+        beta = bb/2
+        return CMEErr(R, d, beta),
+    elif method in ['sbd']:
+        return SBDErr(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))),
+    elif method in ['mddma']:
+        return MDDMAErr(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))),
+    elif method in ['dd']:
+        return DDErr(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))),
     else:
         return cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M)),
 
