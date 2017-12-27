@@ -78,8 +78,16 @@ cdef double adapt_step(double mu, double complex err_p, double complex err):
 cdef class ErrorFct:
     cpdef double complex calc_error(self, double complex Xest)  except *:
         return 0
-    def __call__(self, double complex Xest):
-        return self.calc_error(Xest)
+    #def __call__(self, double complex Xest):
+        #return self.calc_error(Xest)
+    def __call__(self, np.ndarray[ndim=2, dtype=double complex] E,
+                    int TrSyms,
+                    int Ntaps,
+                    unsigned int os,
+                    double mu,
+                    np.ndarray[ndim=2, dtype=double complex] wx,
+                    bool adaptive=False):
+        return train_eq(E, TrSyms, Ntaps, os, mu, wx, self, adaptive)
 
 cdef double complex I=1.j
 
@@ -185,6 +193,29 @@ cdef class ErrorFctCME(ErrorFct):
         self.R = R
     cpdef double complex calc_error(self, double complex Xest) except *:
         return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
+
+def make_train(ErrorFct errfct):
+    def train_eq(np.ndarray[ndim=2, dtype=double complex] E,
+                    int TrSyms,
+                    int Ntaps,
+                    unsigned int os,
+                    double mu,
+                    np.ndarray[ndim=2, dtype=double complex] wx,
+                    bool adaptive=False):
+        cdef np.ndarray[ndim=1, dtype=double complex] err = np.zeros(TrSyms, dtype=np.complex128)
+        cdef unsigned int i, j, k
+        cdef unsigned int pols = E.shape[0]
+        cdef unsigned int L = E.shape[1]
+        cdef double complex Xest
+
+        for i in range(0, TrSyms):
+            Xest = apply_filter(&E[0, i*os], Ntaps, &wx[0,0], pols, L)
+            err[i] = errfct.calc_error(Xest)
+            update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
+            if adaptive and i > 0:
+                mu = adapt_step(mu, err[i-1], err[i])
+        return err, wx
+    return train_eq
 
 def train_eq(np.ndarray[ndim=2, dtype=double complex] E,
                     int TrSyms,
