@@ -40,19 +40,19 @@ References
 """
 
 try:
-    from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD, ErrorFctCMA, ErrorFctRDE, SCAErr, CMEErr
-    training_fct = train_eq
+    from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, ErrorFct
 except:
     #use python code if cython code is not available
     #raise Warning("can not use cython training functions")
-    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
-from .training_python import FS_SCA, FS_CME
+    from .training_python import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
 
-TRAINING_FCTS = {"cma": train_eq, "mcma": train_eq,
-                 "rde": train_eq, "mrde": train_eq,
-                 "sbd": train_eq, "mddma": train_eq,
-                 "sca": train_eq, "cme": train_eq,
-                 "dd": train_eq}
+TRAINING_FCTS = ["cma", "mcma",
+                 "rde", "mrde",
+                 "sbd", "mddma",
+                 "sca", "cme",
+                 "dd"]
 
 def _select_errorfct(method, M, **kwargs):
     if method in ["mcma"]:
@@ -64,7 +64,7 @@ def _select_errorfct(method, M, **kwargs):
         return RDEErr(p, c)
     elif method in ["mrde"]:
         p, c = generate_partition_codes_complex(M)
-        return ErrorFctMRDE(partition=p, codebook=c)
+        return ErrorFctMRDE(p, c)
     elif method in ["sca"]:
         return SCAErr(_cal_Rsca(M))
     elif method in ["cme"]:
@@ -355,14 +355,14 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     """
     method = method.lower()
-    errfct = _select_errorfct(method, M, **kwargs)
+    eqfct = _select_errorfct(method, M, **kwargs)
     # scale signal
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     for i in range(Niter):
         if print_itt:
             print("LMS iteration %d"%i)
         for l in range(pols):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], errfct, adaptive=adaptive_stepsize)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
     return wxy, err
 
 #
