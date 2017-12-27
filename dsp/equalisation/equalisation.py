@@ -6,6 +6,7 @@ from .. import utils
 from ..theory import cal_symbols_qam, cal_scaling_factor_qam
 from ..segmentaxis import segment_axis
 
+#TODO: update documentation with all references
 
 """
 Equalisation functions the equaliser update functions provided are:
@@ -39,6 +40,7 @@ References
 
 """
 
+#TODO: include selection for either numba or cython code
 try:
     from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, ErrorFct
@@ -55,6 +57,7 @@ TRAINING_FCTS = ["cma", "mcma",
                  "dd"]
 
 def _select_errorfct(method, M, **kwargs):
+    #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["mcma"]:
         return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
