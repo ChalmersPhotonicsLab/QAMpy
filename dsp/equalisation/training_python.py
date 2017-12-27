@@ -92,7 +92,7 @@ def create_eqfct(errfct):
     Notes
     -----
     the signature of the returned training function is below with given parameters
-    
+
     train_eq(E, TrSyms, Ntaps, os, mu, wx, adaptive=False)
     Parameters
         E       : array_like
@@ -153,19 +153,68 @@ def create_eqfct(errfct):
     return train_eq
 
 def ErrorFctCMA(R):
+    """
+    Create Constant Modulus Algorithm (CMA) error
+
+    Parameters
+    ----------
+    R : float
+        radius for the CMA algorithm
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    """
     @numba.jit(nopython=True)
     def cma_fct(Xest):
         return (abs(Xest)**2 - R)*Xest
     return create_eqfct(cma_fct)
 
 def ErrorFctMCMA(R):
+    """
+    Create Modified Constant Modulus Algorithm error after _[1]
+
+    Parameters
+    ----------
+    R : complex
+        Complex radius for the CMA algorithm
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
+    """
     @numba.jit(nopython=True)
     def mcma_fct(Xest):
-        """MCMA error"""
         return (Xest.real**2 - R.real) * Xest.real + (Xest.imag**2 - R.imag)*Xest.imag*1.j
     return create_eqfct(mcma_fct)
 
 def ErrorFctRDE(partition, codebook):
+    """
+    Create Radius Directed Error after _[1]
+
+    Parameters
+    ----------
+    partition    : array_like, float
+       partitioning vector defining the boundaries between the different QAM constellation rings
+
+    codebook    : array_like, float
+       code vector defining the signal powers for the different QAM constellation rings
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    """
     @numba.jit(nopython=True)
     def rde_fct(Xest):
         Ssq = abs(Xest)**2
@@ -174,6 +223,25 @@ def ErrorFctRDE(partition, codebook):
     return create_eqfct(rde_fct)
 
 def ErrorFctMRDE(partition, codebook):
+    """
+    Create Modified Radius Directed Error after _[1]
+
+    Parameters
+    ----------
+    partition    : array_like, complex
+       partitioning vector defining the boundaries between the different QAM constellation rings
+
+    codebook    : array_like, complex
+       code vector defining the signal powers for the different QAM constellation rings
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    """
     @numba.jit(nopython=True)
     def mrde_fct(Xest):
         Ssq = Xest.real**2 + 1.j * Xest.imag**2
@@ -182,6 +250,23 @@ def ErrorFctMRDE(partition, codebook):
     return create_eqfct(mrde_fct)
 
 def ErrorFctSBD(symbols):
+    """
+    Symbol Based Decision (SBD) training function after _[1]. This is a DD error function. This does not implement the neighbor weigthing detailed further in _[1].
+
+    Parameters
+    ----------
+    symbols    : array_like, complex
+        the symbols of the QAM format being recovered
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    ...[1] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
+    """
     @numba.jit(nopython=True)
     def sbd_fct(Xest):
         R = symbols[np.argmin(np.abs(Xest-symbols))]
@@ -189,6 +274,24 @@ def ErrorFctSBD(symbols):
     return create_eqfct(sbd_fct)
 
 def ErrorFctMDDMA(symbols):
+    """
+    Modified Decision Directed Modulus Algorithm (MDDMA) error after _[1].
+    This is a DD error function.
+
+    Parameters
+    ----------
+    symbols    : array_like, complex
+        the symbols of the QAM format being recovered
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    ...[1] Fernandes, C. A. R., Favier, G., & Mota, J. C. M. (2007). Decision directed adaptive blind equalization based on the constant modulus algorithm. Signal, Image and Video Processing, 1(4), 333–346. http://doi.org/10.1007/s11760-007-0027-2
+    """
     @numba.jit(nopython=True)
     def mddma_fct(Xest):
         R = symbols[np.argmin(np.abs(Xest-symbols))]
@@ -196,6 +299,22 @@ def ErrorFctMDDMA(symbols):
     return create_eqfct(mddma_fct)
 
 def ErrorFctDD(symbols):
+    """
+    Decision Directed error
+
+    Parameters
+    ----------
+    R : complex
+        Complex radius for the CMA algorithm
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    """
     @numba.jit(nopython=True)
     def dd_fct(Xest):
         R = symbols[np.argmin(np.abs(Xest-symbols))]
@@ -203,6 +322,27 @@ def ErrorFctDD(symbols):
     return create_eqfct(dd_fct)
 
 def ErrorFctCME(R, d, beta):
+    """
+    Constellation matched error algorithm after _[1]
+
+    Parameters
+    ----------
+    R : float
+        radius for the CMA algorithm
+    d : float
+        distance between constellation points along one dimension
+    beta: float
+        ratio between CMA and sin part of the algorithm
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    ...[1] He, L., Amin, M. G., Reed, C., & Malkemes, R. C. (2004). A Hybrid Adaptive Blind Equalization Algorithm for QAM Signals in Wireless Communications, 52(7), 2058–2069.
+    """
     @numba.jit(nopython=True)
     def cme_fct(Xest):
         err = (abs(Xest)**2 - R)*Xest
@@ -211,6 +351,23 @@ def ErrorFctCME(R, d, beta):
     return create_eqfct(cme_fct)
 
 def ErrorFctSCA(R):
+    """
+    Create Square Contour Algorithm error after _[1]
+
+    Parameters
+    ----------
+    R : float
+        radius for the algorithm
+
+    Returns
+    -------
+    train_eq: function
+        equaliser training function
+
+    References
+    -----
+    ...[1] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.dsp.2007.09.001
+    """
     @numba.jit(nopython=True)
     def sca_fct(Xest):
         if abs(Xest.real) >= abs(Xest.imag):
@@ -240,58 +397,6 @@ def FS_MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
             mu /= 5
             counter1 += 1
     return err, wx, mu, counter1
-
-@numba.jit(nopython=True)
-def FS_MCMA(E, TrSyms, Ntaps, os, mu, wx, R, adaptive=False):
-    """
-    Training of the Modified CMA algorithm to determine the equaliser taps. Details in _[1]. Assumes a normalised signal.
-
-    Parameters
-    ----------
-    E       : array_like
-       dual polarisation signal field
-
-    TrSyms : int
-       number of symbols to use needs to be less than len(Ex)
-
-    Ntaps   : int
-       number of equaliser taps
-
-    os      : int
-       oversampling factor
-
-    mu   : float
-       step size parameter
-
-    wx     : array_like
-       initial equaliser taps
-
-    R      : complex
-       CMA cost constant, the real part applies to the real error the imaginary to the imaginary
-    
-    Returns
-    -------
-
-    err       : array_like
-       estimation error for x and y polarisation
-
-    wx    : array_like
-       equaliser taps
-
-    Notes
-    -----
-    ..[1] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
-    """
-    err = np.zeros(TrSyms, dtype=np.complex128)
-    for i in range(TrSyms):
-        X = E[:, i * os:i * os + Ntaps]
-        #Xest = np.sum(wx * X)
-        Xest = sum(wx*X)
-        err[i] = (np.abs(Xest.real)**2 - R.real) * Xest.real + (np.abs(Xest.imag)**2 - R.imag)*Xest.imag*1.j
-        wx -= mu * err[i] * np.conj(X)
-        if adaptive and i > 0:
-            mu = adapt_step(mu, err[i], err[i-1])
-    return err, wx
 
 @numba.jit(nopython=True)
 def FS_CMA(E, TrSyms, Ntaps, os, mu, wx, R, adaptive=False):
