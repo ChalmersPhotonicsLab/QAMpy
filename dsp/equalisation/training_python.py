@@ -75,6 +75,157 @@ def sum(x):
         __sum += y[i]
     return __sum
 
+def create_eqfct(errfct):
+    """
+    Create a equaliser training function for a given error function
+
+    Parameters
+    ----------
+    errfct : function
+        error function to be used for updating the taps
+
+    Returns
+    -------
+    train_eq : function
+        equaliser training function (see Notes for signature)
+
+    Notes
+    -----
+    the signature of the returned training function is below with given parameters
+    
+    train_eq(E, TrSyms, Ntaps, os, mu, wx, adaptive=False)
+    Parameters
+        E       : array_like
+            dual polarisation signal field
+        TrSyms : int
+            number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+        Ntaps   : int
+            number of equaliser taps
+        os      : int
+            oversampling factor
+        mu   : float
+            step size parameter
+        wx     : array_like
+            initial equaliser taps
+
+    Returns
+        err       : array_like
+            estimation error for x and y polarisation
+        wx    : array_like
+            equaliser taps
+    """
+    @numba.jit(nopython=True)
+    def train_eq(E, TrSyms, Ntaps, os, mu, wx,  adaptive=False):
+        """
+        Training of the equaliser
+
+        Parameters
+        ----------
+        E       : array_like
+            dual polarisation signal field
+        TrSyms : int
+            number of symbols to use for training the radius directed equaliser, needs to be less than len(Ex)
+        Ntaps   : int
+            number of equaliser taps
+        os      : int
+            oversampling factor
+        mu   : float
+            step size parameter
+        wx     : array_like
+            initial equaliser taps
+
+        Returns
+        -------
+        err       : array_like
+            estimation error for x and y polarisation
+        wx    : array_like
+            equaliser taps
+        """
+        err = np.zeros(TrSyms, dtype=np.complex128)
+        for i in range(TrSyms):
+            X = E[:, i * os:i * os + Ntaps]
+            Xest = sum(wx * X)
+            err[i] = errfct(Xest)
+            wx -= mu * err[i] * np.conj(X)
+            if adaptive and i > 0:
+                mu = adapt_step(mu, err[i], err[i-1])
+        return err, wx
+    return train_eq
+
+def ErrorFctCMA(R):
+    @numba.jit(nopython=True)
+    def cma_fct(Xest):
+        return (abs(Xest)**2 - R)*Xest
+    return create_eqfct(cma_fct)
+
+def ErrorFctMCMA(R):
+    @numba.jit(nopython=True)
+    def mcma_fct(Xest):
+        """MCMA error"""
+        return (Xest.real**2 - R.real) * Xest.real + (Xest.imag**2 - R.imag)*Xest.imag*1.j
+    return create_eqfct(mcma_fct)
+
+def ErrorFctRDE(partition, codebook):
+    @numba.jit(nopython=True)
+    def rde_fct(Xest):
+        Ssq = abs(Xest)**2
+        S_DD = partition_value(Ssq, part, code)
+        return (Ssq - S_DD)*Xest
+    return create_eqfct(rde_fct)
+
+def ErrorFctMRDE(partition, codebook):
+    @numba.jit(nopython=True)
+    def mrde_fct(Xest):
+        Ssq = Xest.real**2 + 1.j * Xest.imag**2
+        R = partition_value(Ssq.real, partion.real, codebook.real) + partition_value(Ssq.imag, partition.imag, codebook.imag)*1.j
+        return (Ssq.real - R.real)*Xest.real + (Ssq.imag - R.imag)*1.j*Xest.imag
+    return create_eqfct(mrde_fct)
+
+def ErrorFctSBD(symbols):
+    @numba.jit(nopython=True)
+    def sbd_fct(Xest):
+        R = symbols[np.argmin(np.abs(Xest-symbols))]
+        return (Xest.real - R.real)*abs(R.real) + (Xest.imag - R.imag)*1.j*abs(R.imag)
+    return create_eqfct(sbd_fct)
+
+def ErrorFctMDDMA(symbols):
+    @numba.jit(nopython=True)
+    def mddma_fct(Xest):
+        R = symbols[np.argmin(np.abs(Xest-symbols))]
+        return (Xest.real**2 - R.real**2)*Xest.real + (Xest.imag**2 - R.imag**2)*1.j*Xest.imag
+    return create_eqfct(mddma_fct)
+
+def ErrorFctDD(symbols):
+    @numba.jit(nopython=True)
+    def dd_fct(Xest):
+        R = symbols[np.argmin(np.abs(Xest-symbols))]
+        return Xest - R
+    return create_eqfct(dd_fct)
+
+def ErrorFctCME(R, d, beta):
+    @numba.jit(nopython=True)
+    def cme_fct(Xest):
+        err = (abs(Xest)**2 - R)*Xest
+        err +=  beta * np.pi/(2*d) * (np.sin(Xest.real*np.pi/d) + 1.j * np.sin(Xest.imag*np.pi/d))
+        return err
+    return create_eqfct(cme_fct)
+
+def ErrorFctSCA(R):
+    @numba.jit(nopython=True)
+    def sca_fct(Xest):
+        if abs(Xest.real) >= abs(Xest.imag):
+            A = 1
+            if abs(Xest.real) == abs(Xest.imag):
+                B = 1
+            else:
+                B = 0
+        else:
+            A = 0
+            B = 1
+        return 4*Xest.real*(4*Xest.real**2 - 4*R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*R**2)*B
+    return _create_eqfct(sca_fct)
+
+
 @numba.jit(nopython=True)
 def FS_MCMA_adaptive2(E, TrSyms, Ntaps, os, mu, wx, R, syms, R2):
     err = np.zeros(TrSyms, dtype=np.complex128)
