@@ -157,7 +157,7 @@ cdef class ErrorFctDD(ErrorFctGenericDD):
         R = det_symbol(&self.symbols[0], self.N, Xest, &self.dist)
         return Xest - R
 
-cdef class SCAErr(ErrorFct):
+cdef class ErrorFctSCA(ErrorFct):
     cdef double complex R
     def __init__(self, double complex R):
         self.R = R
@@ -175,7 +175,7 @@ cdef class SCAErr(ErrorFct):
             B = 1
         return 4*Xest.real*(4*Xest.real**2 - 4*self.R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*self.R**2)*B
 
-cdef class CMEErr(ErrorFct):
+cdef class ErrorFctCME(ErrorFct):
     cdef double beta
     cdef double d
     cdef double R
