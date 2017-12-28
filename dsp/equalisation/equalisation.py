@@ -166,7 +166,6 @@ def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
     wy = -np.conj(wx)[::-1,::-1]
-
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
@@ -361,11 +360,14 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     eqfct = _select_errorfct(method, M, **kwargs)
     # scale signal
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
-    for i in range(Niter):
-        if print_itt:
-            print("LMS iteration %d"%i)
-        for l in range(pols):
+    for l in range(pols):
+        for i in range(Niter):
+            if print_itt:
+                print("Pol-%d - LMS iteration %d"%(j,i))
             err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
+        #TODO: adjust for more than two polarizations
+        if l < 1:
+            wxy[1] = _init_orthogonaltaps(wxy[0])
     return wxy, err
 
 #
@@ -480,18 +482,18 @@ def CDcomp(E, fs, N, L, D, wl):
     #D = D*1.e-6
     if N == 0:
         N = samp
-        
+
 #    H = np.zeros(N,dtype='complex')
     #H = np.arange(0, N) + 1j * np.zeros(N, dtype='float')
-    #H -= N // 2 
+    #H -= N // 2
     #H *= 2*np.pi
     #H *= fs
     #H *= H
     #H *= D * wl**2 * L / (c * N**2)
-    
+
     omega = np.pi * fs * np.linspace(-1,1,N,dtype = complex)
     beta2 = D * wl**2 / (c * 2 * np.pi)
-    
+
 
     H = np.exp(-.5j * omega**2 * beta2 * L )
     #H1 = H
