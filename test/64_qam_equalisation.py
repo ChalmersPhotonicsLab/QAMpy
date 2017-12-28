@@ -5,13 +5,14 @@ from dsp import  equalisation, modulation, impairments
 fb = 40.e9
 os = 2
 fs = os*fb
-N = 10**5
-theta = 0* np.pi/2.35
+N = 5*10**5
+theta = 1* np.pi/4.5
+theta2 = np.pi/4
 M = 64
 QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 0.2e-3
-muRDE = 0.2e-3
+muCMA = 0.09e-2
+muRDE = 0.09e-2
 ntaps = 11
 t_pmd = 100.e-12
 #Ncma = N//4//os -int(1.5*ntaps)
@@ -20,12 +21,12 @@ t_pmd = 100.e-12
 Ncma = None
 Nrde = None
 
-sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
+sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23), beta=0.01)
 #Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
-print(sig.shape)
 
 SS = impairments.apply_PMD_to_field(sig, theta, t_pmd, fs)
 #SS = np.vstack([X,Y])
+SS = impairments.rotate_field(SS, theta2)
 
 E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
 E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
@@ -52,17 +53,17 @@ plt.hexbin(E[1].real, E[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy))
 plt.legend()
 plt.subplot(243)
 plt.title('Recovered MCMA/MRDE')
-plt.hexbin(E_m[1].real, E_m[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy_m))
+plt.hexbin(E_m[0].real, E_m[0].imag, label=r"$EVM_x=%.1f\%%$"%(evmEx_m*100))
 plt.legend()
 plt.subplot(244)
-plt.hexbin(E_m[0].real, E_m[0].imag, label=r"$EVM_x=%.1f\%%$"%(evmEx_m*100))
+plt.hexbin(E_m[1].real, E_m[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy_m))
 plt.legend()
 plt.subplot(245)
 plt.title('Recovered MCMA/SBD')
-plt.hexbin(E_s[1].real, E_s[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy_s))
+plt.hexbin(E_s[0].real, E_s[0].imag, label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
 plt.legend()
 plt.subplot(246)
-plt.hexbin(E_s[0].real, E_s[0].imag, label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
+plt.hexbin(E_s[1].real, E_s[1].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evmEy_s))
 plt.legend()
 plt.subplot(247)
 plt.title('Original')
