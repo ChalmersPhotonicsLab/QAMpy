@@ -339,10 +339,11 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     args = _init_args(method, M, **kwargs)
     # scale signal
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
-    for i in range(Niter):
-        print("LMS iteration %d"%i)
-        for l in range(pols):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args, adaptive=adaptive_stepsize)
+    for l in range(pols):
+        for i in range(Niter):
+            if print_itt:
+                print("Pol-%d - LMS iteration %d"%(j,i))
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
     return wxy, err
 
 
