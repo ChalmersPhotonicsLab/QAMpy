@@ -341,9 +341,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     for l in range(pols):
         for i in range(Niter):
-            if print_itt:
-                print("Pol-%d - LMS iteration %d"%(j,i))
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
+            print("Pol-%d - LMS iteration %d"%(l,i))
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l],  *args, adaptive=adaptive_stepsize)
         #TODO: adjust for more than two polarizations
         if l < 1:
             wxy[1] = _init_orthogonaltaps(wxy[0])
