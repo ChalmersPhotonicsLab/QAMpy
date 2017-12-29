@@ -72,17 +72,22 @@ def sync_tx2rx_xcorr(data_tx, data_rx):
         the correlation between the two sequences
     """
     # needed to convert bools to integers
+    #TODO: change to also work with shorter rx than tx
+    #TODO: look into what to do for changing data_tx if it's shorter than rx
     tx = 1.*data_tx
     rx = 1.*data_rx
+    N_rx = rx.shape[0]
+    N_tx = tx.shape[0]
     if tx.dtype==np.complex128:
-        N2 = len(tx)
         ac = fftconvolve(np.angle(rx), np.angle(tx)[::-1], 'same')
     else:
-        N2 = len(tx)
         ac = fftconvolve(rx, tt[::-1], 'same')
-    # I still don't quite get why the following works, an alternative would be to zero pad the shorter array
-    # and the offset would be argmax()-len(ac)//2 however this does take significantly longer
-    idx = abs(ac).argmax() - 5*N2//2
+    if N_rx == N_tx:
+        idx = abs(ac).argmax()-N_tx//2
+        if idx < 0:
+            idx += N_tx
+    elif N_rx > N_tx:
+        idx = abs(ac).argmax() - N_tx//2
     return np.roll(data_tx, idx), idx, ac
 
 def sync_rx2tx(data_tx, data_rx, Lsync, imax=200):
