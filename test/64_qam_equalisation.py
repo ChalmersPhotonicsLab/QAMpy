@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, impairments
+from dsp import  equalisation, modulation, impairments, signal_quality
 
 fb = 40.e9
 os = 2
@@ -41,6 +41,10 @@ evmEx_m = QAM.cal_evm(E_m[0])
 evmEy_m= QAM.cal_evm(E_m[1])
 evmEx_s = QAM.cal_evm(E_s[0])
 evmEy_s= QAM.cal_evm(E_s[1])
+gmiEx, gmi_bit, snr_est = signal_quality.calc_gmi(E_s[0], symbols, M)
+print(gmiEx, gmi_bit, snr_est)
+sys.exit()
+
 
 #sys.exit()
 plt.figure()

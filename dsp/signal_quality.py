@@ -3,6 +3,10 @@ import numpy as np
 from .utils import cabssquared
 from .theory import  cal_symbols_qam, cal_scaling_factor_qam
 from .equalisation import quantize as _quantize_pyx
+from . import modulation
+from .dsp_cython import soft_l_value_demapper
+import numba
+
 try:
     import arrayfire as af
 except ImportError:
@@ -259,3 +263,57 @@ def cal_ser_qam(data_rx, symbol_tx, M, method="pyx"):
     """
     data_demod = quantize(data_rx, M, method=method)
     return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)
+
+def generate_bitmapping_mtx(mod):
+    out_mtx = np.reshape(mod.decode(mod.gray_coded_symbols),(mod.M, mod.bits))
+    symbs = mod.gray_coded_symbols
+    bit_map = np.zeros([mod.bits, int(mod.M/2),2], dtype=complex)
+
+    for bit in range(mod.bits):
+        bit_map[bit,:,0] = symbs[~out_mtx[:,bit]]
+        bit_map[bit,:,1] = symbs[out_mtx[:,bit]]
+    return symbs, bit_map
+
+def calc_gmi(rx_symbs, tx_symbs, M):
+    rx_symbs = np.atleast_2d(rx_symbs)
+    tx_symbs = np.atleast_2d(tx_symbs)
+    mod = modulation.QAMModulator(M)
+    symbs, bit_map = generate_bitmapping_mtx(mod)
+    num_bits = int(np.log2(M))
+    GMI = np.zeros(rx_symbs.shape[0])
+    GMI_per_bit = np.zeros((rx_symbs.shape[0],num_bits))
+    SNR_est = np.zeros(rx_symbs.shape[0])
+    # For every mode present, calculate GMI based on SD-demapping
+    for mode in range(rx_symbs.shape[0]):
+        # GMI Calc
+        rx_symbs[mode] = rx_symbs[mode] / np.sqrt(np.mean(np.abs(rx_symbs[mode]) ** 2))
+        tx, rx = mod._sync_and_adjust(tx_symbs[mode],rx_symbs[mode])
+        snr = estimate_snr(rx, tx, symbs)[0]
+        SNR_est[mode] = snr
+        l_values = soft_l_value_demapper(rx,M,10**(snr/10),bit_map)
+        bits = mod.decode(mod.quantize(tx)).astype(np.int)
+        # GMI per bit
+        for bit in range(num_bits):
+            GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[bit::num_bits])*l_values[bit::num_bits])))
+        # Sum GMI
+        GMI[mode] = np.sum(GMI_per_bit[mode])
+    return GMI, GMI_per_bit, SNR_est
+
+def estimate_snr(rx_symbs, tx_symbs,symbs):
+    N = symbs.shape[0]
+    rx_symbs = rx_symbs / np.sqrt(np.mean(np.abs(rx_symbs)**2))
+    Px = np.zeros(N)
+    N0 = 0
+    mus = np.zeros(N, dtype = complex)
+    sigmas = np.zeros(N, dtype= complex)
+    in_pow = 0
+    for ind in range(N):
+        sel_symbs = rx_symbs[np.bool_(tx_symbs == symbs[ind])]
+        Px[ind] = sel_symbs.shape[0] / rx_symbs.shape[0]
+        mus[ind] = np.mean(sel_symbs)
+        sigmas[ind] = np.std(sel_symbs)
+
+        N0 += np.abs(sigmas[ind])**2*Px[ind]
+        in_pow += np.abs(mus[ind])**2*Px[ind]
+    SNR = 10*np.log10(in_pow/N0)
+    return SNR, Px, mus, in_pow, N0
