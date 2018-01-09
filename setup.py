@@ -6,7 +6,7 @@ from os import path
 import numpy as np
 
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
-LINK_ARGS = ["-fopenmp"]
+LINK_ARGS = ["-fopenmp", "-lm"]
 
 equaliser_cython = Extension(name="dsp.equalisation.equaliser_cython",
                      sources=["dsp/equalisation/equaliser_cython.pyx", "dsp/equalisation/equaliserC.c"],

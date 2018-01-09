@@ -3,7 +3,7 @@ import numpy as np
 from scipy.signal import fftconvolve
 from . import utils, prbs
 from . import theory
-
+#TODO: refactor to use remove all unneeded functions
 
 class DataSyncError(Exception):
     pass
