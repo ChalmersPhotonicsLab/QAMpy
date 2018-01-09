@@ -35,12 +35,11 @@ def find_sequence_offset(data_tx, data_rx, show_cc=False):
         the autocorrelation
     """
     # needed to convert bools to integers
-    #TODO: change to also work with shorter rx than tx
-    #TODO: look into what to do for changing data_tx if it's shorter than rx
     tx = 1.*data_tx
     rx = 1.*data_rx
     N_rx = rx.shape[0]
     N_tx = tx.shape[0]
+    assert not N_tx > N_rx, "length of data tx must be shorter or equal to length of data_rx"
     if tx.dtype==np.complex128:
         ac = fftconvolve(np.angle(rx), np.angle(tx)[::-1], 'same')
     else:
@@ -55,6 +54,93 @@ def find_sequence_offset(data_tx, data_rx, show_cc=False):
         return idx, ac
     else:
         return idx
+
+def find_sequence_offset_complex(data_tx, data_rx):
+    """
+    Find the offset of one sequence in the other even if both sequences are complex.
+
+    Parameters
+    ----------
+    data_tx : array_like
+        transmitted data sequence
+    data_rx : array_like
+        received data sequence
+
+    Returns
+    -------
+    idx : integer
+        offset index
+    tx : array_like
+        tx array possibly rotated to correct 1.j**i for complex arrays
+    """
+    acm = 0.
+    try:
+        data_tx.imag
+        data_rx.imag
+    except:
+        return find_sequence_offset(data_tx, data_rx), data_tx
+    for i in range(4):
+        tx = data_tx*1.j**i
+        idx, ac = find_sequence_offset(tx, data_rx, show_cc=True)
+        act = abs(ac).max()
+        if act > acm:
+            ii = i
+            ix = idx
+            acm = act
+    return ix, data_tx*1.j**ii
+
+
+def sync_and_adjust(data_tx, data_rx, adjust="tx"):
+    """
+    Synchronize and adjust length of received and transmitted data sequence. When the length
+    differs between sequences the sequence length will be adjusted based on the adjust parameter
+    and the length of the sequences. If the to adjusting sequence is shorter than the other sequence,
+    we will assume that the pattern is repetitive and therefore pad the sequence. If it is longer than
+    the other sequence we will truncate after adjusting the offset. Note that if sequences are complex we will
+    rotate around the complex plane to remove abiguities.
+
+    Parameters
+    ----------
+    data_tx : array_like
+        transmitted symbol or bit sequence
+    data_rx : array_like
+        received symbol sequence can be noisy
+    adjust : string, optional
+        parameter that determines which data sequence to adjust. If "tx" truncate or extend data_tx
+        if "rx" truncate or extend data_rx
+
+    Returns
+    -------
+    tx : array_like
+       (possibly adjusted) tx data
+    rx : array_like
+       (possibly adjusted) rx data
+    """
+    N_tx = data_tx.shape[0]
+    N_rx = data_rx.shape[0]
+    assert adjust is "tx" or adjust is "rx", "adjust need to be either 'tx' or 'rx'"
+    if N_tx > N_rx:
+        offset, rx = find_sequence_offset_complex(data_rx, data_tx)
+        if adjust is "tx":
+            tx = np.roll(data_tx, -offset)
+            return adjust_data_length(tx, rx, method="truncate")
+        elif adjust is "rx":
+            tx, rx = adjust_data_length(data_tx, rx, method="extend")
+            return tx, np.roll(rx, offset)
+    elif N_tx < N_rx:
+        offset, tx = find_sequence_offset_complex(data_tx, data_rx)
+        if adjust is "tx":
+            tx, rx = adjust_data_length(tx, data_rx, method="extend")
+            return np.roll(tx, offset), rx
+        elif adjust is "rx":
+            rx = np.roll(data_rx, -offset)
+            return adjust_data_length(tx, rx, method="truncate")
+    else:
+        offset, tx = find_sequence_offset_complex(data_tx, data_rx)
+        if adjust is "tx":
+            return np.roll(tx, offset), data_rx
+        elif adjust is "rx":
+            return tx, np.roll(data_rx, -offset)
 
 def sync_rx2tx(data_tx, data_rx, Lsync, imax=200):
     """Sync the received data sequence to the transmitted data, which
@@ -175,7 +261,7 @@ def adjust_data_length(data_tx, data_rx, method=None):
     elif method is "extend":
         if len(data_tx) > len(data_rx):
             data_rx = _extend_by(data_rx, data_tx.shape[0]-data_rx.shape[0])
-            return data_tx, data__rx
+            return data_tx, data_rx
         elif len(data_tx) < len(data_rx):
             data_tx = _extend_by(data_tx, data_rx.shape[0]-data_tx.shape[0])
             return data_tx, data_rx
