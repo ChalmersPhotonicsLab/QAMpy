@@ -6,7 +6,6 @@ cimport cython
 from cpython cimport bool
 cimport numpy as np
 
-cdef unsigned int NTHREADS=8
 
 cdef extern from "complex.h":
     double complex conj(double complex)
@@ -57,7 +56,6 @@ def unwrap_discont(double[::1] seq, double max_diff, double period):
     return new_array
 
 def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=2, dtype=np.float64_t] testangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
-    global  NTHREADS
     cdef unsigned int i, j, ph_idx
     cdef int L = E.shape[0]
     cdef int M = symbols.shape[0]
@@ -70,7 +68,7 @@ def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=2, dtype=np
     comp_angles = np.exp(1.j*testangles)
     dists = np.zeros((L, Ntestangles))+100.
     idx = np.zeros(L, dtype=np.uint32)
-    for i in prange(L, schedule='static', num_threads=NTHREADS, nogil=True):
+    for i in prange(L, schedule='static', nogil=True):
         if testangles.shape[0] > 1:
             ph_idx = i
         else:
@@ -181,7 +179,7 @@ def soft_l_value_demapper(np.ndarray[ndim=1, dtype=double complex] rx_symbs, int
     cdef double tmp2 = 0
 
     for bit in range(num_bits):
-        for symb in prange(N, schedule='static', num_threads=NTHREADS, nogil=True):
+        for symb in prange(N, schedule='static', nogil=True):
             tmp = 0
             tmp2 = 0
             for l in range(k):
