@@ -50,6 +50,8 @@ def find_sequence_offset(data_tx, data_rx, show_cc=False):
             idx += N_tx
     elif N_rx > N_tx:
         idx = abs(ac).argmax() - N_tx//2
+        if idx < 0:
+            idx += N_rx
     if show_cc is True:
         return idx, ac
     else:
