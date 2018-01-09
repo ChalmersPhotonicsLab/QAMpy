@@ -46,21 +46,29 @@ class TestSynchronize(object):
         sig2 = np.roll(sig, shift=shiftN)
         offset = ber_functions.find_sequence_offset(syms[:4000], sig2)
         print(offset, shiftN)
-        assert (offset == shiftN) or (N-offset == shiftN)
+        assert (offset == shiftN)# or (N-offset == shiftN)
 
-    def test_sync_adjust_length(self):
+    @pytest.mark.parametrize("shiftN", [np.random.randint(l*3*10**4//8+1, (l+1)*3*10**4//8) for l in range(8)]+[28924])
+    def test_find_sequence_offset_diff_length_data(self, shiftN):
         N = 3*10**4 # needs to be larger than PRBS pattern
         sig, syms, bits = self.Q.generate_signal(N, None, dual_pol=False, beta=0.01, PRBS=False)
-        N1 = 1000
-        tx, rx = ber_functions.sync_and_adjust(sig, sig[:N1], adjust="tx")
-        assert (tx.shape[0] == N1) and (rx.shape[0] == N1)
-        tx, rx = ber_functions.sync_and_adjust(sig, sig[:N1], adjust="rx")
-        assert (tx.shape[0] == N) and (rx.shape[0] == N)
-        tx, rx = ber_functions.sync_and_adjust(sig[:N1], sig, adjust="tx")
-        assert (tx.shape[0] == N) and (rx.shape[0] == N)
-        tx, rx = ber_functions.sync_and_adjust(sig[:N1], sig, adjust="rx")
-        assert (tx.shape[0] == N1) and (rx.shape[0] == N1)
+        sig2 = np.roll(sig, shift=shiftN)
+        offset = ber_functions.find_sequence_offset(syms[:4000], sig2)
+        sig2 = np.roll(sig2, -offset)
+        npt.assert_allclose(syms[:4000], sig2[:4000], atol=self.d/4)
 
+    @pytest.mark.parametrize("N1, N2, adjust", [(None, 1000, "tx"),(None, 1000, "rx" ), (1000, None, "tx"), (1000, None, "rx") ])
+    def test_sync_adjust_length(self, N1, N2, adjust):
+        N = 3*10**4 # needs to be larger than PRBS pattern
+        sig, syms, bits = self.Q.generate_signal(N, None, dual_pol=False, beta=0.01, PRBS=False)
+        #N1 = 1000
+        tx, rx = ber_functions.sync_and_adjust(sig[:N1], sig[:N2], adjust=adjust)
+        if N1 is None and adjust is "tx":
+            assert (tx.shape[0] == N2) and (rx.shape[0] == N2)
+        elif N2 is None and adjust is "rx":
+            assert (tx.shape[0] == N1) and (rx.shape[0] == N1)
+        else:
+            assert (tx.shape[0] == N) and (rx.shape[0] == N)
 
     @pytest.mark.parametrize("adjust", ["tx", "rx"])
     def test_sync_adjust_offset_same_length(self, adjust):
