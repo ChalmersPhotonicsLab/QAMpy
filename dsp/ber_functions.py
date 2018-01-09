@@ -8,11 +8,12 @@ from . import theory
 class DataSyncError(Exception):
     pass
 
-def sync_tx2rx_xcorr(data_tx, data_rx):
+def find_sequence_offset(data_tx, data_rx, show_cc=False):
     """
-    Sync the transmitted data sequence to the received data, which
+    Find the offset of the transmitted data sequence inside the received data, which
     might contain errors, using cross-correlation between data_rx and data_tx.
-    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This assumes that data_tx is at least once inside data_rx and repetitive>
+    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This assumes that len(data_rx) >= len(data_tx) and that
+    data_tx is at least once inside data_rx.
 
     Parameters
     ----------
@@ -23,15 +24,15 @@ def sync_tx2rx_xcorr(data_tx, data_rx):
     data_rx : array_like
         the received data sequence which might contain errors.
 
+    show_cc : bool, optional
+        if true return the calculated crosscorrelation
 
     Returns
     -------
-    data_rx_sync : array_like
-        data_tx which is synchronized to data_rx
     offset index : int
-        the index where data_rx starts in data_rx
-    ac           : array_like
-        the correlation between the two sequences
+        the index where data_tx starts in data_rx
+    crosscorrelation: array_like, optional
+        the autocorrelation
     """
     # needed to convert bools to integers
     #TODO: change to also work with shorter rx than tx
@@ -43,14 +44,17 @@ def sync_tx2rx_xcorr(data_tx, data_rx):
     if tx.dtype==np.complex128:
         ac = fftconvolve(np.angle(rx), np.angle(tx)[::-1], 'same')
     else:
-        ac = fftconvolve(rx, tt[::-1], 'same')
+        ac = fftconvolve(rx, tx[::-1], 'same')
     if N_rx == N_tx:
         idx = abs(ac).argmax()-N_tx//2
         if idx < 0:
             idx += N_tx
     elif N_rx > N_tx:
         idx = abs(ac).argmax() - N_tx//2
-    return np.roll(data_tx, idx), idx, ac
+    if show_cc is True:
+        return idx, ac
+    else:
+        return idx
 
 def sync_rx2tx(data_tx, data_rx, Lsync, imax=200):
     """Sync the received data sequence to the transmitted data, which
@@ -251,10 +255,10 @@ def cal_ber_nosyncd(data_rx, data_tx):
         length of data
     """
     try:
-        idx, data_tx_sync = sync_tx2rx_xcorr(data_tx, data_rx)
+        idx, data_tx_sync = find_sequence_offset(data_tx, data_rx)
     except DataSyncError:
         # if we cannot sync try to use inverted data
-        idx, data_tx_sync = sync_tx2rx_xcorr(-data_tx, data_rx)
+        idx, data_tx_sync = find_sequence_offset(-data_tx, data_rx)
     data_tx_sync = adjust_data_length(data_tx_sync, data_rx)
     #TODO this still returns a slightly smaller value, as if there would be
     # one less error, maybe this happens in the adjust_data_length

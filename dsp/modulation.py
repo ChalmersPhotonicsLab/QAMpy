@@ -55,7 +55,8 @@ class QAMModulator(object):
         acm = 0.
         for i in range(4):
             syms_tx = syms_tx*1.j**i
-            s_sync, idx, ac = ber_functions.sync_tx2rx_xcorr(syms_tx, syms_demod)
+            idx, ac = ber_functions.find_sequence_offset(syms_tx, syms_demod, show_cc=True)
+            s_sync = np.roll(idx)
             act = abs(ac.max())
             if act > acm:
                 s_tx_sync = s_sync
