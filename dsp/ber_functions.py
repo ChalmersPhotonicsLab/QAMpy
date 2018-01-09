@@ -8,44 +8,6 @@ from . import theory
 class DataSyncError(Exception):
     pass
 
-def sync_rx2tx_xcorr(data_tx, data_rx, N1, N2):
-    """
-    Sync the received data sequence to the transmitted data, which
-    might contain errors, using cross-correlation between data_rx and data_tx.
-    Calculates np.correlate(data_rx[:N1], data_tx[:N2], 'full').
-
-    Parameters
-    ----------
-
-    data_tx : array_like
-            the known input data sequence.
-
-    data_rx : array_like
-        the received data sequence which might contain errors.
-
-    N1 : int
-        the length of elements of the longer array input to correlate. This should be long enough so that the subsequence we use for searching is present, a good value is the number of bits in the PRBS.
-
-    N2 : int, optional
-        the length of the subsequence from data_tx to use to search for in data_rx
-
-    Returns
-    -------
-    offset index : int
-        the index where data_rx starts in data_rx
-    data_rx_sync : array_like
-        data_rx which is synchronized to data_tx
-
-    """
-    # this one gives a slightly higher BER need to investigate
-
-    # needed to convert bools to integers
-    tx = 1.*data_tx
-    rx = 1.*data_rx
-    ac = np.correlate(rx[:N1], tx[:N2], 'full')
-    idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
-    return np.roll(data_rx, idx), idx
-
 def sync_tx2rx_xcorr(data_tx, data_rx):
     """
     Sync the transmitted data sequence to the received data, which
