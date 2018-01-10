@@ -49,13 +49,13 @@ class TestModulatorAttr(object):
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
     def test_ser(self, Nerrors, shiftN):
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
-        sig = sig[0]
-        sym = sym[0]
-        idx = random.sample(range(sig.shape[0]), Nerrors)
-        _flip_symbols(sig, idx, self.d)
+        #sig = sig[0]
+        #sym = sym[0]
+        idx = random.sample(range(sig.shape[1]), Nerrors)
+        _flip_symbols(sig[0], idx, self.d)
         sig = np.roll(sig, shift=shiftN)
         ser = self.Q.cal_ser(sig, symbols_tx=sym)
-        npt.assert_almost_equal(ser, Nerrors/sig.shape[0])
+        npt.assert_almost_equal(ser, Nerrors/sig.shape[1])
 
     @pytest.mark.parametrize("Nerrors", range(5))
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))

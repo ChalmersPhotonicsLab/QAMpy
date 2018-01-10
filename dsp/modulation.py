@@ -54,6 +54,15 @@ class QAMModulator(object):
         """
         return int(np.log2(self.M))
 
+    def _sync_and_adjust(self, tx, rx):
+        tx_out = []
+        rx_out = []
+        for i in range(tx.shape[0]):
+            t, r = ber_functions.sync_and_adjust(tx[i], rx[i])
+            tx_out.append(t)
+            rx_out.append(r)
+        return np.array(tx_out), np.array(rx_out)
+
     def modulate(self, data):
         """
         Modulate a bit sequence into QAM symbols
@@ -112,7 +121,11 @@ class QAMModulator(object):
         idx      : array_like
             1D array of indices into QAMmodulator.symbols
         """
-        return quantize(utils.normalise_and_center(signal), self.symbols)
+        signal = np.atleast_2d(signal)
+        outsyms = np.zeros_like(signal)
+        for i in range(signal.shape[0]):
+            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.symbols)
+        return outsyms
 
     def generate_signal(self, N, snr, carrier_df=0, lw_LO=0, baudrate=1, samplingrate=1, PRBS=True, PRBSorder=(15, 23),
                         PRBSseed=(None, None), beta=0.1, resample_noise=False, ndim=2):
@@ -188,34 +201,38 @@ class QAMModulator(object):
 
     def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
-        Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
+        Calculate the symbol error rate of the signal.
 
         Parameters
         ----------
         signal_rx  : array_like
-            Received signal (1D complex array)
-
+            Received signal (2D complex array)
         symbol_tx  : array_like, optional
             symbols at the transmitter for comparison against signal. If set to None bits_tx needs to be given (Default is None)
         bits_tx    : array_like, optional
             bitstream at the transmitter for comparison against signal. If set to None symbol_tx needs to be given (Default is None)
-
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
-
 
         Returns
         -------
         SER   : float
             symbol error rate
         """
-        assert symbols_tx is not None or bits_tx is not None, "data_tx or symbol_tx must be given"
+        signal_rx = np.atleast_2d(signal_rx)
+        ndim = signal_rx.shape[0]
         if symbols_tx is None:
-            symbols_tx = self.modulate(bits_tx)
+            if bits_tx is None:
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = np.zeros_like(signal_rx)
+                for i in range(ndim):
+                    symbols_tx[i] = self.modulate(bits_tx[i])
         data_demod = self.quantize(signal_rx)
         if not synced:
-            symbols_tx, data_demod = ber_functions.sync_and_adjust(symbols_tx, data_demod)
-        return np.count_nonzero(data_demod - symbols_tx)/len(data_demod)
+            symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
+        errs = np.count_nonzero(data_demod - symbols_tx)
+        return errs/(ndim*data_demod.shape[1])
 
     def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, PRBS=(15, utils.bool2bin(np.ones(15)))):
         """
