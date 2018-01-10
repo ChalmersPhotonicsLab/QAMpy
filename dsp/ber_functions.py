@@ -40,10 +40,10 @@ def find_sequence_offset(data_tx, data_rx, show_cc=False):
     N_rx = rx.shape[0]
     N_tx = tx.shape[0]
     assert not N_tx > N_rx, "length of data tx must be shorter or equal to length of data_rx"
-    if tx.dtype==np.complex128:
-        ac = fftconvolve(np.angle(rx), np.angle(tx)[::-1], 'same')
+    if np.issubdtype(rx.dtype , np.complexfloating):
+        ac = fftconvolve(rx, tx.conj()[::-1], 'same')
     else:
-        ac = fftconvolve(rx, tx[::-1], 'same')
+        ac = fftconvolve(np.hstack([rx,rx,rx]), tx[::-1], 'same')[N_rx:-N_rx]
     if N_rx == N_tx:
         idx = abs(ac).argmax()-N_tx//2
         if idx < 0:
@@ -84,8 +84,9 @@ def find_sequence_offset_complex(data_tx, data_rx):
     for i in range(4):
         tx = data_tx*1.j**i
         idx, ac = find_sequence_offset(tx, data_rx, show_cc=True)
-        act = abs(ac).max()
+        act = ac.real.max()
         if act > acm:
+            plt.plot(abs(ac))
             ii = i
             ix = idx
             acm = act
