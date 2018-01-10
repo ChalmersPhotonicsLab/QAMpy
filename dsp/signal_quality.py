@@ -3,7 +3,7 @@ import numpy as np
 from .utils import cabssquared
 from .theory import  cal_symbols_qam, cal_scaling_factor_qam
 from .equalisation import quantize as _quantize_pyx
-from . import modulation
+from . import modulation, ber_functions
 from .dsp_cython import soft_l_value_demapper
 import numba
 
@@ -287,7 +287,7 @@ def calc_gmi(rx_symbs, tx_symbs, M):
     for mode in range(rx_symbs.shape[0]):
         # GMI Calc
         rx_symbs[mode] = rx_symbs[mode] / np.sqrt(np.mean(np.abs(rx_symbs[mode]) ** 2))
-        tx, rx = mod._sync_and_adjust(tx_symbs[mode],rx_symbs[mode])
+        tx, rx = ber_functions.sync_and_adjust(tx_symbs[mode],rx_symbs[mode])
         snr = estimate_snr(rx, tx, symbs)[0]
         SNR_est[mode] = snr
         l_values = soft_l_value_demapper(rx,M,10**(snr/10),bit_map)
