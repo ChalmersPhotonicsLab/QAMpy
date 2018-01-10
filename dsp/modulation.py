@@ -94,12 +94,16 @@ class QAMModulator(object):
         Parameters
         ----------
         symbols   : array_like
-            1D array of complex input symbols
+            array of complex input symbols
+
+        Note
+        ----
+        Unlike the other functions this function does not always return a 2D array.
 
         Returns
         -------
         outbits   : array_like
-            1D array of booleans representing bits
+            array of booleans representing bits with same number of dimensions as symbols
         """
         if symbols.ndim is 1:
             bt = bitarray()
@@ -120,14 +124,12 @@ class QAMModulator(object):
         Parameters
         ----------
         signal   : array_like
-            1D array of the input signal
+            2D array of the input signal
 
         Returns
         -------
         symbols  : array_like
-            1d array of the detected symbols
-        idx      : array_like
-            1D array of indices into QAMmodulator.symbols
+            2d array of the detected symbols
         """
         signal = np.atleast_2d(signal)
         outsyms = np.zeros_like(signal)
@@ -176,6 +178,16 @@ class QAMModulator(object):
             whether to add the noise before resampling or after (default: False add noise after resampling)
         ndim : interger
             number of dimensions of the generated signal (default=2 dual polarization signal)
+
+        Returns
+        -------
+        signal : array_like
+            the calculated signal array (2D)
+        syms  : array_like
+            the transmitted symbols (2D)
+        bits : array_like
+            the transmitted bits (2D)
+
         """
         out = []
         syms = []
@@ -209,18 +221,22 @@ class QAMModulator(object):
 
     def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
-        Calculate the symbol error rate of the signal.
+        Calculate the symbol error rate of the received signal.
 
         Parameters
         ----------
         signal_rx  : array_like
             Received signal (2D complex array)
-        symbol_tx  : array_like, optional
-            symbols at the transmitter for comparison against signal. If set to None bits_tx needs to be given (Default is None)
+        symbols_tx  : array_like, optional
+            symbols at the transmitter for comparison against signal.
         bits_tx    : array_like, optional
-            bitstream at the transmitter for comparison against signal. If set to None symbol_tx needs to be given (Default is None)
+            bitstream at the transmitter for comparison against signal.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+
+        Note
+        ----
+        If neither symbols_tx or bits_tx are given use self.symbols_tx
 
         Returns
         -------
@@ -234,48 +250,41 @@ class QAMModulator(object):
                 symbols_tx = self.symbols_tx
             else:
                 symbols_tx = np.zeros_like(signal_rx)
+                bits_tx = np.atleast_2d(bits_tx)
                 for i in range(ndim):
                     symbols_tx[i] = self.modulate(bits_tx[i])
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
             symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
         errs = np.count_nonzero(data_demod - symbols_tx)
         return errs/(ndim*data_demod.shape[1])
 
-    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, PRBS=(15, utils.bool2bin(np.ones(15)))):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
-        Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
+        Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits.
 
         Parameters
         ----------
-
         signal_rx    : array_like
             received signal to demodulate and calculate BER of
-
         bits_tx      : array_like, optional
-            transmitted bit sequence to compare against. (default is None, which either PRBS or syms_tx has to be given)
-
+            transmitted bit sequence to compare against.
         symbols_tx      : array_like, optional
-            transmitted bit sequence to compare against. (default is None, which means bits_tx or PRBS has to be given)
-
+            transmitted bit sequence to compare against.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
 
-        PRBS         : tuple(int, int), optional
-            tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
+        Note
+        ----
+        If neither bits_tx or symbols_tx are given, we use the self.symbols_tx
 
 
         Returns
         -------
-
         ber          : float
             bit-error-rate in linear units
-
-        errs         : integer
-            number of detected errors
-
-        N            : integer
-            length of input sequence
         """
         signal_rx = np.atleast_2d(signal_rx)
         ndim = signal_rx.shape[0]
@@ -285,9 +294,12 @@ class QAMModulator(object):
                 symbols_tx = self.symbols_tx
             else:
                 symbols_tx = []
+                bits_tx = np.atleast_2d(bits_tx)
                 for i in range(ndim):
                     symbols_tx.append(self.modulate(bits_tx[i]))
                 symbols_tx = np.array(symbols_tx)
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
         if not synced:
             symbols_tx, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
@@ -324,6 +336,7 @@ class QAMModulator(object):
 
         The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
         """
+        signal_rx = np.atleast_2d(signal_rx)
         if symbols_tx is None:
             symbols_tx = self.quantize(signal_rx)
         else:
