@@ -179,12 +179,9 @@ class QAMModulator(object):
             # not 100% clear if we should apply before or after resampling
             if lw_LO:
                 outdata = impairments.apply_phase_noise(outdata, lw_LO, samplingrate)
-            if ndim:
-                out.append(outdata)
-                syms.append(symbols)
-                bits.append(bitsq)
-            else:
-                return outdata, symbols, bitsq
+            out.append(outdata)
+            syms.append(symbols)
+            bits.append(bitsq)
         return np.array(out), np.array(syms), np.array(bits)
 
     def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):

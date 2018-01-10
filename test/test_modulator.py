@@ -26,21 +26,21 @@ class TestModulatorAttr(object):
 
     def test_quantize_symbols_set(self):
         """Check if all quantized symbols are from Q.symbols"""
-        sig, sym, bits = self.Q.generate_signal(2**10, 30, beta=0.01, dual_pol=False)
-        sym_demod = self.Q.quantize(sig)
+        sig, sym, bits = self.Q.generate_signal(2 ** 10, 30, beta=0.01, ndim=1)
+        sym_demod = self.Q.quantize(sig[0])
         out = np.in1d(sym_demod, self.Q.symbols)
         assert np.alltrue(out)
 
     def test_quantize_symbols_correct(self):
         """Check if all quantized symbols are from Q.symbols"""
-        sig, sym, bits = self.Q.generate_signal(2**10, None, beta=0.01, dual_pol=False)
-        sym_demod = self.Q.quantize(sig)
-        npt.assert_allclose(sym_demod, sym)
+        sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
+        sym_demod = self.Q.quantize(sig[0])
+        npt.assert_allclose(sym_demod, sym[0])
 
     def test_decode_correct(self):
-        sig, sym, bits = self.Q.generate_signal(2**10, None, beta=0.01, dual_pol=False)
-        bb = self.Q.decode(sym)
-        npt.assert_array_equal(bb, bits)
+        sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
+        bb = self.Q.decode(sym[0])
+        npt.assert_array_equal(bb, bits[0])
 
     def test_gen_signal(self):
         pass
@@ -48,7 +48,9 @@ class TestModulatorAttr(object):
     @pytest.mark.parametrize("Nerrors", range(5))
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
     def test_ser(self, Nerrors, shiftN):
-        sig, sym, bits = self.Q.generate_signal(2**10, None, beta=0.01, dual_pol=False)
+        sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
+        sig = sig[0]
+        sym = sym[0]
         idx = random.sample(range(sig.shape[0]), Nerrors)
         _flip_symbols(sig, idx, self.d)
         sig = np.roll(sig, shift=shiftN)
@@ -58,7 +60,9 @@ class TestModulatorAttr(object):
     @pytest.mark.parametrize("Nerrors", range(5))
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
     def test_ber(self, Nerrors, shiftN):
-        sig, sym, bits = self.Q.generate_signal(2**10, None, beta=0.01, dual_pol=False)
+        sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
+        sig = sig[0]
+        bits = bits[0]
         idx = random.sample(range(sig.shape[0]), Nerrors)
         _flip_symbols(sig, idx, self.d)
         sig = np.roll(sig, shift=shiftN)
