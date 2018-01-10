@@ -54,7 +54,7 @@ class TestModulatorAttr(object):
             idx = random.sample(range(sig.shape[1]), Nerrors)
             _flip_symbols(sig[i], idx, self.d)
         sig = np.roll(sig, shift=shiftN, axis=-1)
-        ser = self.Q.cal_ser(sig, symbols_tx=sym)
+        ser = self.Q.cal_ser(sig)
         npt.assert_almost_equal(ser, Nerrors/sig.shape[1])
 
     @pytest.mark.parametrize("Nerrors", range(5))
