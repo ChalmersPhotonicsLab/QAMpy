@@ -11,12 +11,12 @@ class TestSynchronize(object):
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*3*10**4//4+1, (l+1)*3*10**4//4) for l in range(4)])
     @pytest.mark.parametrize("snr", [5, 20, 40])
-    def test_find_sequence_offset_same_length_shift(self, shiftN, snr):
+    @pytest.mark.parametrize("N1", [None, 4000])
+    def test_find_sequence_offset_same_length_shift(self, shiftN, snr, N1):
         N = 3*10**4 # needs to be larger than PRBS pattern
         sig, syms, bits = self.Q.generate_signal(N, snr, dual_pol=False)
         sig2 = np.roll(sig, shift=shiftN)
-        offset = ber_functions.find_sequence_offset(syms, sig2)
-        print(offset, shiftN)
+        offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
         assert (offset == shiftN)
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
@@ -28,15 +28,6 @@ class TestSynchronize(object):
         syms2 = np.roll(syms, offset)
         print(offset, shiftN)
         npt.assert_allclose(syms2, sig2, atol=self.d/4)
-
-    @pytest.mark.parametrize("shiftN", [np.random.randint(l*3*10**4//4+1, (l+1)*3*10**4//4) for l in range(4)]+[28924])
-    @pytest.mark.parametrize("snr", [5, 20, 40])
-    def test_find_sequence_offset_diff_length_shift(self, shiftN, snr):
-        N = 3*10**4 # needs to be larger than PRBS pattern
-        sig, syms, bits = self.Q.generate_signal(N, snr, dual_pol=False, beta=0.01, PRBS=False)
-        sig2 = np.roll(sig, shift=shiftN)
-        offset = ber_functions.find_sequence_offset(syms[:4000], sig2)
-        assert (offset == shiftN)
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*3*10**4//4+1, (l+1)*3*10**4//4) for l in range(4)]+[28924])
     def test_find_sequence_offset_diff_length_data(self, shiftN):
