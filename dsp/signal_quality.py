@@ -289,9 +289,9 @@ def calc_gmi(rx_symbs, tx_symbs, M):
         # GMI Calc
         rx_symbs[mode] = rx_symbs[mode] / np.sqrt(np.mean(np.abs(rx_symbs[mode]) ** 2))
         tx, rx = ber_functions.sync_and_adjust(tx_symbs[mode],rx_symbs[mode])
-        snr = estimate_snr(rx, tx, symbs)[0]
-        SNR_est[mode] = snr
-        l_values = soft_l_value_demapper(rx,M,10**(snr/10),bit_map)
+        snr = estimate_snr(rx, tx, symbs)
+        SNR_est[mode] = 10*np.log10(snr)
+        l_values = soft_l_value_demapper(rx, M, snr, bit_map)
         bits = mod.decode(mod.quantize(tx)).astype(np.int)
         # GMI per bit
         for bit in range(num_bits):
@@ -300,21 +300,43 @@ def calc_gmi(rx_symbs, tx_symbs, M):
         GMI[mode] = np.sum(GMI_per_bit[mode])
     return GMI, GMI_per_bit, SNR_est
 
-def estimate_snr(rx_symbs, tx_symbs,symbs):
-    N = symbs.shape[0]
-    rx_symbs = rx_symbs / np.sqrt(np.mean(np.abs(rx_symbs)**2))
-    Px = np.zeros(N)
-    N0 = 0
-    mus = np.zeros(N, dtype = complex)
-    sigmas = np.zeros(N, dtype= complex)
-    in_pow = 0
+def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
+    """
+    Estimate the signal-to-noise ratio from received and known transmitted symbols.
+
+    Parameters
+    ----------
+    signal_rx : array_like
+        received signal
+    symbols_tx : array_like
+        transmitted symbol sequence
+    gray_symbols : array_like
+        gray coded symbols
+    verbose : bool, optional
+        return verbose output
+
+    Returns
+    -------
+    snr : float
+        estimated linear signal-to-noise ratio
+    """
+
+    N = gray_symbols.shape[0]
+    signal_rx = signal_rx/np.sqrt(np.mean(np.abs(signal_rx) ** 2))
+    Px = np.zeros(N, dtype=np.float64)
+    N0 = 0.
+    mus = np.zeros(N, dtype=np.complex128)
+    sigmas = np.zeros(N, dtype=np.complex128)
+    in_pow = 0.
     for ind in range(N):
-        sel_symbs = rx_symbs[np.bool_(tx_symbs == symbs[ind])]
-        Px[ind] = sel_symbs.shape[0] / rx_symbs.shape[0]
+        sel_symbs = signal_rx[np.bool_(symbols_tx == gray_symbols[ind])]
+        Px[ind] = sel_symbs.shape[0] / signal_rx.shape[0]
         mus[ind] = np.mean(sel_symbs)
         sigmas[ind] = np.std(sel_symbs)
-
         N0 += np.abs(sigmas[ind])**2*Px[ind]
         in_pow += np.abs(mus[ind])**2*Px[ind]
-    SNR = 10*np.log10(in_pow/N0)
-    return SNR, Px, mus, in_pow, N0
+    snr = in_pow/N0
+    if verbose:
+        return snr, Px, mus, in_pow, N0
+    else:
+        return snr
