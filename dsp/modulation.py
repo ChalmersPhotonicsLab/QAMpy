@@ -309,31 +309,30 @@ class QAMModulator(object):
 
     def cal_evm(self, signal_rx, symbols_tx=None):
         """
-        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1]. The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
+        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
+        The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
 
         Parameters
         ----------
-
         signal_rx    : array_like
             input signal to measure the EVM offset
-
         symbols_tx      : array_like, optional
-            known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly. For low SNRs this will underestimate the real EVM, because detection errors are not counted.
+            known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly.
+            For low SNRs this will underestimate the real EVM, because detection errors are not counted.
 
         Returns
         -------
-
         evm       : array_like
             RMS EVM
 
         References
         ----------
-        ...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
+        ...[1] Shafik, R. "On the extended relationships among EVM, BER and SNR as performance metrics". In Conference on Electrical and Computer Engineering (p. 408) (2006).
+         Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
 
 
         Note
         ----
-
         The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
         """
         signal_rx = np.atleast_2d(signal_rx)
