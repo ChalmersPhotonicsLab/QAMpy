@@ -74,6 +74,8 @@ def find_sequence_offset_complex(data_tx, data_rx):
         offset index
     tx : array_like
         tx array possibly rotated to correct 1.j**i for complex arrays
+    ii : integer
+        power for complex rotation angle 1.j**ii
     """
     acm = 0.
     try:
@@ -90,7 +92,7 @@ def find_sequence_offset_complex(data_tx, data_rx):
             ii = i
             ix = idx
             acm = act
-    return ix, data_tx*1.j**ii
+    return ix, data_tx*1.j**ii, ii
 
 
 def sync_and_adjust(data_tx, data_rx, adjust="tx"):
@@ -123,7 +125,7 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
     N_rx = data_rx.shape[0]
     assert adjust is "tx" or adjust is "rx", "adjust need to be either 'tx' or 'rx'"
     if N_tx > N_rx:
-        offset, rx = find_sequence_offset_complex(data_rx, data_tx)
+        offset, rx, ii = find_sequence_offset_complex(data_rx, data_tx)
         if adjust is "tx":
             tx = np.roll(data_tx, -offset)
             return adjust_data_length(tx, rx, method="truncate")
@@ -131,7 +133,7 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
             tx, rx = adjust_data_length(data_tx, rx, method="extend")
             return tx, np.roll(rx, offset)
     elif N_tx < N_rx:
-        offset, tx = find_sequence_offset_complex(data_tx, data_rx)
+        offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
         if adjust is "tx":
             tx, rx = adjust_data_length(tx, data_rx, method="extend")
             return np.roll(tx, offset), rx
@@ -139,7 +141,7 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
             rx = np.roll(data_rx, -offset)
             return adjust_data_length(tx, rx, method="truncate")
     else:
-        offset, tx = find_sequence_offset_complex(data_tx, data_rx)
+        offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
         if adjust is "tx":
             return np.roll(tx, offset), data_rx
         elif adjust is "rx":
