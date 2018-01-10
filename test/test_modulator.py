@@ -27,15 +27,15 @@ class TestModulatorAttr(object):
     def test_quantize_symbols_set(self):
         """Check if all quantized symbols are from Q.symbols"""
         sig, sym, bits = self.Q.generate_signal(2 ** 10, 30, beta=0.01, ndim=1)
-        sym_demod = self.Q.quantize(sig[0])
-        out = np.in1d(sym_demod, self.Q.symbols)
+        sym_demod = self.Q.quantize(sig)
+        out = np.in1d(sym_demod.flatten(), self.Q.symbols.flatten())
         assert np.alltrue(out)
 
     def test_quantize_symbols_correct(self):
         """Check if all quantized symbols are from Q.symbols"""
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
-        sym_demod = self.Q.quantize(sig[0])
-        npt.assert_allclose(sym_demod, sym[0])
+        sym_demod = self.Q.quantize(sig)
+        npt.assert_allclose(sym_demod, sym)
 
     def test_decode_correct(self):
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
