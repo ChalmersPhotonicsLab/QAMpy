@@ -103,18 +103,6 @@ class TestSynchronize(object):
         npt.assert_allclose(tx, rx)
 
     @pytest.mark.parametrize("adjust", ["tx", "rx"])
-    @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)])
-    def test_sync_adjust_offset_diff_length(self, adjust, shiftN):
-        Np = 2**15-1
-        N = 2*Np
-        sig, syms, bits = self.Q.generate_signal(N, None, dual_pol=False, beta=0.01, PRBS=True)
-        syms2 = np.roll(syms, shift=shiftN)
-        tx, rx = ber_functions.sync_and_adjust(syms[:Np], syms2, adjust=adjust)
-        npt.assert_allclose(tx, rx)
-        tx, rx = ber_functions.sync_and_adjust(syms, syms2[:Np], adjust=adjust)
-        npt.assert_allclose(tx, rx)
-
-    @pytest.mark.parametrize("adjust", ["tx", "rx"])
     @pytest.mark.parametrize("tx_i, rx_i", list(zip(list(range(1,4)) + 3*[0], 3*[0]+list(range(1,4)))))
     @pytest.mark.parametrize("N1, N2", [(None, 2**15-1), (2**15-1, None)])
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)] + [48630])
