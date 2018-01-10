@@ -315,6 +315,10 @@ def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
     verbose : bool, optional
         return verbose output
 
+    Note
+    ----
+    signal_rx and symbols_tx need to be synchronized and have the same length
+    
     Returns
     -------
     snr : float
