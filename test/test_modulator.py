@@ -69,6 +69,13 @@ class TestModulatorAttr(object):
         ber = self.Q.cal_ber(sig)
         npt.assert_almost_equal(ber, Nerrors/(sig.shape[1]*self.Q.Nbits))
 
+    @pytest.mark.parametrize("snr", [10, 15, 20])
+    @pytest.mark.parametrize("ndims", range(1,3))
+    def test_evm(self, snr, ndims):
+        sig, sym, bits = self.Q.generate_signal(2 ** 15, snr, beta=0.01, ndim=ndims)
+        evm = self.Q.cal_evm(sig, blind=False)
+        npt.assert_almost_equal(-10*np.log10(evm**2), snr, decimal=0)
+
 
 
 

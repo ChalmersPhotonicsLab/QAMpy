@@ -307,7 +307,7 @@ class QAMModulator(object):
         errs = np.count_nonzero(tx_synced - bits_demod)
         return errs/(bits_demod.shape[1]*ndim)
 
-    def cal_evm(self, signal_rx, symbols_tx=None):
+    def cal_evm(self, signal_rx, blind=False, symbols_tx=None):
         """
         Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
         The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
@@ -316,9 +316,11 @@ class QAMModulator(object):
         ----------
         signal_rx    : array_like
             input signal to measure the EVM offset
+        blind : bool, optional
+            calculate the blind EVM (signal is quantized, without taking into account symbol errors). For low SNRs this
+            will underestimate the real EVM, because detection errors are not counted.
         symbols_tx      : array_like, optional
-            known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly.
-            For low SNRs this will underestimate the real EVM, because detection errors are not counted.
+            known symbol sequence. If this is None self.symbols_tx will be used unless blind is True.
 
         Returns
         -------
@@ -333,12 +335,17 @@ class QAMModulator(object):
 
         Note
         ----
-        The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
+        The to calculate the EVM in dB from the RMS EVM we need calculate 10 log10(EVM**2). This differs from some defintions
+        of EVM, e.g. on wikipedia.
         """
         signal_rx = np.atleast_2d(signal_rx)
-        if symbols_tx is None:
+        if blind:
             symbols_tx = self.quantize(signal_rx)
         else:
-            symbols_tx, signal_ad = ber_functions.sync_and_adjust(symbols_tx, signal_rx)
+            if symbols_tx is None:
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = np.atleast_2d(symbols_tx)
+            symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
         return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
 
