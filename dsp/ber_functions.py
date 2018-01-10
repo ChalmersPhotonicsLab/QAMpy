@@ -88,7 +88,6 @@ def find_sequence_offset_complex(data_tx, data_rx):
         idx, ac = find_sequence_offset(tx, data_rx, show_cc=True)
         act = ac.real.max()
         if act > acm:
-            plt.plot(abs(ac))
             ii = i
             ix = idx
             acm = act
