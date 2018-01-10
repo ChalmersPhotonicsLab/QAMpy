@@ -182,7 +182,9 @@ class QAMModulator(object):
             out.append(outdata)
             syms.append(symbols)
             bits.append(bitsq)
-        return np.array(out), np.array(syms), np.array(bits)
+        self.symbols_tx = np.array(syms)
+        self.bits_tx = np.array(bits)
+        return np.array(out), self.symbols_tx, self.bits_tx
 
     def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
