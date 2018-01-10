@@ -46,24 +46,6 @@ class QAMModulator(object):
                                 bitarray(format(self._graycode[i], bformat)))
                                for i in range(len(self._graycode))])
 
-    def _sync_and_adjust(self, syms_tx, syms_rx):
-        syms_tx = self._sync_symbol2signal(syms_tx, syms_rx)
-        syms_tx, syms_rx = ber_functions.adjust_data_length(syms_tx, syms_rx)
-        return syms_tx, syms_rx
-
-    def _sync_symbol2signal(self, syms_tx, syms_demod):
-        acm = 0.
-        for i in range(4):
-            syms_tx = syms_tx*1.j**i
-            idx, ac = ber_functions.find_sequence_offset(syms_tx, syms_demod, show_cc=True)
-            s_sync = np.roll(idx)
-            act = abs(ac.max())
-            if act > acm:
-                s_tx_sync = s_sync
-                ix = idx
-                acm = act
-        return s_tx_sync
-
     @property
     def bits(self):
         """
@@ -240,9 +222,7 @@ class QAMModulator(object):
             symbols_tx = self.modulate(bits_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
-            #symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
-            #symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
-            symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
+            symbols_tx, data_demod = ber_functions.sync_and_adjust(symbols_tx, data_demod)
         return np.count_nonzero(data_demod - symbols_tx)/len(data_demod)
 
     def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, PRBS=(15, utils.bool2bin(np.ones(15)))):
@@ -287,7 +267,7 @@ class QAMModulator(object):
                 bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
             symbols_tx = self.modulate(bits_tx)
         if not synced:
-            s_tx_sync, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
+            s_tx_sync, syms_demod = ber_functions.sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(s_tx_sync)
         return ber_functions.cal_ber_syncd(tx_synced, bits_demod, threshold=0.8)[0]
@@ -324,6 +304,6 @@ class QAMModulator(object):
         if symbols_tx is None:
             symbols_tx = self.quantize(signal_rx)
         else:
-            symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
+            symbols_tx, signal_ad = ber_functions.sync_and_adjust(symbols_tx, signal_rx)
         return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
 
