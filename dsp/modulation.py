@@ -68,7 +68,7 @@ class QAMModulator(object):
         outdata  : array_like
             1D array of complex symbol values. Normalised to energy of 1
         """
-        rem = len(data) % self.bits
+        rem = len(data) % self.Nbits
         if rem > 0:
             data = data[:-rem]
         datab = bitarray()
@@ -168,7 +168,7 @@ class QAMModulator(object):
         syms = []
         bits = []
         for i in range(2):
-            Nbits = N * self.bits
+            Nbits = N * self.Nbits
             if PRBS == True:
                 bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
             else:
@@ -265,7 +265,7 @@ class QAMModulator(object):
         syms_demod = self.quantize(signal_rx)
         if symbols_tx is None:
             if bits_tx is None:
-                bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
+                bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.Nbits, seed=PRBS[1])
             symbols_tx = self.modulate(bits_tx)
         if not synced:
             s_tx_sync, syms_demod = ber_functions.sync_and_adjust(symbols_tx, syms_demod)
