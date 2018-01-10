@@ -63,7 +63,7 @@ class TestModulatorAttr(object):
         _flip_symbols(sig, idx, self.d)
         sig = np.roll(sig, shift=shiftN)
         ber = self.Q.cal_ber(sig, bits_tx=bits)
-        npt.assert_almost_equal(ber, Nerrors/(sig.shape[0]*self.Q.bits))
+        npt.assert_almost_equal(ber, Nerrors/(sig.shape[0]*self.Q.Nbits))
 
 
 
