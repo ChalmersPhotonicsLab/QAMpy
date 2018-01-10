@@ -101,9 +101,17 @@ class QAMModulator(object):
         outbits   : array_like
             1D array of booleans representing bits
         """
-        bt = bitarray()
-        bt.encode(self._encoding, symbols.view(dtype="S16"))
-        return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
+        if symbols.ndim is 1:
+            bt = bitarray()
+            bt.encode(self._encoding, symbols.view(dtype="S16"))
+            return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
+        bits = []
+        for i in range(symbols.shape[0]):
+            bt = bitarray()
+            bt.encode(self._encoding, symbols[i].view(dtype="S16"))
+            bits.append(np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool) )
+        return np.array(bits)
+
 
     def quantize(self, signal):
         """
@@ -269,17 +277,23 @@ class QAMModulator(object):
         N            : integer
             length of input sequence
         """
-        assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
+        signal_rx = np.atleast_2d(signal_rx)
+        ndim = signal_rx.shape[0]
         syms_demod = self.quantize(signal_rx)
         if symbols_tx is None:
             if bits_tx is None:
-                bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.Nbits, seed=PRBS[1])
-            symbols_tx = self.modulate(bits_tx)
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = []
+                for i in range(ndim):
+                    symbols_tx.append(self.modulate(bits_tx[i]))
+                symbols_tx = np.array(symbols_tx)
         if not synced:
-            s_tx_sync, syms_demod = ber_functions.sync_and_adjust(symbols_tx, syms_demod)
+            symbols_tx, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
-        tx_synced = self.decode(s_tx_sync)
-        return ber_functions.cal_ber_syncd(tx_synced, bits_demod, threshold=0.8)[0]
+        tx_synced = self.decode(symbols_tx)
+        errs = np.count_nonzero(tx_synced - bits_demod)
+        return errs/(bits_demod.shape[1]*ndim)
 
     def cal_evm(self, signal_rx, symbols_tx=None):
         """

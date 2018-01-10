@@ -59,15 +59,15 @@ class TestModulatorAttr(object):
 
     @pytest.mark.parametrize("Nerrors", range(5))
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
-    def test_ber(self, Nerrors, shiftN):
-        sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=1)
-        sig = sig[0]
-        bits = bits[0]
-        idx = random.sample(range(sig.shape[0]), Nerrors)
-        _flip_symbols(sig, idx, self.d)
-        sig = np.roll(sig, shift=shiftN)
-        ber = self.Q.cal_ber(sig, bits_tx=bits)
-        npt.assert_almost_equal(ber, Nerrors/(sig.shape[0]*self.Q.Nbits))
+    @pytest.mark.parametrize("ndims", range(1,3))
+    def test_ber(self, Nerrors, shiftN, ndims):
+        sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=ndims)
+        for i in range(ndims):
+            idx = random.sample(range(sig.shape[1]), Nerrors)
+            _flip_symbols(sig[i], idx, self.d)
+        sig = np.roll(sig, shift=shiftN, axis=-1)
+        ber = self.Q.cal_ber(sig)
+        npt.assert_almost_equal(ber, Nerrors/(sig.shape[1]*self.Q.Nbits))
 
 
 
