@@ -41,13 +41,13 @@ class QAMModulator(object):
         self.coding = None
         self._graycode = theory.gray_code_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
-        bformat = "0%db" % self.bits
+        bformat = "0%db" % self.Nbits
         self._encoding = dict([(self.symbols[i].tobytes(),
                                 bitarray(format(self._graycode[i], bformat)))
                                for i in range(len(self._graycode))])
 
     @property
-    def bits(self):
+    def Nbits(self):
         """
         Number of bits per symbol
         """
