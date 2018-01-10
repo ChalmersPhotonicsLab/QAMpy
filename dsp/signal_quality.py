@@ -264,22 +264,23 @@ def cal_ser_qam(data_rx, symbol_tx, M, method="pyx"):
     data_demod = quantize(data_rx, M, method=method)
     return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)
 
-def generate_bitmapping_mtx(mod):
-    out_mtx = np.reshape(mod.decode(mod.gray_coded_symbols),(mod.M, mod.bits))
-    symbs = mod.gray_coded_symbols
-    bit_map = np.zeros([mod.bits, int(mod.M/2),2], dtype=complex)
-
-    for bit in range(mod.bits):
-        bit_map[bit,:,0] = symbs[~out_mtx[:,bit]]
-        bit_map[bit,:,1] = symbs[out_mtx[:,bit]]
-    return symbs, bit_map
+def generate_bitmapping_mtx(coded_symbs, coded_bits, M):
+    num_bits = int(np.log2(M))
+    out_mtx = np.reshape(coded_bits, (M, num_bits))
+    bit_map = np.zeros([num_bits, int(M/2),2], dtype=complex)
+    for bit in range(num_bits):
+        bit_map[bit,:,0] = coded_symbs[~out_mtx[:,bit]]
+        bit_map[bit,:,1] = coded_symbs[out_mtx[:,bit]]
+    return bit_map
 
 def calc_gmi(rx_symbs, tx_symbs, M):
     rx_symbs = np.atleast_2d(rx_symbs)
     tx_symbs = np.atleast_2d(tx_symbs)
     mod = modulation.QAMModulator(M)
-    symbs, bit_map = generate_bitmapping_mtx(mod)
-    num_bits = int(np.log2(M))
+    #symbs, bit_map = generate_bitmapping_mtx(mod)
+    symbs = mod.gray_coded_symbols
+    bit_map = mod.bitmap_mtx#generate_bitmapping_mtx(symbs, mod.decode(symbs), mod.M)
+    num_bits = mod.Nbits
     GMI = np.zeros(rx_symbs.shape[0])
     GMI_per_bit = np.zeros((rx_symbs.shape[0],num_bits))
     SNR_est = np.zeros(rx_symbs.shape[0])

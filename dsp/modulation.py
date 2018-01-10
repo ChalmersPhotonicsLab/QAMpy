@@ -8,7 +8,7 @@ from . import ber_functions
 from . import utils
 from . import impairments
 from .prbs import make_prbs_extXOR
-from .signal_quality import quantize
+from .signal_quality import quantize, generate_bitmapping_mtx
 
 class QAMModulator(object):
     """
@@ -45,6 +45,7 @@ class QAMModulator(object):
         self._encoding = dict([(self.symbols[i].tobytes(),
                                 bitarray(format(self._graycode[i], bformat)))
                                for i in range(len(self._graycode))])
+        self.bitmap_mtx = generate_bitmapping_mtx(self.gray_coded_symbols, self.decode(self.gray_coded_symbols), self.M)
 
     @property
     def Nbits(self):
