@@ -114,18 +114,8 @@ class QAMModulator(object):
         """
         return quantize(utils.normalise_and_center(signal), self.symbols)
 
-    def generate_signal(self,
-                      N,
-                       snr,
-                       carrier_df=0,
-                       lw_LO = 0,
-                       baudrate=1,
-                       samplingrate=1,
-                       PRBS=True,
-                       PRBSorder=(15, 23),
-                       PRBSseed=(None, None),
-                       beta=0.1,
-                        resample_noise=False, dual_pol=True):
+    def generate_signal(self, N, snr, carrier_df=0, lw_LO=0, baudrate=1, samplingrate=1, PRBS=True, PRBSorder=(15, 23),
+                        PRBSseed=(None, None), beta=0.1, resample_noise=False, ndim=2):
         """
         Generate a M-QAM data signal array
 
@@ -163,11 +153,13 @@ class QAMModulator(object):
             roll-off factor for the root raised cosine pulseshaping filter, value needs to be in range [0,1]
         resample_noise : bool
             whether to add the noise before resampling or after (default: False add noise after resampling)
+        ndim : interger
+            number of dimensions of the generated signal (default=2 dual polarization signal)
         """
         out = []
         syms = []
         bits = []
-        for i in range(2):
+        for i in range(ndim):
             Nbits = N * self.Nbits
             if PRBS == True:
                 bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
@@ -187,7 +179,7 @@ class QAMModulator(object):
             # not 100% clear if we should apply before or after resampling
             if lw_LO:
                 outdata = impairments.apply_phase_noise(outdata, lw_LO, samplingrate)
-            if dual_pol:
+            if ndim:
                 out.append(outdata)
                 syms.append(symbols)
                 bits.append(bitsq)
