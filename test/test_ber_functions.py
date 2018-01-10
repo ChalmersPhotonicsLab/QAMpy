@@ -5,7 +5,7 @@ import numpy.testing as npt
 from dsp import modulation, ber_functions
 
 
-class TestSynchronize(object):
+class TestFindSequenceOffset(object):
     Q = modulation.QAMModulator(16)
     d = np.diff(np.unique(Q.symbols.real)).min()
 
@@ -28,6 +28,11 @@ class TestSynchronize(object):
         offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
         sig2 = np.roll(sig2, -offset)
         npt.assert_allclose(syms[:N1], sig2[:N1], atol=self.d/4)
+
+
+class TestFindSequenceOffsetComplex(object):
+    Q = modulation.QAMModulator(16)
+    d = np.diff(np.unique(Q.symbols.real)).min()
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("i", range(4))
@@ -59,6 +64,10 @@ class TestSynchronize(object):
         sig2 = np.roll(sig, shift=shiftN)
         offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms*1j**i, sig2)
         assert (4-ii)%4 == i
+
+class TestSyncAndAdjust(object):
+    Q = modulation.QAMModulator(16)
+    d = np.diff(np.unique(Q.symbols.real)).min()
 
     @pytest.mark.parametrize("N1, N2, adjust", [(None, 1000, "tx"),(None, 1000, "rx" ), (1000, None, "tx"), (1000, None, "rx") ])
     def test_sync_adjust_test_length(self, N1, N2, adjust):
@@ -96,6 +105,10 @@ class TestSynchronize(object):
         syms2 = np.roll(syms, shift=shiftN)
         tx, rx = ber_functions.sync_and_adjust(syms[:N1]*1j**tx_i, syms2[:N2]*1j**rx_i, adjust=adjust)
         npt.assert_allclose(tx, rx)
+
+class TestAdjustDataLength(object):
+    Q = modulation.QAMModulator(16)
+    d = np.diff(np.unique(Q.symbols.real)).min()
 
     @pytest.mark.parametrize("N1, N2", [(None, 1000), (1000, None)])
     @pytest.mark.parametrize("method", ["truncate", "extend", None])
