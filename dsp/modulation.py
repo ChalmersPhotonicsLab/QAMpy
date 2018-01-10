@@ -8,7 +8,7 @@ from . import ber_functions
 from . import utils
 from . import impairments
 from .prbs import make_prbs_extXOR
-from .signal_quality import quantize, generate_bitmapping_mtx
+from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr
 
 class QAMModulator(object):
     """
@@ -365,4 +365,24 @@ class QAMModulator(object):
             return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1))#/np.mean(abs(self.symbols)**2))
         else:
             return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
+
+    def est_snr(self, signal_rx, symbols_tx=None, synced=False, per_dim=True):
+        signal_rx = np.atleast_2d(signal_rx)
+        ndims = signal_rx.shape[0]
+        if symbols_tx is None:
+            symbols_tx = self.symbols_tx
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
+        if not synced:
+            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx)
+        if per_dim:
+            snr = np.zeros(ndims, dtype=np.float64)
+            for i in range(ndims):
+                snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
+            return snr
+        else:
+            snr = 0.
+            for i in range(ndims):
+                snr += estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
+            return snr/ndims
 
