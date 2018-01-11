@@ -277,9 +277,8 @@ def calc_gmi(rx_symbs, tx_symbs, M):
     rx_symbs = np.atleast_2d(rx_symbs)
     tx_symbs = np.atleast_2d(tx_symbs)
     mod = modulation.QAMModulator(M)
-    #symbs, bit_map = generate_bitmapping_mtx(mod)
     symbs = mod.gray_coded_symbols
-    bit_map = mod.bitmap_mtx#generate_bitmapping_mtx(symbs, mod.decode(symbs), mod.M)
+    bit_map = mod.bitmap_mtx#
     num_bits = mod.Nbits
     GMI = np.zeros(rx_symbs.shape[0])
     GMI_per_bit = np.zeros((rx_symbs.shape[0],num_bits))
