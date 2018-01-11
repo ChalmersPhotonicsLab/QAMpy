@@ -221,7 +221,8 @@ class QAMModulator(object):
 
     def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
-        Calculate the symbol error rate of the received signal.
+        Calculate the symbol error rate of the received signal.Currently does not check
+        for correct polarization.
 
         Parameters
         ----------
@@ -263,7 +264,8 @@ class QAMModulator(object):
 
     def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
-        Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits.
+        Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits. Currently does not check
+        for correct polarization.
 
         Parameters
         ----------
@@ -310,7 +312,8 @@ class QAMModulator(object):
     def cal_evm(self, signal_rx, blind=False, symbols_tx=None):
         """
         Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
-        The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
+        The EVM here is normalised to the average symbol power, not the peak as in some other definitions. Currently does not check
+        for correct polarization.
 
         Parameters
         ----------
