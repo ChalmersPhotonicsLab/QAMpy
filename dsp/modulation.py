@@ -241,8 +241,8 @@ class QAMModulator(object):
 
         Returns
         -------
-        SER   : float, array_like
-            symbol error rate
+        SER   : array_like
+            symbol error rate per dimension
         """
         signal_rx = np.atleast_2d(signal_rx)
         ndim = signal_rx.shape[0]
@@ -285,8 +285,8 @@ class QAMModulator(object):
 
         Returns
         -------
-        ber          : float, array_like
-            bit-error-rate in linear units
+        ber          :  array_like
+            bit-error-rate in linear units per dimension
         """
         signal_rx = np.atleast_2d(signal_rx)
         ndim = signal_rx.shape[0]
@@ -327,8 +327,8 @@ class QAMModulator(object):
 
         Returns
         -------
-        evm       : float, array_like
-            RMS EVM
+        evm       : array_like
+            RMS EVM per dimension
 
         References
         ----------
@@ -353,6 +353,23 @@ class QAMModulator(object):
         return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1))#/np.mean(abs(self.symbols)**2))
 
     def est_snr(self, signal_rx, symbols_tx=None, synced=False):
+        """
+        Estimate the SNR of a given input signal, using known symbols.
+
+        Parameters
+        ----------
+        signal_rx : array_like
+            input signal
+        symbols_tx : array_like, optional
+            known transmitted symbols (default: None means that self.symbols_tx are used)
+        synced : bool, optional
+            whether the signal and symbols are synchronized already
+
+        Returns
+        -------
+        snr: array_like
+            snr estimate per dimension
+        """
         signal_rx = np.atleast_2d(signal_rx)
         ndims = signal_rx.shape[0]
         if symbols_tx is None:
