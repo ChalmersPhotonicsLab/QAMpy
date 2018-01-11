@@ -219,7 +219,7 @@ class QAMModulator(object):
         self.bits_tx = np.array(bits)
         return np.array(out), self.symbols_tx, self.bits_tx
 
-    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, per_dim=True):
+    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
         Calculate the symbol error rate of the received signal.
 
@@ -233,8 +233,6 @@ class QAMModulator(object):
             bitstream at the transmitter for comparison against signal.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
-        per_dim  : bool, optional
-            return separate SER per dimension
 
         Note
         ----
@@ -260,14 +258,10 @@ class QAMModulator(object):
         data_demod = self.quantize(signal_rx)
         if not synced:
             symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
-        if per_dim:
-            errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
-            return errs/data_demod.shape[1]
-        else:
-            errs = np.count_nonzero(data_demod - symbols_tx)
-            return errs/(ndim*data_demod.shape[1])
+        errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
+        return errs/data_demod.shape[1]
 
-    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, per_dim=True):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
         Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits.
 
@@ -281,8 +275,6 @@ class QAMModulator(object):
             transmitted bit sequence to compare against.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
-        per_dim  : bool, optional
-            return separate BER per dimension
 
         Note
         ----
@@ -312,14 +304,10 @@ class QAMModulator(object):
             symbols_tx, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(symbols_tx)
-        if per_dim:
-            errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
-            return errs/bits_demod.shape[1]
-        else:
-            errs = np.count_nonzero(tx_synced - bits_demod)
-            return errs/(bits_demod.shape[1]*ndim)
+        errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
+        return errs/bits_demod.shape[1]
 
-    def cal_evm(self, signal_rx, blind=False, symbols_tx=None, per_dim=True):
+    def cal_evm(self, signal_rx, blind=False, symbols_tx=None):
         """
         Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
         The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
@@ -333,8 +321,6 @@ class QAMModulator(object):
             will underestimate the real EVM, because detection errors are not counted.
         symbols_tx      : array_like, optional
             known symbol sequence. If this is None self.symbols_tx will be used unless blind is True.
-        per_dim  : bool, optional
-            return separate EVM per dimension
 
         Returns
         -------
@@ -361,12 +347,9 @@ class QAMModulator(object):
             else:
                 symbols_tx = np.atleast_2d(symbols_tx)
             symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
-        if per_dim:
-            return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1))#/np.mean(abs(self.symbols)**2))
-        else:
-            return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
+        return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1))#/np.mean(abs(self.symbols)**2))
 
-    def est_snr(self, signal_rx, symbols_tx=None, synced=False, per_dim=True):
+    def est_snr(self, signal_rx, symbols_tx=None, synced=False):
         signal_rx = np.atleast_2d(signal_rx)
         ndims = signal_rx.shape[0]
         if symbols_tx is None:
@@ -375,14 +358,8 @@ class QAMModulator(object):
             symbols_tx = np.atleast_2d(symbols_tx)
         if not synced:
             symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx)
-        if per_dim:
-            snr = np.zeros(ndims, dtype=np.float64)
-            for i in range(ndims):
-                snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
-            return snr
-        else:
-            snr = 0.
-            for i in range(ndims):
-                snr += estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
-            return snr/ndims
+        snr = np.zeros(ndims, dtype=np.float64)
+        for i in range(ndims):
+            snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
+        return snr
 

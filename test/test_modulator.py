@@ -48,14 +48,13 @@ class TestModulatorAttr(object):
     @pytest.mark.parametrize("Nerrors", range(5))
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
     @pytest.mark.parametrize("ndims", range(1,3))
-    @pytest.mark.parametrize("per_dim", [True, False])
-    def test_ser(self, Nerrors, shiftN, ndims, per_dim):
+    def test_ser(self, Nerrors, shiftN, ndims):
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=ndims)
         for i in range(ndims):
             idx = random.sample(range(sig.shape[1]), Nerrors)
             _flip_symbols(sig[i], idx, self.d)
         sig = np.roll(sig, shift=shiftN, axis=-1)
-        ser = self.Q.cal_ser(sig, per_dim=per_dim)
+        ser = self.Q.cal_ser(sig)
         # note that for the npt.assert_... functions if the desired is scalar, all array values are checked
         # against the scalar hence it passes if ser is 1- or multi-dim
         npt.assert_almost_equal(ser, Nerrors/sig.shape[1])
@@ -63,53 +62,21 @@ class TestModulatorAttr(object):
     @pytest.mark.parametrize("Nerrors", range(5))
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
     @pytest.mark.parametrize("ndims", range(1,3))
-    @pytest.mark.parametrize("per_dim", [True, False])
-    def test_ber(self, Nerrors, shiftN, ndims, per_dim):
+    def test_ber(self, Nerrors, shiftN, ndims):
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=ndims)
         for i in range(ndims):
             idx = random.sample(range(sig.shape[1]), Nerrors)
             _flip_symbols(sig[i], idx, self.d)
         sig = np.roll(sig, shift=shiftN, axis=-1)
-        ber = self.Q.cal_ber(sig, per_dim=per_dim)
+        ber = self.Q.cal_ber(sig)
         npt.assert_almost_equal(ber, Nerrors/(sig.shape[1]*self.Q.Nbits))
 
     @pytest.mark.parametrize("snr", [10, 15, 20])
     @pytest.mark.parametrize("ndims", range(2,3))
-    @pytest.mark.parametrize("per_dim", [True, False])
-    def test_evm(self, snr, ndims, per_dim):
+    def test_evm(self, snr, ndims):
         sig, sym, bits = self.Q.generate_signal(2 ** 15, snr, beta=0.01, ndim=ndims)
-        evm = self.Q.cal_evm(sig, blind=False, per_dim=per_dim)
+        evm = self.Q.cal_evm(sig, blind=False)
         npt.assert_almost_equal(-10*np.log10(evm**2), snr, decimal=0)
-
-    @pytest.mark.parametrize("ndims", range(2,3))
-    @pytest.mark.parametrize("per_dim", [True, False])
-    def test_evm_dims(self, ndims, per_dim):
-        sig, sym, bits = self.Q.generate_signal(2 ** 15, 20, beta=0.01, ndim=ndims)
-        evm = self.Q.cal_evm(sig, blind=False, per_dim=per_dim)
-        if per_dim:
-            assert evm.shape[0] is ndims
-        else:
-            assert np.isscalar(evm) or evm.shape[0] is 1
-
-    @pytest.mark.parametrize("ndims", range(2,3))
-    @pytest.mark.parametrize("per_dim", [True, False])
-    def test_ser_dims(self, ndims, per_dim):
-        sig, sym, bits = self.Q.generate_signal(2 ** 15, 20, beta=0.01, ndim=ndims)
-        ser = self.Q.cal_ser(sig, per_dim=per_dim)
-        if per_dim:
-            assert ser.shape[0] is ndims
-        else:
-            assert np.isscalar(ser) or ser.shape[0] is 1
-
-    @pytest.mark.parametrize("ndims", range(2,3))
-    @pytest.mark.parametrize("per_dim", [True, False])
-    def test_ber_dims(self, ndims, per_dim):
-        sig, sym, bits = self.Q.generate_signal(2 ** 15, 20, beta=0.01, ndim=ndims)
-        ber = self.Q.cal_ber(sig, per_dim=per_dim)
-        if per_dim:
-            assert ber.shape[0] is ndims
-        else:
-            assert np.isscalar(ber) or ber.shape[0] is 1
 
     @pytest.mark.parametrize("snr", [10, 15, 20])
     def test_est_snr(self, snr):
