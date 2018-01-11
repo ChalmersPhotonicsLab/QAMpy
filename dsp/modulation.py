@@ -8,7 +8,7 @@ from . import ber_functions
 from . import utils
 from . import impairments
 from .prbs import make_prbs_extXOR
-from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr
+from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
 class QAMModulator(object):
     """
@@ -382,4 +382,28 @@ class QAMModulator(object):
         for i in range(ndims):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
         return snr
+
+    def cal_gmi(self, signal_rx, symbols_tx=None):
+        signal_rx = np.atleast_2d(signal_rx)
+        if symbols_tx is None:
+            symbols_tx = self.symbols_tx
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
+        ndims = signal_rx.shape[0]
+        GMI = np.zeros(ndims, dtype=np.float64)
+        GMI_per_bit = np.zeros((ndims, self.Nbits), dtype=np.float64)
+        mm = np.sqrt(np.mean(np.abs(signal_rx)**2, axis=-1))
+        signal_rx = signal_rx/mm[:,np.newaxis]
+        tx, rx = self._sync_and_adjust(symbols_tx, signal_rx)
+        snr = self.est_snr(rx, symbols_tx=tx, synced=True)
+        bits = self.decode(self.quantize(tx)).astype(np.int)
+        # For every mode present, calculate GMI based on SD-demapping
+        for mode in range(ndims):
+            l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self.bitmap_mtx)
+            # GMI per bit
+            for bit in range(self.Nbits):
+                GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[mode, bit::self.Nbits])*l_values[bit::self.Nbits])))
+            GMI[mode] = np.sum(GMI_per_bit[mode])
+        return GMI, GMI_per_bit
+
 

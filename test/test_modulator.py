@@ -4,7 +4,7 @@ import random
 import numpy.testing as npt
 import matplotlib.pylab as plt
 
-from dsp import modulation
+from dsp import modulation, signal_quality
 
 def _flip_symbols(sig, idx, d):
     for i in idx:
@@ -83,6 +83,14 @@ class TestModulatorAttr(object):
         sig, sym, bits = self.Q.generate_signal(2 ** 15, snr, beta=0.01, ndim=1)
         e_snr = self.Q.est_snr(sig)
         npt.assert_almost_equal(10*np.log10(e_snr), snr, decimal=1)
+
+@pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
+@pytest.mark.parametrize("ndims", range(1,3))
+def test_gmi_cal(M, ndims):
+    Q = modulation.QAMModulator(M)
+    sig, syms, bits = Q.generate_signal(2**15, None, ndim=ndims)
+    gmi = Q.cal_gmi(sig)[0]
+    npt.assert_almost_equal(gmi, np.log2(M), decimal=1)
 
 
 
