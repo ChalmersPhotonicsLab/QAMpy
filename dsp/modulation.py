@@ -8,7 +8,7 @@ from . import ber_functions
 from . import utils
 from . import impairments
 from .prbs import make_prbs_extXOR
-from .signal_quality import quantize, generate_bitmapping_mtx
+from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr
 
 class QAMModulator(object):
     """
@@ -54,6 +54,15 @@ class QAMModulator(object):
         """
         return int(np.log2(self.M))
 
+    def _sync_and_adjust(self, tx, rx):
+        tx_out = []
+        rx_out = []
+        for i in range(tx.shape[0]):
+            t, r = ber_functions.sync_and_adjust(tx[i], rx[i])
+            tx_out.append(t)
+            rx_out.append(r)
+        return np.array(tx_out), np.array(rx_out)
+
     def modulate(self, data):
         """
         Modulate a bit sequence into QAM symbols
@@ -68,7 +77,7 @@ class QAMModulator(object):
         outdata  : array_like
             1D array of complex symbol values. Normalised to energy of 1
         """
-        rem = len(data) % self.bits
+        rem = len(data) % self.Nbits
         if rem > 0:
             data = data[:-rem]
         datab = bitarray()
@@ -85,16 +94,28 @@ class QAMModulator(object):
         Parameters
         ----------
         symbols   : array_like
-            1D array of complex input symbols
+            array of complex input symbols
+
+        Note
+        ----
+        Unlike the other functions this function does not always return a 2D array.
 
         Returns
         -------
         outbits   : array_like
-            1D array of booleans representing bits
+            array of booleans representing bits with same number of dimensions as symbols
         """
-        bt = bitarray()
-        bt.encode(self._encoding, symbols.view(dtype="S16"))
-        return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
+        if symbols.ndim is 1:
+            bt = bitarray()
+            bt.encode(self._encoding, symbols.view(dtype="S16"))
+            return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
+        bits = []
+        for i in range(symbols.shape[0]):
+            bt = bitarray()
+            bt.encode(self._encoding, symbols[i].view(dtype="S16"))
+            bits.append(np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool) )
+        return np.array(bits)
+
 
     def quantize(self, signal):
         """
@@ -103,29 +124,21 @@ class QAMModulator(object):
         Parameters
         ----------
         signal   : array_like
-            1D array of the input signal
+            2D array of the input signal
 
         Returns
         -------
         symbols  : array_like
-            1d array of the detected symbols
-        idx      : array_like
-            1D array of indices into QAMmodulator.symbols
+            2d array of the detected symbols
         """
-        return quantize(utils.normalise_and_center(signal), self.symbols)
+        signal = np.atleast_2d(signal)
+        outsyms = np.zeros_like(signal)
+        for i in range(signal.shape[0]):
+            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.symbols)
+        return outsyms
 
-    def generate_signal(self,
-                      N,
-                       snr,
-                       carrier_df=0,
-                       lw_LO = 0,
-                       baudrate=1,
-                       samplingrate=1,
-                       PRBS=True,
-                       PRBSorder=(15, 23),
-                       PRBSseed=(None, None),
-                       beta=0.1,
-                        resample_noise=False, dual_pol=True):
+    def generate_signal(self, N, snr, carrier_df=0, lw_LO=0, baudrate=1, samplingrate=1, PRBS=True, PRBSorder=(15, 23),
+                        PRBSseed=(None, None), beta=0.1, resample_noise=False, ndim=2):
         """
         Generate a M-QAM data signal array
 
@@ -163,12 +176,24 @@ class QAMModulator(object):
             roll-off factor for the root raised cosine pulseshaping filter, value needs to be in range [0,1]
         resample_noise : bool
             whether to add the noise before resampling or after (default: False add noise after resampling)
+        ndim : interger
+            number of dimensions of the generated signal (default=2 dual polarization signal)
+
+        Returns
+        -------
+        signal : array_like
+            the calculated signal array (2D)
+        syms  : array_like
+            the transmitted symbols (2D)
+        bits : array_like
+            the transmitted bits (2D)
+
         """
         out = []
         syms = []
         bits = []
-        for i in range(2):
-            Nbits = N * self.bits
+        for i in range(ndim):
+            Nbits = N * self.Nbits
             if PRBS == True:
                 bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
             else:
@@ -187,124 +212,177 @@ class QAMModulator(object):
             # not 100% clear if we should apply before or after resampling
             if lw_LO:
                 outdata = impairments.apply_phase_noise(outdata, lw_LO, samplingrate)
-            if dual_pol:
-                out.append(outdata)
-                syms.append(symbols)
-                bits.append(bitsq)
-            else:
-                return outdata, symbols, bitsq
-        return np.array(out), np.array(syms), np.array(bits)
+            out.append(outdata)
+            syms.append(symbols)
+            bits.append(bitsq)
+        self.symbols_tx = np.array(syms)
+        self.bits_tx = np.array(bits)
+        return np.array(out), self.symbols_tx, self.bits_tx
 
-    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
+    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, per_dim=True):
         """
-        Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
+        Calculate the symbol error rate of the received signal.
 
         Parameters
         ----------
         signal_rx  : array_like
-            Received signal (1D complex array)
-
-        symbol_tx  : array_like, optional
-            symbols at the transmitter for comparison against signal. If set to None bits_tx needs to be given (Default is None)
+            Received signal (2D complex array)
+        symbols_tx  : array_like, optional
+            symbols at the transmitter for comparison against signal.
         bits_tx    : array_like, optional
-            bitstream at the transmitter for comparison against signal. If set to None symbol_tx needs to be given (Default is None)
-
+            bitstream at the transmitter for comparison against signal.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+        per_dim  : bool, optional
+            return separate SER per dimension
 
+        Note
+        ----
+        If neither symbols_tx or bits_tx are given use self.symbols_tx
 
         Returns
         -------
-        SER   : float
+        SER   : float, array_like
             symbol error rate
         """
-        assert symbols_tx is not None or bits_tx is not None, "data_tx or symbol_tx must be given"
+        signal_rx = np.atleast_2d(signal_rx)
+        ndim = signal_rx.shape[0]
         if symbols_tx is None:
-            symbols_tx = self.modulate(bits_tx)
+            if bits_tx is None:
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = np.zeros_like(signal_rx)
+                bits_tx = np.atleast_2d(bits_tx)
+                for i in range(ndim):
+                    symbols_tx[i] = self.modulate(bits_tx[i])
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
-            symbols_tx, data_demod = ber_functions.sync_and_adjust(symbols_tx, data_demod)
-        return np.count_nonzero(data_demod - symbols_tx)/len(data_demod)
+            symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
+        if per_dim:
+            errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
+            return errs/data_demod.shape[1]
+        else:
+            errs = np.count_nonzero(data_demod - symbols_tx)
+            return errs/(ndim*data_demod.shape[1])
 
-    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, PRBS=(15, utils.bool2bin(np.ones(15)))):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False, per_dim=True):
         """
-        Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
+        Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits.
 
         Parameters
         ----------
-
         signal_rx    : array_like
             received signal to demodulate and calculate BER of
-
         bits_tx      : array_like, optional
-            transmitted bit sequence to compare against. (default is None, which either PRBS or syms_tx has to be given)
-
+            transmitted bit sequence to compare against.
         symbols_tx      : array_like, optional
-            transmitted bit sequence to compare against. (default is None, which means bits_tx or PRBS has to be given)
-
+            transmitted bit sequence to compare against.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+        per_dim  : bool, optional
+            return separate BER per dimension
 
-        PRBS         : tuple(int, int), optional
-            tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
+        Note
+        ----
+        If neither bits_tx or symbols_tx are given, we use the self.symbols_tx
 
 
         Returns
         -------
-
-        ber          : float
+        ber          : float, array_like
             bit-error-rate in linear units
-
-        errs         : integer
-            number of detected errors
-
-        N            : integer
-            length of input sequence
         """
-        assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
+        signal_rx = np.atleast_2d(signal_rx)
+        ndim = signal_rx.shape[0]
         syms_demod = self.quantize(signal_rx)
         if symbols_tx is None:
             if bits_tx is None:
-                bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
-            symbols_tx = self.modulate(bits_tx)
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = []
+                bits_tx = np.atleast_2d(bits_tx)
+                for i in range(ndim):
+                    symbols_tx.append(self.modulate(bits_tx[i]))
+                symbols_tx = np.array(symbols_tx)
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
         if not synced:
-            s_tx_sync, syms_demod = ber_functions.sync_and_adjust(symbols_tx, syms_demod)
+            symbols_tx, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
-        tx_synced = self.decode(s_tx_sync)
-        return ber_functions.cal_ber_syncd(tx_synced, bits_demod, threshold=0.8)[0]
+        tx_synced = self.decode(symbols_tx)
+        if per_dim:
+            errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
+            return errs/bits_demod.shape[1]
+        else:
+            errs = np.count_nonzero(tx_synced - bits_demod)
+            return errs/(bits_demod.shape[1]*ndim)
 
-    def cal_evm(self, signal_rx, symbols_tx=None):
+    def cal_evm(self, signal_rx, blind=False, symbols_tx=None, per_dim=True):
         """
-        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1]. The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
+        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
+        The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
 
         Parameters
         ----------
-
         signal_rx    : array_like
             input signal to measure the EVM offset
-
+        blind : bool, optional
+            calculate the blind EVM (signal is quantized, without taking into account symbol errors). For low SNRs this
+            will underestimate the real EVM, because detection errors are not counted.
         symbols_tx      : array_like, optional
-            known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly. For low SNRs this will underestimate the real EVM, because detection errors are not counted.
+            known symbol sequence. If this is None self.symbols_tx will be used unless blind is True.
+        per_dim  : bool, optional
+            return separate EVM per dimension
 
         Returns
         -------
-
-        evm       : array_like
+        evm       : float, array_like
             RMS EVM
 
         References
         ----------
-        ...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
+        ...[1] Shafik, R. "On the extended relationships among EVM, BER and SNR as performance metrics". In Conference on Electrical and Computer Engineering (p. 408) (2006).
+         Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
 
 
         Note
         ----
-
-        The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
+        The to calculate the EVM in dB from the RMS EVM we need calculate 10 log10(EVM**2). This differs from some defintions
+        of EVM, e.g. on wikipedia.
         """
-        if symbols_tx is None:
+        signal_rx = np.atleast_2d(signal_rx)
+        if blind:
             symbols_tx = self.quantize(signal_rx)
         else:
-            symbols_tx, signal_ad = ber_functions.sync_and_adjust(symbols_tx, signal_rx)
-        return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
+            if symbols_tx is None:
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = np.atleast_2d(symbols_tx)
+            symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
+        if per_dim:
+            return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1))#/np.mean(abs(self.symbols)**2))
+        else:
+            return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx)))#/np.mean(abs(self.symbols)**2))
+
+    def est_snr(self, signal_rx, symbols_tx=None, synced=False, per_dim=True):
+        signal_rx = np.atleast_2d(signal_rx)
+        ndims = signal_rx.shape[0]
+        if symbols_tx is None:
+            symbols_tx = self.symbols_tx
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
+        if not synced:
+            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx)
+        if per_dim:
+            snr = np.zeros(ndims, dtype=np.float64)
+            for i in range(ndims):
+                snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
+            return snr
+        else:
+            snr = 0.
+            for i in range(ndims):
+                snr += estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
+            return snr/ndims
 
