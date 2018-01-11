@@ -384,6 +384,23 @@ class QAMModulator(object):
         return snr
 
     def cal_gmi(self, signal_rx, symbols_tx=None):
+        """
+        Calculate the generalized mutual information for the received signal.
+
+        Parameters
+        ----------
+        signal_rx : array_like
+            equalised input signal
+        symbols_tx : array_like
+            transmitted symbols (default:None use self.symbols_tx of the modulator)
+
+        Returns
+        -------
+        gmi : array_like
+            generalized mutual information per mode
+        gmi_per_bit : array_like
+            generalized mutual information per transmitted bit per mode
+        """
         signal_rx = np.atleast_2d(signal_rx)
         if symbols_tx is None:
             symbols_tx = self.symbols_tx
