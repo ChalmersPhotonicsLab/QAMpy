@@ -111,6 +111,13 @@ class TestModulatorAttr(object):
         else:
             assert np.isscalar(ber) or ber.shape[0] is 1
 
+    @pytest.mark.parametrize("snr", [10, 15, 20])
+    def test_est_snr(self, snr):
+        sig, sym, bits = self.Q.generate_signal(2 ** 15, snr, beta=0.01, ndim=1)
+        e_snr = self.Q.est_snr(sig)
+        npt.assert_almost_equal(10*np.log10(e_snr), snr, decimal=1)
+
+
 
 
 
