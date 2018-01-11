@@ -292,7 +292,7 @@ def calc_gmi(rx_symbs, tx_symbs, M):
         snr = estimate_snr(rx, tx, symbs)
         SNR_est[mode] = 10*np.log10(snr)
         l_values = soft_l_value_demapper(rx, M, snr, bit_map)
-        bits = mod.decode(mod.quantize(tx)).astype(np.int)
+        bits = mod.decode(mod.quantize(tx)).astype(np.int).flatten()
         # GMI per bit
         for bit in range(num_bits):
             GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[bit::num_bits])*l_values[bit::num_bits])))
