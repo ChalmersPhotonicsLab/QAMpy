@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, utils, modulation
+from dsp import  equalisation, impairments, modulation
 
 
 fb = 40.e9
@@ -16,12 +16,9 @@ ntaps=40
 
 QAM = modulation.QAMModulator(M)
 
-X, sx, bx = QAM.generateSignal(N, 14, baudrate=fb, samplingrate=fs)
-Y, sy, by = QAM.generateSignal(N, 14, baudrate=fb, samplingrate=fs)
-omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
+S, s, b = QAM.generate_signal(N, 14, baudrate=fb, samplingrate=fs)
 
-S = np.vstack([X,Y])
-SS = utils.apply_PMD_to_field(S, theta, t_pmd, omega)
+SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 wxy, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="cma")
 wxy_m, err_m = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="mcma")
 E = equalisation.apply_filter(SS, os, wxy)
@@ -30,12 +27,12 @@ print(E.shape)
 print(SS.shape)
 
 
-evmX = QAM.cal_EVM(X[::2])
-evmY = QAM.cal_EVM(Y[::2])
-evmEx = QAM.cal_EVM(E[0])
-evmEy = QAM.cal_EVM(E[1])
-evmEx_m = QAM.cal_EVM(E_m[0])
-evmEy_m = QAM.cal_EVM(E_m[1])
+evmX = QAM.cal_evm(S[0, ::2])
+evmY = QAM.cal_evm(S[1, ::2])
+evmEx = QAM.cal_evm(E[0])
+evmEy = QAM.cal_evm(E[1])
+evmEx_m = QAM.cal_evm(E_m[0])
+evmEy_m = QAM.cal_evm(E_m[1])
 #sys.exit()
 plt.figure()
 plt.subplot(131)
@@ -50,8 +47,8 @@ plt.plot(E_m[1].real, E_m[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy_m*100))
 plt.legend()
 plt.subplot(133)
 plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.plot(S[0,::2].real, S[0,::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.plot(S[1,::2].real, S[1,::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
 plt.legend()
 
 plt.figure()

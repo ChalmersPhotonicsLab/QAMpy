@@ -1,28 +1,9 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, modulation
-from dsp.signal_quality import cal_blind_evm
+from dsp import  equalisation, modulation, impairments
+from dsp.signal_quality import cal_evm
 
 
-
-def H_PMD(theta, t, omega): #see Ip and Kahn JLT 25, 2033 (2007)
-    """"""
-    h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    h2 = np.array([[np.exp(1.j*omega*t/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t/2)]])
-    h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-    H = np.einsum('ij,jkl->ikl', h1, h2)
-    H = np.einsum('ijl,jk->ikl', H, h3)
-    return H
-
-def rotate_field(theta, field):
-    h = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    return np.dot(h, field)
-
-def applyPMD(field, H):
-    Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(field, axes=1),axis=1), axes=1)
-    SSf = np.einsum('ijk,ik -> ik',H , Sf)
-    SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
-    return SS
 
 fb = 40.e9
 os = 2
@@ -40,17 +21,9 @@ t_pmd = 20.e-12
 Ncma = 10000
 Nrde = N//2//os -int(1.5*ntaps)
 
-X, Xsymbols, Xbits = QAM.generateSignal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=15)
-Y, Ysymbols, Ybits = QAM.generateSignal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+S, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
 
-omega = 2*np.pi*np.linspace(-fs/2, fs/2, N*os, endpoint=False)
-
-H = H_PMD(theta, t_pmd, omega)
-H2 = H_PMD(-theta, -t_pmd, omega)
-
-S = np.vstack([X,Y])
-
-SS = applyPMD(S, H)
+SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 
 E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
@@ -59,14 +32,14 @@ E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, 
 print("equalised")
 
 
-evmX = cal_blind_evm(X[::2], M)
-evmY = cal_blind_evm(Y[::2], M)
-evmEx = cal_blind_evm(E[0], M)
-evmEy = cal_blind_evm(E[1], M)
-evmEx_m = cal_blind_evm(E_m[0], M)
-evmEy_m = cal_blind_evm(E_m[1], M)
-evmEx_s = cal_blind_evm(E_s[0], M)
-evmEy_s = cal_blind_evm(E_s[1], M)
+evmX = cal_evm(S[0,::2], M)
+evmY = cal_evm(S[1,::2], M)
+evmEx = cal_evm(E[0], M)
+evmEy = cal_evm(E[1], M)
+evmEx_m = cal_evm(E_m[0], M)
+evmEy_m = cal_evm(E_m[1], M)
+evmEx_s = cal_evm(E_s[0], M)
+evmEy_s = cal_evm(E_s[1], M)
 
 #sys.exit()
 plt.figure()
@@ -87,8 +60,8 @@ plt.plot(E_s[0].real, E_s[0].imag, 'r.' ,label=r"$EVM_x=%.1f\%%$"%(evmEx_s*100))
 plt.legend()
 plt.subplot(224)
 plt.title('Original')
-plt.plot(X[::2].real, X[::2].imag, 'r.', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(Y[::2].real, Y[::2].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.plot(S[0,::2].real, S[0,::2].imag, 'r.', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
+plt.plot(S[1,::2].real, S[1,::2].imag, 'g.', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
 plt.legend()
 
 plt.figure()

@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
 import numpy as np
 
 from .. import utils
-from ..theory import calculate_MQAM_symbols, calculate_MQAM_scaling_factor
+from ..theory import cal_symbols_qam, cal_scaling_factor_qam
 from ..segmentaxis import segment_axis
 
+#TODO: update documentation with all references
 
 """
 Equalisation functions the equaliser update functions provided are:
@@ -38,40 +40,60 @@ References
 
 """
 
+#TODO: include selection for either numba or cython code
 try:
-    from .equaliser_cython import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA, FS_DD
+    from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, ErrorFct
 except:
     #use python code if cython code is not available
-    raise Warning("can not use cython training functions")
-    from .training_python import FS_RDE, FS_CMA, FS_MRDE, FS_MCMA, FS_SBD, FS_MDDMA
-from .training_python import FS_SCA, FS_CME
+    #raise Warning("can not use cython training functions")
+    from .equaliser_numba import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
 
-TRAINING_FCTS = {"cma": FS_CMA, "mcma": FS_MCMA,
-                 "rde": FS_RDE, "mrde": FS_MRDE,
-                 "sbd": FS_SBD, "mddma": FS_MDDMA,
-                 "sca": FS_SCA, "cme": FS_CME,
-                 "dd": FS_DD}
+TRAINING_FCTS = ["cma", "mcma",
+                 "rde", "mrde",
+                 "sbd", "mddma",
+                 "sca", "cme",
+                 "dd"]
 
-
-def _init_args(method, M, **kwargs):
+def _select_errorfct(method, M, **kwargs):
+    #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["mcma"]:
-        return _calculate_Rconstant_complex(M),
+        return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
-        return _calculate_Rconstant(M),
+        return ErrorFctCMA(_cal_Rconstant(M))
     elif method in ["rde"]:
-        return generate_partition_codes_radius(M)
+        p, c = generate_partition_codes_radius(M)
+        return RDEErr(p, c)
     elif method in ["mrde"]:
-        return generate_partition_codes_complex(M)
+        p, c = generate_partition_codes_complex(M)
+        return ErrorFctMRDE(p, c)
     elif method in ["sca"]:
-        return _calculate_Rsca(M),
+        return SCAErr(_cal_Rsca(M))
     elif method in ["cme"]:
-        syms = calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M))
-        d = np.min(abs(np.diff(syms.real))) # should be fixed to consider different spacing between real and imag
-        R = _calculate_Rconstant(M)
-        beta = kwargs['beta']
-        return (R, d, beta)
+        syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
+        d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
+        R = _cal_Rconstant(M)
+        r2 = np.mean(abs(syms)**2)
+        r4 = np.mean(abs(syms)**4)
+        A = r4/r2
+        bb = np.max(abs(syms*abs(syms)**2-A))
+        try:
+            beta = kwargs['beta']
+        except:
+            r2 = np.mean(abs(syms)**2)
+            r4 = np.mean(abs(syms)**4)
+            A = r4/r2
+            beta = np.max(abs(syms*abs(syms)**2-A))/2
+        return CMEErr(R, d, beta)
+    elif method in ['sbd']:
+        return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
+    elif method in ['mddma']:
+        return ErrorFctMDDMA(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
+    elif method in ['dd']:
+        return ErrorFctDD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
     else:
-        return calculate_MQAM_symbols(M)/np.sqrt(calculate_MQAM_scaling_factor(M)),
+        raise ValueError("%s is unknown method"%method)
 
 
 def apply_filter(E, os, wxy):
@@ -114,24 +136,24 @@ def apply_filter(E, os, wxy):
         Eest = np.dot(X, ww.transpose())
         return np.atleast_2d(Eest)
 
-def _calculate_Rdash(syms):
+def _cal_Rdash(syms):
      return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (np.sign(syms.real + syms.imag) + np.sign(syms.real-syms.imag) + 1.j*(np.sign(syms.real+syms.imag) - np.sign(syms.real-syms.imag)))*syms.conj()
 
-def _calculate_Rsca(M):
-    syms = calculate_MQAM_symbols(M)
-    syms /= np.sqrt(calculate_MQAM_scaling_factor(M))
-    Rd = _calculate_Rdash(syms)
+def _cal_Rsca(M):
+    syms = cal_symbols_qam(M)
+    syms /= np.sqrt(cal_scaling_factor_qam(M))
+    Rd = _cal_Rdash(syms)
     return np.mean((abs(syms.real + syms.imag) + abs(syms.real - syms.imag))**2 * Rd)/(4*np.mean(Rd))
 
-def _calculate_Rconstant(M):
-    syms = calculate_MQAM_symbols(M)
-    scale = calculate_MQAM_scaling_factor(M)
+def _cal_Rconstant(M):
+    syms = cal_symbols_qam(M)
+    scale = cal_scaling_factor_qam(M)
     syms /= np.sqrt(scale)
     return np.mean(abs(syms)**4)/np.mean(abs(syms)**2)
 
-def _calculate_Rconstant_complex(M):
-    syms = calculate_MQAM_symbols(M)
-    scale = calculate_MQAM_scaling_factor(M)
+def _cal_Rconstant_complex(M):
+    syms = cal_symbols_qam(M)
+    scale = cal_scaling_factor_qam(M)
     syms /= np.sqrt(scale)
     return np.mean(syms.real**4)/np.mean(syms.real**2) + 1.j * np.mean(syms.imag**4)/np.mean(syms.imag**2)
 
@@ -144,7 +166,6 @@ def _init_orthogonaltaps(wx):
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
     wy = -np.conj(wx)[::-1,::-1]
-
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
@@ -174,8 +195,8 @@ def generate_partition_codes_complex(M):
     codes   : array_like
         the nearest symbol radius 
     """
-    syms = calculate_MQAM_symbols(M)
-    scale = calculate_MQAM_scaling_factor(M)
+    syms = cal_symbols_qam(M)
+    scale = cal_scaling_factor_qam(M)
     syms /= np.sqrt(scale)
     syms_r = np.unique(abs(syms.real)**4/abs(syms.real)**2)
     syms_i = np.unique(abs(syms.imag)**4/abs(syms.imag)**2)
@@ -201,8 +222,8 @@ def generate_partition_codes_radius(M):
     codes   : array_like
         the nearest symbol radius 
     """
-    syms = calculate_MQAM_symbols(M)
-    scale = calculate_MQAM_scaling_factor(M)
+    syms = cal_symbols_qam(M)
+    scale = cal_scaling_factor_qam(M)
     syms /= np.sqrt(scale)
     codes = np.unique(abs(syms)**4/abs(syms)**2)
     parts = codes[:-1] + np.diff(codes)/2
@@ -336,15 +357,17 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     """
     method = method.lower()
-    training_fct = TRAINING_FCTS[method]
-    args = _init_args(method, M, **kwargs)
+    eqfct = _select_errorfct(method, M, **kwargs)
     # scale signal
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
-    for i in range(Niter):
-        if print_itt:
-            print("LMS iteration %d"%i)
-        for l in range(pols):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = training_fct(E, TrSyms, Ntaps, os, mu, wxy[l], *args, adaptive=adaptive_stepsize)
+    for l in range(pols):
+        for i in range(Niter):
+            if print_itt:
+                print("Pol-%d - LMS iteration %d"%(l,i))
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
+        #TODO: adjust for more than two polarizations
+        if l < 1:
+            wxy[1] = _init_orthogonaltaps(wxy[0])
     return wxy, err
 
 #
@@ -459,18 +482,18 @@ def CDcomp(E, fs, N, L, D, wl):
     #D = D*1.e-6
     if N == 0:
         N = samp
-        
+
 #    H = np.zeros(N,dtype='complex')
     #H = np.arange(0, N) + 1j * np.zeros(N, dtype='float')
-    #H -= N // 2 
+    #H -= N // 2
     #H *= 2*np.pi
     #H *= fs
     #H *= H
     #H *= D * wl**2 * L / (c * N**2)
-    
+
     omega = np.pi * fs * np.linspace(-1,1,N,dtype = complex)
     beta2 = D * wl**2 / (c * 2 * np.pi)
-    
+
 
     H = np.exp(-.5j * omega**2 * beta2 * L )
     #H1 = H

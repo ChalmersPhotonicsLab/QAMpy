@@ -35,34 +35,37 @@ def comp_IQ_inbalance(signal):
     # Build output
     comp_singal = I + 1.j * (Q_balcd * np.sqrt(amp_inbalance))
     
-    return comp_singal, phase_inbalance, amp_inbalance
+    return comp_singal
 
 
-def comp_rf_delay(sig, delay, sampling_rate = 50e9 ):
+def comp_rf_delay(signal, delay, sampling_rate = 50e9 ):
     """
     Adds a delay of X picoseconds to the signal in frequency domain. Can be 
     used to compensate for impairments such as RF cables of different length 
     between the optical hybrid and ADC. 
-    
-    Input:
-        sig: Real-valued input signal
-        sampling_ratev: ADC sampling rate
-        delay: Delay in ps 
-        
-        
-    Output
-        sig_out: Signal after compensating for delay
+
+    Parameters
+    ----------
+        signal : array_like
+            Real-valued input signal
+        delay : float
+            Delay in ps
+        sampling_rate : scalar, optional
+            ADC sampling rate
+
+    Returns
+    -------
+        sig_out : array_like
+            Signal after compensating for delay
     
     """
     
     # Frequency base vector
-    freqVector = np.fft.fftfreq(sig.size, sampling_rate/2)
+    freqVector = np.fft.fftfreq(signal.size, sampling_rate/2)
     
     # Phase-dealyed version
     sig_out = np.fft.ifft(np.exp(-1j*2*np.pi*delay*1e-12*freqVector)*\
-                          np.fft.fft(sig))
+                          np.fft.fft(signal))
     
     # Real part of output
     return sig_out.real
-    
-    

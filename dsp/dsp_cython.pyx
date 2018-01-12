@@ -6,7 +6,6 @@ cimport cython
 from cpython cimport bool
 cimport numpy as np
 
-cdef unsigned int NTHREADS=8
 
 cdef extern from "complex.h":
     double complex conj(double complex)
@@ -14,6 +13,26 @@ cdef extern from "complex.h":
 cdef extern from "equaliserC.h" nogil:
     double complex det_symbol(double complex *syms, unsigned int M, double complex value, double *distout)
 
+cdef extern from "math.h" nogil:
+    double log(double)
+
+cdef extern from "math.h" nogil:
+    double exp(double)
+
+cdef extern from "complex.h" nogil:
+    double cabs(double complex)
+
+cdef extern from "complex.h" nogil:
+    double cimag(double complex)
+
+cdef extern from "complex.h" nogil:
+    double creal(double complex)
+
+cdef extern from "math.h" nogil:
+    double pow(double, double)
+
+cdef double cabssq(double complex x) nogil:
+    return cimag(x)*cimag(x) + creal(x)*creal(x)
 
 def unwrap_discont(double[::1] seq, double max_diff, double period):
     cdef int i
@@ -37,7 +56,6 @@ def unwrap_discont(double[::1] seq, double max_diff, double period):
     return new_array
 
 def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=2, dtype=np.float64_t] testangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
-    global  NTHREADS
     cdef unsigned int i, j, ph_idx
     cdef int L = E.shape[0]
     cdef int M = symbols.shape[0]
@@ -50,7 +68,7 @@ def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=2, dtype=np
     comp_angles = np.exp(1.j*testangles)
     dists = np.zeros((L, Ntestangles))+100.
     idx = np.zeros(L, dtype=np.uint32)
-    for i in prange(L, schedule='static', num_threads=NTHREADS, nogil=True):
+    for i in prange(L, schedule='static', nogil=True):
         if testangles.shape[0] > 1:
             ph_idx = i
         else:
@@ -150,3 +168,23 @@ def lfsr_int(np.int64_t seed, np.int64_t mask):
         if xor != 0:
             state ^= mask #this performs the modulus operation
         yield xor, state
+
+def soft_l_value_demapper(np.ndarray[ndim=1, dtype=double complex] rx_symbs, int M, double snr, np.ndarray[ndim=3, dtype=double complex] bits_map):
+    cdef int num_bits = int(np.log2(M))
+    cdef np.ndarray[ndim=1, dtype=np.float64_t] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
+    cdef int mode, bit, symb, l
+    cdef int N = rx_symbs.shape[0]
+    cdef int k = bits_map.shape[1]
+    cdef double tmp = 0
+    cdef double tmp2 = 0
+
+    for bit in range(num_bits):
+        for symb in prange(N, schedule='static', nogil=True):
+            tmp = 0
+            tmp2 = 0
+            for l in range(k):
+                tmp = tmp + exp(-snr*cabssq(bits_map[bit,l,1] - rx_symbs[symb]))
+                tmp2 = tmp2 + exp(-snr*cabssq(bits_map[bit,l,0] - rx_symbs[symb]))
+            L_values[symb*num_bits + bit] = log(tmp) - log(tmp2)
+    return L_values
+

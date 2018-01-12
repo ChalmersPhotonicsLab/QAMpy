@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import signals, equalisation, modulation, utils, phaserecovery, signal_quality
+
+import dsp.resample
+from dsp import  equalisation, modulation, utils, phaserecovery, signal_quality, analog_frontend
 from scipy.io import loadmat
 
 
@@ -26,18 +28,22 @@ Y = Y.flatten()
 
 #X = utils.pre_filter(X, 2*3.9)
 #Y = utils.pre_filter(Y, 2*3.9)
-X = utils.resample(X, 2.5, 2,renormalise = True)
-Y = utils.resample(Y, 2.5, 2,renormalise = True)
-X = utils.comp_IQbalance(X)
-Y = utils.comp_IQbalance(Y)
+#X = utils.resample(X, 2.5, 2)
+#Y = utils.resample(Y, 2.5, 2)
+X = dsp.resample.rrcos_resample_zeroins(X, 2.5, 2, beta=0.05, Ts=1)
+Y = dsp.resample.rrcos_resample_zeroins(Y, 2.5, 2, beta=0.05, Ts=1)
+X = analog_frontend.comp_IQ_inbalance(X)
+Y = analog_frontend.comp_IQbalance(Y)
+print(X.shape)
+print(Y.shape)
 SS = np.vstack([X[5000:-5000],Y[5000:-5000]])
 
 SS = SS[:,:int(2e5)]
 
 E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(5,5), methods=("mcma", "sbd"), adaptive_stepsize=(True,True) )
 
-X = signal_quality.normalise_sig(E[0,:],M)[1]
-Y = signal_quality.normalise_sig(E[1,:],M)[1]    
+X = signal_quality.norm_to_s0(E[0, :], M)
+Y = signal_quality.norm_to_s0(E[1, :], M)
 E = np.vstack([X,Y])
 
 foe = phaserecovery.find_freq_offset(E,fft_size = 2**10)
@@ -52,34 +58,23 @@ E = Ec
 
 
 print("X pol phase")
-Ex, phx = phaserecovery.blindphasesearch(E[0], 64, QAM.symbols, 64)
+Ex, phx = phaserecovery.bps(E[0], 32, QAM.symbols, 8)
 print("X pol phase done")
 print("Y pol phase")
-Ey, phy = phaserecovery.blindphasesearch(E[1], 64, QAM.symbols, 64)
+Ey, phy = phaserecovery.bps(E[1], 32, QAM.symbols, 8)
 print("Y pol phase done")
 Ec = np.vstack([Ex,Ey])
 
-
-#
-#wx, err_both = equalisation.equalise_signal(Ec, 1, muRDE, M,Niter=1, Ntaps=ntaps, method="sbd" , adaptive_stepsize=False)
-#Ec = equalisation.apply_filter(Ec, 1, wx)
-
-
-#print("X pol phase")
-#Ex, phx = phaserecovery.blindphasesearch(Ec[0], 64, QAM.symbols, 128)
-#print("X pol phase done")
-#print("Y pol phase")
-#Ey, phy = phaserecovery.blindphasesearch(Ec[1], 64, QAM.symbols, 128)
-#print("Y pol phase done")
-#Ec = np.vstack([Ex,Ey])
-
-
-#evmX = QAM.cal_EVM(X[::2])
-#evmY = QAM.cal_EVM(Y[::2])
-#evmEx = QAM.cal_EVM(E[0])
-#evmEy = QAM.cal_EVM(E[1])
-#evmEx_c = QAM.cal_EVM(Ec[0])
-#evmEy_c = QAM.cal_EVM(Ec[1])
+evmX = QAM.cal_evm(X[::2])
+evmY = QAM.cal_evm(Y[::2])
+evmEx = QAM.cal_evm(E[0])
+evmEy = QAM.cal_evm(E[1])
+#Ec[0] = signal_quality.normalise_sig(Ec[0], M)[1]
+#Ec[1] = signal_quality.normalise_sig(Ec[1], M)[1]
+evmEx_c = QAM.cal_evm(Ec[0])
+evmEy_c = QAM.cal_evm(Ec[1])
+print(evmEy_c)
+print(evmEx_c)
 #sys.exit()
 plt.figure()
 plt.subplot(221)
