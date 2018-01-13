@@ -8,7 +8,7 @@ Pilot-Based DSP Transmitter for MQAM with M>4
 @author: mazurm
 """
 import numpy as np
-from dsp import signals, equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality
+from dsp import equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality
 from dsp.prbs import make_prbs_extXOR
 import matplotlib.pylab as plt
 
