@@ -196,9 +196,9 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
 
         curr_frame = np.tile(frame[l, :],5)
 
-        # Add modal delays
+        # Add modal delays, this can be used to emulate things like fake-pol. mux. when the frames are not aligned.
         if modal_delay is not None:
-            if np.array(modal_delay).shape != npols:
+            if np.array(modal_delay).shape[0] != npols:
                 raise ValueError("Number of rolls has to match number of modes!")
             curr_frame = np.roll(curr_frame,modal_delay[l])
 
