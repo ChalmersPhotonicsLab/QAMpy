@@ -8,7 +8,7 @@ Pilot-Based DSP Transmitter for MQAM with M>4
 @author: mazurm
 """
 import numpy as np
-from dsp import equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality
+from dsp import equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality,resample
 from dsp.prbs import make_prbs_extXOR
 import matplotlib.pylab as plt
 
@@ -181,3 +181,45 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
                             data_symbs[l,j*(pilot_ins_ratio-1):(j+1)*(pilot_ins_ratio-1)]
     
     return symbol_seq, data_symbs, pilot_symbs
+
+
+def sim_tx(frame, os, symb_rate=24e9, modal_delay = None, beta=0.1, snr=None, freqoff=None, linewidth=None, rot_angle=None):
+    """
+    Function to simulate transmission distortions to pilot frame
+
+    """
+
+    npols = frame.shape[0]
+    sig = np.zeros([npols, len(frame[0, :]) * os], dtype=complex)
+
+    for l in range(npols):
+
+        # Add modal delays
+        if modal_delay is not None:
+            if np.array(modal_delay).shape != npols:
+                raise ValueError("Number of rolls has to match number of modes!")
+
+        # Upsample and pulse shaping
+        if os > 1:
+            sig[l, :] = resample.rrcos_resample_zeroins(frame[l, :], 1, os, beta=beta, renormalise=True)
+
+        # Add AWGN
+        if snr is not None:
+            sig[l, :] = utils.add_awgn(sig[l, :], 10 ** (-snr / 20) * np.sqrt(os))
+
+        # Add FOE
+        if freqoff is not None:
+            sig[l, :] *= np.exp(2.j * np.pi * np.arange(len(sig[l, :])) * freqoff / (symb_rate * os))
+
+        # Add Phase Noise
+        if linewidth is not None:
+            sig[l, :] = sig[l, :] * np.exp(1j * utils.phase_noise(sig[l, :].shape, linewidth, symb_rate * os))
+
+        # Verfy normalization
+        sig = utils.normalise_and_center(sig)
+
+    # Currently only implemented for DP signals.
+    if (npols == 2) and (rot_angle is not None):
+        sig = utils.rotate_field(sig, rot_angle)
+
+    return sig
