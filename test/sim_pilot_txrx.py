@@ -3,11 +3,12 @@ from dsp import equalisation, modulation, utils, phaserecovery, pilotbased_recei
     resample
 import matplotlib.pylab as plt
 
-def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, do_extra_blind_eq=False,
-                       do_extra_blind_BPS=(False, 64, 128), os=2, M=128, Numtaps=(17, 45), frame_length=2 ** 16,
-                       method=('cma', 'cma'), pilot_seq_len=512, pilot_ins_ratio=32, Niter=(10, 30), mu=(1e-3, 1e-3),
-                       adap_step=(True, True), cpe_average=5, use_cpe_pilot_ratio=1, remove_inital_cpe_output=True,
-                       remove_phase_pilots=True, do_pilot_based_foe=True, foe_symbs=None, blind_foe_payload=False):
+def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, os=2, M=128, Numtaps=(17, 45),
+                       frame_length=2 ** 16, method=('cma', 'cma'), pilot_seq_len=512, pilot_ins_ratio=32,
+                       Niter=(10, 30), mu=(1e-3, 1e-3), adap_step=(True, True), cpe_average=5, use_cpe_pilot_ratio=1,
+                       remove_inital_cpe_output=True, remove_phase_pilots=True, do_pilot_based_foe=True,
+                       foe_symbs=None, blind_foe_payload=False):
+
     rec_signal = np.atleast_2d(rec_signal)
     tap_cor = int((Numtaps[1] - Numtaps[0]) / 2)
     npols = rec_signal.shape[0]
@@ -58,27 +59,6 @@ def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, do
             # symbs = symbs[:, int(use_cpe_pilot_ratio * pilot_ins_ratio * cpe_average):]
         dsp_sig_out.append(symbs)
         phase_trace.append(trace)
-
-    # Extra CPE Using blind phase search
-    if do_extra_blind_BPS[0]:
-        phase_comp_symbs_bps = []
-        phase_trace_bps = []
-        QAM = modulation.QAMModulator(M)
-        for l in range(npols):
-            symbs, phase = phaserecovery.blindphasesearch(dsp_sig_out[l].flatten(), do_extra_blind_BPS[1], QAM.symbols,
-                                                          do_extra_blind_BPS[2])
-            phase_comp_symbs_bps.append(symbs)
-            phase_trace_bps.append(phase)
-        dsp_sig_out = phase_comp_symbs_bps
-
-    # Extra final blind equalizer
-    if do_extra_blind_eq:
-        symbs_out = []
-        for l in range(npols):
-            wx, err_both = equalisation.equalise_signal(dsp_sig_out[l], 1, 1e-3, M, Niter=10, Ntaps=Numtaps[1],
-                                                        method="mcma", adaptive_stepsize=True)
-            symbs_out.append(utils.orthonormalize_signal(equalisation.apply_filter(dsp_sig_out[l], 1, wx)))
-        dsp_sig_out = symbs_out
 
     return eq_pilots, dsp_sig_out, shift_factor, taps, phase_trace, foePerMode
 
