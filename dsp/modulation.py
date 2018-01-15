@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import warnings
 from bitarray import bitarray
 
 from . import resample
@@ -192,6 +193,23 @@ class QAMModulator(object):
         out = []
         syms = []
         bits = []
+        if PRBS:
+            if len(PRBSorder) < ndim:
+                warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
+                PRBSorder_n = []
+                PRBSseed_n = []
+                orders = [15, 23]
+                for i in range(ndim):
+                    try:
+                        PRBSorder_n.append(PRBSorder[i])
+                        PRBSseed_n.append(PRBSseed[i])
+                    except IndexError:
+                        o = np.random.choice(orders)
+                        PRBSorder_n.append(o)
+                        s = np.random.randint(0, 2**o)
+                        PRBSseed_n.append(s)
+                PRBSorder = PRBSorder_n
+                PRBSseed = PRBSseed_n
         for i in range(ndim):
             Nbits = N * self.Nbits
             if PRBS == True:
