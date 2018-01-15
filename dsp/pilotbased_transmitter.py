@@ -8,7 +8,7 @@ Pilot-Based DSP Transmitter for MQAM with M>4
 @author: mazurm
 """
 import numpy as np
-from dsp import signals, equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality
+from dsp import equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality,resample, impairments
 from dsp.prbs import make_prbs_extXOR
 import matplotlib.pylab as plt
 
@@ -18,15 +18,15 @@ def gen_dataframe_with_phasepilots(M,npols, frame_length = 2**18, pilot_seq_len 
     data_modulator = modulation.QAMModulator(M)
     pilot_modualtor = modulation.QAMModulator(4)
     
-    N_data_frames = (frame_length - pilot_seq_len) / pilot_ins_ratio
+    N_data_frames = int((frame_length - pilot_seq_len) / pilot_ins_ratio)
     
     if (N_data_frames%1) != 0:
         raise ValueError("Pilot insertion ratio not propper selected")
     
     N_pilot_symbs = pilot_seq_len + N_data_frames    
     N_data_symbs = N_data_frames * (pilot_ins_ratio - 1)    
-    N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.bits
-    N_data_bits = N_data_symbs * data_modulator.bits
+    N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.Nbits
+    N_data_bits = N_data_symbs * data_modulator.Nbits
        
     # Set sequence together
     symbol_seq = np.zeros([npols,frame_length], dtype = complex)
@@ -70,10 +70,10 @@ def gen_dataframe_without_phasepilots(M,npols, frame_length = 2**18, pilot_seq_l
     if (pilot_seq_len >= frame_length):
         raise ValueError("Pilot insertion ratio not propper selected")
     
-    N_data_symbs = frame_length - pilot_seq_len
+    N_data_symbs = int(frame_length - pilot_seq_len)
     
-    N_pilot_bits = (pilot_seq_len) * pilot_modualtor.bits
-    N_data_bits = N_data_symbs * data_modulator.bits
+    N_pilot_bits = (pilot_seq_len) * pilot_modualtor.Nbits
+    N_data_bits = N_data_symbs * data_modulator.Nbits
     
     # Set sequence together
     symbol_seq = np.zeros([npols,frame_length], dtype = complex)
@@ -108,7 +108,7 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
         raise ValueError("Number of moduation formats and insertion ratios does not match")
 
     
-    N_data_frames = (frame_length - pilot_seq_len) / pilot_ins_ratio
+    N_data_frames = int((frame_length - pilot_seq_len) / pilot_ins_ratio)
     if (N_data_frames%1) != 0:
         raise ValueError("Pilot insertion ratio not propper selected")
 
@@ -129,7 +129,7 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
     norm_factors[1] = 1
     # Pilot symbols    
     N_pilot_symbs = pilot_seq_len + N_data_frames    
-    N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.bits
+    N_pilot_bits = (N_pilot_symbs) * pilot_modualtor.Nbits
 
     # Number of symbols per modulation format, correction added later
     sub_blocks = N_data_symbs // sum(mod_ratio)
@@ -181,3 +181,48 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
                             data_symbs[l,j*(pilot_ins_ratio-1):(j+1)*(pilot_ins_ratio-1)]
     
     return symbol_seq, data_symbs, pilot_symbs
+
+
+def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, symb_rate=24e9, freqoff=None, linewidth=None, rot_angle=None):
+    """
+    Function to simulate transmission distortions to pilot frame
+
+    """
+
+    npols = frame.shape[0]
+    sig = np.zeros([npols, int(num_frames*(frame[0, :]).shape[0] * os)], dtype=complex)
+
+    for l in range(npols):
+
+        curr_frame = np.tile(frame[l, :],5)
+
+        # Add modal delays, this can be used to emulate things like fake-pol. mux. when the frames are not aligned.
+        if modal_delay is not None:
+            if np.array(modal_delay).shape[0] != npols:
+                raise ValueError("Number of rolls has to match number of modes!")
+            curr_frame = np.roll(curr_frame,modal_delay[l])
+
+        # Upsample and pulse shaping
+        if os > 1:
+            sig[l, :] = resample.rrcos_resample_zeroins(curr_frame, 1, os, beta=beta, renormalise=True)
+
+        # Add AWGN
+        if snr is not None:
+            sig[l, :] = impairments.add_awgn(sig[l, :], 10 ** (-snr / 20) * np.sqrt(os))
+
+        # Add FOE
+        if freqoff is not None:
+            sig[l, :] *= np.exp(2.j * np.pi * np.arange(len(sig[l, :])) * freqoff / (symb_rate * os))
+
+        # Add Phase Noise
+        if linewidth is not None:
+            sig[l, :] = sig[l, :] * np.exp(1j * impairments.phase_noise(sig[l, :].shape, linewidth, symb_rate * os))
+
+        # Verfy normalization
+        sig = utils.normalise_and_center(sig)
+
+    # Currently only implemented for DP signals.
+    if (npols == 2) and (rot_angle is not None):
+        sig = utils.rotate_field(sig, rot_angle)
+
+    return sig
