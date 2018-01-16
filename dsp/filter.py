@@ -21,6 +21,31 @@ def pre_filter(signal, bw):
     s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
     return s
 
+def pre_filter_wdm(signal, bw, os,center_freq = 0):
+    """
+    Low-pass pre-filter signal with square shape filter
+
+    Parameters
+    ----------
+
+    signal : array_like
+        single polarization signal
+
+    bw     : float
+        bandwidth of the rejected part, given as fraction of overall length
+    """
+    N = len(signal)
+    freq_axis = np.fft.fftfreq(N, 1 / os)
+
+    idx = np.where(abs(freq_axis-center_freq) < bw / 2)
+
+    h = np.zeros(N, dtype=np.float64)
+    # h[int(N/(bw/2)):-int(N/(bw/2))] = 1
+    h[idx] = 1
+    #s = np.fft.ifftshift(np.fft.ifft(np.fft.fft(signal) * h))
+    s = (np.fft.ifft(np.fft.fft(signal) * h))
+    return s
+
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
     nyq = 0.5*fs
     cutoff_norm = cutoff/nyq
