@@ -3,16 +3,17 @@ import numpy as np
 from scipy.signal import fftconvolve
 from . import utils, prbs
 from . import theory
-
+#TODO: refactor to use remove all unneeded functions
 
 class DataSyncError(Exception):
     pass
 
-def sync_Rx2Tx_Xcorr(data_tx, data_rx, N1, N2):
+def find_sequence_offset(data_tx, data_rx, show_cc=False):
     """
-    Sync the received data sequence to the transmitted data, which
+    Find the offset of the transmitted data sequence inside the received data, which
     might contain errors, using cross-correlation between data_rx and data_tx.
-    Calculates np.correlate(data_rx[:N1], data_tx[:N2], 'full').
+    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This assumes that len(data_rx) >= len(data_tx) and that
+    data_tx is at least once inside data_rx.
 
     Parameters
     ----------
@@ -23,69 +24,129 @@ def sync_Rx2Tx_Xcorr(data_tx, data_rx, N1, N2):
     data_rx : array_like
         the received data sequence which might contain errors.
 
-    N1 : int
-        the length of elements of the longer array input to correlate. This should be long enough so that the subsequence we use for searching is present, a good value is the number of bits in the PRBS.
-
-    N2 : int, optional
-        the length of the subsequence from data_tx to use to search for in data_rx
+    show_cc : bool, optional
+        if true return the calculated crosscorrelation
 
     Returns
     -------
     offset index : int
-        the index where data_rx starts in data_rx
-    data_rx_sync : array_like
-        data_rx which is synchronized to data_tx
-
-    """
-    # this one gives a slightly higher BER need to investigate
-
-    # needed to convert bools to integers
-    tx = 1.*data_tx
-    rx = 1.*data_rx
-    ac = np.correlate(rx[:N1], tx[:N2], 'full')
-    idx = abs(ac).argmax() - len(ac)//2 + (N1-N2)//2
-    return np.roll(data_rx, idx), idx
-
-def sync_Tx2Rx_Xcorr(data_tx, data_rx):
-    """
-    Sync the transmitted data sequence to the received data, which
-    might contain errors, using cross-correlation between data_rx and data_tx.
-    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This assumes that data_tx is at least once inside data_rx and repetitive>
-
-    Parameters
-    ----------
-
-    data_tx : array_like
-            the known input data sequence.
-
-    data_rx : array_like
-        the received data sequence which might contain errors.
-
-
-    Returns
-    -------
-    data_rx_sync : array_like
-        data_tx which is synchronized to data_rx
-    offset index : int
-        the index where data_rx starts in data_rx
-    ac           : array_like
-        the correlation between the two sequences
+        the index where data_tx starts in data_rx
+    crosscorrelation: array_like, optional
+        the autocorrelation
     """
     # needed to convert bools to integers
     tx = 1.*data_tx
     rx = 1.*data_rx
-    if tx.dtype==np.complex128:
-        N2 = len(tx)
-        ac = fftconvolve(np.angle(rx), np.angle(tx)[::-1], 'same')
+    N_rx = rx.shape[0]
+    N_tx = tx.shape[0]
+    assert not N_tx > N_rx, "length of data tx must be shorter or equal to length of data_rx"
+    if np.issubdtype(rx.dtype , np.complexfloating):
+        ac = fftconvolve(rx, tx.conj()[::-1], 'same')
     else:
-        N2 = len(tx)
-        ac = fftconvolve(rx, tt[::-1], 'same')
-    # I still don't quite get why the following works, an alternative would be to zero pad the shorter array
-    # and the offset would be argmax()-len(ac)//2 however this does take significantly longer
-    idx = abs(ac).argmax() - 5*N2//2
-    return np.roll(data_tx, idx), idx, ac
+        ac = fftconvolve(np.hstack([rx,rx,rx]), tx[::-1], 'same')[N_rx:-N_rx]
+    if N_rx == N_tx:
+        idx = abs(ac).argmax()-N_tx//2
+        if idx < 0:
+            idx += N_tx
+    elif N_rx > N_tx:
+        idx = abs(ac).argmax() - N_tx//2
+        if idx < 0:
+            idx += N_rx
+    if show_cc is True:
+        return idx, ac
+    else:
+        return idx
 
-def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
+def find_sequence_offset_complex(data_tx, data_rx):
+    """
+    Find the offset of one sequence in the other even if both sequences are complex.
+
+    Parameters
+    ----------
+    data_tx : array_like
+        transmitted data sequence
+    data_rx : array_like
+        received data sequence
+
+    Returns
+    -------
+    idx : integer
+        offset index
+    tx : array_like
+        tx array possibly rotated to correct 1.j**i for complex arrays
+    ii : integer
+        power for complex rotation angle 1.j**ii
+    """
+    acm = 0.
+    try:
+        data_tx.imag
+        data_rx.imag
+    except:
+        return find_sequence_offset(data_tx, data_rx), data_tx
+    for i in range(4):
+        tx = data_tx*1.j**i
+        idx, ac = find_sequence_offset(tx, data_rx, show_cc=True)
+        act = ac.real.max()
+        if act > acm:
+            ii = i
+            ix = idx
+            acm = act
+    return ix, data_tx*1.j**ii, ii
+
+
+def sync_and_adjust(data_tx, data_rx, adjust="tx"):
+    """
+    Synchronize and adjust length of received and transmitted data sequence. When the length
+    differs between sequences the sequence length will be adjusted based on the adjust parameter
+    and the length of the sequences. If the to adjusting sequence is shorter than the other sequence,
+    we will assume that the pattern is repetitive and therefore pad the sequence. If it is longer than
+    the other sequence we will truncate after adjusting the offset. Note that if sequences are complex we will
+    rotate around the complex plane to remove abiguities.
+
+    Parameters
+    ----------
+    data_tx : array_like
+        transmitted symbol or bit sequence
+    data_rx : array_like
+        received symbol sequence can be noisy
+    adjust : string, optional
+        parameter that determines which data sequence to adjust. If "tx" truncate or extend data_tx
+        if "rx" truncate or extend data_rx
+
+    Returns
+    -------
+    tx : array_like
+       (possibly adjusted) tx data
+    rx : array_like
+       (possibly adjusted) rx data
+    """
+    N_tx = data_tx.shape[0]
+    N_rx = data_rx.shape[0]
+    assert adjust is "tx" or adjust is "rx", "adjust need to be either 'tx' or 'rx'"
+    if N_tx > N_rx:
+        offset, rx, ii = find_sequence_offset_complex(data_rx, data_tx)
+        if adjust is "tx":
+            tx = np.roll(data_tx, -offset)
+            return adjust_data_length(tx, rx, method="truncate")
+        elif adjust is "rx":
+            tx, rx = adjust_data_length(data_tx, rx, method="extend")
+            return tx, np.roll(rx, offset)
+    elif N_tx < N_rx:
+        offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
+        if adjust is "tx":
+            tx, rx = adjust_data_length(tx, data_rx, method="extend")
+            return np.roll(tx, offset), rx
+        elif adjust is "rx":
+            rx = np.roll(data_rx, -offset)
+            return adjust_data_length(tx, rx, method="truncate")
+    else:
+        offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
+        if adjust is "tx":
+            return np.roll(tx, offset), data_rx
+        elif adjust is "rx":
+            return tx, np.roll(data_rx, -offset)
+
+def sync_rx2tx(data_tx, data_rx, Lsync, imax=200):
     """Sync the received data sequence to the transmitted data, which
     might contain errors. Starts to with data_rx[:Lsync] if it does not find
     the offset it will iterate through data[i*Lsync:Lsync*(i+1)] until offset is found
@@ -125,7 +186,7 @@ def sync_Rx2Tx(data_tx, data_rx, Lsync, imax=200):
             pass
     raise DataSyncError("maximum iterations exceeded")
 
-def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
+def sync_tx2rx(data_tx, data_rx, Lsync, imax=200):
     """Sync the transmitted data sequence to the received data, which
     might contain errors. Starts to with data_rx[:Lsync] if it does not find
     the offset it will iterate through data[i:Lsync+i] until offset is found
@@ -164,50 +225,6 @@ def sync_Tx2Rx(data_tx, data_rx, Lsync, imax=200):
         except ValueError:
             pass
     raise DataSyncError("maximum iterations exceeded")
-
-def sync_PRBS2Rx(data_rx, order, Lsync, imax=200):
-    """
-    Synchronise a PRBS sequence to a possibly noisy received data stream.
-    This is different to the general sync code, because in general the data
-    array will be much shorter than the prbs sequence, which takes a long
-    time to compute for lengths of > 2**23-1.
-
-    Parameters
-    ----------
-    data_rx : array_like
-        the received data signal stream
-    order : int
-        the order of the PRBS sequence.
-    Lsync : int
-        the number of bits to use to test for equality.
-    imax : int, optional
-        the maximum number of iterations to test with (default is 200).
-
-    Returns
-    -------
-    prbs_tx_sync : array_like
-        prbs sequence that it synchronized to the data stream
-
-    Raises
-    ------
-    DataSyncError
-        If no position can be found.
-    """
-    for i in range(imax):
-        if i + Lsync > len(data_rx):
-            break
-        datablock = data_rx[i:i + Lsync]
-        prbsseq = prbs.make_prbs_extXOR(order, Lsync - order,
-                                        datablock[:order])
-        if np.all(datablock[order:] == prbsseq):
-            prbsval = np.hstack([
-                datablock, prbs.make_prbs_extXOR(
-                    order,
-                    len(data_rx) - i - len(datablock), datablock[-order:])
-            ])
-            return i, prbsval
-    raise DataSyncError("maximum iterations exceeded")
-
 
 def adjust_data_length(data_tx, data_rx, method=None):
     """Adjust the length of data_tx to match data_rx, either by truncation
@@ -248,7 +265,7 @@ def adjust_data_length(data_tx, data_rx, method=None):
     elif method is "extend":
         if len(data_tx) > len(data_rx):
             data_rx = _extend_by(data_rx, data_tx.shape[0]-data_rx.shape[0])
-            return data_tx, data__rx
+            return data_tx, data_rx
         elif len(data_tx) < len(data_rx):
             data_tx = _extend_by(data_tx, data_rx.shape[0]-data_tx.shape[0])
             return data_tx, data_rx
@@ -263,7 +280,7 @@ def _extend_by(data, N):
     data = np.hstack([data, data[:rem]])
     return data
 
-def _cal_BER_only(data_rx, data_tx, threshold=0.2):
+def cal_ber_syncd(data_rx, data_tx, threshold=0.2):
     """Calculate the bit-error rate (BER) between two synchronised binary data
     signals in linear units.
 
@@ -300,79 +317,10 @@ def _cal_BER_only(data_rx, data_tx, threshold=0.2):
     return ber, errs, N
 
 
-# TODO: the parameters of this function should really be changed to
-# (data_rx, data_tx, Lsync, order=None, imax=200)
-def cal_BER(data_rx, Lsync, order=None, data_tx=None, imax=200):
-    """Calculate the BER between an received binary data stream and a given bit
-    sequence or a PRBS. If data_tx is shorter than data_rx it is assumed that
-    data_rx is repetitive.
-
-    Parameters:
-    ----------
-    data_rx : array_like
-        received binary data stream.
-    Lsync : int
-        number of bits to use for synchronisation
-    order : int, optional
-        order of PRBS if no data_tx is given (default:None)
-    data_tx : array_like
-        known input bit sequence (if none assume PRBS (default:None))
-    imax : int, optional
-        number of iterations to try for sync (default is 200).
-
-    Returns
-    -------
-    ber : float
-        linear bit error rate
+def cal_ber_nosyncd(data_rx, data_tx):
     """
-    if data_tx is None and order is not None:
-        return cal_BER_PRBS(data_rx.astype(np.bool), order, Lsync, imax)
-    elif order is None and data_tx is not None:
-        return cal_BER_known_seq(
-            data_rx.astype(np.bool), data_tx.astype(np.bool), Lsync, imax)
-    else:
-        raise ValueError("data_tx and order must not both be None")
-
-
-def cal_BER_PRBS(data_rx, order, Lsync, imax=200):
-    """Calculate the BER between data_tx and a PRBS signal with a given
-    order. This function automatically tries the inverted data if it fails
-    to sync.
-
-    Parameters
-    ----------
-    data_rx: array_like
-        measured receiver bit stream
-    order : int
-        order of the PRBS
-    Lsync : int
-        number of bits to use for synchronisation.
-    imax : int, optional
-        number of iterations to try for sync (default is 200).
-
-    Returns
-    -------
-    ber : float
-        bit error rate in linear units
-    errs : int
-        number of counted errors
-    N : int
-        length of data
-    """
-    inverted = False
-    try:
-        idx, prbsval = sync_PRBS2Rx(data_rx, order, Lsync, imax)
-    except DataSyncError:
-        inverted = True
-        # if we cannot sync try to use inverted data
-        data_rx = -data_rx
-        idx, prbsval = sync_PRBS2Rx(data_rx, order, Lsync, imax)
-    return _cal_BER_only(data_rx[idx:], prbsval), inverted
-
-
-def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
-    """Calculate the BER between a received bit stream and a known
-    bit sequence. If data_tx is shorter than data_rx it is assumed
+    Calculate the BER between a received bit stream and a known
+    bit sequence which is not synchronised. If data_tx is shorter than data_rx it is assumed
     that data_rx is repetitive. This function automatically inverts the data if
     it fails to sync.
 
@@ -397,101 +345,11 @@ def cal_BER_known_seq(data_rx, data_tx, Lsync, imax=200):
         length of data
     """
     try:
-        idx, data_tx_sync = sync_Tx2Rx(data_tx, data_rx, Lsync, imax)
+        idx, data_tx_sync = find_sequence_offset(data_tx, data_rx)
     except DataSyncError:
         # if we cannot sync try to use inverted data
-        idx, data_tx_sync = sync_Tx2Rx(-data_tx, data_rx, Lsync, imax)
+        idx, data_tx_sync = find_sequence_offset(-data_tx, data_rx)
     data_tx_sync = adjust_data_length(data_tx_sync, data_rx)
     #TODO this still returns a slightly smaller value, as if there would be
     # one less error, maybe this happens in the adjust_data_length
-    return _cal_BER_only(data_rx, data_tx_sync)
-
-
-
-def cal_BER_QPSK_prbs(data_rx, order_I, order_Q, Lsync=None, imax=200):
-    """Calculate the BER for a QPSK signal the I and Q channels can either have
-    the same or different orders.
-
-    Parameters:
-    ----------
-    data_rx : array_like
-        received bit stream
-    order_I : int
-        PRBS order of the in-phase component
-    order_Q : int
-        PRBS order of the quadrature component.
-    Lsync : int, optional
-        the length of bits to use for syncing, if None use twice the length of
-        the longer order (default=None)
-    imax : int, optional
-        maximum number of tries for syncing before giving up (default=200)
-
-    Returns
-    -------
-    ber : float
-        bit error rate in linear units (np.nan if failed to sync)
-    errs : int
-        number of counted errors (np.nan if failed to sync)
-    N : int
-        length of data (np.nan if failed to sync)
-    """
-    #TODO implement offset parameter
-    data_demod = QAMquantize(data_rx, 4)[0]
-    data_I = (1 + data_demod.real).astype(np.bool)
-    data_Q = (1 + data_demod.imag).astype(np.bool)
-    if Lsync is None:
-        Lsync = 2 * max(order_I, order_Q)
-    try:
-        (ber_I, err_I, N_I), inverted = cal_BER_PRBS(data_I, order_I, Lsync,
-                                                     imax)
-    except DataSyncError:
-        tmp = order_I
-        order_I = order_Q
-        order_Q = tmp
-        try:
-            (ber_I, err_I, N_I), inverted = cal_BER_PRBS(data_I, order_I,
-                                                         Lsync, imax)
-        except DataSyncError:
-            raise Warning("Could not sync PRBS to data")
-            return np.nan, np.nan, np.nan
-    if inverted:
-        data_Q = -data_Q
-    try:
-        (ber_Q, err_Q, N_Q), inverted = cal_BER_PRBS(data_Q, order_Q, Lsync,
-                                                     imax)
-    except DataSyncError:
-        raise Warning("Could not sync PRBS to data")
-        return np.nan, np.nan, np.nan
-
-    return (ber_I + ber_Q) / 2., err_Q + err_I, N_Q + N_I
-
-
-def QAMquantize(sig, M):
-    """Quantize a QAM signal assuming Grey coding where possible
-    using maximum likelyhood. Calculates distance to ideal points.
-    Only works for vectors (1D array), not for M-D arrays
-
-    Parameters
-    ----------
-    sig : array_like
-        signal data
-    M : int
-        QAM order (currently has to be 4)
-
-    Returns
-    -------
-    sym : array_like
-        symbols after demodulation (complex numbers)
-    idx : array_like
-        indices of the data items in the constellation diagram
-    """
-    L = len(sig)
-    sym = np.zeros(L, dtype=np.complex128)
-    data = np.zeros(L, dtype='int')
-    cons = theory.calculate_MQAM_symbols(M).flatten()
-    scal = theory.MQAMScalingFactor(M)
-    P = np.mean(utils.cabssquared(sig))
-    sig = sig / np.sqrt(P)
-    idx = abs(sig[:, np.newaxis] - cons).argmin(axis=1)
-    sym = cons[idx]
-    return sym, idx
+    return cal_ber_syncd(data_rx, data_tx_sync)

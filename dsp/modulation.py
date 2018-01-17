@@ -1,56 +1,15 @@
 from __future__ import division
 import numpy as np
-try:
-    import arrayfire as af
-except ImportError:
-    af = None
+import warnings
 from bitarray import bitarray
-from .utils import bin2gray, cabssquared, convert_iqtosinglebitstream, resample, normalise_and_center, bool2bin, apply_phase_noise, rrcos_resample_poly, rrcos_resample_zeroins
-from .prbs import make_prbs_extXOR
-from .equalisation import quantize as quantize_pyx
-from .theory import MQAMScalingFactor, calculate_MQAM_symbols, calculate_MQAM_scaling_factor, gray_code_for_qam
+
+from . import resample
 from . import theory
 from . import ber_functions
 from . import utils
-from .phaserecovery import NMAX
-
-def quantize(signal, symbols, method="pyx", **kwargs):
-    if method == "pyx":
-        return quantize_pyx(signal, symbols, **kwargs)
-    elif method == "af":
-        if af == None:
-            raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
-        return quantize_af(signal, symbols, **kwargs)
-    else:
-        raise ValueError("method '%s' unknown has to be either 'pyx' or 'af'"%(method))
-
-
-def quantize_af(signal, symbols, precision=16):
-    global  NMAX
-    if precision == 16:
-        prec_dtype = np.complex128
-    elif precision == 8:
-        prec_dtype = np.complex64
-    else:
-        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
-    Nmax = NMAX//len(symbols.flatten())//16
-    L = signal.flatten().shape[0]
-    sig = af.np_to_af_array(signal.flatten().astype(prec_dtype))
-    sym = af.transpose(af.np_to_af_array(symbols.flatten().astype(prec_dtype)))
-    tmp = af.constant(0, L, dtype=af.Dtype.c64)
-    if L < Nmax:
-        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig,sym)), dim=1)
-        tmp = af.transpose(sym)[idx]
-    else:
-        steps = L//Nmax
-        rem = L%Nmax
-        for i in range(steps):
-            v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[i*Nmax:(i+1)*Nmax],sym)), dim=1)
-            tmp[i*Nmax:(i+1)*Nmax] = af.transpose(sym)[idx]
-        v, idx = af.imin(af.abs(af.broadcast(lambda x,y: x-y, sig[steps*Nmax:],sym)), dim=1)
-        tmp[steps*Nmax:] = af.transpose(sym)[idx]
-    return np.array(tmp)
-
+from . import impairments
+from .prbs import make_prbs_extXOR
+from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
 class QAMModulator(object):
     """
@@ -74,24 +33,36 @@ class QAMModulator(object):
 
         """
         self.M = M
-        self.symbols = calculate_MQAM_symbols(M)
+        self.symbols = theory.cal_symbols_qam(M)
         if not scaling_factor:
-            self._scale = calculate_MQAM_scaling_factor(M)
+            self._scale = theory.cal_scaling_factor_qam(M)
+        else:
+            self._scale = scaling_factor
         self.symbols /= np.sqrt(self._scale)
         self.coding = None
-        self._graycode = gray_code_for_qam(M)
+        self._graycode = theory.gray_code_qam(M)
         self.gray_coded_symbols = self.symbols[self._graycode]
-        bformat = "0%db" % self.bits
+        bformat = "0%db" % self.Nbits
         self._encoding = dict([(self.symbols[i].tobytes(),
                                 bitarray(format(self._graycode[i], bformat)))
                                for i in range(len(self._graycode))])
+        self.bitmap_mtx = generate_bitmapping_mtx(self.gray_coded_symbols, self.decode(self.gray_coded_symbols), self.M)
 
     @property
-    def bits(self):
+    def Nbits(self):
         """
         Number of bits per symbol
         """
         return int(np.log2(self.M))
+
+    def _sync_and_adjust(self, tx, rx):
+        tx_out = []
+        rx_out = []
+        for i in range(tx.shape[0]):
+            t, r = ber_functions.sync_and_adjust(tx[i], rx[i])
+            tx_out.append(t)
+            rx_out.append(r)
+        return np.array(tx_out), np.array(rx_out)
 
     def modulate(self, data):
         """
@@ -107,7 +78,7 @@ class QAMModulator(object):
         outdata  : array_like
             1D array of complex symbol values. Normalised to energy of 1
         """
-        rem = len(data) % self.bits
+        rem = len(data) % self.Nbits
         if rem > 0:
             data = data[:-rem]
         datab = bitarray()
@@ -124,16 +95,28 @@ class QAMModulator(object):
         Parameters
         ----------
         symbols   : array_like
-            1D array of complex input symbols
+            array of complex input symbols
+
+        Note
+        ----
+        Unlike the other functions this function does not always return a 2D array.
 
         Returns
         -------
         outbits   : array_like
-            1D array of booleans representing bits
+            array of booleans representing bits with same number of dimensions as symbols
         """
-        bt = bitarray()
-        bt.encode(self._encoding, symbols.view(dtype="S16"))
-        return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
+        if symbols.ndim is 1:
+            bt = bitarray()
+            bt.encode(self._encoding, symbols.view(dtype="S16"))
+            return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
+        bits = []
+        for i in range(symbols.shape[0]):
+            bt = bitarray()
+            bt.encode(self._encoding, symbols[i].view(dtype="S16"))
+            bits.append(np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool) )
+        return np.array(bits)
+
 
     def quantize(self, signal):
         """
@@ -142,66 +125,21 @@ class QAMModulator(object):
         Parameters
         ----------
         signal   : array_like
-            1D array of the input signal
+            2D array of the input signal
 
         Returns
         -------
         symbols  : array_like
-            1d array of the detected symbols
-        idx      : array_like
-            1D array of indices into QAMmodulator.symbols
+            2d array of the detected symbols
         """
-        signal = normalise_and_center(signal)
-        return quantize(normalise_and_center(signal), self.symbols)
+        signal = np.atleast_2d(signal)
+        outsyms = np.zeros_like(signal)
+        for i in range(signal.shape[0]):
+            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.symbols)
+        return outsyms
 
-    def cal_EVM(self, signal, syms=None):
-        """
-        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1]. The EVM here is normalised to the average symbol power, not the peak as in some other definitions.
-
-        Parameters
-        ----------
-
-        signal    : array_like
-            input signal to measure the EVM offset
-
-        syms      : array_like, optional
-            known symbol sequence. If this is None, the signal is quantized into its symbols and the EVM is calculated blindly. For low SNRs this will underestimate the real EVM, because detection errors are not counted.
-
-        Returns
-        -------
-
-        evm       : array_like
-            RMS EVM
-
-        References
-        ----------
-        ...[1] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
-
-
-        Note
-        ----
-
-        The RMS EVM differs from the EVM in dB by a square factor, see the different definitions e.g. on wikipedia.
-        """
-        if syms == None:
-            syms = self.quantize(signal)
-        else:
-            syms, signal_ad = self._sync_and_adjust(syms, signal)
-        return np.sqrt(np.mean(cabssquared(syms-signal)))#/np.mean(abs(self.symbols)**2))
-
-    def generateSignal(self,
-                      N,
-                       snr,
-                       carrier_df=0,
-                       lw_LO = 0,
-                       baudrate=1,
-                       samplingrate=1,
-                       IQsep=False,
-                       PRBS=True,
-                       PRBSorder=15,
-                       PRBSseed=None,
-                       beta=0.1,
-                       resample_noise=False):
+    def generate_signal(self, N, snr, carrier_df=0, lw_LO=0, baudrate=1, samplingrate=1, PRBS=True, PRBSorder=(15, 23),
+                        PRBSseed=(None, None), beta=0.1, resample_noise=False, ndim=2):
         """
         Generate a M-QAM data signal array
 
@@ -223,187 +161,284 @@ class QAMModulator(object):
             the rate at which the signal is sampled. Together with the baudrate
             this is used for calculating the oversampling factor. Note that if samplingrate is
             different to baudrate the length of the returned array is not N. (Default is 1.)
-        IQsep  : bool, optional
-            Whether to generate two independent data streams for I and Q (Default is False)
-        PRBS: bool, optional
+        PRBS: bool or tuple, optional
             If True the bits are generated as standard PRBS sequences, if False
-            random bits are generated using numpy.random.randint.
+            random bits are generated using numpy.random.randint. If the signal is dual_pol this needs
+            be a tuple for each pol.
             (Default is True)
         PRBSOrder: int or tuple of bool, optional
             The PRBS order i.e. the length 2**order of the PRBS to use
-            If IQsep is True this needs to be a tuple of two ints for the I and Q sequence generation.
+            If dual_pol is True this needs to be a tuple of two ints for the polarisations
             (Default is 15)
         PRBSseed: array_like, optional
-            Seed to the PRBS generator needs to be a 1D array of booleans of length order.
+            Seed to the PRBS generator needs to be a 1D array of booleans of length order. If dual pol this needs to be a 2D array
           . (Default=None, which corresponds to a seed of all 1's)
         beta   : float, optional
             roll-off factor for the root raised cosine pulseshaping filter, value needs to be in range [0,1]
         resample_noise : bool
             whether to add the noise before resampling or after (default: False add noise after resampling)
+        ndim : interger
+            number of dimensions of the generated signal (default=2 dual polarization signal)
+
+        Returns
+        -------
+        signal : array_like
+            the calculated signal array (2D)
+        syms  : array_like
+            the transmitted symbols (2D)
+        bits : array_like
+            the transmitted bits (2D)
+
         """
-        if IQsep:
-            if np.isscalar(PRBSorder):
-                if np.isscalar(PRBSseed) or PRBSseed is None:
-                    bitsq = twostreamPRBS(N, self.bits, PRBS)
-                else:
-                    bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed)
-            else:
-                bitsq = twostreamPRBS(N, self.bits, PRBS, PRBSseed=PRBSseed, PRBSorder=PRBSorder)
-        else:
-            Nbits = N * self.bits
+        out = []
+        syms = []
+        bits = []
+        if PRBS:
+            if len(PRBSorder) < ndim:
+                warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
+                PRBSorder_n = []
+                PRBSseed_n = []
+                orders = [15, 23]
+                for i in range(ndim):
+                    try:
+                        PRBSorder_n.append(PRBSorder[i])
+                        PRBSseed_n.append(PRBSseed[i])
+                    except IndexError:
+                        o = np.random.choice(orders)
+                        PRBSorder_n.append(o)
+                        s = np.random.randint(0, 2**o)
+                        PRBSseed_n.append(s)
+                PRBSorder = PRBSorder_n
+                PRBSseed = PRBSseed_n
+        for i in range(ndim):
+            Nbits = N * self.Nbits
             if PRBS == True:
-                bitsq = make_prbs_extXOR(PRBSorder, Nbits, PRBSseed)
+                bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
             else:
                 bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
-        symbols = self.modulate(bitsq)
-        if resample_noise:
-            if snr is not None:
-                outdata = utils.add_awgn(symbols, 10**(-snr/20))
-            outdata = resample(baudrate, samplingrate, outdata)
-        else:
-            os = samplingrate/baudrate
-            outdata = rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1/baudrate, renormalise=True)
-            if snr is not None:
-                outdata = utils.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
-        outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
-        # not 100% clear if we should apply before or after resampling
-        if lw_LO:
-            outdata = apply_phase_noise(outdata, lw_LO, samplingrate)
-        return outdata, symbols, bitsq
+            symbols = self.modulate(bitsq)
+            if resample_noise:
+                if snr is not None:
+                    outdata = impairments.add_awgn(symbols, 10**(-snr/20))
+                outdata = resample.resample_poly(baudrate, samplingrate, outdata)
+            else:
+                os = samplingrate/baudrate
+                outdata = resample.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
+                if snr is not None:
+                    outdata = impairments.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
+            outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
+            # not 100% clear if we should apply before or after resampling
+            if lw_LO:
+                outdata = impairments.apply_phase_noise(outdata, lw_LO, samplingrate)
+            out.append(outdata)
+            syms.append(symbols)
+            bits.append(bitsq)
+        self.symbols_tx = np.array(syms)
+        self.bits_tx = np.array(bits)
+        return np.array(out), self.symbols_tx, self.bits_tx
 
-    def theoretical_SER(self, snr):
+    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
-        Return the theoretical SER for this modulation format for the given SNR (in linear units)
-        """
-        return theory.MQAM_SERvsEsN0(snr, self.M)
-
-    def calculate_SER(self, signal_rx, symbol_tx=None, bits_tx=None, synced=False):
-        """
-        Calculate the symbol error rate of the signal. This function does not do any synchronization and assumes that signal and transmitted data start at the same symbol.
+        Calculate the symbol error rate of the received signal.Currently does not check
+        for correct polarization.
 
         Parameters
         ----------
         signal_rx  : array_like
-            Received signal (1D complex array)
-
-        symbol_tx  : array_like, optional
-            symbols at the transmitter for comparison against signal. If set to None bits_tx needs to be given (Default is None)
+            Received signal (2D complex array)
+        symbols_tx  : array_like, optional
+            symbols at the transmitter for comparison against signal.
         bits_tx    : array_like, optional
-            bitstream at the transmitter for comparison against signal. If set to None symbol_tx needs to be given (Default is None)
-
+            bitstream at the transmitter for comparison against signal.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
 
+        Note
+        ----
+        If neither symbols_tx or bits_tx are given use self.symbols_tx
 
         Returns
         -------
-        SER   : float
-            symbol error rate
+        SER   : array_like
+            symbol error rate per dimension
         """
-        assert symbol_tx is not None or bits_tx is not None, "data_tx or symbol_tx must be given"
-        if symbol_tx is None:
-            symbol_tx = self.modulate(bits_tx)
+        signal_rx = np.atleast_2d(signal_rx)
+        ndim = signal_rx.shape[0]
+        if symbols_tx is None:
+            if bits_tx is None:
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = np.zeros_like(signal_rx)
+                bits_tx = np.atleast_2d(bits_tx)
+                for i in range(ndim):
+                    symbols_tx[i] = self.modulate(bits_tx[i])
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
         data_demod = self.quantize(signal_rx)
         if not synced:
-            #symbol_tx = self._sync_symbol2signal(symbol_tx, data_demod)
-            #symbol_tx, data_demod = ber_functions.adjust_data_length(symbol_tx, data_demod)
-            symbol_tx, data_demod = self._sync_and_adjust(symbol_tx, data_demod)
-        return np.count_nonzero(data_demod - symbol_tx)/len(data_demod), symbol_tx, data_demod
+            symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
+        errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
+        return errs/data_demod.shape[1]
 
-    def _sync_and_adjust(self, syms_tx, syms_rx):
-        syms_tx = self._sync_symbol2signal(syms_tx, syms_rx)
-        syms_tx, syms_rx = ber_functions.adjust_data_length(syms_tx, syms_rx)
-        return syms_tx, syms_rx
-
-    def _sync_symbol2signal(self, syms_tx, syms_demod):
-        acm = 0.
-        for i in range(4):
-            syms_tx = syms_tx*1.j**i
-            s_sync, idx, ac = ber_functions.sync_Tx2Rx_Xcorr(syms_tx, syms_demod)
-            act = abs(ac.max())
-            if act > acm:
-                s_tx_sync = s_sync
-                ix = idx
-                acm = act
-        return s_tx_sync
-
-    def cal_BER(self, signal_rx, bits_tx=None, syms_tx=None, PRBS=(15,bool2bin(np.ones(15)))):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
         """
-        Calculate the bit-error-rate for the given signal, against either a PRBS sequence or a given bit sequence.
+        Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits. Currently does not check
+        for correct polarization.
 
         Parameters
         ----------
-
         signal_rx    : array_like
             received signal to demodulate and calculate BER of
-
         bits_tx      : array_like, optional
-            transmitted bit sequence to compare against. (default is None, which either PRBS or syms_tx has to be given)
+            transmitted bit sequence to compare against.
+        symbols_tx      : array_like, optional
+            transmitted bit sequence to compare against.
+        synced    : bool, optional
+            whether signal_tx and symbol_tx are synchronised.
 
-        syms_tx      : array_like, optional
-            transmitted bit sequence to compare against. (default is None, which means bits_tx or PRBS has to be given)
-
-        PRBS         : tuple(int, int), optional
-            tuple of PRBS order and seed, the order has to be integer 7, 15, 23, 31 and the seed has to be None or a binary array of length of the PRBS order. If the seed is None it will be initialised to all bits one.
+        Note
+        ----
+        If neither bits_tx or symbols_tx are given, we use the self.symbols_tx
 
 
         Returns
         -------
-
-        ber          : float
-            bit-error-rate in linear units
-
-        errs         : integer
-            number of detected errors
-
-        N            : integer
-            length of input sequence
+        ber          :  array_like
+            bit-error-rate in linear units per dimension
         """
-        assert bits_tx is not None or PRBS is not None, "either bits_tx or PRBS needs to be given"
+        signal_rx = np.atleast_2d(signal_rx)
+        ndim = signal_rx.shape[0]
         syms_demod = self.quantize(signal_rx)
-        if syms_tx is None:
+        if symbols_tx is None:
             if bits_tx is None:
-                bits_tx = make_prbs_extXOR( PRBS[0], len(syms_demod)*self.bits, seed=PRBS[1])
-            syms_tx = self.modulate(bits_tx)
-            # TODO check if this needs to be put below the synchronization
-            #syms_tx = ber_functions.adjust_data_length(syms_tx, syms_demod)[0]
-        #s_tx_sync = self._sync_symbol2signal(syms_tx, syms_demod)
-        s_tx_sync, syms_demod = self._sync_and_adjust(syms_tx, syms_demod)
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = []
+                bits_tx = np.atleast_2d(bits_tx)
+                for i in range(ndim):
+                    symbols_tx.append(self.modulate(bits_tx[i]))
+                symbols_tx = np.array(symbols_tx)
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
+        if not synced:
+            symbols_tx, syms_demod = self._sync_and_adjust(symbols_tx, syms_demod)
         bits_demod = self.decode(syms_demod)
-        tx_synced = self.decode(s_tx_sync)
-        return ber_functions._cal_BER_only(tx_synced, bits_demod, threshold=0.8)
+        tx_synced = self.decode(symbols_tx)
+        errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
+        return errs/bits_demod.shape[1]
+
+    def cal_evm(self, signal_rx, blind=False, symbols_tx=None):
+        """
+        Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
+        The EVM here is normalised to the average symbol power, not the peak as in some other definitions. Currently does not check
+        for correct polarization.
+
+        Parameters
+        ----------
+        signal_rx    : array_like
+            input signal to measure the EVM offset
+        blind : bool, optional
+            calculate the blind EVM (signal is quantized, without taking into account symbol errors). For low SNRs this
+            will underestimate the real EVM, because detection errors are not counted.
+        symbols_tx      : array_like, optional
+            known symbol sequence. If this is None self.symbols_tx will be used unless blind is True.
+
+        Returns
+        -------
+        evm       : array_like
+            RMS EVM per dimension
+
+        References
+        ----------
+        ...[1] Shafik, R. "On the extended relationships among EVM, BER and SNR as performance metrics". In Conference on Electrical and Computer Engineering (p. 408) (2006).
+         Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
 
 
-def twostreamPRBS(Nsyms, bits, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None,None)):
-    """
-    Generata a PRBS from two independent PRBS generators.
+        Note
+        ----
+        The to calculate the EVM in dB from the RMS EVM we need calculate 10 log10(EVM**2). This differs from some defintions
+        of EVM, e.g. on wikipedia.
+        """
+        signal_rx = np.atleast_2d(signal_rx)
+        if blind:
+            symbols_tx = self.quantize(signal_rx)
+        else:
+            if symbols_tx is None:
+                symbols_tx = self.symbols_tx
+            else:
+                symbols_tx = np.atleast_2d(symbols_tx)
+            symbols_tx, signal_ad = self._sync_and_adjust(symbols_tx, signal_rx)
+        return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1))#/np.mean(abs(self.symbols)**2))
 
-    Parameters
-    ----------
-    Nsyms   : int
-        the number of symbols at the output
-    bits    : ints
-        the bits per symbol
-    PRBS    : bool, optional
-        whether to use PRBS signal generation or np.random.randint (Default True use PRBS)
-    PRBSorder : tuple(int, int), optional
-        The PRBS order for each generated sequence (Default is (15,23))
-    PRBSseed  : tuple(int, int), optional
-        The seed for each PRBS
+    def est_snr(self, signal_rx, symbols_tx=None, synced=False):
+        """
+        Estimate the SNR of a given input signal, using known symbols.
 
-    Returns
-    -------
-    bitseq  : array_like
-        1D array of booleans that are the interleaved PRBS sequence
-    """
-    if bits % 2:
-        Nbits = (Nsyms * (bits // 2 + 1), Nsyms * bits // 2)
-    else:
-        Nbits = (Nsyms * bits // 2, Nsyms * bits // 2)
-    if PRBS:
-        bitsq1 = make_prbs_extXOR(PRBSorder[0], Nbits[0], PRBSseed[0])
-        bitsq2 = make_prbs_extXOR(PRBSorder[0], Nbits[1], PRBSseed[1])
-    else:
-        bitsq1 = np.random.randint(0, high=2, size=Nbits[0]).astype(np.bool)
-        bitsq2 = np.random.randint(0, high=2, size=Nbits[1]).astype(np.bool)
-    return convert_iqtosinglebitstream(bitsq1, bitsq2, bits)
+        Parameters
+        ----------
+        signal_rx : array_like
+            input signal
+        symbols_tx : array_like, optional
+            known transmitted symbols (default: None means that self.symbols_tx are used)
+        synced : bool, optional
+            whether the signal and symbols are synchronized already
+
+        Returns
+        -------
+        snr: array_like
+            snr estimate per dimension
+        """
+        signal_rx = np.atleast_2d(signal_rx)
+        ndims = signal_rx.shape[0]
+        if symbols_tx is None:
+            symbols_tx = self.symbols_tx
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
+        if not synced:
+            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx)
+        snr = np.zeros(ndims, dtype=np.float64)
+        for i in range(ndims):
+            snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
+        return snr
+
+    def cal_gmi(self, signal_rx, symbols_tx=None):
+        """
+        Calculate the generalized mutual information for the received signal.
+
+        Parameters
+        ----------
+        signal_rx : array_like
+            equalised input signal
+        symbols_tx : array_like
+            transmitted symbols (default:None use self.symbols_tx of the modulator)
+
+        Returns
+        -------
+        gmi : array_like
+            generalized mutual information per mode
+        gmi_per_bit : array_like
+            generalized mutual information per transmitted bit per mode
+        """
+        signal_rx = np.atleast_2d(signal_rx)
+        if symbols_tx is None:
+            symbols_tx = self.symbols_tx
+        else:
+            symbols_tx = np.atleast_2d(symbols_tx)
+        ndims = signal_rx.shape[0]
+        GMI = np.zeros(ndims, dtype=np.float64)
+        GMI_per_bit = np.zeros((ndims, self.Nbits), dtype=np.float64)
+        mm = np.sqrt(np.mean(np.abs(signal_rx)**2, axis=-1))
+        signal_rx = signal_rx/mm[:,np.newaxis]
+        tx, rx = self._sync_and_adjust(symbols_tx, signal_rx)
+        snr = self.est_snr(rx, symbols_tx=tx, synced=True)
+        bits = self.decode(self.quantize(tx)).astype(np.int)
+        # For every mode present, calculate GMI based on SD-demapping
+        for mode in range(ndims):
+            l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self.bitmap_mtx)
+            # GMI per bit
+            for bit in range(self.Nbits):
+                GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[mode, bit::self.Nbits])*l_values[bit::self.Nbits])))
+            GMI[mode] = np.sum(GMI_per_bit[mode])
+        return GMI, GMI_per_bit
+
+

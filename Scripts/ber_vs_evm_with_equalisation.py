@@ -19,7 +19,7 @@ snr = np.linspace(5, 30, 8)
 snrf = np.linspace(5, 30, 500)
 evmf = np.linspace(-30, 0, 500)
 N = 2**16
-Mqams = [ 4, 16, 64, 128]
+Mqams = [ 4, 16]#, 64, 128]
 
 plt.figure()
 ax1 = plt.subplot(221)
@@ -58,36 +58,34 @@ fb = 10e9
 os = 2
 fs = os*fb
 ntaps = 13
-beta = 0.01
+beta = 0.1
 for M in Mqams:
     print("%d-QAM"%M)
     ser = np.zeros(snr.shape)
     ber = np.zeros(snr.shape)
     evm1 = np.zeros(snr.shape)
     evm_known = np.zeros(snr.shape)
-    q_known = np.zeros(snr.shape)
-    tt = []
-    ox = []
-
     i = 0
     for sr in snr:
         print("SNR = %2f.0 dB"%sr)
         modulator = modulation.QAMModulator(M)
-        signal, syms, bits = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
-        signalx = np.atleast_2d(utils.rrcos_pulseshaping(signal, fs, 1/fb, beta))
-        signalafter = np.atleast_2d(signalx[0,::2])
-        evm1[i] = modulator.cal_EVM(signalafter[0])
-        evm_known[i] = modulator.cal_EVM(signalafter[0], syms)
+        signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta, dual_pol=False)
+        signal = np.atleast_2d(signal)
+        signalx = np.atleast_2d(utils.rrcos_pulseshaping(signal[0], fs, 1/fb, beta))
+        wx, er =  equalisation.equalise_signal(signalx, os, 3e-4, M, Ntaps=ntaps, adaptive_step=True, method="mcma")
+        signalafter = equalisation.apply_filter(signalx, os, wx )
+        evm1[i] = modulator.cal_evm(signal[0])
+        evm_known[i] = modulator.cal_evm(signalafter[0], syms)
         # check to see that we can recovery timing delay
-        signalafter = np.roll(signalafter * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
-        ser[i] = modulator.calculate_SER(signalafter[0], symbol_tx=syms)[0]
-        ber[i] = modulator.cal_BER(signalafter[0], bits)[0]
+        #signalafter = np.roll(signalafter * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
+        ser[i] = modulator.cal_ser(signalafter[0], symbol_tx=syms)
+        ber[i] = modulator.cal_ber(signalafter[0], bits_tx=bits)[0]
         i += 1
-    ax1.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax1.plot(snrf, theory.ber_vs_es_over_n0_qam(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax2.plot(snrf, theory.MQAM_SERvsEsN0(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax2.plot(snrf, theory.ser_vs_es_over_n0_qam(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
     ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax3.plot(evmf, theory.MQAM_BERvsEVM(evmf, M), color=c[j], label="%d-QAM theory"%M)
+    ax3.plot(evmf, theory.ber_vs_evm_qam(evmf, M), color=c[j], label="%d-QAM theory"%M)
     ax3.plot(utils.lin2dB(evm1**2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
     # illustrate the difference between a blind and non-blind EVM
     ax3.plot(utils.lin2dB(evm_known**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
