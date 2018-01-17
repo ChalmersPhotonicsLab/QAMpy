@@ -69,7 +69,7 @@ def _select_errorfct(method, M, **kwargs):
         p, c = generate_partition_codes_complex(M)
         return ErrorFctMRDE(p, c)
     elif method in ["sca"]:
-        return SCAErr(_cal_Rsca(M))
+        return ErrFctSCA(_cal_Rsca(M))
     elif method in ["cme"]:
         syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
         d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
@@ -85,7 +85,7 @@ def _select_errorfct(method, M, **kwargs):
             r4 = np.mean(abs(syms)**4)
             A = r4/r2
             beta = np.max(abs(syms*abs(syms)**2-A))/2
-        return CMEErr(R, d, beta)
+        return ErrorFctCME(R, d, beta)
     elif method in ['sbd']:
         return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
     elif method in ['mddma']:
