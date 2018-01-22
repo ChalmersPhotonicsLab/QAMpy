@@ -158,3 +158,19 @@ def gray_code_qam(M):
     gidx = bin2gray(idx)
     return ((gidx[0] << N) | gidx[1]).flatten()
 
+def prob_shaping_propabilites(symbols, nu):
+        symbs = np.unique(symbols.real)
+        px = np.zeros(symbs.shape[0])
+        div_factor = 0
+        for ind in range(px.shape[0]):
+            div_factor += np.exp(-nu * np.abs(symbs[ind]) ** 2)
+        for ind in range(px.shape[0]):
+            px[ind] = np.exp(-nu * np.abs(symbs[ind]) ** 2) / div_factor
+        return symbs, px
+
+def generate_shaped_symbols(N, symbs, px, normalize=True):
+        mod_symbs = np.random.choice(symbs, N, p=px) + \
+                    1j * np.random.choice(symbs, N, p=px)
+        if normalize:
+            mod_symbs = utils.normalise_and_center(mod_symbs)
+        return mod_symbs
