@@ -110,9 +110,8 @@ n_wdm_channels = 3
 ch_sep = 2
 os_rx = 2
 
-sel_wdm_ch = 0
-rx_filter_pos = np.NaN
-rx_filter_bw = 2
+sel_wdm_ch = -1
+plot_results = True
 
 sig_wdm_ch = []
 frame_symbs = []
@@ -133,13 +132,10 @@ for ch in range(n_wdm_channels):
     data_symbs.append(datas)
     pilot_symbs.append(pilots)
 
-    if ch == 0:
-        sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
+    # Simulate tyransmission
+    sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
                                                 linewidth=laser_lw,beta=beta)
-    else:
-        sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
-                                                linewidth=laser_lw,beta=beta)
-
+    # Add signal to Rx structure. 
     sig_wdm_ch.append(sig_tmp)
 
 
@@ -147,11 +143,13 @@ for ch in range(n_wdm_channels):
 # Place the data channels
 #==============================================================================
 num_side_ch = int((n_wdm_channels-1)/2)
-rx_sig = np.zeros(sig_wdm_ch[0].shape,dtype=complex)
+tx_sig = np.zeros(sig_wdm_ch[0].shape,dtype=complex)
 for ch in range(n_wdm_channels):
-    rx_sig += sig_wdm_ch[ch] * np.exp(1j*2*np.pi*(-num_side_ch+ch)*ch_sep*
+    tx_sig += sig_wdm_ch[ch] * np.exp(1j*2*np.pi*(-num_side_ch+ch)*ch_sep*
                         np.linspace(0,sig_wdm_ch[ch].shape[1]/os_tx,sig_wdm_ch[ch].shape[1]))
 
+
+rx_sig = tx_sig.copy()
 
 #==============================================================================
 # Filter a bit, select propper channel
@@ -160,7 +158,7 @@ for l in range(npols):
     rx_sig[l] = pre_filter(rx_sig[l],rx_filter_bw,os_tx,center_freq=sel_wdm_ch*ch_sep)
 
     if (sel_wdm_ch) != 0:
-       rx_sig *= np.exp(1j*2*np.pi*sel_wdm_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
+       rx_sig[l] *= np.exp(-1j*2*np.pi*sel_wdm_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
 
 #==============================================================================
 # Start the receiver structure
@@ -185,9 +183,23 @@ dsp_out = run_pilot_receiver(rx_sig_dsp,pilot_symbs[sel_wdm_ch+num_side_ch],
                              frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, 
                              pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx)
 
+
+
 # Calculate GMI
 mod = modulation.QAMModulator(M)
 gmi_res = np.zeros(npols)
 for l in range(npols):
     gmi_res[l] = mod.cal_gmi(dsp_out[1][l].flatten(),data_symbs[sel_wdm_ch+num_side_ch][l])[0][0]
+    
+#==============================================================================
+# Do Some plotting
+#==============================================================================
+
+if plot_results:
+    plt.figure()
+    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(tx_sig[0]))**2),label="Tx Spectrum")
+    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_sig[0]))**2),label="Rx Spectrum, Post Filter")
+    
+    plt.figure()
+    plt.hist2d(dsp_out[1][0].flatten().real,dsp_out[1][0].flatten().imag,bins=200)
 
