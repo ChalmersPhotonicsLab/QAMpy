@@ -20,28 +20,6 @@ double complex det_symbol(double complex *syms, unsigned int M, double complex v
     return det_sym;
  }
 
-
-void SBD_C(double complex *E, int TrSyms, int Ntaps,  unsigned int os, double mu, double complex *wx, double complex *symbols, unsigned int M, double complex *err, unsigned int pols){
-
-  int i, j, k;
-  double complex Xest, dsymb;
-  for (i=0; i<TrSyms; i++){
-      Xest = 0;
-      for (j=0; j<Ntaps; j++) {
-        for (k=0; k<pols; k++) {
-          Xest = Xest + (wx+j*2)[k]*(E+(i*os+j)*pols)[k];
-        }
-      }
-      //dsymb = det_symbol(symbols, M, Xest);
-      err[i] = (creal(Xest) - creal(dsymb))*abs(creal(dsymb)) + I*(cimag(Xest) - cimag(dsymb)) * abs(cimag(dsymb));
-      for(j=0; j<Ntaps; j++) {
-        for(k=0; k<pols; k++) {
-          (wx+j*pols)[k] = (wx+j*pols)[k]-mu*err[i]*Xest*conj((E+(i*os+j)*pols)[k]);
-        }
-      }
-    }
-}
-
 double complex apply_filter(double complex *E, unsigned int Ntaps, double complex *wx, unsigned int pols, unsigned int L){
 
   int j, k;
