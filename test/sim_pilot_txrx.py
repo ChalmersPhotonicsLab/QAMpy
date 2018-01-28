@@ -98,6 +98,10 @@ pilot_seq_len = 2048
 pilot_ins_rat = 32
 cpe_avg = 8
 
+laser_lw = 0
+sig_snr = 35
+freq_off = 1e9*0
+
 os_tx = 8
 rx_filter_bw = 2
 os_rx = 2
@@ -128,11 +132,11 @@ for ch in range(n_wdm_channels):
     pilot_symbs.append(pilots)
 
     if ch == 0:
-        sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=35, modal_delay=None, freqoff=0e9*0,
-                                                linewidth=100e3*0,beta=beta)
+        sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
+                                                linewidth=laser_lw,beta=beta)
     else:
-        sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=35, modal_delay=None, freqoff=0e9*0,
-                                                linewidth=100e3*0,beta=beta)
+        sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
+                                                linewidth=laser_lw,beta=beta)
 
     sig_wdm_ch.append(sig_tmp)
 
