@@ -111,7 +111,7 @@ ch_sep = 2
 os_rx = 2
 
 sel_wdm_ch = 0
-rx_filter_pos = -2
+rx_filter_pos = np.NaN
 rx_filter_bw = 2
 
 sig_wdm_ch = []
@@ -119,7 +119,9 @@ frame_symbs = []
 data_symbs = []
 pilot_symbs = []
 
+#==============================================================================
 # Generate several frames
+#==============================================================================
 for ch in range(n_wdm_channels):
     # Create frame
     frames, datas, pilots = pilotbased_transmitter.gen_dataframe_with_phasepilots(M,npols,frame_length=frame_length,
@@ -141,19 +143,28 @@ for ch in range(n_wdm_channels):
     sig_wdm_ch.append(sig_tmp)
 
 
+#==============================================================================
 # Place the data channels
+#==============================================================================
 num_side_ch = int((n_wdm_channels-1)/2)
 rx_sig = np.zeros(sig_wdm_ch[0].shape,dtype=complex)
 for ch in range(n_wdm_channels):
-    rx_sig += sig_wdm_ch[ch] * np.exp(1j*2*np.pi*(-num_side_ch+ch)*ch_sep*np.linspace(0,sig_wdm_ch[ch].shape[1]/os_tx,sig_wdm_ch[ch].shape[1]))
+    rx_sig += sig_wdm_ch[ch] * np.exp(1j*2*np.pi*(-num_side_ch+ch)*ch_sep*
+                        np.linspace(0,sig_wdm_ch[ch].shape[1]/os_tx,sig_wdm_ch[ch].shape[1]))
 
 
+#==============================================================================
 # Filter a bit, select propper channel
+#==============================================================================
 for l in range(npols):
     rx_sig[l] = pre_filter(rx_sig[l],rx_filter_bw,os_tx,center_freq=sel_wdm_ch*ch_sep)
 
     if (sel_wdm_ch) != 0:
        rx_sig *= np.exp(1j*2*np.pi*sel_wdm_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
+
+#==============================================================================
+# Start the receiver structure
+#==============================================================================
 
 # Orthonormalize a bit, try to get back to something again
 rx_sig = utils.orthonormalize_signal(rx_sig)
@@ -164,8 +175,15 @@ rx_x = resample.rrcos_resample_zeroins(rx_sig[0].flatten(), os_tx, os_rx, Ts=2/o
 rx_y = resample.rrcos_resample_zeroins(rx_sig[1].flatten(), os_tx, os_rx, Ts=2/os_rx, beta=beta, renormalise = True)
 rx_sig_dsp = np.vstack((rx_x,rx_y))
 
+
+#==============================================================================
+# Run DSP and calculate AIR
+#==============================================================================
+
 # Run DSP
-dsp_out = run_pilot_receiver(rx_sig_dsp,pilot_symbs[sel_wdm_ch+num_side_ch], frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx)
+dsp_out = run_pilot_receiver(rx_sig_dsp,pilot_symbs[sel_wdm_ch+num_side_ch], 
+                             frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, 
+                             pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx)
 
 # Calculate GMI
 mod = modulation.QAMModulator(M)
