@@ -88,29 +88,32 @@ def pre_filter(signal, bw, os,center_freq = 0):
     return s
 
 
+# Signal configuration
 M = 256
 npols = 2
 beta = 0.2
+laser_lw = 0
+sig_snr = 35
+freq_off = 1e9*0
 
-
+# Pilot DSP configuration
 frame_length = 2**14
 pilot_seq_len = 2048
 pilot_ins_rat = 32
 cpe_avg = 8
 
-laser_lw = 0
-sig_snr = 35
-freq_off = 1e9*0
-
+# Over sampling settings and WDM configuration
 os_tx = 8
 rx_filter_bw = 2
 os_rx = 2
-
 n_wdm_channels = 3
 ch_sep = 2
 os_rx = 2
 
+# Select Rx channel
 sel_wdm_ch = -1
+
+# If wanted, plot the output results. 
 plot_results = True
 
 sig_wdm_ch = []
@@ -166,7 +169,6 @@ for l in range(npols):
 
 # Orthonormalize a bit, try to get back to something again
 rx_sig = utils.orthonormalize_signal(rx_sig)
-
 
 # Resample for DSP
 rx_x = resample.rrcos_resample_zeroins(rx_sig[0].flatten(), os_tx, os_rx, Ts=2/os_rx, beta=beta, renormalise = True)
