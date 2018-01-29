@@ -484,20 +484,24 @@ class PilotModulator(object):
         self.mod_pilot.generate_signal(N_pilots, None, ndim=ndim, **kwargs)
         out_symbs[:, :pilot_seq_len] = self.mod_pilot.symbols_tx[:, :pilot_seq_len]
         if N_ph_frames:
-            self.mod_data.generate_signal(N_ph_frames * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
-            # Note that currently the phase pilots start one symbol after the sequence
-            # TODO: we should probably fix this
-            out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
-            for j in range(N_pilots):
-                out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
+            if not pilot_ins_rat == 1:
+                self.mod_data.generate_signal(N_ph_frames * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
+                # Note that currently the phase pilots start one symbol after the sequence
+                # TODO: we should probably fix this
+                out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
+                for j in range(N_pilots):
+                    out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
                           pilot_seq_len + (j + 1) * pilot_ins_rat] = \
-                    self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
+                        self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
+
         else:
             self.mod_data.generate_signal(frame_len-pilot_seq_len, None, ndim=ndim, **kwargs)
             out_symbs[:, pilot_seq_len:] = self.mod_data.symbols_tx[:,:]
         self.symbols_tx = out_symbs
         self.pilot_ins_rat = pilot_ins_rat
         self.pilot_seq_len = pilot_seq_len
+        if pilot_ins_rat == 1:
+            return out_symbs, np.array([], dtype=complex), self.mod_pilot.symbols_tx
         return out_symbs, self.mod_data.symbols_tx, self.mod_pilot.symbols_tx
 
     @property
