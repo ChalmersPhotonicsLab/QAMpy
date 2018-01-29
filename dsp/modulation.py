@@ -442,3 +442,34 @@ class QAMModulator(object):
         return GMI, GMI_per_bit
 
 
+class PilotModulator(object):
+    def __init__(self, M):
+        self.mod_data = QAMModulator(M)
+        self.mod_pilot = QAMModulator(4)
+
+    def generate_signal(self, frame_len, pilot_seq_len, pilot_ins_rat, ndim, **kwargs):
+        N_ph_pilots = int((frame_len - pilot_seq_len)/pilot_ins_rat)
+        N_pilots = pilot_seq_len + N_ph_pilots
+        out_symbs = np.zeros([ndim, frame_len], dtype=complex)
+        self.mod_pilot.generate_signal(N_pilots, None, ndim=ndim, **kwargs)
+        self.mod_data.generate_signal(N_ph_pilots * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
+        out_symbs[:, :pilot_seq_len] = self.mod_pilot.symbols_tx[:, :pilot_seq_len]
+        out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
+        for j in range(N_pilots):
+            out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
+                         pilot_seq_len + (j + 1) * pilot_ins_rat] = \
+                self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
+        self.symbols_tx = out_symbs
+        self.pilot_ins_rat = pilot_ins_rat
+        self.pilot_seq_len = pilot_seq_len
+        return out_symbs, self.mod_data.symbols_tx, self.mod_pilot.symbols_tx
+
+    @property
+    def pilot_seq(self):
+        return self.mod_pilot.symbols_tx[:self.pilot_seq_len]
+
+    @property
+    def ph_pilots(self):
+        return self.mod_pilot.symbols_tx[self.pilot_seq_len::self.pilot_ins_rat]
+
+
