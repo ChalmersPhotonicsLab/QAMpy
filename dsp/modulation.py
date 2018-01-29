@@ -458,7 +458,7 @@ class PilotModulator(object):
         pilot_seq_len : integer
             length of the pilot sequence at the beginning of the frame
         pilot_ins_rat : integer
-            phase pilot insertion ratio
+            phase pilot insertion ratio, if 0 or None do not insert phase pilots
         ndim : integer
             number of dimensions of the signal
         kwargs
@@ -473,21 +473,28 @@ class PilotModulator(object):
         pilots : array_like
             pilot sequence
         """
-        if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
-            raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
-        N_ph_pilots = (frame_len - pilot_seq_len)//pilot_ins_rat
-        N_pilots = pilot_seq_len + N_ph_pilots
+        if pilot_ins_rat is 0 or pilot_ins_rat is None:
+            N_ph_frames = 0
+        else:
+            if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
+                raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
+            N_ph_frames = (frame_len - pilot_seq_len)//pilot_ins_rat
+        N_pilots = pilot_seq_len + N_ph_frames
         out_symbs = np.zeros([ndim, frame_len], dtype=complex)
         self.mod_pilot.generate_signal(N_pilots, None, ndim=ndim, **kwargs)
-        self.mod_data.generate_signal(N_ph_pilots * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
         out_symbs[:, :pilot_seq_len] = self.mod_pilot.symbols_tx[:, :pilot_seq_len]
-        # Note that currently the phase pilots start one symbol after the sequence
-        # TODO: we should probably fix this
-        out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
-        for j in range(N_pilots):
-            out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
-                         pilot_seq_len + (j + 1) * pilot_ins_rat] = \
-                self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
+        if N_ph_frames:
+            self.mod_data.generate_signal(N_ph_frames * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
+            # Note that currently the phase pilots start one symbol after the sequence
+            # TODO: we should probably fix this
+            out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
+            for j in range(N_pilots):
+                out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
+                          pilot_seq_len + (j + 1) * pilot_ins_rat] = \
+                    self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
+        else:
+            self.mod_data.generate_signal(frame_len-pilot_seq_len, None, ndim=ndim, **kwargs)
+            out_symbs[:, pilot_seq_len:] = self.mod_data.symbols_tx[:,:]
         self.symbols_tx = out_symbs
         self.pilot_ins_rat = pilot_ins_rat
         self.pilot_seq_len = pilot_seq_len
