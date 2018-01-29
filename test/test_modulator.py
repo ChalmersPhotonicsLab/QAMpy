@@ -84,6 +84,30 @@ class TestModulatorAttr(object):
         e_snr = self.Q.est_snr(sig)
         npt.assert_almost_equal(10*np.log10(e_snr), snr, decimal=1)
 
+class TestPilotModulator(object):
+    Q = modulation.PilotModulator(128)
+
+    @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
+    @pytest.mark.parametrize("ndims", range(1, 4))
+    def testshape(self, N, ndims):
+        s, d, p = self.Q.generate_signal(N, 256, 32, ndims)
+        assert s.shape[1] == N and s.shape[0] == ndims
+
+    @pytest.mark.parametrize("N", [1, 123, 256, 534])
+    def testseqlen(self, N):
+        QPSK = modulation.QAMModulator(4)
+        s, d, p = self.Q.generate_signal(2**16, N, 0, 1)
+        for sym in s[0, :N]:
+            assert sym in QPSK.symbols
+
+    @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
+    def testphpilots(self, N):
+        QPSK = modulation.QAMModulator(4)
+        s, d, p = self.Q.generate_signal(2**16, 0, N, 1)
+        for sym in s[0, ::N]:
+            assert sym in QPSK.symbols
+
+
 @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
 @pytest.mark.parametrize("ndims", range(1,3))
 def test_gmi_cal(M, ndims):
