@@ -448,12 +448,41 @@ class PilotModulator(object):
         self.mod_pilot = QAMModulator(4)
 
     def generate_signal(self, frame_len, pilot_seq_len, pilot_ins_rat, ndim, **kwargs):
-        N_ph_pilots = int((frame_len - pilot_seq_len)/pilot_ins_rat)
+        """
+        Generate a pilot based symbol sequence
+
+        Parameters
+        ----------
+        frame_len : integer
+            length of the data frame without pilot sequence
+        pilot_seq_len : integer
+            length of the pilot sequence at the beginning of the frame
+        pilot_ins_rat : integer
+            phase pilot insertion ratio
+        ndim : integer
+            number of dimensions of the signal
+        kwargs
+            keyword arguments to pass to QAMmodulator.generate_signal
+
+        Returns
+        -------
+        symbols : array_like
+            data frame with pilots
+        data : array_like
+            data symbols
+        pilots : array_like
+            pilot sequence
+        """
+        if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
+            raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
+        N_ph_pilots = (frame_len - pilot_seq_len)//pilot_ins_rat
         N_pilots = pilot_seq_len + N_ph_pilots
         out_symbs = np.zeros([ndim, frame_len], dtype=complex)
         self.mod_pilot.generate_signal(N_pilots, None, ndim=ndim, **kwargs)
         self.mod_data.generate_signal(N_ph_pilots * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
         out_symbs[:, :pilot_seq_len] = self.mod_pilot.symbols_tx[:, :pilot_seq_len]
+        # Note that currently the phase pilots start one symbol after the sequence
+        # TODO: we should probably fix this
         out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
         for j in range(N_pilots):
             out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
@@ -466,10 +495,10 @@ class PilotModulator(object):
 
     @property
     def pilot_seq(self):
-        return self.mod_pilot.symbols_tx[:self.pilot_seq_len]
+        return self.mod_pilot.symbols_tx[:, :self.pilot_seq_len]
 
     @property
     def ph_pilots(self):
-        return self.mod_pilot.symbols_tx[self.pilot_seq_len::self.pilot_ins_rat]
+        return self.mod_pilot.symbols_tx[:, self.pilot_seq_len::self.pilot_ins_rat]
 
 
