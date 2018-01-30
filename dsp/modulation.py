@@ -493,7 +493,8 @@ class PilotModulator(object):
                     out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
                           pilot_seq_len + (j + 1) * pilot_ins_rat] = \
                         self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
-
+            else:
+                out_symbs[:, pilot_seq_len:] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
         else:
             self.mod_data.generate_signal(frame_len-pilot_seq_len, None, ndim=ndim, **kwargs)
             out_symbs[:, pilot_seq_len:] = self.mod_data.symbols_tx[:,:]
