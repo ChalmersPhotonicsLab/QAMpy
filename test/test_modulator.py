@@ -104,8 +104,8 @@ class TestPilotModulator(object):
     def testphpilots(self, N):
         QPSK = modulation.QAMModulator(4)
         s, d, p = self.Q.generate_signal(2**16, 0, N, 1)
-        for sym in s[0, ::N]:
-            assert sym in QPSK.symbols
+        dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
 
 @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
