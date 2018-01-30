@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import fractions
 import warnings
 from bitarray import bitarray
 
@@ -531,7 +532,32 @@ class TDHQAMModulator(object):
         else:
             raise NotImplementedError("no other methods are implemented yet")
 
-
+    def generate_signal(self, N, ndim=1, **kwargs):
+        ratn = fractions.Fraction(self.fr).limit_denominator()
+        f_M2 = ratn.numerator
+        f_M = ratn.denominator
+        f_M1 = f_M - f_M2
+        frms = N//f_M
+        frms_rem = N%f_M
+        N1 = frms * f_M1
+        N2 = frms * f_M2
+        out = np.zeros((ndim, N), dtype=np.complex128)
+        if frms_rem:
+            mi1 = min(f_M1, frms_rem)
+            N1 += mi1
+            frms_rem -= mi1
+            if frms_rem > 0:
+                assert frms_rem < f_M2, "remaining symbols should be less than symbol 2 frames"
+                N2 += frms_rem
+        sig1, sym1, bits1, = self.mod_M1.generate_signal(N1, None, ndim=ndim, **kwargs)
+        sig2, sym2, bits2, = self.mod_M2.generate_signal(N2, None, ndim=ndim, **kwargs)
+        idx = np.arange(N)
+        idx1 = idx%f_M < f_M1
+        idx2 = idx%f_M >= f_M1
+        out[:,idx1] = sym1
+        out[:,idx2] = sym2
+        self.symbols_tx = out
+        return out
 
 
 
