@@ -107,6 +107,19 @@ class TestPilotModulator(object):
         for sym in s[0, ::N]:
             assert sym in QPSK.symbols
 
+class TestTDHybrid(object):
+    @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])
+    @pytest.mark.parametrize("M2", [4, 16, 32, 64, 128, 256])
+    def testhybrid_dist(self, M1, M2):
+        hm = modulation.TDHQAMModulator(M1, M2, 0.5, power_method="dist")
+        d1_r = np.min(np.diff(np.unique(hm.mod_M1.symbols.real)))
+        d2_r = np.min(np.diff(np.unique(hm.mod_M2.symbols.real)))
+        d1_i = np.min(np.diff(np.unique(hm.mod_M1.symbols.imag)))
+        d2_i = np.min(np.diff(np.unique(hm.mod_M2.symbols.imag)))
+        npt.assert_approx_equal(d1_r, d2_r)
+        npt.assert_approx_equal(d1_i, d2_i)
+
+
 
 @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
 @pytest.mark.parametrize("ndims", range(1,3))

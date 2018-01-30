@@ -514,3 +514,25 @@ class PilotModulator(object):
         return self.mod_pilot.symbols_tx[:, self.pilot_seq_len::self.pilot_ins_rat]
 
 
+class TDHQAMModulator(object):
+    def __init__(self, M1, M2, fr, power_method="dist", snr=None):
+        if power_method is "ber":
+            assert snr is not None, "snr needs to be given to calculate the power ratio based on ber"
+        self.M1 = M1
+        self.M2 = M2
+        self.fr = fr
+        self.mod_M1 = QAMModulator(M1)
+        if power_method is "dist":
+            d1 = np.min(abs(np.diff(np.unique(self.mod_M1.symbols))))
+            M2symbols = theory.cal_symbols_qam(M2)
+            d2 = np.min(abs(np.diff(np.unique(M2symbols))))
+            scf = (d2/d1)**2
+            self.mod_M2 = QAMModulator(M2, scaling_factor=scf)
+        else:
+            raise NotImplementedError("no other methods are implemented yet")
+
+
+
+
+
+
