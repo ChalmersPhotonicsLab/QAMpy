@@ -128,6 +128,11 @@ class QAMSignal(np.ndarray):
     def __array_finalize__(self, obj):
         if obj is None: return
         self.bits = getattr(obj, "bits", None)
+        self._symbols = getattr(obj, "_symbols", obj)
+
+    @property
+    def symbols(self):
+        return self._symbols
 
     @property
     def Nbits(self):
@@ -230,9 +235,9 @@ class QAMSignal(np.ndarray):
         ndim = signal_rx.shape[0]
         data_demod = self.quantize(signal_rx)
         if not synced:
-            symbols_tx, data_demod = self._sync_and_adjust(self, data_demod)
+            symbols_tx, data_demod = self._sync_and_adjust(self.symbols, data_demod)
         else:
-            symbols_tx = self
+            symbols_tx = self.symbols
         errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         return np.asarray(errs)/data_demod.shape[1]
 
@@ -266,9 +271,9 @@ class QAMSignal(np.ndarray):
         ndim = signal_rx.shape[0]
         syms_demod = self.quantize(signal_rx)
         if not synced:
-            symbols_tx, syms_demod = self._sync_and_adjust(self, syms_demod)
+            symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod)
         else:
-            symbols_tx = self
+            symbols_tx = self.symbols
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(symbols_tx)
         errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
@@ -307,8 +312,8 @@ class QAMSignal(np.ndarray):
         of EVM, e.g. on wikipedia.
         """
         signal_rx = np.atleast_2d(signal_rx)
-        symbols_tx, signal_ad = self._sync_and_adjust(self, signal_rx)
-        return np.asarray(pnp.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1)))#/np.mean(abs(self.symbols)**2))
+        symbols_tx, signal_ad = self._sync_and_adjust(self.symbols, signal_rx)
+        return np.asarray(np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1)))#/np.mean(abs(self.symbols)**2))
 
     def est_snr(self, signal_rx, synced=False):
         """
@@ -331,9 +336,9 @@ class QAMSignal(np.ndarray):
         signal_rx = np.atleast_2d(signal_rx)
         ndims = signal_rx.shape[0]
         if not synced:
-            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx)
+            symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx)
         else:
-            symbols_tx = self
+            symbols_tx = self.symbols
         snr = np.zeros(ndims, dtype=np.float64)
         for i in range(ndims):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
@@ -358,7 +363,7 @@ class QAMSignal(np.ndarray):
             generalized mutual information per transmitted bit per mode
         """
         signal_rx = np.atleast_2d(signal_rx)
-        symbols_tx = self
+        symbols_tx = self.symbols
         ndims = signal_rx.shape[0]
         GMI = np.zeros(ndims, dtype=np.float64)
         GMI_per_bit = np.zeros((ndims, self.Nbits), dtype=np.float64)
