@@ -517,6 +517,22 @@ class PilotModulator(object):
 
 class TDHQAMModulator(object):
     def __init__(self, M1, M2, fr, power_method="dist", snr=None):
+        """
+        Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
+
+        Parameters
+        ----------
+        M1 : integer
+            QAM order of the first part.
+        M2 : integer
+            QAM order of the second part
+        fr : float
+            fraction of the second format of the overall frame length
+        power_method : string, optional
+            method to calculate the power ratio of the different orders, currently on "dist" is implemented
+        snr : float
+            Design signal-to-noise ratio needed when using BER for calculation of the power ratio, currently does nothing
+        """
         if power_method is "ber":
             assert snr is not None, "snr needs to be given to calculate the power ratio based on ber"
         self.M1 = M1
@@ -533,6 +549,23 @@ class TDHQAMModulator(object):
             raise NotImplementedError("no other methods are implemented yet")
 
     def generate_signal(self, N, ndim=1, **kwargs):
+        """
+        Generate a hybrid qam signal
+
+        Parameters
+        ----------
+        N : integer
+            length of the signal
+        ndim : integer, optional
+            number of dimensions (modes, polarizations)
+        kwargs
+            arguments to pass to the modulator signal generations
+
+        Returns
+        -------
+        out : array_like
+            hybrid qam signal
+        """
         ratn = fractions.Fraction(self.fr).limit_denominator()
         f_M2 = ratn.numerator
         f_M = ratn.denominator
