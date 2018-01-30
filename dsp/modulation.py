@@ -125,6 +125,10 @@ class QAMSignal(np.ndarray):
         obj.bits = bits
         return obj
 
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self.bits = getattr(obj, "bits", None)
+
     @property
     def Nbits(self):
         """
@@ -155,7 +159,7 @@ class QAMSignal(np.ndarray):
         outdata  : array_like
             1D array of complex symbol values. Normalised to energy of 1
         """
-        self._modulate(data, self._encoding, self.M)
+        return self._modulate(data, self._encoding, self.M)
 
     def decode(self, symbols):
         """
@@ -175,7 +179,7 @@ class QAMSignal(np.ndarray):
         outbits   : array_like
             array of booleans representing bits with same number of dimensions as symbols
         """
-        self._decode(symbols, self._encoding)
+        return self._decode(symbols, self._encoding)
 
     def quantize(self, signal):
         """
@@ -230,7 +234,7 @@ class QAMSignal(np.ndarray):
         else:
             symbols_tx = self
         errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
-        return errs/data_demod.shape[1]
+        return np.asarray(errs)/data_demod.shape[1]
 
     def cal_ber(self, signal_rx, synced=False):
         """
@@ -268,7 +272,7 @@ class QAMSignal(np.ndarray):
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(symbols_tx)
         errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
-        return errs/bits_demod.shape[1]
+        return np.asarray(errs)/bits_demod.shape[1]
 
     def cal_evm(self, signal_rx, blind=False):
         """
@@ -304,7 +308,7 @@ class QAMSignal(np.ndarray):
         """
         signal_rx = np.atleast_2d(signal_rx)
         symbols_tx, signal_ad = self._sync_and_adjust(self, signal_rx)
-        return np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1))#/np.mean(abs(self.symbols)**2))
+        return np.asarray(pnp.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1)))#/np.mean(abs(self.symbols)**2))
 
     def est_snr(self, signal_rx, synced=False):
         """
@@ -333,7 +337,7 @@ class QAMSignal(np.ndarray):
         snr = np.zeros(ndims, dtype=np.float64)
         for i in range(ndims):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
-        return snr
+        return np.asarray(snr)
 
     def cal_gmi(self, signal_rx):
         """
