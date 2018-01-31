@@ -20,6 +20,56 @@ def _flip_symbols(sig, idx, d):
                 sig[i] += 1.j*d
     return sig
 
+class TestQAMSymbolsGray(object):
+    @pytest.mark.parametrize("N", [np.random.randint(1,2**20)])
+    @pytest.mark.parametrize("ndim", np.arange(1, 4))
+    def test_shape(self, N, ndim):
+        s = modulation.QAMSymbolsGrayCoded(16, N, ndim)
+        assert s.shape == (ndim, N)
+
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    def testavgpow(self, M):
+        s = modulation.QAMSymbolsGrayCoded(M, 2**18)
+        p = (abs(s)**2).mean()
+        npt.assert_almost_equal(p, 1, 2)
+
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    def test_symbols(self, M):
+        s = modulation.QAMSymbolsGrayCoded(M, 1000, ndim=1)
+        si = np.unique(s)
+        thsyms = modulation.theory.cal_symbols_qam(M)/np.sqrt(modulation.theory.cal_scaling_factor_qam(M))
+        d = np.min(abs(s[0,:, np.newaxis]-thsyms), axis=1)
+        assert si.shape[0] == M
+        npt.assert_array_almost_equal(d, 0)
+
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    @pytest.mark.parametrize("prbsseed", np.arange(1,10))
+    def testbits(self, M, prbsseed):
+        s = modulation.QAMSymbolsGrayCoded(M, 1000, ndim=1, PRBSseed=[prbsseed])
+        npt.assert_array_almost_equal(s.decode(s), s.bits)
+
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    @pytest.mark.parametrize("prbsseed", np.arange(1,10))
+    def testbits2(self, M, prbsseed):
+        N = 1000
+        s = modulation.QAMSymbolsGrayCoded(M, N, ndim=1, PRBSseed=[prbsseed])
+        bitsq = modulation.make_prbs_extXOR(s._prbsorder[0], N*np.log2(M), prbsseed)
+        npt.assert_array_almost_equal(s.decode(s)[0], bitsq)
+
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    def testfromarray_order(self, M):
+        a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
+        s = modulation.QAMSymbolsGrayCoded.from_array(a)
+        assert np.unique(s).shape[0] is M
+
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    def testfromarray_avgpow(self, M):
+        a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
+        s = modulation.QAMSymbolsGrayCoded.from_array(a)
+        npt.assert_almost_equal((abs(s)**2).mean(), (abs(s)**2).mean())
+
+
+
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)
     d = np.diff(np.unique(Q.symbols.real)).min()
