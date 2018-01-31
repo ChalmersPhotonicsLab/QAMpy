@@ -79,7 +79,7 @@ class TestQAMSymbolsGray(object):
 
     @pytest.mark.parametrize("N", [1024, 12423, 100000, 2**18])
     @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
-    def testfrombits_len(self,  N, M):
+    def testfrombits_bits(self,  N, M):
         b = modulation.make_prbs_extXOR(15, N)
         s = modulation.QAMSymbolsGrayCoded.from_bits(b, M)
         nbit = int(np.log2(M))
