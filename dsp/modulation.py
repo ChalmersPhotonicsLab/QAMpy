@@ -116,24 +116,45 @@ class QAMSignal(np.ndarray):
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._decode(coded_symbols, encoding), M)
         obj, bits = cls.generate(N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding)
         obj = obj.view(cls)
-        obj.bitmap_mtx = bitmap_mtx
+        obj._bitmap_mtx = bitmap_mtx
         obj._encoding = encoding
-        obj.coded_symbols = coded_symbols
-        obj.M = M
-        obj._graycode = _graycode
+        obj._coded_symbols = coded_symbols
+        obj._M = M
+        obj._code = _graycode
         obj._prbs = PRBS
-        obj._prbsorder=PRBSorder
-        obj.bits = bits
+        obj._prbsorder = PRBSorder
+        obj._prbsseed = PRBSseed
+        obj._bits = bits
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None: return
-        self.bits = getattr(obj, "bits", None)
+        self._bits = getattr(obj, "_bits", None)
         self._symbols = getattr(obj, "_symbols", obj)
+        self._bitmap_mtx = getattr(obj, "_bitmap_mtx", None)
+        self._encoding = getattr(obj, "_encoding", None)
+        self._M = getattr(obj, "_M", None)
+        self._code = getattr(obj, "_code", None)
+        self._coded_symbols = getattr(obj, "_coded_symbols", None)
+        self._prbs = getattr(obj, "_prbs", None)
+        self._prbsorder = getattr(obj, "_prbsorder", None)
+        self._prbsseed = getattr(obj, "_prbsseed", None)
 
     @property
     def symbols(self):
         return self._symbols
+
+    @property
+    def coded_symbols(self):
+        return self._coded_symbols
+
+    @property
+    def bits(self):
+        return self._bits
+
+    @property
+    def M(self):
+        return self._M
 
     @property
     def Nbits(self):
@@ -375,7 +396,7 @@ class QAMSignal(np.ndarray):
         bits = self.decode(self.quantize(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(ndims):
-            l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self.bitmap_mtx)
+            l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self._bitmap_mtx)
             # GMI per bit
             for bit in range(self.Nbits):
                 GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[mode, bit::self.Nbits])*l_values[bit::self.Nbits])))
