@@ -12,7 +12,8 @@ from . import impairments
 from .prbs import make_prbs_extXOR
 from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
-class QAMSignal(np.ndarray):
+class QAMSymbolsGrayCoded(np.ndarray):
+
     @classmethod
     def generate(cls, N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding):
         syms = []
@@ -99,21 +100,58 @@ class QAMSignal(np.ndarray):
         # the below is not really the fastest method but easy encoding/decoding is possible
         return np.fromstring(b''.join(datab.decode(encoding)), dtype=np.complex128)
 
-    def __new__(cls, M, N, ndim=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None):
+    @classmethod
+    def from_array(cls, arr, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), fb=1):
+        M = np.unique(arr).shape[0]
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))/np.sqrt((abs(np.unique(arr))**2).mean())
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_attr(M, scale)
+        out = np.empty_like(arr)
+        for i in range(arr.shape[0]):
+            out[i] = quantize(arr[i], coded_symbols)
+        bits = cls._decode(out, encoding)
+        obj = np.asarray(out).view(cls)
+        obj._M = M
+        obj._fb = fb
+        obj._bits = bits
+        obj._encoding = encoding
+        obj._code = _graycode
+        obj._coded_symbols = coded_symbols
+        obj._prbs = PRBS
+        if PRBS is None:
+            obj._prbsorder = None
+        else:
+            obj._prbsorder = PRBSorder
+        obj._prbsseed = PRBSseed
+        return obj
+
+    @classmethod
+    def _generate_attr(cls, M, scale):
         Nbits = np.log2(M)
         symbols = theory.cal_symbols_qam(M)
-        if not scaling_factor:
-            scale = theory.cal_scaling_factor_qam(M)
-        else:
-            scale = scaling_factor
-        symbols /= np.sqrt(scale)
+        # check if this gives the correct mapping
+        symbols /= scale
         _graycode = theory.gray_code_qam(M)
         coded_symbols = symbols[_graycode]
-        bformat = "0%db" % Nbits
-        encoding = dict([(coded_symbols[i].tobytes(),
-                                bitarray(format(_graycode[i], bformat)))
-                               for i in range(len(_graycode))])
+        encoding = cls._generate_encoding(coded_symbols, _graycode, M)
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._decode(coded_symbols, encoding), M)
+        return coded_symbols, _graycode, encoding, bitmap_mtx
+
+
+    @classmethod
+    def _generate_encoding(cls, symbols, code, M):
+        Nbits = np.log2(M)
+        bformat = "0%db" % Nbits
+        return dict([(symbols[i].tobytes(),
+                                bitarray(format(code[i], bformat)))
+                               for i in range(len(code))])
+
+
+    def __new__(cls, M, N, ndim=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None, fb=1):
+        if not scaling_factor:
+            scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        else:
+            scale = scaling_factor
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_attr(M, scale)
         obj, bits = cls.generate(N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding)
         obj = obj.view(cls)
         obj._bitmap_mtx = bitmap_mtx
@@ -122,7 +160,10 @@ class QAMSignal(np.ndarray):
         obj._M = M
         obj._code = _graycode
         obj._prbs = PRBS
-        obj._prbsorder = PRBSorder
+        if PRBS is None:
+            obj._prbsorder = None
+        else:
+            obj._prbsorder = PRBSorder
         obj._prbsseed = PRBSseed
         obj._bits = bits
         return obj
@@ -163,15 +204,6 @@ class QAMSignal(np.ndarray):
         """
         return int(np.log2(self.M))
 
-    def _sync_and_adjust(self, tx, rx):
-        tx_out = []
-        rx_out = []
-        for i in range(tx.shape[0]):
-            t, r = ber_functions.sync_and_adjust(tx[i], rx[i])
-            tx_out.append(t)
-            rx_out.append(r)
-        return np.array(tx_out), np.array(rx_out)
-
     def modulate(self, data):
         """
         Modulate a bit sequence into QAM symbols
@@ -204,11 +236,20 @@ class QAMSignal(np.ndarray):
         Returns
         -------
         outbits   : array_like
-            array of booleans representing bits with same number of dimensions as symbols
+             for i in range(signal.shape[0]):
+            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)       array of booleans representing bits with same number of dimensions as symbols
         """
         return self._decode(symbols, self._encoding)
 
-    def quantize(self, signal):
+class SignalQualityMixing(object):
+
+    def _signal_present(self, signal):
+        if signal is None:
+            return self
+        else:
+            return np.atleast_2d(signal)
+
+    def quantize(self, signal=None):
         """
         Make symbol decisions based on the input field. Decision is made based on difference from constellation points
 
@@ -222,13 +263,23 @@ class QAMSignal(np.ndarray):
         symbols  : array_like
             2d array of the detected symbols
         """
-        signal = np.atleast_2d(signal)
+        signal = self._signal_present(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
             outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)
         return outsyms
 
-    def cal_ser(self, signal_rx, synced=False):
+    def _sync_and_adjust(self, tx, rx):
+        tx_out = []
+        rx_out = []
+        for i in range(tx.shape[0]):
+            t, r = ber_functions.sync_and_adjust(tx[i], rx[i])
+            tx_out.append(t)
+            rx_out.append(r)
+        return np.array(tx_out), np.array(rx_out)
+
+
+    def cal_ser(self, signal_rx=None, synced=False):
         """
         Calculate the symbol error rate of the received signal.Currently does not check
         for correct polarization.
@@ -253,7 +304,7 @@ class QAMSignal(np.ndarray):
         SER   : array_like
             symbol error rate per dimension
         """
-        signal_rx = np.atleast_2d(signal_rx)
+        signal_rx = self._signal_present(signal_rx)
         ndim = signal_rx.shape[0]
         data_demod = self.quantize(signal_rx)
         if not synced:
@@ -263,7 +314,7 @@ class QAMSignal(np.ndarray):
         errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         return np.asarray(errs)/data_demod.shape[1]
 
-    def cal_ber(self, signal_rx, synced=False):
+    def cal_ber(self, signal_rx=None, synced=False):
         """
         Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits. Currently does not check
         for correct polarization.
@@ -289,7 +340,7 @@ class QAMSignal(np.ndarray):
         ber          :  array_like
             bit-error-rate in linear units per dimension
         """
-        signal_rx = np.atleast_2d(signal_rx)
+        signal_rx = self._signal_present(signal_rx)
         ndim = signal_rx.shape[0]
         syms_demod = self.quantize(signal_rx)
         if not synced:
@@ -301,7 +352,7 @@ class QAMSignal(np.ndarray):
         errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
         return np.asarray(errs)/bits_demod.shape[1]
 
-    def cal_evm(self, signal_rx, blind=False):
+    def cal_evm(self, signal_rx=None, blind=False):
         """
         Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
         The EVM here is normalised to the average symbol power, not the peak as in some other definitions. Currently does not check
@@ -333,11 +384,12 @@ class QAMSignal(np.ndarray):
         The to calculate the EVM in dB from the RMS EVM we need calculate 10 log10(EVM**2). This differs from some defintions
         of EVM, e.g. on wikipedia.
         """
-        signal_rx = np.atleast_2d(signal_rx)
+        signal_rx = self._signal_present(signal_rx)
+        ndim = signal_rx.shape[0]
         symbols_tx, signal_ad = self._sync_and_adjust(self.symbols, signal_rx)
         return np.asarray(np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1)))#/np.mean(abs(self.symbols)**2))
 
-    def est_snr(self, signal_rx, synced=False):
+    def est_snr(self, signal_rx=None, synced=False):
         """
         Estimate the SNR of a given input signal, using known symbols.
 
@@ -355,7 +407,7 @@ class QAMSignal(np.ndarray):
         snr: array_like
             snr estimate per dimension
         """
-        signal_rx = np.atleast_2d(signal_rx)
+        signal_rx = self._signal_present(signal_rx)
         ndims = signal_rx.shape[0]
         if not synced:
             symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx)
@@ -366,7 +418,7 @@ class QAMSignal(np.ndarray):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
         return np.asarray(snr)
 
-    def cal_gmi(self, signal_rx):
+    def cal_gmi(self, signal_rx=None):
         """
         Calculate the generalized mutual information for the received signal.
 
@@ -384,7 +436,7 @@ class QAMSignal(np.ndarray):
         gmi_per_bit : array_like
             generalized mutual information per transmitted bit per mode
         """
-        signal_rx = np.atleast_2d(signal_rx)
+        signal_rx = self._signal_present(signal_rx)
         symbols_tx = self.symbols
         ndims = signal_rx.shape[0]
         GMI = np.zeros(ndims, dtype=np.float64)
@@ -403,6 +455,9 @@ class QAMSignal(np.ndarray):
             GMI[mode] = np.sum(GMI_per_bit[mode])
         return GMI, GMI_per_bit
 
+
+class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
+    pass
 
 class QAMModulator(object):
     """
