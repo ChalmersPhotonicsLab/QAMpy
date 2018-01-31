@@ -152,25 +152,19 @@ class QAMSymbolsGrayCoded(np.ndarray):
         return obj
 
     @classmethod
-    def _generate_attr(cls, M, scale):
+    def _generate_coding(cls, M, scale):
         Nbits = np.log2(M)
         symbols = theory.cal_symbols_qam(M)
         # check if this gives the correct mapping
         symbols /= scale
         _graycode = theory.gray_code_qam(M)
         coded_symbols = symbols[_graycode]
-        encoding = cls._generate_encoding(coded_symbols, _graycode, M)
+        bformat = "0%db" % Nbits
+        encoding = dict([(symbols[i].tobytes(),
+                                bitarray(format(_graycode[i], bformat)))
+                               for i in range(len(_graycode))])
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._decode(coded_symbols, encoding), M)
         return coded_symbols, _graycode, encoding, bitmap_mtx
-
-
-    @classmethod
-    def _generate_encoding(cls, symbols, code, M):
-        Nbits = np.log2(M)
-        bformat = "0%db" % Nbits
-        return dict([(symbols[i].tobytes(),
-                                bitarray(format(code[i], bformat)))
-                               for i in range(len(code))])
 
 
     def __new__(cls, M, N, ndim=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None, fb=1):
@@ -178,7 +172,7 @@ class QAMSymbolsGrayCoded(np.ndarray):
             scale = np.sqrt(theory.cal_scaling_factor_qam(M))
         else:
             scale = scaling_factor
-        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_attr(M, scale)
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_coding(M, scale)
         obj, bits = cls.generate(N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding)
         obj = obj.view(cls)
         obj._bitmap_mtx = bitmap_mtx
