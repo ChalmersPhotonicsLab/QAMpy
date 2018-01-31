@@ -164,8 +164,8 @@ class TestPilotModulator(object):
     def testseqlen(self, N):
         QPSK = modulation.QAMModulator(4)
         s, d, p = self.Q.generate_signal(2**16, N, 0, 1)
-        for sym in s[0, :N]:
-            assert sym in QPSK.symbols
+        dist = abs(s[0, :N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
     def testphpilots(self, N):
