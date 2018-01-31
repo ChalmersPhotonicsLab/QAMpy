@@ -14,7 +14,7 @@ from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, sof
 
 class QAMSignal(np.ndarray):
     @classmethod
-    def generatesig(cls, N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding):
+    def generate(cls, N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding):
         syms = []
         bits = []
         if PRBS:
@@ -39,6 +39,7 @@ class QAMSignal(np.ndarray):
             if PRBS == True:
                 bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
             else:
+                # TODO: change this to use seed with np.random.RandomState
                 bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
             symbols = cls._modulate(bitsq, encoding, M)
             syms.append(symbols)
@@ -113,7 +114,7 @@ class QAMSignal(np.ndarray):
                                 bitarray(format(_graycode[i], bformat)))
                                for i in range(len(_graycode))])
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._decode(coded_symbols, encoding), M)
-        obj, bits = cls.generatesig(N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding)
+        obj, bits = cls.generate(N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding)
         obj = obj.view(cls)
         obj.bitmap_mtx = bitmap_mtx
         obj._encoding = encoding
