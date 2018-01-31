@@ -610,7 +610,7 @@ class QAMModulator(object):
         signal = np.atleast_2d(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
-            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)
+            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.gray_coded_symbols)
         return outsyms
 
     def generate_signal(self, N, snr, carrier_df=0, lw_LO=0, baudrate=1, samplingrate=1, PRBS=True, PRBSorder=(15, 23),
