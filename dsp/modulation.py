@@ -185,6 +185,7 @@ class QAMSymbolsGrayCoded(np.ndarray):
         obj._encoding = encoding
         obj._coded_symbols = coded_symbols
         obj._M = M
+        obj._fb = fb
         obj._code = _graycode
         obj._prbs = PRBS
         if PRBS is None:
@@ -193,15 +194,17 @@ class QAMSymbolsGrayCoded(np.ndarray):
             obj._prbsorder = PRBSorder
         obj._prbsseed = PRBSseed
         obj._bits = bits
+        obj._symbols = obj.copy()
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None: return
         self._bits = getattr(obj, "_bits", None)
-        self._symbols = getattr(obj, "_symbols", obj)
+        self._symbols = getattr(obj, "_symbols", None)
         self._bitmap_mtx = getattr(obj, "_bitmap_mtx", None)
         self._encoding = getattr(obj, "_encoding", None)
         self._M = getattr(obj, "_M", None)
+        self._fb = getattr(obj, "_fb", None)
         self._code = getattr(obj, "_code", None)
         self._coded_symbols = getattr(obj, "_coded_symbols", None)
         self._prbs = getattr(obj, "_prbs", None)
@@ -223,6 +226,10 @@ class QAMSymbolsGrayCoded(np.ndarray):
     @property
     def M(self):
         return self._M
+
+    @property
+    def fb(self):
+        return self._fb
 
     @property
     def Nbits(self):
@@ -484,7 +491,63 @@ class SignalQualityMixing(object):
 
 
 class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
-    pass
+    def __new__(cls, M, N, ndim=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None, fb=1, fs=1, **kwargs):
+        obj = super().__new__(cls, M, N, fb=fb, ndim=ndim, PRBS=PRBS, PRBSorder=PRBSorder, PRBSseed=PRBSseed, scaling_factor=None)
+        os = fs/fb
+        #TODO: check if we are not wasting memory here
+        if not np.isclose(os, 1):
+            onew = obj.copy()
+            onew.resize(obj.shape[0], obj.shape[1]*int(os))
+            for i in range(obj.shape[0]):
+                onew[i,:] = resample.rrcos_resample_zeroins(obj[i], fb, fs, Ts=1/fb, **kwargs)
+            onew = np.asarray(onew).view(cls)
+            onew._bits = getattr(obj, "_bits", None)
+            onew._symbols = getattr(obj, "_symbols", None)
+            onew._bitmap_mtx = getattr(obj, "_bitmap_mtx", None)
+            onew._encoding = getattr(obj, "_encoding", None)
+            onew._M = getattr(obj, "_M", None)
+            onew._code = getattr(obj, "_code", None)
+            onew._coded_symbols = getattr(obj, "_coded_symbols", None)
+            onew._prbs = getattr(obj, "_prbs", None)
+            onew._prbsorder = getattr(obj, "_prbsorder", None)
+            onew._prbsseed = getattr(obj, "_prbsseed", None)
+            onew._fb = getattr(obj, "_fb", None)
+            onew._fs = fs
+        else:
+            onew = obj.view(cls)
+            onew._fs = fs
+        return onew
+
+    @property
+    def fs(self):
+        return self._fs
+
+
+class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, ndim=1, **kwargs):
+        out_symbs = np.empty((ndim, frame_len), dtype=np.complex128)
+        idx = np.arange(N)
+        idx_pil_seq = idx < pilot_seq_len
+        if pilot_ins_rat == 0 or pilot_ins_rat is None:
+            N_pilots = pilot_seq_len
+            idx_ph_pil = (idx-pilot_seq_len)%frame_ins == 0
+            idx_pil = idx_ph_pil ^ idx_pil_seq
+        else:
+            if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
+                raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
+            N_ph_frames = (frame_len - pilot_seq_len)//pilot_ins_rat
+            N_pilots = pilot_seq_len + N_ph_frames
+            idx_pil = idx_pil_seq
+        idx_dat = ~idx_pil
+        pilots = super().__new__(cls, 4, N_pilots, ndim=ndim, **kwargs)
+        # Note that currently the phase pilots start one symbol after the sequence
+        # TODO: we should probably fix this
+        out_symbs[:, idx_pil] = pilots
+        symbs = super().__new__(cls, M, N_ph_frames * (pilot_ins_rat -1 ), ndim=ndim, **kwargs)
+        out_symbs[:, idx_dat] = symbs
+        out = np.tile(out_symbs, nframes)
+
+
 
 class QAMModulator(object):
     """
