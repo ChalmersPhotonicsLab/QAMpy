@@ -68,6 +68,23 @@ class TestQAMSymbolsGray(object):
         s = modulation.QAMSymbolsGrayCoded.from_array(a)
         npt.assert_almost_equal((abs(s)**2).mean(), (abs(s)**2).mean())
 
+    @pytest.mark.parametrize("N", [1024, 12423, 100000, 2**18])
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    def testfrombits_len(self,  N, M):
+        b = modulation.make_prbs_extXOR(15, N)
+        s = modulation.QAMSymbolsGrayCoded.from_bits(b, M)
+        nbit = int(np.log2(M))
+        nbitlen = N//nbit
+        assert s.shape[1] == nbitlen
+
+    @pytest.mark.parametrize("N", [1024, 12423, 100000, 2**18])
+    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    def testfrombits_len(self,  N, M):
+        b = modulation.make_prbs_extXOR(15, N)
+        s = modulation.QAMSymbolsGrayCoded.from_bits(b, M)
+        nbit = int(np.log2(M))
+        nbitlen = N//nbit
+        npt.assert_almost_equal(s.decode(s)[0], b[:nbitlen*nbit])
 
 
 class TestModulatorAttr(object):

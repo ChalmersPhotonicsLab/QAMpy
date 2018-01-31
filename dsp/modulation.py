@@ -102,6 +102,7 @@ class QAMSymbolsGrayCoded(np.ndarray):
 
     @classmethod
     def from_array(cls, arr, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), fb=1):
+        arr = np.atleast_2d(arr)
         M = np.unique(arr).shape[0]
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))/np.sqrt((abs(np.unique(arr))**2).mean())
         coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_attr(M, scale)
@@ -122,6 +123,32 @@ class QAMSymbolsGrayCoded(np.ndarray):
         else:
             obj._prbsorder = PRBSorder
         obj._prbsseed = PRBSseed
+        return obj
+
+    @classmethod
+    def from_bits(cls, bits, M, fb=1):
+        arr = np.atleast_2d(bits)
+        nbits = int(np.log2(M))
+        if arr.shape[1]%nbits > 0:
+            warnings.warn("Length of bits not divisible by log2(M) truncating")
+            len = arr.shape[1]//nbits*nbits
+            arr = arr[:, :len]
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_attr(M, scale)
+        out = []
+        for i in range(arr.shape[0]):
+            out.append( cls._modulate(arr[i], encoding, M))
+        out = np.asarray(out)
+        obj = np.asarray(out).view(cls)
+        obj._M = M
+        obj._fb = fb
+        obj._bits = bits
+        obj._encoding = encoding
+        obj._code = _graycode
+        obj._coded_symbols = coded_symbols
+        obj._prbs = False
+        obj._prbsorder = None
+        obj._prbsseed = None
         return obj
 
     @classmethod
