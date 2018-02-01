@@ -520,26 +520,53 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
 class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, ndim=1, **kwargs):
         out_symbs = np.empty((ndim, frame_len), dtype=np.complex128)
-        idx = np.arange(N)
+        idx = np.arange(frame_len)
         idx_pil_seq = idx < pilot_seq_len
         if pilot_ins_rat == 0 or pilot_ins_rat is None:
             N_pilots = pilot_seq_len
-            idx_ph_pil = (idx-pilot_seq_len)%frame_ins == 0
-            idx_pil = idx_ph_pil ^ idx_pil_seq
+            idx_pil = idx_pil_seq
+            N_data = frame_len - pilot_seq_len
         else:
             if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
                 raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
             N_ph_frames = (frame_len - pilot_seq_len)//pilot_ins_rat
             N_pilots = pilot_seq_len + N_ph_frames
-            idx_pil = idx_pil_seq
+            idx_ph_pil = ((idx-pilot_seq_len)%pilot_ins_rat != 0) & (idx-pilot_seq_len >0)
+            #idx_ph_pil = ~idx_ph_pil
+            idx_pil = ~idx_ph_pil #^ idx_pil_seq
+            N_data = N_ph_frames * (pilot_ins_rat -1)
         idx_dat = ~idx_pil
         pilots = super().__new__(cls, 4, N_pilots, ndim=ndim, **kwargs)
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
-        symbs = super().__new__(cls, M, N_ph_frames * (pilot_ins_rat -1 ), ndim=ndim, **kwargs)
+        symbs = super().__new__(cls, M, N_data, ndim=ndim, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out = np.tile(out_symbs, nframes)
+        obj = out_symbs.view(cls)
+        obj._frame_len = frame_len
+        obj._pilot_seq_len = pilot_seq_len
+        obj.pilot_ins_rat = pilot_ins_rat
+        obj._nframes = nframes
+        obj._symbols = symbs
+        obj._pilots = pilots
+        return obj
+
+    @property
+    def pilot_seq(self):
+        return self._pilots[:self._pilot_seq_len]
+
+    @property
+    def pilot_seq(self):
+        return self._pilots[self._pilot_seq_len::pilot_ins_rat]
+
+    @property
+    def pilots(self):
+        return self._pilots
+
+    def __getattr__(self, attr):
+        return getattr(self._symbols, attr)
+
 
 
 

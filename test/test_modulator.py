@@ -86,6 +86,27 @@ class TestQAMSymbolsGray(object):
         nbitlen = N//nbit
         npt.assert_almost_equal(s.decode(s)[0], b[:nbitlen*nbit])
 
+class TestPilotSignal(object):
+    @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
+    @pytest.mark.parametrize("ndims", range(1, 4))
+    def testshape(self, N, ndims):
+        s = modulation.SignalWithPilots(128, N, 256, 32, 1, ndim=ndims )
+        assert s.shape[1] == N and s.shape[0] == ndims
+
+    @pytest.mark.parametrize("N", [1, 123, 256, 534])
+    def testseqlen(self, N):
+        QPSK = modulation.QAMModulator(4)
+        s = modulation.SignalWithPilots(128, 2**18, N, 0, 1 )
+        dist = abs(s[0, :N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
+
+    @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
+    def testphpilots(self, N):
+        QPSK = modulation.QAMModulator(4)
+        s = modulation.SignalWithPilots(128, 2**18, 0, N, 1 )
+        dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
+
 
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)
