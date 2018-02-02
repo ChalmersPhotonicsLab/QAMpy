@@ -137,7 +137,9 @@ class TestTDHybridsSymbols(object):
                 d = np.min(abs(s[:, np.newaxis]-o._symbols_M2), axis=1)
                 npt.assert_array_almost_equal(d, 0)
 
-
+    def testclass(self):
+        s = modulation.TDHQAMSymbols((16,4), 1000)
+        type(s._symbols_M1 ) is modulation.QAMSymbolsGrayCoded
 
 
 

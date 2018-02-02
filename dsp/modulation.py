@@ -516,8 +516,9 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
     def fs(self):
         return self._fs
 
-class TDHQAMSymbols(QAMSymbolsGrayCoded):
-    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, ndim=1, **kwargs):
+class TDHQAMSymbols(np.ndarray, SignalQualityMixing):
+    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, ndim=1,
+                M1class=QAMSymbolsGrayCoded, M2class=QAMSymbolsGrayCoded, **kwargs):
         """
         Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
 
@@ -552,8 +553,8 @@ class TDHQAMSymbols(QAMSymbolsGrayCoded):
             if frms_rem > 0:
                 assert frms_rem < f_M2, "remaining symbols should be less than symbol 2 frames"
                 N2 += frms_rem
-        syms1, = super().__new__(cls, M1, N1, ndim=ndim, **kwargs)
-        syms2, = super().__new__(cls, M2, N2, ndim=ndim, **kwargs)
+        syms1, = M1class( M1, N1, ndim=ndim, **kwargs)
+        syms2, = M2class( M2, N2, ndim=ndim, **kwargs)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
         syms2 /= np.sqrt(scale)
         idx = np.arange(N)
