@@ -59,7 +59,13 @@ class SymbolBase(np.ndarray):
     def __array_finalize__(self, obj):
         if obj is None: return
         for attr in self._inheritattr_:
-            setattr(self, getattr(obj, attr, None))
+            setattr(self, attr, getattr(obj, attr, None))
+        if hasattr(obj, "_symbols"):
+            s =  getattr(obj, "_symbols")
+            if s is None:
+                self._symbols = obj
+            else:
+                self._symbols = obj._symbols
 
 class RandomBits(np.ndarray):
     def __new__(cls, N, ndim=1, seed=None):
@@ -107,43 +113,11 @@ class PRBSBits(np.ndarray):
         self._order = getattr(obj, "_order", None)
 
 
-class QAMSymbolsGrayCoded(np.ndarray):
+class QAMSymbolsGrayCoded(SymbolBase):
+    _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code"]
 
-    @classmethod
-    def generate(cls, N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding):
-        syms = []
-        bits = []
-        if PRBS:
-            if len(PRBSorder) < ndim:
-                warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
-                PRBSorder_n = []
-                PRBSseed_n = []
-                orders = [15, 23]
-                for i in range(ndim):
-                    try:
-                        PRBSorder_n.append(PRBSorder[i])
-                        PRBSseed_n.append(PRBSseed[i])
-                    except IndexError:
-                        o = np.random.choice(orders)
-                        PRBSorder_n.append(o)
-                        s = np.random.randint(0, 2**o)
-                        PRBSseed_n.append(s)
-                PRBSorder = PRBSorder_n
-                PRBSseed = PRBSseed_n
-        for i in range(ndim):
-            Nbits = N * np.log2(M)
-            if PRBS == True:
-                bitsq = make_prbs_extXOR(PRBSorder[i], Nbits, PRBSseed[i])
-            else:
-                # TODO: change this to use seed with np.random.RandomState
-                bitsq = np.random.randint(0, high=2, size=Nbits).astype(np.bool)
-            symbols = cls._modulate(bitsq, encoding, M)
-            syms.append(symbols)
-            bits.append(bitsq)
-        return np.asarray(syms), np.asarray(bits)
-
-    @classmethod
-    def _decode(cls, symbols, encoding):
+    @staticmethod
+    def _demodulate( symbols, encoding):
         """
         Decode array of input symbols to bits according to the coding of the modulator.
 
@@ -151,6 +125,8 @@ class QAMSymbolsGrayCoded(np.ndarray):
         ----------
         symbols   : array_like
             array of complex input symbols
+        encoding  : array_like
+            mapping between symbols and bits
 
         Note
         ----
@@ -172,8 +148,8 @@ class QAMSymbolsGrayCoded(np.ndarray):
             bits.append(np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool) )
         return np.array(bits)
 
-    @classmethod
-    def _modulate(cls, data, encoding, M):
+    @staticmethod
+    def _modulate(data, encoding, M, dtype=np.complex128):
         """
         Modulate a bit sequence into QAM symbols
 
@@ -187,41 +163,41 @@ class QAMSymbolsGrayCoded(np.ndarray):
         outdata  : array_like
             1D array of complex symbol values. Normalised to energy of 1
         """
-        rem = len(data) % np.log2(M)
-        if rem > 0:
-            data = data[:-rem]
-        datab = bitarray()
-        datab.pack(data.tobytes())
-        # the below is not really the fastest method but easy encoding/decoding is possible
-        return np.fromstring(b''.join(datab.decode(encoding)), dtype=np.complex128)
+        data = np.atleast_2d(data)
+        ndim = data.shape[0]
+        bitspsym = int(np.log2(M))
+        Nsym = data.shape[1]//bitspsym
+        out = np.empty((ndim,Nsym), dtype=dtype)
+        N = data.shape[1] - data.shape[1]%bitspsym
+        for i in range(ndim):
+            datab = bitarray()
+            datab.pack(data[i, :N].tobytes())
+            # the below is not really the fastest method but easy encoding/decoding is possible
+            out[i,:] = np.fromstring(b''.join(datab.decode(encoding)), dtype=dtype)
+        return out
 
     @classmethod
-    def from_array(cls, arr, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), fb=1):
-        arr = np.atleast_2d(arr)
-        M = np.unique(arr).shape[0]
-        scale = np.sqrt(theory.cal_scaling_factor_qam(M))/np.sqrt((abs(np.unique(arr))**2).mean())
-        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_attr(M, scale)
-        out = np.empty_like(arr)
-        for i in range(arr.shape[0]):
-            out[i] = quantize(arr[i], coded_symbols)
-        bits = cls._decode(out, encoding)
+    def from_symbol_array(cls, symbs, fb=1):
+        symbs = np.atleast_2d(symbs)
+        M = np.unique(symbs).shape[0]
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))/np.sqrt((abs(np.unique(symbs))**2).mean())
+        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        out = np.empty_like(symbs)
+        for i in range(symbs.shape[0]):
+            out[i] = quantize(symbs[i], coded_symbols)
+        bits = cls._demodulate(out, encoding)
         obj = np.asarray(out).view(cls)
         obj._M = M
         obj._fb = fb
         obj._bits = bits
         obj._encoding = encoding
-        obj._code = _graycode
+        obj._code = graycode
         obj._coded_symbols = coded_symbols
-        obj._prbs = PRBS
-        if PRBS is None:
-            obj._prbsorder = None
-        else:
-            obj._prbsorder = PRBSorder
-        obj._prbsseed = PRBSseed
+        obj._symbols = None
         return obj
 
     @classmethod
-    def from_bits(cls, bits, M, fb=1):
+    def from_bit_array(cls, bits, M, fb=1):
         arr = np.atleast_2d(bits)
         nbits = int(np.log2(M))
         if arr.shape[1]%nbits > 0:
@@ -229,25 +205,24 @@ class QAMSymbolsGrayCoded(np.ndarray):
             len = arr.shape[1]//nbits*nbits
             arr = arr[:, :len]
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))
-        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_attr(M, scale)
-        out = []
-        for i in range(arr.shape[0]):
-            out.append( cls._modulate(arr[i], encoding, M))
-        out = np.asarray(out)
+        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        #out = []
+        #for i in range(arr.shape[0]):
+        #    out.append( cls._modulate(arr[i], encoding, M))
+        out = cls._modulate(arr, encoding, M)
+        #out = np.asarray(out)
         obj = np.asarray(out).view(cls)
         obj._M = M
         obj._fb = fb
         obj._bits = bits
         obj._encoding = encoding
-        obj._code = _graycode
+        obj._code = graycode
         obj._coded_symbols = coded_symbols
-        obj._prbs = False
-        obj._prbsorder = None
-        obj._prbsseed = None
+        obj._symbols = None
         return obj
 
     @classmethod
-    def _generate_coding(cls, M, scale):
+    def _generate_mapping(cls, M, scale):
         Nbits = np.log2(M)
         symbols = theory.cal_symbols_qam(M)
         # check if this gives the correct mapping
@@ -258,17 +233,16 @@ class QAMSymbolsGrayCoded(np.ndarray):
         encoding = dict([(symbols[i].tobytes(),
                                 bitarray(format(_graycode[i], bformat)))
                                for i in range(len(_graycode))])
-        bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._decode(coded_symbols, encoding), M)
+        bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
 
-    def __new__(cls, M, N, ndim=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None, fb=1):
-        if not scaling_factor:
-            scale = np.sqrt(theory.cal_scaling_factor_qam(M))
-        else:
-            scale = scaling_factor
-        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_coding(M, scale)
-        obj, bits = cls.generate(N, M, ndim, PRBS, PRBSorder, PRBSseed, encoding)
+    def __new__(cls, M, N, ndim=1, fb=1, bitclass=PRBSBits, **kwargs):
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        Nbits = int(N * np.log2(M))
+        bits = bitclass(Nbits, ndim=ndim, **kwargs)
+        obj = cls._modulate(bits, encoding, M)
         obj = obj.view(cls)
         obj._bitmap_mtx = bitmap_mtx
         obj._encoding = encoding
@@ -276,29 +250,9 @@ class QAMSymbolsGrayCoded(np.ndarray):
         obj._M = M
         obj._fb = fb
         obj._code = _graycode
-        obj._prbs = PRBS
-        if PRBS is None:
-            obj._prbsorder = None
-        else:
-            obj._prbsorder = PRBSorder
-        obj._prbsseed = PRBSseed
         obj._bits = bits
-        obj._symbols = obj.copy()
+        obj._symbols = None
         return obj
-
-    def __array_finalize__(self, obj):
-        if obj is None: return
-        self._bits = getattr(obj, "_bits", None)
-        self._symbols = getattr(obj, "_symbols", None)
-        self._bitmap_mtx = getattr(obj, "_bitmap_mtx", None)
-        self._encoding = getattr(obj, "_encoding", None)
-        self._M = getattr(obj, "_M", None)
-        self._fb = getattr(obj, "_fb", None)
-        self._code = getattr(obj, "_code", None)
-        self._coded_symbols = getattr(obj, "_coded_symbols", None)
-        self._prbs = getattr(obj, "_prbs", None)
-        self._prbsorder = getattr(obj, "_prbsorder", None)
-        self._prbsseed = getattr(obj, "_prbsseed", None)
 
     @property
     def symbols(self):
@@ -343,7 +297,7 @@ class QAMSymbolsGrayCoded(np.ndarray):
         """
         return self._modulate(data, self._encoding, self.M)
 
-    def decode(self, symbols):
+    def demodulate(self, symbols):
         """
         Decode array of input symbols to bits according to the coding of the modulator.
 
@@ -362,7 +316,7 @@ class QAMSymbolsGrayCoded(np.ndarray):
              for i in range(signal.shape[0]):
             outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)       array of booleans representing bits with same number of dimensions as symbols
         """
-        return self._decode(symbols, self._encoding)
+        return self._demodulate(symbols, self._encoding)
 
 class SignalQualityMixing(object):
 

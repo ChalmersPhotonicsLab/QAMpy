@@ -65,34 +65,34 @@ class TestQAMSymbolsGray(object):
     @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
     @pytest.mark.parametrize("prbsseed", np.arange(1,10))
     def testbits(self, M, prbsseed):
-        s = modulation.QAMSymbolsGrayCoded(M, 1000, ndim=1, PRBSseed=[prbsseed])
-        npt.assert_array_almost_equal(s.decode(s), s.bits)
+        s = modulation.QAMSymbolsGrayCoded(M, 1000, ndim=1, seed=[prbsseed])
+        npt.assert_array_almost_equal(s.demodulate(s), s.bits)
 
     @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
     @pytest.mark.parametrize("prbsseed", np.arange(1,10))
     def testbits2(self, M, prbsseed):
         N = 1000
-        s = modulation.QAMSymbolsGrayCoded(M, N, ndim=1, PRBSseed=[prbsseed])
-        bitsq = modulation.make_prbs_extXOR(s._prbsorder[0], N*np.log2(M), prbsseed)
-        npt.assert_array_almost_equal(s.decode(s)[0], bitsq)
+        s = modulation.QAMSymbolsGrayCoded(M, N, ndim=1, seed=[prbsseed])
+        bitsq = modulation.make_prbs_extXOR(s.bits._order[0], N*np.log2(M), prbsseed)
+        npt.assert_array_almost_equal(s.demodulate(s)[0], bitsq)
 
     @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
     def testfromarray_order(self, M):
         a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
-        s = modulation.QAMSymbolsGrayCoded.from_array(a)
+        s = modulation.QAMSymbolsGrayCoded.from_symbol_array(a)
         assert np.unique(s).shape[0] is M
 
     @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
     def testfromarray_avgpow(self, M):
         a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
-        s = modulation.QAMSymbolsGrayCoded.from_array(a)
+        s = modulation.QAMSymbolsGrayCoded.from_symbol_array(a)
         npt.assert_almost_equal((abs(s)**2).mean(), (abs(s)**2).mean())
 
     @pytest.mark.parametrize("N", [1024, 12423, 100000, 2**18])
     @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
     def testfrombits_len(self,  N, M):
         b = modulation.make_prbs_extXOR(15, N)
-        s = modulation.QAMSymbolsGrayCoded.from_bits(b, M)
+        s = modulation.QAMSymbolsGrayCoded.from_bit_array(b, M)
         nbit = int(np.log2(M))
         nbitlen = N//nbit
         assert s.shape[1] == nbitlen
@@ -101,10 +101,10 @@ class TestQAMSymbolsGray(object):
     @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
     def testfrombits_bits(self,  N, M):
         b = modulation.make_prbs_extXOR(15, N)
-        s = modulation.QAMSymbolsGrayCoded.from_bits(b, M)
+        s = modulation.QAMSymbolsGrayCoded.from_bit_array(b, M)
         nbit = int(np.log2(M))
         nbitlen = N//nbit
-        npt.assert_almost_equal(s.decode(s)[0], b[:nbitlen*nbit])
+        npt.assert_almost_equal(s.demodulate(s)[0], b[:nbitlen*nbit])
 
 class TestPilotSignal(object):
     @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
