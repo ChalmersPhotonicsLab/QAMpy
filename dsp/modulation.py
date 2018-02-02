@@ -516,6 +516,68 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
     def fs(self):
         return self._fs
 
+class TDHQAMSymbols(QAMSymbolsGrayCoded):
+    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, ndim=1, **kwargs):
+        """
+        Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
+
+        Parameters
+        ----------
+        M1 : integer
+            QAM order of the first part.
+        M2 : integer
+            QAM order of the second part
+        fr : float
+            fraction of the second format of the overall frame length
+        power_method : string, optional
+            method to calculate the power ratio of the different orders, currently on "dist" is implemented
+        snr : float
+            Design signal-to-noise ratio needed when using BER for calculation of the power ratio, currently does nothing
+        """
+        M1 = M[0]
+        M2 = M[1]
+        ratn = fractions.Fraction(fr).limit_denominator()
+        f_M2 = ratn.numerator
+        f_M = ratn.denominator
+        f_M1 = f_M - f_M2
+        frms = N//f_M
+        frms_rem = N%f_M
+        N1 = frms * f_M1
+        N2 = frms * f_M2
+        out = np.zeros((ndim, N), dtype=np.complex128)
+        if frms_rem:
+            mi1 = min(f_M1, frms_rem)
+            N1 += mi1
+            frms_rem -= mi1
+            if frms_rem > 0:
+                assert frms_rem < f_M2, "remaining symbols should be less than symbol 2 frames"
+                N2 += frms_rem
+        syms1, = super().__new__(cls, M1, N1, ndim=ndim, **kwargs)
+        syms2, = super().__new__(cls, M2, N2, ndim=ndim, **kwargs)
+        scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
+        syms2 /= np.sqrt(scale)
+        idx = np.arange(N)
+        idx1 = idx%f_M < f_M1
+        idx2 = idx%f_M >= f_M1
+        out[:,idx1] = syms1
+        out[:,idx2] = syms2
+        obj = out.view(cls)
+        obj._symbols = out.view(cls)
+        obj._symbols_M1 = syms1
+        obj._symbols_M2 = syms2
+        obj._fr = fr
+        obj._M = M
+        return obj
+
+    @staticmethod
+    def calculate_power_ratio(M1symbols, M2symbols, method):
+        if method is "dist":
+            d1 = np.min(abs(np.diff(np.unique(M1symbols))))
+            d2 = np.min(abs(np.diff(np.unique(M2symbols))))
+            scf = (d2/d1)**2
+            return scf
+        else:
+            raise NotImplementedError("Only 'dist' method is currently implemented")
 
 class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, ndim=1, **kwargs):

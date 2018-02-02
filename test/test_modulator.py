@@ -107,6 +107,40 @@ class TestPilotSignal(object):
         dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
+class TestTDHybridsSymbols(object):
+    @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])
+    @pytest.mark.parametrize("M2", [4, 16, 32, 64, 128, 256])
+    def test_dist(self, M1, M2):
+        s = modulation.TDHQAMSymbols((M1, M2), 1000, fr=0.5)
+        d1_r = np.min(np.diff(np.unique(s._symbols_M1.real)))
+        d2_r = np.min(np.diff(np.unique(s._symbols_M2.real)))
+        d1_i = np.min(np.diff(np.unique(s._symbols_M1.imag)))
+        d2_i = np.min(np.diff(np.unique(s._symbols_M2.imag)))
+        npt.assert_approx_equal(d1_r, d2_r)
+        npt.assert_approx_equal(d1_i, d2_i)
+
+    @pytest.mark.parametrize("r1", np.arange(1, 10))
+    @pytest.mark.parametrize("r2", np.arange(1, 10))
+    def test_ratio(self, r1, r2):
+        import math
+        if math.gcd(r1, r2) > 1:
+            assert True
+            return
+        r = r1+r2
+        o = modulation.TDHQAMSymbols((16,4),1000, fr=r2/r)
+        for i in range(r):
+            s = o[0, i::r]
+            if i%r < r1:
+                d = np.min(abs(s[:, np.newaxis]-o._symbols_M1), axis=1)
+                npt.assert_array_almost_equal(d, 0)
+            else:
+                d = np.min(abs(s[:, np.newaxis]-o._symbols_M2), axis=1)
+                npt.assert_array_almost_equal(d, 0)
+
+
+
+
+
 
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)
