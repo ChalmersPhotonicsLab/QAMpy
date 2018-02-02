@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import abc
 import fractions
 import warnings
 from bitarray import bitarray
@@ -11,6 +12,100 @@ from . import utils
 from . import impairments
 from .prbs import make_prbs_extXOR
 from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
+
+
+class SymbolBase(np.ndarray):
+    __metaclass__ = abc.ABCMeta
+    _inheritattr_ = [] #list of attributes names that should be inherited
+
+    @classmethod
+    @abc.abstractmethod
+    def _demodulate(cls, symbols):
+        """
+        Demodulate an array of input symbols to bits according
+
+        Parameters
+        ----------
+        symbols   : array_like
+            array of complex input symbols
+        mapping   : array_like
+            mapping between symbols and bits
+        kwargs
+            other arguments to use
+
+        Returns
+        -------
+        bits   : array_like
+            array of booleans representing bits with same number of dimensions as symbols
+        """
+
+    @classmethod
+    @abc.abstractmethod
+    def _modulate(cls, bits):
+        """
+        Modulate a bit sequence into symbols
+
+        Parameters
+        ----------
+        bits     : array_like
+           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
+
+        Returns
+        -------
+        outdata  : array_like
+            1D array of complex symbol values. Normalised to energy of 1
+        """
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        for attr in self._inheritattr_:
+            setattr(self, getattr(obj, attr, None))
+
+class RandomBits(np.ndarray):
+    def __new__(cls, N, ndim=1, seed=None):
+        R = np.random.RandomState(seed)
+        bitsq = R.randint(0, high=2, size=(ndim,N)).astype(np.bool)
+        obj = bitsq.view(cls)
+        obj._rand_state = R
+        obj._seed = seed
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self._seed = getattr(obj, "_seed", None)
+        self._rand_state = getattr(obj, "_rand_state", None)
+
+class PRBSBits(np.ndarray):
+    def __new__(cls, N, ndim=1, seed=[None, None], order=[15, 23]):
+        if len(order) < ndim:
+            warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
+            order_n = []
+            seed_n = []
+            orders = [15, 23]
+            for i in range(ndim):
+                try:
+                   order_n.append(order[i])
+                   seed_n.append(seed[i])
+                except IndexError:
+                    o = np.random.choice(orders)
+                    order_n.append(o)
+                    s = np.random.randint(0, 2**o)
+                    seed_n.append(s)
+                order = order_n
+                seed = seed_n
+        bits = np.empty((ndim, N), dtype=np.bool)
+        for i in range(ndim):
+            bits[i][:] = make_prbs_extXOR(order[i], N, seed[i])
+        obj = bits.view(cls)
+        obj._order = order
+        obj._seed = seed
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self._seed = getattr(obj, "_seed", None)
+        self._order = getattr(obj, "_order", None)
+
 
 class QAMSymbolsGrayCoded(np.ndarray):
 

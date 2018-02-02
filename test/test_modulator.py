@@ -20,6 +20,26 @@ def _flip_symbols(sig, idx, d):
                 sig[i] += 1.j*d
     return sig
 
+class TestBits(object):
+    @pytest.mark.parametrize("ctype", [modulation.PRBSBits, modulation.RandomBits])
+    @pytest.mark.parametrize("N", [2**10, 2**14, 2**18])
+    @pytest.mark.parametrize("ndim", np.arange(1, 4))
+    def testshape(self, ctype, N, ndim):
+        b = ctype(N, ndim=ndim)
+        assert b.shape == (ndim, N)
+
+    @pytest.mark.parametrize("ctype", [modulation.PRBSBits, modulation.RandomBits])
+    def testtype(self, ctype):
+        c = ctype(100, ndim=1)
+        assert c.dtype == np.bool
+
+    @pytest.mark.parametrize("ctype", [modulation.PRBSBits, modulation.RandomBits])
+    def testdist(self, ctype):
+        c = ctype(10**6)
+        ones = np.count_nonzero(c)
+        assert (ones-10**6/2)<1000
+
+
 class TestQAMSymbolsGray(object):
     @pytest.mark.parametrize("N", [np.random.randint(1,2**20)])
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
