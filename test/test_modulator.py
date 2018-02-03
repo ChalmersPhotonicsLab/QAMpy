@@ -84,7 +84,7 @@ class TestQAMSymbolsGray(object):
     @pytest.mark.parametrize("prbsseed", np.arange(1,10))
     def testbits2(self, M, prbsseed):
         N = 1000
-        s = modulation.QAMSymbolsGrayCoded(M, N, nmodes=1, seed=[prbsseed])
+        s = modulation.QAMSymbolsGrayCoded(M, N, nmodes=1, seed=[prbsseed], bitclass=modulation.PRBSBits)
         bitsq = modulation.make_prbs_extXOR(s.bits._order[0], N*np.log2(M), prbsseed)
         npt.assert_array_almost_equal(s.demodulate(s)[0], bitsq)
 
@@ -261,10 +261,10 @@ class TestTDHybridsSymbols(object):
             assert True
             return
         r = r1+r2
-        s1 = modulation.QAMSymbolsGrayCoded(16, 1000*r1)
-        s2 = modulation.QAMSymbolsGrayCoded(4, 1000*r2)
+        s1 = modulation.QAMSymbolsGrayCoded(16, 1000*r1, seed=[1,2])
+        s2 = modulation.QAMSymbolsGrayCoded(4, 1000*r2, seed=[1,2])
         o = modulation.TDHQAMSymbols.from_symbol_arrays(s1, s2, r2/r)
-        o2 = modulation.TDHQAMSymbols((16, 4), 1000*(r1+r2), fr=r2/r)
+        o2 = modulation.TDHQAMSymbols((16, 4), 1000*(r1+r2), fr=r2/r, seed=[1,2] )
         npt.assert_array_almost_equal(o, o2)
 
     @pytest.mark.parametrize("attr", ["fb", "M", "f_M1", "f_M2", "f_M", "fr"])
