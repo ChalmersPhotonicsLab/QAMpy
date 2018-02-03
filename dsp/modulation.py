@@ -719,13 +719,13 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
             return self._symbols_M1.from_symbol_array(syms1, fb=self._fb, M=self._M[0]), \
                    self._symbols_M2.from_symbol_array(syms2, fb=self._fb, M=self._M[1])
         else:
-            NotImplementedError("currently only 'dist' method is implemented")
+            raise NotImplementedError("currently only 'dist' method is implemented")
 
     def _demodulate(self):
-        NotImplementedError("Use demodulation of subclasses")
+        raise NotImplementedError("Use demodulation of subclasses")
 
     def _modulate(self):
-        NotImplementedError("Use modulation of subclasses")
+        raise NotImplementedError("Use modulation of subclasses")
 
 class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, nmodes=1, **kwargs):
