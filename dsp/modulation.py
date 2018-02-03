@@ -114,7 +114,8 @@ class PRBSBits(np.ndarray):
 
 
 class QAMSymbolsGrayCoded(SymbolBase):
-    _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code"]
+    _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code",
+                     "_coded_symbols"]
 
     @staticmethod
     def _demodulate( symbols, encoding):
@@ -177,9 +178,11 @@ class QAMSymbolsGrayCoded(SymbolBase):
         return out
 
     @classmethod
-    def from_symbol_array(cls, symbs, fb=1):
+    def from_symbol_array(cls, symbs, M=None, fb=1):
         symbs = np.atleast_2d(symbs)
-        M = np.unique(symbs).shape[0]
+        if M is None:
+            warnings.warn("no M given, estimating how mnay unique symbols are in array, this can cause errors")
+            M = np.unique(symbs).shape[0]
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))/np.sqrt((abs(np.unique(symbs))**2).mean())
         coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
         out = np.empty_like(symbs)
@@ -424,6 +427,7 @@ class SignalQualityMixing(object):
             symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod)
         else:
             symbols_tx = self.symbols
+        #TODO: need to rename decode to demodulate
         bits_demod = self.decode(syms_demod)
         tx_synced = self.decode(symbols_tx)
         errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
@@ -565,8 +569,8 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
     def fs(self):
         return self._fs
 
-class TDHQAMSymbols(np.ndarray, SignalQualityMixing):
-    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, ndim=1,
+class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
+    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, ndim=1, fb=1,
                 M1class=QAMSymbolsGrayCoded, M2class=QAMSymbolsGrayCoded, **kwargs):
         """
         Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
@@ -591,19 +595,14 @@ class TDHQAMSymbols(np.ndarray, SignalQualityMixing):
         f_M = ratn.denominator
         f_M1 = f_M - f_M2
         frms = N//f_M
-        frms_rem = N%f_M
+        if N%f_M > 0:
+            N = f_M * frms
+            warnings.warn("length of overall pattern not divisable by number of frames, truncating to %d symbols"%N)
         N1 = frms * f_M1
         N2 = frms * f_M2
         out = np.zeros((ndim, N), dtype=np.complex128)
-        if frms_rem:
-            mi1 = min(f_M1, frms_rem)
-            N1 += mi1
-            frms_rem -= mi1
-            if frms_rem > 0:
-                assert frms_rem < f_M2, "remaining symbols should be less than symbol 2 frames"
-                N2 += frms_rem
-        syms1, = M1class( M1, N1, ndim=ndim, **kwargs)
-        syms2, = M2class( M2, N2, ndim=ndim, **kwargs)
+        syms1 = M1class( M1, N1, ndim=ndim, fb=fb, **kwargs)
+        syms2 = M2class( M2, N2, ndim=ndim, fb=fb, **kwargs)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
         syms2 /= np.sqrt(scale)
         idx = np.arange(N)
@@ -611,12 +610,18 @@ class TDHQAMSymbols(np.ndarray, SignalQualityMixing):
         idx2 = idx%f_M >= f_M1
         out[:,idx1] = syms1
         out[:,idx2] = syms2
+        #obj._idx_M1 = idx1
+        #obj._idx_M2 = idx2
         obj = out.view(cls)
-        obj._symbols = out.view(cls)
         obj._symbols_M1 = syms1
         obj._symbols_M2 = syms2
         obj._fr = fr
+        obj._fb = fb
+        obj._frame_len = f_M
+        obj._fr_M1 = f_M1
+        obj._fr_M2 = f_M2
         obj._M = M
+        obj._power_method = power_method
         return obj
 
     @staticmethod
@@ -628,6 +633,37 @@ class TDHQAMSymbols(np.ndarray, SignalQualityMixing):
             return scf
         else:
             raise NotImplementedError("Only 'dist' method is currently implemented")
+
+    def _divide_signal_frame(self, signal):
+        idx = np.arange(signal.shape[1])
+        idx1 = idx[idx%self._frame_len < self._fr_M1]
+        idx2 = idx[idx%self._frame_len >= self._fr_M1]
+        syms1 = np.zeros((signal.shape[0], idx1.shape[0]), dtype=signal.dtype)
+        syms2 = np.zeros((signal.shape[0], idx2.shape[0]), dtype=signal.dtype)
+        if self._M[0] > self._M[1]:
+            idx_m = idx1
+        else:
+            idx_m = idx2
+        if self._power_method == "dist":
+            idx_max = []
+            for i in range(signal.shape[0]):
+                imax = 0
+                pmax = -10
+                for j in range(self._frame_len):
+                    pmax_n = np.mean(abs(signal[i, (idx_m+j)%idx.max()]))
+                    if pmax_n > pmax:
+                        imax = j
+                        pmax = pmax_n
+                syms1[i,:] = signal[i, (idx1+imax)%idx.max()]
+                syms2[i,:] = signal[i, (idx2+imax)%idx.max()]
+            return self._symbols_M1.from_symbol_array(syms1, fb=self._fb, M=self._M[0]), \
+                   self._symbols_M2.from_symbol_array(syms2, fb=self._fb, M=self._M[1])
+        else:
+            NotImplementedError("currently only 'dist' method is implemented")
+
+    #TODO: need to check how to best implement this with syncing etc.
+    def _demodulate(self, symbols, *args):
+        pass
 
 class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, ndim=1, **kwargs):
