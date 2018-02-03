@@ -570,7 +570,7 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
         return self._fs
 
 class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
-    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2" "_fb", "_fr"]
+    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr"]
     @staticmethod
     def _cal_fractions(fr):
         ratn = fractions.Fraction(fr).limit_denominator()
@@ -648,6 +648,14 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
     @property
     def M(self):
         return (self._symbols_M1.M, self._symbols_M2.M)
+
+    @property
+    def fr(self):
+        return self._fr
+
+    @property
+    def fb(self):
+        return self._fb
 
     @classmethod
     def from_symbol_arrays(cls, syms_M1, syms_M2, fr, power_method="dist"):
