@@ -773,7 +773,7 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
         if np.count_nonzero(idx_dat) > N:
             warnings.warn("Data for frame is shorter than length of data array, truncating")
         out_symbs = np.empty((nmodes, frame_len), dtype=data.dtype)
-        Ndat = np.count_nonzero(idx_dat) or None
+        Ndat = np.count_nonzero(idx_dat)
         pilots = QAMSymbolsGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **pilot_kwargs)/np.sqrt(scale_pilots)
         out_symbs[:, idx_pil] = pilots
         out_symbs[:, idx_dat] = data[:, :Ndat]
