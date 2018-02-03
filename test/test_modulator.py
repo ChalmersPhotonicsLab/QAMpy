@@ -106,6 +106,7 @@ class TestQAMSymbolsGray(object):
         nbitlen = N//nbit
         npt.assert_almost_equal(s.demodulate(s)[0], b[:nbitlen*nbit])
 
+
 class TestPilotSignal(object):
     @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
     @pytest.mark.parametrize("ndims", range(1, 4))
@@ -126,6 +127,7 @@ class TestPilotSignal(object):
         s = modulation.SignalWithPilots(128, 2**18, 0, N, 1 )
         dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
+
 
 class TestTDHybridsSymbols(object):
     @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])
@@ -160,6 +162,7 @@ class TestTDHybridsSymbols(object):
     def testclass(self):
         s = modulation.TDHQAMSymbols((16,4), 1000)
         type(s._symbols_M1 ) is modulation.QAMSymbolsGrayCoded
+        type(s._symbols_M2 ) is modulation.QAMSymbolsGrayCoded
 
 
 

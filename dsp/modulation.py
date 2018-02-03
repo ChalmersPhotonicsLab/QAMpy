@@ -570,6 +570,15 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
         return self._fs
 
 class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
+    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2" "_fb", "_fr"
+    @staticmethod
+    def _cal_fractions(fr):
+        ratn = fractions.Fraction(fr).limit_denominator()
+        f_M2 = ratn.numerator
+        f_M = ratn.denominator
+        f_M1 = f_M - f_M2 
+        return f_M, f_M1, f_M2
+    
     def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, ndim=1, fb=1,
                 M1class=QAMSymbolsGrayCoded, M2class=QAMSymbolsGrayCoded, **kwargs):
         """
@@ -590,10 +599,7 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         """
         M1 = M[0]
         M2 = M[1]
-        ratn = fractions.Fraction(fr).limit_denominator()
-        f_M2 = ratn.numerator
-        f_M = ratn.denominator
-        f_M1 = f_M - f_M2
+        f_M, f_M1, f_M2 = cls._cal_fractions(fr)
         frms = N//f_M
         if N%f_M > 0:
             N = f_M * frms
@@ -617,12 +623,45 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         obj._symbols_M2 = syms2
         obj._fr = fr
         obj._fb = fb
-        obj._frame_len = f_M
-        obj._fr_M1 = f_M1
-        obj._fr_M2 = f_M2
         obj._M = M
         obj._power_method = power_method
         return obj
+    
+    @property
+    def frame_len(self):
+        fM, fM1, fM2 = self._cal_fractions(self.fr):
+        return fM
+    
+    @property
+    def f_M1(self):
+        fM, fM1, fM2 = self._cal_fractions(self.fr):
+        return fM1
+    
+    @property
+    def f_M2(self):
+        fM, fM1, fM2 = self._cal_fractions(self.fr):
+        return fM2
+
+    @classmethod
+    def from_symbol_arrays(cls, syms_M1, syms_M2, fr, power_method="dist"):
+        assert syms_M1.ndim == 2 and syms_M2.ndim == 2, "input needs to have two dimensions"
+        assert syms_M1.shape[0] == syms_M2.shape[0], "Number of "
+        f_M, f_M1, f_M2 = cls._cal_fractions(fr)
+        scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
+        syms_M2 /= np.sqrt(scale)
+        N1 = syms_M1.shape[1]
+        N2 = syms_M2.shape[1] 
+        N = N1 + N2
+        nframes = N//f_M
+        if (nframes * f_M1 > N1) or (nframes * f_M2 > N2):
+            warn.warnings("Need to truncate input arrays as ratio is not possible otherwise")
+            nframes = min(N1//f_M1, N2//f_M2)
+        out = np.zeros((syms))
+            
+            
+            
+        else:
+            raise NotImplementedError("Only 'dist' method is currently implemented")
 
     @staticmethod
     def calculate_power_ratio(M1symbols, M2symbols, method):
@@ -662,8 +701,11 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
             NotImplementedError("currently only 'dist' method is implemented")
 
     #TODO: need to check how to best implement this with syncing etc.
-    def _demodulate(self, symbols, *args):
-        pass
+    def _demodulate(self):
+        NotImplementedError("Use demodulation of subclasses")
+
+    def _modulate(self):
+        NotImplementedError("Use modulation of subclasses")
 
 class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, ndim=1, **kwargs):
