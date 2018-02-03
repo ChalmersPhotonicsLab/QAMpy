@@ -570,7 +570,7 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
         return self._fs
 
 class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
-    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr"]
+    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols"]
     @staticmethod
     def _cal_fractions(fr):
         ratn = fractions.Fraction(fr).limit_denominator()
@@ -631,7 +631,7 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         return obj
 
     @property
-    def frame_len(self):
+    def f_M(self):
         fM, fM1, fM2 = self._cal_fractions(self.fr)
         return fM
     
@@ -696,11 +696,11 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
 
     def _divide_signal_frame(self, signal):
         idx = np.arange(signal.shape[1])
-        idx1 = idx[idx%self._frame_len < self._fr_M1]
-        idx2 = idx[idx%self._frame_len >= self._fr_M1]
+        idx1 = idx[idx%self.f_M < self.f_M1]
+        idx2 = idx[idx%self.f_M >= self.f_M1]
         syms1 = np.zeros((signal.shape[0], idx1.shape[0]), dtype=signal.dtype)
         syms2 = np.zeros((signal.shape[0], idx2.shape[0]), dtype=signal.dtype)
-        if self._M[0] > self._M[1]:
+        if self.M[0] > self.M[1]:
             idx_m = idx1
         else:
             idx_m = idx2
@@ -716,8 +716,8 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
                         pmax = pmax_n
                 syms1[i,:] = signal[i, (idx1+imax)%idx.max()]
                 syms2[i,:] = signal[i, (idx2+imax)%idx.max()]
-            return self._symbols_M1.from_symbol_array(syms1, fb=self._fb, M=self._M[0]), \
-                   self._symbols_M2.from_symbol_array(syms2, fb=self._fb, M=self._M[1])
+            return self._symbols_M1.from_symbol_array(syms1, fb=self.fb, M=self.M[0]), \
+                   self._symbols_M2.from_symbol_array(syms2, fb=self.fb, M=self.M[1])
         else:
             raise NotImplementedError("currently only 'dist' method is implemented")
 
@@ -727,8 +727,10 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
     def _modulate(self):
         raise NotImplementedError("Use modulation of subclasses")
 
-class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, nmodes=1, **kwargs):
+class SignalWithPilots(SymbolBase,SignalQualityMixing):
+    _inheritattr_ = ["_pilots", "_symbols", "_fb", "_frame_len", ]
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, nmodes=1, scale_pilots=1,
+                dataclass=QAMSymbolsGrayCoded, **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
         idx = np.arange(frame_len)
         idx_pil_seq = idx < pilot_seq_len
@@ -746,17 +748,17 @@ class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
             idx_pil = ~idx_ph_pil #^ idx_pil_seq
             N_data = N_ph_frames * (pilot_ins_rat -1)
         idx_dat = ~idx_pil
-        pilots = super().__new__(cls, 4, N_pilots, nmodes=nmodes, **kwargs)
+        pilots = QAMSymbolsGrayCoded(4, N_pilots, nmodes=nmodes, **kwargs)*scale_pilots
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
-        symbs = super().__new__(cls, M, N_data, nmodes=nmodes, **kwargs)
+        symbs = dataclass(M, N_data, nmodes=nmodes, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
-        obj.pilot_ins_rat = pilot_ins_rat
+        obj._pilot_ins_rat = pilot_ins_rat
         obj._nframes = nframes
         obj._symbols = symbs
         obj._pilots = pilots
@@ -773,11 +775,6 @@ class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
     @property
     def pilots(self):
         return self._pilots
-
-    def __getattr__(self, attr):
-        return getattr(self._symbols, attr)
-
-
 
 
 class QAMModulator(object):
