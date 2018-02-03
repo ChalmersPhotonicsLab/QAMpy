@@ -220,7 +220,7 @@ class TestTDHybridsSymbols(object):
         o2 = modulation.TDHQAMSymbols((16, 4), 1000*(r1+r2), fr=r2/r)
         npt.assert_array_almost_equal(o, o2)
 
-    @pytest.mark.parametrize("attr", ["fb", "M", "f_M1", "f_M2", "frame_len", "fr"])
+    @pytest.mark.parametrize("attr", ["fb", "M", "f_M1", "f_M2", "f_M", "fr"])
     def test_preserveattr(self, attr):
         s1 = modulation.TDHQAMSymbols((16, 4), 1000, 0.5)
         s2 = s1+10
