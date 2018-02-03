@@ -145,16 +145,16 @@ class TestPilotSignal(object):
 
     @pytest.mark.parametrize("N", [1, 123, 256, 534])
     def testseqlen(self, N):
-        QPSK = modulation.QAMModulator(4)
+        QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
         s = modulation.SignalWithPilots(128, 2**18, N, 0, 1 )
-        dist = abs(s[0, :N, np.newaxis] - QPSK.symbols)
+        dist = abs(s[0, :N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
     def testphpilots(self, N):
-        QPSK = modulation.QAMModulator(4)
+        QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
         s = modulation.SignalWithPilots(128, 2**18, 0, N, 1 )
-        dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
+        dist = abs(s[0, ::N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     @pytest.mark.parametrize("Nseq", [2, 32, 64, 128])
@@ -179,18 +179,18 @@ class TestPilotSignal(object):
 
     @pytest.mark.parametrize("N", [1, 123, 256, 534])
     def test_from_data_seqlen(self, N):
-        QPSK = modulation.QAMModulator(4)
+        QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
         data = modulation.QAMSymbolsGrayCoded(128, 2**12)
         s = modulation.SignalWithPilots.from_data_array(data, 2**12, N, 0, 1)
-        dist = abs(s[0, :N, np.newaxis] - QPSK.symbols)
+        dist = abs(s[0, :N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
     def test_from_data_phpilots(self, N):
-        QPSK = modulation.QAMModulator(4)
+        QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
         data = modulation.QAMSymbolsGrayCoded(128, 2**12)
         s = modulation.SignalWithPilots.from_data_array(data, 2**12, 0, N, 1)
-        dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
+        dist = abs(s[0, ::N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     def test_from_data_symbols(self):
