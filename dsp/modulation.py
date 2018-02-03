@@ -745,7 +745,7 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
         idx_dat = ~idx_pil
         return idx, idx_dat, idx_pil
 
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, scale_pilots=1,
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1,
                 dataclass=QAMSymbolsGrayCoded, nmodes=1, **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
@@ -755,7 +755,7 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
         out_symbs[:, idx_pil] = pilots
         symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, **kwargs)
         out_symbs[:, idx_dat] = symbs
-        out = np.tile(out_symbs, nframes)
+        out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
@@ -766,7 +766,7 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
         return obj
 
     @classmethod
-    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes, scale_pilots=1, **pilot_kwargs):
+    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1, **pilot_kwargs):
         nmodes, N = data.shape
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
         assert np.count_nonzero(idx_dat) < N, "data frame is to short for the given frame length"
@@ -777,7 +777,7 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
         pilots = QAMSymbolsGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **pilot_kwargs)/np.sqrt(scale_pilots)
         out_symbs[:, idx_pil] = pilots
         out_symbs[:, idx_dat] = data[:, :Ndat]
-        out = np.tile(out_symbs, nframes)
+        out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
