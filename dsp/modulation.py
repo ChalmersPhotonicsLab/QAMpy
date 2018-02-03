@@ -721,7 +721,6 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         else:
             NotImplementedError("currently only 'dist' method is implemented")
 
-    #TODO: need to check how to best implement this with syncing etc.
     def _demodulate(self):
         NotImplementedError("Use demodulation of subclasses")
 
