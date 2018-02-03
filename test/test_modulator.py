@@ -39,6 +39,18 @@ class TestBits(object):
         ones = np.count_nonzero(c)
         assert (ones-10**6/2)<1000
 
+    def testprbspreserveattr(self):
+        c = modulation.PRBSBits(1000)
+        cc = np.roll(c, 100)
+        assert cc._seed == c._seed
+        assert cc._order == c._order
+
+    def testrandpreserveattr(self):
+        c = modulation.RandomBits(1000)
+        cc = np.roll(c, 100)
+        assert cc._seed == c._seed
+        assert cc._rand_state == c._rand_state
+
 
 class TestQAMSymbolsGray(object):
     @pytest.mark.parametrize("N", [np.random.randint(1,2**20)])
@@ -105,6 +117,23 @@ class TestQAMSymbolsGray(object):
         nbit = int(np.log2(M))
         nbitlen = N//nbit
         npt.assert_almost_equal(s.demodulate(s)[0], b[:nbitlen*nbit])
+
+    @pytest.mark.parametrize("attr", ["_M", "_bits", "_encoding", "_bitmap_mtx",
+                                      "_fb", "_code", "_coded_symbols"])
+    def test_preserveattr(self, attr):
+        s1 = modulation.QAMSymbolsGrayCoded(16, 1000)
+        s2 = s1+10
+        a1 = getattr(s1, attr)
+        a2 = getattr(s2, attr)
+        if isinstance(a1, np.ndarray):
+            npt.assert_array_almost_equal(a1, a2)
+        else:
+            assert a1 == a2
+
+    def test_symbolpreserve(self):
+        s1 = modulation.QAMSymbolsGrayCoded(16, 1000)
+        s2 = s1 + 10
+        npt.assert_array_almost_equal(s1, s2.symbols)
 
 
 class TestPilotSignal(object):
