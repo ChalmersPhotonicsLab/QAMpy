@@ -728,7 +728,7 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         raise NotImplementedError("Use modulation of subclasses")
 
 class SignalWithPilots(SymbolBase,SignalQualityMixing):
-    _inheritattr_ = ["_pilots", "_symbols", "_fb", "_frame_len", ]
+    _inheritattr_ = ["_pilots", "_symbols", "_fb", "_frame_len", "_pilot_seq_len", "_nframes"]
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, nmodes=1, scale_pilots=1,
                 dataclass=QAMSymbolsGrayCoded, **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
@@ -769,8 +769,8 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
         return self._pilots[:self._pilot_seq_len]
 
     @property
-    def pilot_seq(self):
-        return self._pilots[self._pilot_seq_len::pilot_ins_rat]
+    def ph_pilots(self):
+        return self._pilots[self._pilot_seq_len::self._pilot_ins_rat]
 
     @property
     def pilots(self):
