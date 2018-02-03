@@ -240,7 +240,8 @@ class QAMSymbolsGrayCoded(SymbolBase):
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
 
-    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=PRBSBits, **kwargs):
+    # using Randombits as default class because they are slightly faster
+    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, **kwargs):
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))
         coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
         Nbits = int(N * np.log2(M))
