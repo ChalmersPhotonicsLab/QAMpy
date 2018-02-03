@@ -68,9 +68,9 @@ class SymbolBase(np.ndarray):
                 self._symbols = obj._symbols
 
 class RandomBits(np.ndarray):
-    def __new__(cls, N, ndim=1, seed=None):
+    def __new__(cls, N, nmodes=1, seed=None):
         R = np.random.RandomState(seed)
-        bitsq = R.randint(0, high=2, size=(ndim,N)).astype(np.bool)
+        bitsq = R.randint(0, high=2, size=(nmodes,N)).astype(np.bool)
         obj = bitsq.view(cls)
         obj._rand_state = R
         obj._seed = seed
@@ -82,13 +82,13 @@ class RandomBits(np.ndarray):
         self._rand_state = getattr(obj, "_rand_state", None)
 
 class PRBSBits(np.ndarray):
-    def __new__(cls, N, ndim=1, seed=[None, None], order=[15, 23]):
-        if len(order) < ndim:
+    def __new__(cls, N, nmodes=1, seed=[None, None], order=[15, 23]):
+        if len(order) < nmodes:
             warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
             order_n = []
             seed_n = []
             orders = [15, 23]
-            for i in range(ndim):
+            for i in range(nmodes):
                 try:
                    order_n.append(order[i])
                    seed_n.append(seed[i])
@@ -99,8 +99,8 @@ class PRBSBits(np.ndarray):
                     seed_n.append(s)
                 order = order_n
                 seed = seed_n
-        bits = np.empty((ndim, N), dtype=np.bool)
-        for i in range(ndim):
+        bits = np.empty((nmodes, N), dtype=np.bool)
+        for i in range(nmodes):
             bits[i][:] = make_prbs_extXOR(order[i], N, seed[i])
         obj = bits.view(cls)
         obj._order = order
@@ -165,12 +165,12 @@ class QAMSymbolsGrayCoded(SymbolBase):
             1D array of complex symbol values. Normalised to energy of 1
         """
         data = np.atleast_2d(data)
-        ndim = data.shape[0]
+        nmodes = data.shape[0]
         bitspsym = int(np.log2(M))
         Nsym = data.shape[1]//bitspsym
-        out = np.empty((ndim,Nsym), dtype=dtype)
+        out = np.empty((nmodes,Nsym), dtype=dtype)
         N = data.shape[1] - data.shape[1]%bitspsym
-        for i in range(ndim):
+        for i in range(nmodes):
             datab = bitarray()
             datab.pack(data[i, :N].tobytes())
             # the below is not really the fastest method but easy encoding/decoding is possible
@@ -240,11 +240,11 @@ class QAMSymbolsGrayCoded(SymbolBase):
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
 
-    def __new__(cls, M, N, ndim=1, fb=1, bitclass=PRBSBits, **kwargs):
+    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=PRBSBits, **kwargs):
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))
         coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
         Nbits = int(N * np.log2(M))
-        bits = bitclass(Nbits, ndim=ndim, **kwargs)
+        bits = bitclass(Nbits, nmodes=nmodes, **kwargs)
         obj = cls._modulate(bits, encoding, M)
         obj = obj.view(cls)
         obj._bitmap_mtx = bitmap_mtx
@@ -385,7 +385,7 @@ class SignalQualityMixing(object):
             symbol error rate per dimension
         """
         signal_rx = self._signal_present(signal_rx)
-        ndim = signal_rx.shape[0]
+        nmodes = signal_rx.shape[0]
         data_demod = self.quantize(signal_rx)
         if not synced:
             symbols_tx, data_demod = self._sync_and_adjust(self.symbols, data_demod)
@@ -421,7 +421,7 @@ class SignalQualityMixing(object):
             bit-error-rate in linear units per dimension
         """
         signal_rx = self._signal_present(signal_rx)
-        ndim = signal_rx.shape[0]
+        nmodes = signal_rx.shape[0]
         syms_demod = self.quantize(signal_rx)
         if not synced:
             symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod)
@@ -466,7 +466,7 @@ class SignalQualityMixing(object):
         of EVM, e.g. on wikipedia.
         """
         signal_rx = self._signal_present(signal_rx)
-        ndim = signal_rx.shape[0]
+        nmodes = signal_rx.shape[0]
         symbols_tx, signal_ad = self._sync_and_adjust(self.symbols, signal_rx)
         return np.asarray(np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1)))#/np.mean(abs(self.symbols)**2))
 
@@ -489,13 +489,13 @@ class SignalQualityMixing(object):
             snr estimate per dimension
         """
         signal_rx = self._signal_present(signal_rx)
-        ndims = signal_rx.shape[0]
+        nmodes = signal_rx.shape[0]
         if not synced:
             symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx)
         else:
             symbols_tx = self.symbols
-        snr = np.zeros(ndims, dtype=np.float64)
-        for i in range(ndims):
+        snr = np.zeros(nmodes, dtype=np.float64)
+        for i in range(nmodes):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
         return np.asarray(snr)
 
@@ -519,16 +519,16 @@ class SignalQualityMixing(object):
         """
         signal_rx = self._signal_present(signal_rx)
         symbols_tx = self.symbols
-        ndims = signal_rx.shape[0]
-        GMI = np.zeros(ndims, dtype=np.float64)
-        GMI_per_bit = np.zeros((ndims, self.Nbits), dtype=np.float64)
+        nmodes = signal_rx.shape[0]
+        GMI = np.zeros(nmodes, dtype=np.float64)
+        GMI_per_bit = np.zeros((nmodes, self.Nbits), dtype=np.float64)
         mm = np.sqrt(np.mean(np.abs(signal_rx)**2, axis=-1))
         signal_rx = signal_rx/mm[:,np.newaxis]
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx)
         snr = self.est_snr(rx, synced=True)
         bits = self.decode(self.quantize(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
-        for mode in range(ndims):
+        for mode in range(nmodes):
             l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self._bitmap_mtx)
             # GMI per bit
             for bit in range(self.Nbits):
@@ -538,8 +538,8 @@ class SignalQualityMixing(object):
 
 
 class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
-    def __new__(cls, M, N, ndim=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None, fb=1, fs=1, **kwargs):
-        obj = super().__new__(cls, M, N, fb=fb, ndim=ndim, PRBS=PRBS, PRBSorder=PRBSorder, PRBSseed=PRBSseed, scaling_factor=None)
+    def __new__(cls, M, N, nmodes=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None, fb=1, fs=1, **kwargs):
+        obj = super().__new__(cls, M, N, fb=fb, nmodes=nmodes, PRBS=PRBS, PRBSorder=PRBSorder, PRBSseed=PRBSseed, scaling_factor=None)
         os = fs/fb
         #TODO: check if we are not wasting memory here
         if not np.isclose(os, 1):
@@ -570,7 +570,7 @@ class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
         return self._fs
 
 class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
-    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2" "_fb", "_fr"
+    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2" "_fb", "_fr"]
     @staticmethod
     def _cal_fractions(fr):
         ratn = fractions.Fraction(fr).limit_denominator()
@@ -579,7 +579,7 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         f_M1 = f_M - f_M2 
         return f_M, f_M1, f_M2
     
-    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, ndim=1, fb=1,
+    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, nmodes=1, fb=1,
                 M1class=QAMSymbolsGrayCoded, M2class=QAMSymbolsGrayCoded, **kwargs):
         """
         Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
@@ -606,9 +606,9 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
             warnings.warn("length of overall pattern not divisable by number of frames, truncating to %d symbols"%N)
         N1 = frms * f_M1
         N2 = frms * f_M2
-        out = np.zeros((ndim, N), dtype=np.complex128)
-        syms1 = M1class( M1, N1, ndim=ndim, fb=fb, **kwargs)
-        syms2 = M2class( M2, N2, ndim=ndim, fb=fb, **kwargs)
+        out = np.zeros((nmodes, N), dtype=np.complex128)
+        syms1 = M1class( M1, N1, nmodes=nmodes, fb=fb, **kwargs)
+        syms2 = M2class( M2, N2, nmodes=nmodes, fb=fb, **kwargs)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
         syms2 /= np.sqrt(scale)
         idx = np.arange(N)
@@ -629,22 +629,22 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
     
     @property
     def frame_len(self):
-        fM, fM1, fM2 = self._cal_fractions(self.fr):
+        fM, fM1, fM2 = self._cal_fractions(self.fr)
         return fM
     
     @property
     def f_M1(self):
-        fM, fM1, fM2 = self._cal_fractions(self.fr):
+        fM, fM1, fM2 = self._cal_fractions(self.fr)
         return fM1
     
     @property
     def f_M2(self):
-        fM, fM1, fM2 = self._cal_fractions(self.fr):
+        fM, fM1, fM2 = self._cal_fractions(self.fr)
         return fM2
 
     @classmethod
     def from_symbol_arrays(cls, syms_M1, syms_M2, fr, power_method="dist"):
-        assert syms_M1.ndim == 2 and syms_M2.ndim == 2, "input needs to have two dimensions"
+        assert syms_M1.nmodes == 2 and syms_M2.nmodes == 2, "input needs to have two dimensions"
         assert syms_M1.shape[0] == syms_M2.shape[0], "Number of "
         f_M, f_M1, f_M2 = cls._cal_fractions(fr)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
@@ -656,10 +656,7 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         if (nframes * f_M1 > N1) or (nframes * f_M2 > N2):
             warn.warnings("Need to truncate input arrays as ratio is not possible otherwise")
             nframes = min(N1//f_M1, N2//f_M2)
-        out = np.zeros((syms))
-            
-            
-            
+            out = np.zeros((syms))
         else:
             raise NotImplementedError("Only 'dist' method is currently implemented")
 
@@ -708,8 +705,8 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         NotImplementedError("Use modulation of subclasses")
 
 class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, ndim=1, **kwargs):
-        out_symbs = np.empty((ndim, frame_len), dtype=np.complex128)
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, nmodes=1, **kwargs):
+        out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
         idx = np.arange(frame_len)
         idx_pil_seq = idx < pilot_seq_len
         if pilot_ins_rat == 0 or pilot_ins_rat is None:
@@ -726,11 +723,11 @@ class SignalWithPilots(QAMSymbolsGrayCoded, SignalQualityMixing):
             idx_pil = ~idx_ph_pil #^ idx_pil_seq
             N_data = N_ph_frames * (pilot_ins_rat -1)
         idx_dat = ~idx_pil
-        pilots = super().__new__(cls, 4, N_pilots, ndim=ndim, **kwargs)
+        pilots = super().__new__(cls, 4, N_pilots, nmodes=nmodes, **kwargs)
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
-        symbs = super().__new__(cls, M, N_data, ndim=ndim, **kwargs)
+        symbs = super().__new__(cls, M, N_data, nmodes=nmodes, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
