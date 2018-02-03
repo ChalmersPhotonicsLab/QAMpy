@@ -578,7 +578,14 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         f_M = ratn.denominator
         f_M1 = f_M - f_M2 
         return f_M, f_M1, f_M2
-    
+
+    @staticmethod
+    def _cal_symbol_idx(N, f_M, f_M1):
+        idx = np.arange(N)
+        idx1 = idx%f_M < f_M1
+        idx2 = idx%f_M >= f_M1
+        return idx, idx1, idx2
+
     def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, nmodes=1, fb=1,
                 M1class=QAMSymbolsGrayCoded, M2class=QAMSymbolsGrayCoded, **kwargs):
         """
@@ -611,13 +618,9 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         syms2 = M2class( M2, N2, nmodes=nmodes, fb=fb, **kwargs)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
         syms2 /= np.sqrt(scale)
-        idx = np.arange(N)
-        idx1 = idx%f_M < f_M1
-        idx2 = idx%f_M >= f_M1
+        idx, idx1, idx2 = cls._cal_symbol_idx(N, f_M, f_M1)
         out[:,idx1] = syms1
         out[:,idx2] = syms2
-        #obj._idx_M1 = idx1
-        #obj._idx_M2 = idx2
         obj = out.view(cls)
         obj._symbols_M1 = syms1
         obj._symbols_M2 = syms2
@@ -626,7 +629,7 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         obj._M = M
         obj._power_method = power_method
         return obj
-    
+
     @property
     def frame_len(self):
         fM, fM1, fM2 = self._cal_fractions(self.fr)
@@ -642,26 +645,39 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         fM, fM1, fM2 = self._cal_fractions(self.fr)
         return fM2
 
+    @property
+    def M(self):
+        return (self._symbols_M1.M, self._symbols_M2.M)
+
     @classmethod
     def from_symbol_arrays(cls, syms_M1, syms_M2, fr, power_method="dist"):
-        assert syms_M1.nmodes == 2 and syms_M2.nmodes == 2, "input needs to have two dimensions"
-        assert syms_M1.shape[0] == syms_M2.shape[0], "Number of "
+        assert syms_M1.ndim == 2 and syms_M2.ndim == 2, "input needs to have two dimensions"
+        assert syms_M1.shape[0] == syms_M2.shape[0], "Number of modes must be the same"
         f_M, f_M1, f_M2 = cls._cal_fractions(fr)
-        scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
+        scale = cls.calculate_power_ratio(syms_M1.coded_symbols, syms_M2.coded_symbols, power_method)
         syms_M2 /= np.sqrt(scale)
         N1 = syms_M1.shape[1]
         N2 = syms_M2.shape[1] 
         N = N1 + N2
         nframes = N//f_M
         if (nframes * f_M1 > N1) or (nframes * f_M2 > N2):
-            warn.warnings("Need to truncate input arrays as ratio is not possible otherwise")
+            warnings.warn("Need to truncate input arrays as ratio is not possible otherwise")
             nframes = min(N1//f_M1, N2//f_M2)
-            out = np.zeros((syms))
-        else:
-            raise NotImplementedError("Only 'dist' method is currently implemented")
+        N = nframes * f_M
+        out = np.zeros((syms_M1.shape[0], N), dtype=syms_M1.dtype)
+        idx, idx1, idx2 = cls._cal_symbol_idx(N, f_M, f_M1)
+        out[:,idx1] = syms_M1
+        out[:,idx2] = syms_M2
+        obj = out.view(cls)
+        obj._symbols_M1 = syms_M1
+        obj._symbols_M2 = syms_M2
+        obj._fr = fr
+        obj._fb = syms_M1.fb
+        obj._power_method = power_method
+        return obj
 
     @staticmethod
-    def calculate_power_ratio(M1symbols, M2symbols, method):
+    def calculate_power_ratio(M1symbols, M2symbols, method="dist"):
         if method is "dist":
             d1 = np.min(abs(np.diff(np.unique(M1symbols))))
             d2 = np.min(abs(np.diff(np.unique(M2symbols))))

@@ -164,7 +164,32 @@ class TestTDHybridsSymbols(object):
         type(s._symbols_M1 ) is modulation.QAMSymbolsGrayCoded
         type(s._symbols_M2 ) is modulation.QAMSymbolsGrayCoded
 
+    @pytest.mark.parametrize("r1", np.arange(1, 3))
+    @pytest.mark.parametrize("r2", np.arange(1, 3))
+    def test_from_arrays_shape(self, r1, r2):
+        import math
+        if math.gcd(r1, r2) > 1:
+            assert True
+            return
+        r = r1+r2
+        s1 = modulation.QAMSymbolsGrayCoded(16, 1000*r1)
+        s2 = modulation.QAMSymbolsGrayCoded(4, 1000*r2)
+        o = modulation.TDHQAMSymbols.from_symbol_arrays(s1, s2, r2/r)
+        assert o.shape == (1, 1000*(r1+r2))
 
+    @pytest.mark.parametrize("r1", np.arange(1, 3))
+    @pytest.mark.parametrize("r2", np.arange(1, 3))
+    def test_from_arrays_ratio(self, r1, r2):
+        import math
+        if math.gcd(r1, r2) > 1:
+            assert True
+            return
+        r = r1+r2
+        s1 = modulation.QAMSymbolsGrayCoded(16, 1000*r1)
+        s2 = modulation.QAMSymbolsGrayCoded(4, 1000*r2)
+        o = modulation.TDHQAMSymbols.from_symbol_arrays(s1, s2, r2/r)
+        o2 = modulation.TDHQAMSymbols((16, 4), 1000*(r1+r2), fr=r2/r)
+        npt.assert_array_almost_equal(o, o2)
 
 
 class TestModulatorAttr(object):
