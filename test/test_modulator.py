@@ -165,6 +165,18 @@ class TestPilotSignal(object):
         idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(ph_fr*ph_i+Nseq, Nseq, ph_i)
         npt.assert_array_almost_equal(s[:,idx_d], s.symbols)
 
+    @pytest.mark.parametrize("N", np.arange(2, 5))
+    def testframes_shape(self, N):
+        s = modulation.SignalWithPilots(128, 2**16, 128, 32, nframes=N)
+        assert 2**16*N == s.shape[1]
+
+    @pytest.mark.parametrize("N", np.arange(2, 5))
+    def testframes_data(self, N):
+        flen = 2**16
+        s = modulation.SignalWithPilots(128, flen, 128, 32, nframes=N)
+        for i in range(1,N):
+            npt.assert_array_almost_equal(s[:,:flen], s[:, i*flen:(i+1)*flen])
+
     @pytest.mark.parametrize("N", [1, 123, 256, 534])
     def test_from_data_seqlen(self, N):
         QPSK = modulation.QAMModulator(4)
@@ -191,6 +203,7 @@ class TestPilotSignal(object):
         idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(2**12, 128, 16)
         s = modulation.SignalWithPilots.from_data_array(data, 2**12, 128, 16, 1)
         npt.assert_array_almost_equal(s[:,idx_d], data[:, :np.count_nonzero(idx_d)])
+
 
 class TestTDHybridsSymbols(object):
     @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])
