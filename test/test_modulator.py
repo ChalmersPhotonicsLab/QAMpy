@@ -157,6 +157,40 @@ class TestPilotSignal(object):
         dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
+    @pytest.mark.parametrize("Nseq", [2, 32, 64, 128])
+    @pytest.mark.parametrize("ph_i", [2, 32, 64, 128])
+    def test_symbols(self, Nseq, ph_i):
+        ph_fr = 50
+        s = modulation.SignalWithPilots(128, ph_fr*ph_i+Nseq , Nseq, ph_i, 1)
+        idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(ph_fr*ph_i+Nseq, Nseq, ph_i)
+        npt.assert_array_almost_equal(s[:,idx_d], s.symbols)
+
+    @pytest.mark.parametrize("N", [1, 123, 256, 534])
+    def test_from_data_seqlen(self, N):
+        QPSK = modulation.QAMModulator(4)
+        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
+        s = modulation.SignalWithPilots.from_data_array(data, 2**12, N, 0, 1)
+        dist = abs(s[0, :N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
+
+    @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
+    def test_from_data_phpilots(self, N):
+        QPSK = modulation.QAMModulator(4)
+        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
+        s = modulation.SignalWithPilots.from_data_array(data, 2**12, 0, N, 1)
+        dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
+
+    def test_from_data_symbols(self):
+        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
+        s = modulation.SignalWithPilots.from_data_array(data, 2**12, 128, 16, 1)
+        npt.assert_array_almost_equal(data[:, :s.symbols.shape[1]], s.symbols)
+
+    def test_from_data_symbols2(self):
+        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
+        idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(2**12, 128, 16)
+        s = modulation.SignalWithPilots.from_data_array(data, 2**12, 128, 16, 1)
+        npt.assert_array_almost_equal(s[:,idx_d], data[:, :np.count_nonzero(idx_d)])
 
 class TestTDHybridsSymbols(object):
     @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])

@@ -729,30 +729,31 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
 
 class SignalWithPilots(SymbolBase,SignalQualityMixing):
     _inheritattr_ = ["_pilots", "_symbols", "_fb", "_frame_len", "_pilot_seq_len", "_nframes"]
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, nmodes=1, scale_pilots=1,
-                dataclass=QAMSymbolsGrayCoded, **kwargs):
-        out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
+
+    @staticmethod
+    def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):
         idx = np.arange(frame_len)
         idx_pil_seq = idx < pilot_seq_len
         if pilot_ins_rat == 0 or pilot_ins_rat is None:
-            N_pilots = pilot_seq_len
             idx_pil = idx_pil_seq
-            N_data = frame_len - pilot_seq_len
         else:
             if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
                 raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
             N_ph_frames = (frame_len - pilot_seq_len)//pilot_ins_rat
-            N_pilots = pilot_seq_len + N_ph_frames
             idx_ph_pil = ((idx-pilot_seq_len)%pilot_ins_rat != 0) & (idx-pilot_seq_len >0)
-            #idx_ph_pil = ~idx_ph_pil
             idx_pil = ~idx_ph_pil #^ idx_pil_seq
-            N_data = N_ph_frames * (pilot_ins_rat -1)
         idx_dat = ~idx_pil
-        pilots = QAMSymbolsGrayCoded(4, N_pilots, nmodes=nmodes, **kwargs)*scale_pilots
+        return idx, idx_dat, idx_pil
+
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes, scale_pilots=1,
+                dataclass=QAMSymbolsGrayCoded, nmodes=1, **kwargs):
+        out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
+        idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
+        pilots = QAMSymbolsGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **kwargs)*scale_pilots
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
-        symbs = dataclass(M, N_data, nmodes=nmodes, **kwargs)
+        symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
@@ -761,6 +762,28 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
         obj._pilot_ins_rat = pilot_ins_rat
         obj._nframes = nframes
         obj._symbols = symbs
+        obj._pilots = pilots
+        return obj
+
+    @classmethod
+    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes, scale_pilots=1, **pilot_kwargs):
+        nmodes, N = data.shape
+        idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
+        assert np.count_nonzero(idx_dat) < N, "data frame is to short for the given frame length"
+        if np.count_nonzero(idx_dat) > N:
+            warnings.warn("Data for frame is shorter than length of data array, truncating")
+        out_symbs = np.empty((nmodes, frame_len), dtype=data.dtype)
+        Ndat = np.count_nonzero(idx_dat) or None
+        pilots = QAMSymbolsGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **pilot_kwargs)/np.sqrt(scale_pilots)
+        out_symbs[:, idx_pil] = pilots
+        out_symbs[:, idx_dat] = data[:, :Ndat]
+        out = np.tile(out_symbs, nframes)
+        obj = out_symbs.view(cls)
+        obj._frame_len = frame_len
+        obj._pilot_seq_len = pilot_seq_len
+        obj._pilot_ins_rat = pilot_ins_rat
+        obj._nframes = nframes
+        obj._symbols = data[:, :Ndat]
         obj._pilots = pilots
         return obj
 
@@ -775,6 +798,10 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
     @property
     def pilots(self):
         return self._pilots
+
+    @property
+    def symbols(self):
+        return self._symbols
 
 
 class QAMModulator(object):
