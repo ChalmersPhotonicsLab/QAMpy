@@ -135,6 +135,12 @@ class TestQAMSymbolsGray(object):
         s2 = s1 + 10
         npt.assert_array_almost_equal(s1, s2.symbols)
 
+    def test_symbols_implace_op(self):
+        s = modulation.QAMSymbolsGrayCoded(4, 2**12)
+        avg1 = (abs(s)**2).mean()
+        s += 5
+        avg2 = (abs(s.symbols)**2).mean()
+        npt.assert_array_almost_equal(avg1, avg2)
 
 class TestPilotSignal(object):
     @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
@@ -309,6 +315,13 @@ class TestQAMSignal(object):
         s /= abs(s).max()
         npt.assert_array_almost_equal(s, si)
 
+    def test_symbols_implace_op(self):
+        s = modulation.QAMSignal(4, 2**12)
+        avg1 = (abs(s.symbols)**2).mean()
+        s += 5
+        avg2 = (abs(s.symbols)**2).mean()
+        npt.assert_array_almost_equal(avg1, avg2)
+
     def test_symbolinherit(self):
         N = 1000
         s = modulation.QAMSymbolsGrayCoded(128, N)
@@ -365,6 +378,37 @@ class TestSignalQualityOnSignal(object):
         s = modulation.QAMSignal(16, 2**16, nmodes=nmodes)
         ber = s.cal_ber()
         assert ber.shape[0] == nmodes
+
+    def test_ber_value(self):
+        s = modulation.QAMSignal(16, 2**16)
+        s += 0.05*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        ber = s.cal_ber()
+        assert ber[0] == 0
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_est_snr_shape(self, nmodes):
+        s = modulation.QAMSignal(16, 2**16, nmodes=nmodes)
+        snr = s.est_snr()
+        assert snr.shape[0] == nmodes
+
+    def test_est_snr_value(self):
+        s = modulation.QAMSignal(16, 2**16)
+        snr = s.est_snr()
+        assert snr[0] > 1e25
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_cal_gmi_shape(self, nmodes):
+        s = modulation.QAMSignal(16, 2**16, nmodes=nmodes)
+        gmi, gmi_pb = s.cal_gmi()
+        assert gmi.shape[0] == nmodes
+
+    @pytest.mark.parametrize("M", [16, 128, 256])
+    def test_cal_gmi_value(self, M):
+        s = modulation.QAMSignal(M, 2**16)
+        s += 0.05*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        nbits = np.log2(M)
+        gmi, gmi_pb = s.cal_gmi()
+        npt.assert_almost_equal(gmi[0], nbits)
 
 
 
