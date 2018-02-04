@@ -497,7 +497,7 @@ class SignalQualityMixing(object):
             symbols_tx = self.symbols
         snr = np.zeros(nmodes, dtype=np.float64)
         for i in range(nmodes):
-            snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.gray_coded_symbols)
+            snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols)
         return np.asarray(snr)
 
     def cal_gmi(self, signal_rx=None):
@@ -527,7 +527,7 @@ class SignalQualityMixing(object):
         signal_rx = signal_rx/mm[:,np.newaxis]
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx)
         snr = self.est_snr(rx, synced=True)
-        bits = self.decode(self.quantize(tx)).astype(np.int)
+        bits = self.demodulate(self.quantize(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
             l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self._bitmap_mtx)
@@ -548,7 +548,7 @@ class QAMSignal(SymbolBase, SignalQualityMixing):
         if not np.isclose(os, 1):
             onew = cls._resample_array(obj, fs, **resamplekwargs)
         else:
-            onew = obj.view(cls)
+            onew = obj.copy().view(cls)
             onew._symbols = obj
             onew._fs = fs
         return onew
