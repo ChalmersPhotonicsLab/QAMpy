@@ -429,8 +429,8 @@ class SignalQualityMixing(object):
         else:
             symbols_tx = self.symbols
         #TODO: need to rename decode to demodulate
-        bits_demod = self.decode(syms_demod)
-        tx_synced = self.decode(symbols_tx)
+        bits_demod = self.demodulate(syms_demod)
+        tx_synced = self.demodulate(symbols_tx)
         errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
         return np.asarray(errs)/bits_demod.shape[1]
 
