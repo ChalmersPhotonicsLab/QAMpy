@@ -278,6 +278,57 @@ class TestTDHybridsSymbols(object):
         else:
             assert a1 == a2
 
+class TestQAMSignal(object):
+    @pytest.mark.parametrize("attr", ["fb", "M", "fs", "symbols"])
+    def test_preserveattr(self, attr):
+        s1 = modulation.QAMSignal(16, 1000, fs=2)
+        s2 = s1+10
+        a1 = getattr(s1, attr)
+        a2 = getattr(s2, attr)
+        if isinstance(a1, np.ndarray):
+            npt.assert_array_almost_equal(a1, a2)
+        else:
+            assert a1 == a2
+
+    @pytest.mark.parametrize("os", np.arange(2,5))
+    @pytest.mark.parametrize("nmodes", np.arange(1,3))
+    def test_samplerate(self, os, nmodes):
+        N = 1000
+        Nn = os*N
+        s = modulation.QAMSignal(16, N, fs=os, nmodes=nmodes)
+        assert s.shape == (nmodes, Nn)
+
+    @pytest.mark.parametrize("os", np.arange(2,5))
+    def test_resample(self, os):
+        N = 1000
+        Nn = os*N
+        s = modulation.QAMSymbolsGrayCoded(128, N)
+        sn = modulation.QAMSignal.from_symbol_array(s, fs=os, beta=0.2, renormalise=False)
+        si = sn.resample(1, beta=0.2, renormalise=False)
+        si /= abs(si).max()
+        s /= abs(s).max()
+        npt.assert_array_almost_equal(s, si)
+
+    def test_symbolinherit(self):
+        N = 1000
+        s = modulation.QAMSymbolsGrayCoded(128, N)
+        sn = modulation.QAMSignal.from_symbol_array(s, fs=2, beta=0.2, renormalise=False)
+        assert sn.symbols is s
+
+    def test_symbolinherit2(self):
+        N = 1000
+        s = modulation.QAMSymbolsGrayCoded(128, N)
+        sn = modulation.QAMSignal.from_symbol_array(s, fs=2, beta=0.2, renormalise=False)
+        sn2 = sn+2
+        assert sn2.symbols is s
+
+    def test_symbolinherit3(self):
+        N = 1000
+        s = modulation.QAMSignal(16, N, fs=2)
+        sn = s.resample(1, beta=0.2)
+        assert sn.symbols is s.symbols
+
+
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)
     d = np.diff(np.unique(Q.symbols.real)).min()

@@ -538,37 +538,72 @@ class SignalQualityMixing(object):
         return GMI, GMI_per_bit
 
 
-class QAMSignal(QAMSymbolsGrayCoded, SignalQualityMixing):
-    def __new__(cls, M, N, nmodes=1, PRBS=True, PRBSorder=(15, 23), PRBSseed=(None, None), scaling_factor=None, fb=1, fs=1, **kwargs):
-        obj = super().__new__(cls, M, N, fb=fb, nmodes=nmodes, PRBS=PRBS, PRBSorder=PRBSorder, PRBSseed=PRBSseed, scaling_factor=None)
+class QAMSignal(SymbolBase, SignalQualityMixing):
+    _inheritattr_ = ["_bits", "_symbols", "_fs", "_fb"]
+    def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=QAMSymbolsGrayCoded, dtype=np.complex128,
+                classkwargs={}, resamplekwargs={"beta": 0.1}):
+        obj = symbolclass(M,N, fb=fb, nmodes=nmodes, **classkwargs)
         os = fs/fb
         #TODO: check if we are not wasting memory here
         if not np.isclose(os, 1):
-            onew = obj.copy()
-            onew.resize(obj.shape[0], obj.shape[1]*int(os))
-            for i in range(obj.shape[0]):
-                onew[i,:] = resample.rrcos_resample_zeroins(obj[i], fb, fs, Ts=1/fb, **kwargs)
-            onew = np.asarray(onew).view(cls)
-            onew._bits = getattr(obj, "_bits", None)
-            onew._symbols = getattr(obj, "_symbols", None)
-            onew._bitmap_mtx = getattr(obj, "_bitmap_mtx", None)
-            onew._encoding = getattr(obj, "_encoding", None)
-            onew._M = getattr(obj, "_M", None)
-            onew._code = getattr(obj, "_code", None)
-            onew._coded_symbols = getattr(obj, "_coded_symbols", None)
-            onew._prbs = getattr(obj, "_prbs", None)
-            onew._prbsorder = getattr(obj, "_prbsorder", None)
-            onew._prbsseed = getattr(obj, "_prbsseed", None)
-            onew._fb = getattr(obj, "_fb", None)
-            onew._fs = fs
+            onew = cls._resample_array(obj, fs, **resamplekwargs)
         else:
             onew = obj.view(cls)
+            onew._symbols = obj
             onew._fs = fs
+        return onew
+
+    @classmethod
+    def _resample_array(cls, obj, fs, **kwargs):
+        if hasattr(obj, "fs"):
+            fold = obj.fs
+            fb = obj.fb
+        else:
+            fb = obj.fb
+            fold = fb
+        os = fs/fold
+        onew = np.empty((obj.shape[0], int(os*obj.shape[1])), dtype=obj.dtype)
+        for i in range(obj.shape[0]):
+            onew[i,:] = resample.rrcos_resample_zeroins(obj[i], fold, fs, Ts=1/fb, **kwargs)
+        onew = np.asarray(onew).view(cls)
+        syms = getattr(obj, "_symbols", None)
+        if syms is None:
+            onew._symbols = obj
+        else:
+            onew._symbols = obj._symbols
+        onew._fs = fs
         return onew
 
     @property
     def fs(self):
         return self._fs
+
+    @property
+    def M(self):
+        return self._symbols.M
+
+    @property
+    def fb(self):
+        return self._symbols._fb
+
+    @property
+    def symbols(self):
+        return self._symbols
+
+    @classmethod
+    def from_symbol_array(cls, array, fs, **kwargs):
+        os = fs/array.fb
+        if not np.isclose(os, 1):
+            onew = cls._resample_array(array, fs, **kwargs)
+        else:
+            onew = obj.view(cls)
+            onew._symbols = obj
+            onew._fs = fs
+        return onew
+
+    def resample(self, fnew, **kwargs):
+        return self._resample_array(self, fnew, **kwargs)
+
 
 class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
     _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols"]
