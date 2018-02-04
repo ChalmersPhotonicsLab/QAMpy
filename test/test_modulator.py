@@ -328,6 +328,21 @@ class TestQAMSignal(object):
         sn = s.resample(1, beta=0.2)
         assert sn.symbols is s.symbols
 
+    @pytest.mark.parametrize("attr", ["M", "bits", "_encoding", "_bitmap_mtx",
+                                      "fb", "_code", "coded_symbols"])
+    def test_symbol_attr(self, attr):
+        s = modulation.QAMSignal(16, 2000, fs=2)
+        a = getattr(s, attr)
+        assert a is not None
+
+
+class TestSignalQuality(object):
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_ser_shape(self, nmodes):
+        s = modulation.QAMSignal(16, 2**16, nmodes=nmodes)
+        ser = s.cal_ser()
+        assert ser.shape[0] == nmodes
 
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)

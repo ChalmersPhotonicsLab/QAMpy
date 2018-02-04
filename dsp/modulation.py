@@ -604,6 +604,9 @@ class QAMSignal(SymbolBase, SignalQualityMixing):
     def resample(self, fnew, **kwargs):
         return self._resample_array(self, fnew, **kwargs)
 
+    def __getattr__(self, attr):
+        return getattr(self._symbols, attr)
+
 
 class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
     _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols"]
