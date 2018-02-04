@@ -842,6 +842,9 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
     def symbols(self):
         return self._symbols
 
+    def __getattr__(self, attr):
+        return getattr(self._symbols, attr)
+
 
 class QAMModulator(object):
     """
