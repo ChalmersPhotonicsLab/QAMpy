@@ -336,13 +336,37 @@ class TestQAMSignal(object):
         assert a is not None
 
 
-class TestSignalQuality(object):
+class TestSignalQualityOnSignal(object):
 
     @pytest.mark.parametrize("nmodes", np.arange(1, 4))
     def test_ser_shape(self, nmodes):
         s = modulation.QAMSignal(16, 2**16, nmodes=nmodes)
         ser = s.cal_ser()
         assert ser.shape[0] == nmodes
+
+    def test_ser_value(self):
+        s = modulation.QAMSignal(16, 2**16)
+        ser = s.cal_ser()
+        assert ser[0] == 0
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_evm_shape(self, nmodes):
+        s = modulation.QAMSignal(16, 2**16, nmodes=nmodes)
+        evm = s.cal_evm()
+        assert evm.shape[0] == nmodes
+
+    def test_evm_value(self):
+        s = modulation.QAMSignal(16, 2**16)
+        evm = s.cal_evm()
+        assert evm[0] < 1e-4
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_ber_shape(self, nmodes):
+        s = modulation.QAMSignal(16, 2**16, nmodes=nmodes)
+        ber = s.cal_ber()
+        assert ber.shape[0] == nmodes
+
+
 
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)
