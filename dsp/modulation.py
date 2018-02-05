@@ -568,7 +568,7 @@ class QAMSignal(SymbolBase, SignalQualityMixing):
         onew = np.asarray(onew).view(cls)
         syms = getattr(obj, "_symbols", None)
         if syms is None:
-            onew._symbols = obj
+            onew._symbols = obj.copy()
         else:
             onew._symbols = obj._symbols
         onew._fs = fs
@@ -596,7 +596,7 @@ class QAMSignal(SymbolBase, SignalQualityMixing):
         if not np.isclose(os, 1):
             onew = cls._resample_array(array, fs, **kwargs)
         else:
-            onew = obj.view(cls)
+            onew = obj.copy().view(cls)
             onew._symbols = obj
             onew._fs = fs
         return onew

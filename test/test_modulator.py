@@ -138,8 +138,9 @@ class TestQAMSymbolsGray(object):
     def test_symbols_implace_op(self):
         s = modulation.QAMSymbolsGrayCoded(4, 2**12)
         avg1 = (abs(s)**2).mean()
+        s2 = s
         s += 5
-        avg2 = (abs(s.symbols)**2).mean()
+        avg2 = (abs(s2.symbols)**2).mean()
         npt.assert_array_almost_equal(avg1, avg2)
 
 class TestPilotSignal(object):
@@ -405,7 +406,7 @@ class TestSignalQualityOnSignal(object):
     @pytest.mark.parametrize("M", [16, 128, 256])
     def test_cal_gmi_value(self, M):
         s = modulation.QAMSignal(M, 2**16)
-        s += 0.05*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        s += 0.01*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
