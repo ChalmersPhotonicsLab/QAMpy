@@ -181,7 +181,7 @@ ch_sep = 1.01
 os_rx = 2
 
 # Select Rx channel
-sel_wdm_ch = 0
+sel_wdm_ch = np.array([0,1,2])
 
 # If wanted, plot the output results. 
 plot_results = True
@@ -227,23 +227,32 @@ rx_sig = tx_sig.copy()
 #==============================================================================
 # Filter a bit, select propper channel
 #==============================================================================
-for l in range(npols):
-    rx_sig[l] = pre_filter(rx_sig[l],rx_filter_bw,os_tx,center_freq=sel_wdm_ch*ch_sep)
 
-    if (sel_wdm_ch) != 0:
-       rx_sig[l] *= np.exp(-1j*2*np.pi*sel_wdm_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
+rx_wdm_sigs = []
+for ch in sel_wdm_ch:
+    # Filter out per polarization
+    for l in range(npols):
+        rx_sig[l] = pre_filter(rx_sig[l],rx_filter_bw,os_tx,center_freq=sel_wdm_ch*ch_sep)
+        if (sel_wdm_ch) != 0:
+           rx_sig[l] *= np.exp(-1j*2*np.pi*sel_wdm_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
+           
+    # Add down-shifted signals to the output array
+    rx_wdm_sigs.append(rx_sig)
 
 #==============================================================================
 # Start the receiver structure
 #==============================================================================
 
-# Orthonormalize a bit, try to get back to something again
-rx_sig = utils.orthonormalize_signal(rx_sig)
-
-# Resample for DSP
-rx_x = resample.rrcos_resample_zeroins(rx_sig[0].flatten(), os_tx, os_rx, Ts=2/os_rx, beta=beta, renormalise = True)
-rx_y = resample.rrcos_resample_zeroins(rx_sig[1].flatten(), os_tx, os_rx, Ts=2/os_rx, beta=beta, renormalise = True)
-rx_sig_dsp = np.vstack((rx_x,rx_y))
+rx_wdm_sigs_resample = []
+for wdm_ch in range(len(rx_wdm_sigs)):
+    
+    # Orthonormalize a bit, try to get back to something again
+    rx_sig = utils.orthonormalize_signal(rx_wdm_sigs[wdm_ch])
+    
+    # Resample for DSP
+    rx_x = resample.rrcos_resample_zeroins(rx_sig[0].flatten(), os_tx, os_rx, Ts=2/os_rx, beta=beta, renormalise = True)
+    rx_y = resample.rrcos_resample_zeroins(rx_sig[1].flatten(), os_tx, os_rx, Ts=2/os_rx, beta=beta, renormalise = True)
+    rx_wdm_sigs_resample.append(np.vstack((rx_x,rx_y)))
 
 
 #==============================================================================
