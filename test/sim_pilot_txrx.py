@@ -83,14 +83,16 @@ def run_joint_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=Fal
     # Extract pilot sequence
     ref_symbs = (pilot_symbs[1][:, :pilot_seq_len])
     
+    ref_symbs_wdm = [pilot_symbs[0][:, :pilot_seq_len],pilot_symbs[1][:, :pilot_seq_len],pilot_symbs[2][:, :pilot_seq_len]]
     
     # Frame sync, locate first frame
     shift_factor, corse_foe = pilotbased_receiver.frame_sync(rec_signal[1], ref_symbs, os, frame_length=frame_length,
                                                              mu=mu[0], method=method[0], ntaps=Numtaps[0],
                                                              Niter=Niter[0], adap_step=adap_step[0])  
     
+
     # Converge equalizer using the pilot sequence
-    eq_pilots, foePerMode, taps, shift_factor = pilotbased_receiver.equalize_pilot_sequence(rec_signal[1], ref_symbs,
+    eq_pilots, foePerMode, taps, shift_factor = pilotbased_receiver.equalize_pilot_sequence_joint(rec_signal, ref_symbs_wdm,
                                                                                             shift_factor, os, sh=sh,
                                                                                             process_frame_id=process_frame_id,
                                                                                             frame_length=frame_length,
@@ -101,6 +103,8 @@ def run_joint_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=Fal
                                                                                             foe_symbs=foe_symbs,
                                                                                             blind_foe_payload=blind_foe_payload)
 
+
+    print("MIMO EQ Completed")
 
     # DSP for the payload: Equalization, FOE, CPE. All pilot-aided
     dsp_sig_out = []
@@ -284,9 +288,9 @@ for l in range(npols):
 if plot_results:
     plt.figure()
     plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(tx_sig[0]))**2),label="Tx Spectrum")
-    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[0][0]))**2),label="Rx Spectrum, Post Filter")
-    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[1][0]))**2),label="Rx Spectrum, Post Filter")
-    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[2][0]))**2),label="Rx Spectrum, Post Filter")
+    #plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[0][0]))**2),label="Rx Spectrum, Post Filter")
+    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[1][0]))**2),label="Rx Spectrum center CH, Post Filter")
+    #plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[2][0]))**2),label="Rx Spectrum, Post Filter")
     plt.figure()
     plt.hist2d(dsp_out[1][0].flatten().real,dsp_out[1][0].flatten().imag,bins=200)
 

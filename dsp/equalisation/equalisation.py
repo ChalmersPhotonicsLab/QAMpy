@@ -123,18 +123,29 @@ def apply_filter(E, os, wxy):
     E = np.atleast_2d(E)
     pols = E.shape[0]
     Ntaps = wxy[0].shape[1]
+    
     X1 = segment_axis(E[0], Ntaps, Ntaps-os)
-    if pols == 2:
-        X2 = segment_axis(E[1], Ntaps, Ntaps-os)
-        X = np.hstack([X1,X2])
-        ww = np.vstack([wxy[0].flatten(), wxy[1].flatten()])
-        Eest = np.dot(X, ww.transpose())
-        return np.vstack([Eest[:,0],  Eest[:,1]])
+    X = X1
+    ww = wxy[0].flatten()
+    if pols > 1:
+        for pol in range(1,pols):
+            X_P = segment_axis(E[pol], Ntaps, Ntaps-os)
+            X = np.hstack([X,X_P])
+            ww = np.vstack((ww,wxy[pol].flatten()))
+    
+    Eest = np.dot(X, ww.transpose())
+    
+    
+    if pols > 1:
+        Eest_tmp = Eest[:,0]
+        for pol in range(1,pols):
+            Eest_tmp = np.vstack([Eest_tmp,Eest[:,pol]])
+        Eest = Eest_tmp
     else:
-        X = X1
-        ww = wxy[0].flatten()
-        Eest = np.dot(X, ww.transpose())
-        return np.atleast_2d(Eest)
+        Eest = np.atleast_2d(Eest)
+    
+    
+    return Eest
 
 def _cal_Rdash(syms):
      return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (np.sign(syms.real + syms.imag) + np.sign(syms.real-syms.imag) + 1.j*(np.sign(syms.real+syms.imag) - np.sign(syms.real-syms.imag)))*syms.conj()

@@ -364,7 +364,7 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
     
     # Refsymbs for central wavelength channel, n modes 
     ref_symbs_center = np.atleast_2d(ref_symbs[1])
-    npols = ref_symbs_center[1].shape[0]
+    npols = ref_symbs_center.shape[0]
     
     # Veryfy equal dimentions
     if not npols == rx_signal[1].shape[0]:
@@ -395,13 +395,13 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         foePerMode = np.ones(foePerMode.shape)*np.mean(foePerMode)
         
         # extract other signals
-        sig_left = rx_signal[0][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-        sig_right = rx_signal[2][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+#        sig_left = rx_signal[0][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+#        sig_right = rx_signal[2][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
         
         # Apply FO-compensation, create final signal
-        sig_dc_left = phaserecovery.comp_freq_offset(sig_left,foePerMode,os=os)
+        sig_dc_left = phaserecovery.comp_freq_offset(rx_signal[0],foePerMode,os=os)
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal_center,foePerMode,os=os)
-        sig_dc_right = phaserecovery.comp_freq_offset(sig_right,foePerMode,os=os)
+        sig_dc_right = phaserecovery.comp_freq_offset(rx_signal[1],foePerMode,os=os)
     else:
         # Signal should be DC-centered. Do nothing. 
         sig_dc_center = rx_signal_center
@@ -412,15 +412,28 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         pilot_seq = sig_dc_center[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
         wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
         
-        pilot_seq_wdm = np.vstack((sig_dc_left,sig_dc_center,sig_dc_right))
+        pilot_seq_wdm = np.concatenate((sig_dc_left,sig_dc_center,sig_dc_right),axis=0)
         pilot_seq_wdm = pilot_seq_wdm[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-        wxy_wdm = np.vstack((np.zeros(wxy_init.shape),wxy_init,np.zeros(wxy_init.shape)))
+
+        for pol in range(len(wxy_init)):
+            wxy_init[pol] = np.concatenate((np.zeros(wxy_init[pol].shape,dtype=complex),wxy_init[pol],np.zeros(wxy_init[pol].shape,dtype=complex)),axis=0)
         
+        wxy_init_wdm = []
+        wxy_init_wdm.append(np.zeros(wxy_init[0].shape,dtype=complex))
+        wxy_init_wdm.append(np.zeros(wxy_init[1].shape,dtype=complex))
+        wxy_init_wdm.append(wxy_init[0])
+        wxy_init_wdm.append(wxy_init[1])        
+        wxy_init_wdm.append(np.zeros(wxy_init[0].shape,dtype=complex))
+        wxy_init_wdm.append(np.zeros(wxy_init[1].shape,dtype=complex))
         
-        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        #wxy_wdm = np.vstack((np.zeros(wxy_init.shape),wxy_init,np.zeros(wxy_init.shape)))
+
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
         out_taps.append(wx)
         symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,out_taps[l])
-        eq_pilots[2+l,:] = symbs_out[2+l,:]
+        print("Hej")
+        print(symbs_out.shape)
+        eq_pilots[l,:] = symbs_out[2+l,:]
 
 
 
