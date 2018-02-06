@@ -177,11 +177,11 @@ os_tx = 8
 rx_filter_bw = 1.5
 os_rx = 2
 n_wdm_channels = 3
-ch_sep = 1.01
+ch_sep = 2
 os_rx = 2
 
 # Select Rx channel
-sel_wdm_ch = np.array([0,1,2])
+sel_wdm_ch = np.array([-1,0,1])
 
 # If wanted, plot the output results. 
 plot_results = True
@@ -229,15 +229,16 @@ rx_sig = tx_sig.copy()
 #==============================================================================
 
 rx_wdm_sigs = []
-for ch in sel_wdm_ch:
+for sel_ch in sel_wdm_ch:
     # Filter out per polarization
+    rx_sig_ch = rx_sig.copy()
     for l in range(npols):
-        rx_sig[l] = pre_filter(rx_sig[l],rx_filter_bw,os_tx,center_freq=sel_wdm_ch*ch_sep)
-        if (sel_wdm_ch) != 0:
-           rx_sig[l] *= np.exp(-1j*2*np.pi*sel_wdm_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
+        rx_sig_ch[l] = pre_filter(rx_sig_ch[l],rx_filter_bw,os_tx,center_freq=sel_ch*ch_sep)
+        if (sel_ch) != 0:
+           rx_sig_ch[l] *= np.exp(-1j*2*np.pi*sel_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
            
     # Add down-shifted signals to the output array
-    rx_wdm_sigs.append(rx_sig)
+    rx_wdm_sigs.append(rx_sig_ch)
 
 #==============================================================================
 # Start the receiver structure
@@ -260,7 +261,11 @@ for wdm_ch in range(len(rx_wdm_sigs)):
 #==============================================================================
 
 # Run DSP
-dsp_out = run_pilot_receiver(rx_sig_dsp,pilot_symbs[sel_wdm_ch+num_side_ch], 
+#dsp_out = run_pilot_receiver(rx_sig_dsp,pilot_symbs[sel_wdm_ch+num_side_ch], 
+#                             frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, 
+#                             pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx)
+
+dsp_out = run_joint_pilot_receiver(rx_wdm_sigs_resample,pilot_symbs, 
                              frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, 
                              pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx)
 
@@ -270,7 +275,7 @@ dsp_out = run_pilot_receiver(rx_sig_dsp,pilot_symbs[sel_wdm_ch+num_side_ch],
 mod = modulation.QAMModulator(M)
 gmi_res = np.zeros(npols)
 for l in range(npols):
-    gmi_res[l] = mod.cal_gmi(dsp_out[1][l].flatten(),data_symbs[sel_wdm_ch+num_side_ch][l])[0][0]
+    gmi_res[l] = mod.cal_gmi(dsp_out[1][l].flatten(),data_symbs[1][l])[0][0]
     
 #==============================================================================
 # Do Some plotting
@@ -279,8 +284,9 @@ for l in range(npols):
 if plot_results:
     plt.figure()
     plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(tx_sig[0]))**2),label="Tx Spectrum")
-    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_sig[0]))**2),label="Rx Spectrum, Post Filter")
-    
+    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[0][0]))**2),label="Rx Spectrum, Post Filter")
+    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[1][0]))**2),label="Rx Spectrum, Post Filter")
+    plt.semilogy(np.fft.fftshift(np.abs(np.fft.fft(rx_wdm_sigs[2][0]))**2),label="Rx Spectrum, Post Filter")
     plt.figure()
     plt.hist2d(dsp_out[1][0].flatten().real,dsp_out[1][0].flatten().imag,bins=200)
 
