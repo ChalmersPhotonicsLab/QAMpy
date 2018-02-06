@@ -134,8 +134,6 @@ def apply_filter(E, os, wxy):
             ww = np.vstack((ww,wxy[pol].flatten()))
     
     Eest = np.dot(X, ww.transpose())
-    
-    
     if pols > 1:
         Eest_tmp = Eest[:,0]
         for pol in range(1,pols):

@@ -105,6 +105,8 @@ def run_joint_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=Fal
 
 
     print("MIMO EQ Completed")
+    print(len(taps))
+    print(taps[0].shape)
 
     # DSP for the payload: Equalization, FOE, CPE. All pilot-aided
     dsp_sig_out = []
