@@ -351,11 +351,28 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
 
 def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None,blind_foe_payload=False):
     
+    
+    # Check for propper dim
+    if not len(rx_signal) == 3:
+        raise ValueError("Requires an input signal array with 3 neighboring channels")
+    if not len(ref_symbs) == 3:
+        raise ValueError("Requires an input pilot symbol array with length 3")
+        
+    # Assume identical shift for the 2 central modes
+    if len(shift_factor) == 1:
+        shift_factor = np.vstack(shift_factor,shift_factor)
+    
+    # Refsymbs for central wavelength channel, n modes 
+    ref_symbs_center = np.atleast_2d(ref_symbs[1])
+    npols = ref_symbs_center[1].shape[0]
+    
+    # Veryfy equal dimentions
+    if not npols == rx_signal[1].shape[0]:
+        raise ValueError("Different number of modes in the signal and reference symbosl")
+    
     # Inital settings
-    rx_signal = np.atleast_2d(rx_signal)
-    ref_symbs = np.atleast_2d(ref_symbs)
-    npols = rx_signal.shape[0]    
-    pilot_seq_len = len(ref_symbs[0,:])    
+    rx_signal_center = np.atleast_2d(rx_signal[1])       
+    pilot_seq_len = len(ref_symbs_center[0,:])    
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     tmp_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     out_taps = []
@@ -363,50 +380,65 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
     # Tap update and extract the propper pilot sequuence    
     if not((ntaps[1]-ntaps[0])%os  ==  0):
         raise ValueError("Taps for search and convergence impropper configured")
-    tap_cor = int((ntaps[1]-ntaps[0])/2)
+    tap_cor = int((ntaps[1]-ntaps[0])/os)
     
     # Run FOE and shift spectrum
     if not sh:    
         # First Eq, extract pilot sequence to do FOE
         for l in range(npols):
-            pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+            pilot_seq = rx_signal_center[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
             wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
-            # wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot, wxy = wx, Ntaps=ntaps[1], Niter=Niter[1],
-            #                                        method=method[0], adaptive_stepsize=adap_step[1])
             symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
             tmp_pilots[l,:] = symbs_out[l,:]
        
-        foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
+        foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs_center)
         foePerMode = np.ones(foePerMode.shape)*np.mean(foePerMode)
         
-        # Apply FO-compensation
-        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
+        # extract other signals
+        sig_left = rx_signal[0][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+        sig_right = rx_signal[2][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+        
+        # Apply FO-compensation, create final signal
+        sig_dc_left = phaserecovery.comp_freq_offset(sig_left,foePerMode,os=os)
+        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal_center,foePerMode,os=os)
+        sig_dc_right = phaserecovery.comp_freq_offset(sig_right,foePerMode,os=os)
     else:
         # Signal should be DC-centered. Do nothing. 
-        sig_dc_center = rx_signal
+        sig_dc_center = rx_signal_center
         foePerMode = np.zeros([npols,1])
         
     # First step Eq
     for l in range(npols):
         pilot_seq = sig_dc_center[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
         wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wxy_init,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        
+        pilot_seq_wdm = np.vstack((sig_dc_left,sig_dc_center,sig_dc_right))
+        pilot_seq_wdm = pilot_seq_wdm[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+        wxy_wdm = np.vstack((np.zeros(wxy_init.shape),wxy_init,np.zeros(wxy_init.shape)))
+        
+        
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
         out_taps.append(wx)
-        symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps[l])
-        eq_pilots[l,:] = symbs_out[l,:]
+        symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,out_taps[l])
+        eq_pilots[2+l,:] = symbs_out[2+l,:]
 
-    # Equalize using additional frames if selected
-    for frame_id in range(0,process_frame_id+1):
-        for l in range(npols):
-            pilot_seq = sig_dc_center[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
-            wx_1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=out_taps[l],Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
-            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wx_1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
-            out_taps[l] = wx
 
-            if frame_id == process_frame_id:
-                symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps[l])
-                eq_pilots[l,:] = symbs_out[l,:]
-                shift_factor[l] = shift_factor[l] + process_frame_id*os*frame_length  
+
+
+
+#
+#    # Equalize using additional frames if selected
+#    for frame_id in range(0,process_frame_id+1):
+#        for l in range(npols):
+#            pilot_seq = sig_dc_center[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
+#            wx_1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=out_taps[l],Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
+#            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wx_1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+#            out_taps[l] = wx
+#
+#            if frame_id == process_frame_id:
+#                symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps[l])
+#                eq_pilots[l,:] = symbs_out[l,:]
+#                shift_factor[l] = shift_factor[l] + process_frame_id*os*frame_length  
 
     return eq_pilots, foePerMode, out_taps, shift_factor
 
