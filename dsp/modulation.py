@@ -886,7 +886,7 @@ class SignalWithPilots(Signal,SignalQualityMixing):
     def est_snr(self, signal_rx=None, blind=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return super().est_snr(signal_rx, synced)
+        return super().est_snr(signal_rx, blind)
 
 
 
