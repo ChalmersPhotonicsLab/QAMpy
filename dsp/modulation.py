@@ -597,7 +597,7 @@ class Signal(SymbolBase, SignalQualityMixing):
         if not np.isclose(os, 1):
             onew = cls._resample_array(array, fs, **kwargs)
         else:
-            onew = obj.view(cls)
+            onew = array.view(cls)
             onew._symbols = obj
             onew._fs = fs
         return onew
