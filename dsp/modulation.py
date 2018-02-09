@@ -538,7 +538,7 @@ class SignalQualityMixing(object):
         return GMI, GMI_per_bit
 
 
-class QAMSignal(SymbolBase, SignalQualityMixing):
+class Signal(SymbolBase, SignalQualityMixing):
     _inheritattr_ = ["_bits", "_symbols", "_fs", "_fb"]
     def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=QAMSymbolsGrayCoded, dtype=np.complex128,
                 classkwargs={}, resamplekwargs={"beta": 0.1}):
@@ -766,8 +766,8 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
     def _modulate(self):
         raise NotImplementedError("Use modulation of subclasses")
 
-class SignalWithPilots(SymbolBase,SignalQualityMixing):
-    _inheritattr_ = ["_pilots", "_symbols", "_fb", "_frame_len", "_pilot_seq_len", "_nframes"]
+class SignalWithPilots(Signal,SignalQualityMixing):
+    _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes"]
 
     @staticmethod
     def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):
@@ -808,7 +808,7 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
     def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1, **pilot_kwargs):
         nmodes, N = data.shape
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
-        assert np.count_nonzero(idx_dat) < N, "data frame is to short for the given frame length"
+        assert np.count_nonzero(idx_dat) <= N, "data frame is to short for the given frame length"
         if np.count_nonzero(idx_dat) > N:
             warnings.warn("Data for frame is shorter than length of data array, truncating")
         out_symbs = np.empty((nmodes, frame_len), dtype=data.dtype)
@@ -837,10 +837,6 @@ class SignalWithPilots(SymbolBase,SignalQualityMixing):
     @property
     def pilots(self):
         return self._pilots
-
-    @property
-    def symbols(self):
-        return self._symbols
 
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
