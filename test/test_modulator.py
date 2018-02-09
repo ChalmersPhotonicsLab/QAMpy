@@ -342,6 +342,14 @@ class TestSignal(object):
         s /= abs(s).max()
         npt.assert_array_almost_equal(s, si)
 
+    @pytest.mark.parametrize("os", np.arange(2,5))
+    def test_from_symbol_array(self, os):
+        N =1000
+        Nn = os*N
+        s = modulation.QAMSymbolsGrayCoded(128, N)
+        sn = modulation.Signal.from_symbol_array(s, fs=os, beta=0.2, renormalise=False)
+        assert sn.shape[1] == s.shape[1]*os
+
     def test_symbols_implace_op(self):
         s = modulation.Signal(4, 2 ** 12)
         avg1 = (abs(s.symbols)**2).mean()
@@ -432,12 +440,71 @@ class TestSignalQualityOnSignal(object):
     @pytest.mark.parametrize("M", [16, 128, 256])
     def test_cal_gmi_value(self, M):
         s = modulation.Signal(M, 2 ** 16)
-        s += 0.05*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        s += 0.0004*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
 
+class TestPilotSignalQualityOnSignal(object):
 
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_ser_shape(self, nmodes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=nmodes)
+        ser = s.cal_ser()
+        assert ser.shape[0] == nmodes
+
+    def test_ser_value(self):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
+        ser = s.cal_ser()
+        assert ser[0] == 0
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_evm_shape(self, nmodes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=nmodes)
+        evm = s.cal_evm()
+        assert evm.shape[0] == nmodes
+
+    def test_evm_value(self):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
+        evm = s.cal_evm()
+        assert evm[0] < 1e-4
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_ber_shape(self, nmodes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=nmodes)
+        ber = s.cal_ber()
+        assert ber.shape[0] == nmodes
+
+    def test_ber_value(self):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
+        s += 0.05*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        ber = s.cal_ber()
+        assert ber[0] == 0
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_est_snr_shape(self, nmodes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=nmodes)
+        snr = s.est_snr()
+        assert snr.shape[0] == nmodes
+
+    def test_est_snr_value(self):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
+        snr = s.est_snr()
+        assert snr[0] > 1e25
+
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    def test_cal_gmi_shape(self, nmodes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=nmodes)
+        gmi, gmi_pb = s.cal_gmi()
+        assert gmi.shape[0] == nmodes
+
+    @pytest.mark.parametrize("M", [16, 128, 256])
+    def test_cal_gmi_value(self, M):
+        s = modulation.SignalWithPilots(M, 2 ** 16, 128, 32, nmodes=1)
+        s += 0.0004*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        nbits = np.log2(M)
+        gmi, gmi_pb = s.cal_gmi()
+        npt.assert_almost_equal(gmi[0], nbits)
 
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)
