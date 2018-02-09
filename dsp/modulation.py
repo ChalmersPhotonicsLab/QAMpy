@@ -849,9 +849,16 @@ class SignalWithPilots(Signal,SignalQualityMixing):
     def frame_len(self):
         return self._frame_len
 
-    def get_data(self):
-        idx = np.tile(self._idx_dat, self.nframes)
-        return self[:,idx]
+    def get_data(self, shift_factors=None):
+        if shift_factors is None
+            idx = np.tile(self._idx_dat, self.nframes)
+            return self[:,idx]
+        idxn = np.tile(self._idx_dat, self.nframes)
+        idx_o = []
+        for sf in shift_factors:
+            idx_o.append(np.roll(idxn, sf))
+        idx_o = np.array(idx_o)
+        return self[idx_o].reshape(shift_factors.shape[0], idxn.shape[0])
 
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
