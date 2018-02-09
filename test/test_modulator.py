@@ -199,6 +199,7 @@ class TestPilotSignal(object):
         dist = abs(s[0, ::N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
+
     def test_from_data_symbols(self):
         data = modulation.QAMSymbolsGrayCoded(128, 2**12)
         s = modulation.SignalWithPilots.from_data_array(data, 2**12, 128, 16, 1)
@@ -226,6 +227,15 @@ class TestPilotSignal(object):
         assert si.shape[0] == sn.shape[0]
         assert si.shape[1] == 2*sn.shape[1]
         npt.assert_array_almost_equal(s ,si.symbols)
+
+    @pytest.mark.parametrize("Nseq", [64, 128])
+    @pytest.mark.parametrize("ph_i", [2, 32, 64])
+    @pytest.mark.parametrize("nframes", [1, 2, 3, 4])
+    def test_get_data(self, Nseq, ph_i, nframes):
+        N = 2**16
+        s = modulation.SignalWithPilots(64, N, Nseq, ph_i, nframes=nframes)
+        npt.assert_array_almost_equal(s.get_data(), np.tile(s.symbols, nframes))
+
 
 
 class TestTDHybridsSymbols(object):

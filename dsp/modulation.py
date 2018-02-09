@@ -10,6 +10,7 @@ from . import theory
 from . import ber_functions
 from . import utils
 from . import impairments
+from . import pilotbased_receiver
 from .prbs import make_prbs_extXOR
 from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
@@ -802,6 +803,7 @@ class SignalWithPilots(Signal,SignalQualityMixing):
         obj._nframes = nframes
         obj._symbols = symbs
         obj._pilots = pilots
+        obj._idx_dat = idx_dat
         return obj
 
     @classmethod
@@ -824,6 +826,7 @@ class SignalWithPilots(Signal,SignalQualityMixing):
         obj._nframes = nframes
         obj._symbols = data[:, :Ndat]
         obj._pilots = pilots
+        obj._idx_dat = idx_dat
         return obj
 
     @property
@@ -838,8 +841,26 @@ class SignalWithPilots(Signal,SignalQualityMixing):
     def pilots(self):
         return self._pilots
 
+    @property
+    def nframes(self):
+        return self._nframes
+
+    @property
+    def frame_len(self):
+        return self._frame_len
+
+    def get_data(self):
+        idx = np.tile(self._idx_dat, self.nframes)
+        return self[:,idx]
+
+
+
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
+
+
+
+
 
 
 class QAMModulator(object):
