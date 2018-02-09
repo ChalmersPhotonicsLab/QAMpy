@@ -598,7 +598,7 @@ class Signal(SymbolBase, SignalQualityMixing):
             onew = cls._resample_array(array, fs, **kwargs)
         else:
             onew = array.view(cls)
-            onew._symbols = obj
+            onew._symbols = array
             onew._fs = fs
         return onew
 
@@ -850,7 +850,7 @@ class SignalWithPilots(Signal,SignalQualityMixing):
         return self._frame_len
 
     def get_data(self, shift_factors=None):
-        if shift_factors is None
+        if shift_factors is None:
             idx = np.tile(self._idx_dat, self.nframes)
             return self[:,idx]
         idxn = np.tile(self._idx_dat, self.nframes)
