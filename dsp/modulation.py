@@ -853,10 +853,34 @@ class SignalWithPilots(Signal,SignalQualityMixing):
         idx = np.tile(self._idx_dat, self.nframes)
         return self[:,idx]
 
-
-
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
+
+    def cal_ser(self, signal_rx=None, synced=False):
+        if signal_rx is None:
+            signal_rx = self.get_data()
+        return super().cal_ser(signal_rx, synced)
+
+    def cal_ber(self, signal_rx=None, synced=False):
+        if signal_rx is None:
+            signal_rx = self.get_data()
+        return super().cal_ber(signal_rx, synced)
+
+    def cal_evm(self, signal_rx=None, blind=False):
+        if signal_rx is None:
+            signal_rx = self.get_data()
+        return super().cal_evm(signal_rx, blind)
+
+    def cal_gmi(self, signal_rx=None):
+        if signal_rx is None:
+            signal_rx = self.get_data()
+        return super().cal_gmi(signal_rx)
+
+    def est_snr(self, signal_rx=None, blind=False):
+        if signal_rx is None:
+            signal_rx = self.get_data()
+        return super().est_snr(signal_rx, synced)
+
 
 
 
