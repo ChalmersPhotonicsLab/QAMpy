@@ -157,12 +157,4 @@ def add_awgn(sig, strgth):
        output signal with added noise
 
     """
-    sigout = np.zeros(sig.shape, dtype=sig.dtype)
-    if sig.ndim > 1:
-        N = sig.shape[1]
-        for i in range(sig.shape[0]):
-            sigout[i] = sig[i] + strgth * (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because of var vs std
-    else:
-        N = sig.shape[0]
-        sigout = sig + strgth * (np.random.randn(N) + 1.j*np.random.randn(N))/np.sqrt(2) # sqrt(2) because of var vs std
-    return sigout
+    return sig + strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2) # sqrt(2) because of var vs std
