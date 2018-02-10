@@ -58,7 +58,10 @@ def _applyPMD(field, H):
     Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(field, axes=1),axis=1), axes=1)
     SSf = np.einsum('ijk,ik -> ik',H , Sf)
     SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
-    return SS
+    try:
+        return field.recreate_from_np_array(SS)
+    except:
+        return SS
 
 def apply_PMD_to_field(field, theta, t_dgd, fs):
     """

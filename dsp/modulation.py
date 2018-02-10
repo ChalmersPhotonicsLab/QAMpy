@@ -94,6 +94,11 @@ class SignalBase(np.ndarray):
         else:
             return np.atleast_2d(signal)
 
+    def recreate_from_np_array(self, arr, **kwargs):
+        obj = arr.view(self.__class__)
+        self._copy_inherits(self, obj)
+        return obj
+
     @classmethod
     def _resample_array(cls, arr, fnew, fold, fb, **kwargs):
         os = fnew / fold
