@@ -143,6 +143,36 @@ class TestQAMSymbolsGray(object):
         avg2 = (abs(s.symbols) ** 2).mean()
         npt.assert_array_almost_equal(avg1, avg2)
 
+    @pytest.mark.parametrize("os", np.arange(2, 5))
+    @pytest.mark.parametrize("nmodes", np.arange(1, 3))
+    def test_samplerate(self, os, nmodes):
+        N = 1000
+        Nn = os * N
+        s = modulation.QAMSymbolsGrayCoded(16, N, nmodes=nmodes)
+        s = s.resample(os, beta=0.2)
+        assert s.shape == (nmodes, Nn)
+
+    @pytest.mark.parametrize("os", np.arange(2, 5))
+    def test_resample(self, os):
+        N = 1000
+        Nn = os * N
+        s = modulation.QAMSymbolsGrayCoded(128, N)
+        sn = s.resample(os, beta=0.2, renormalise=False)
+        assert sn.fs == os
+        assert sn.fb == 1
+
+    @pytest.mark.parametrize("os", np.arange(2, 5))
+    def test_resample2(self, os):
+        N = 1000
+        Nn = os * N
+        s = modulation.QAMSymbolsGrayCoded(128, N)
+        sn = s.resample(os, beta=0.2, renormalise=False)
+        si = sn.resample(1, beta=0.2, renormalise=False)
+        si /= abs(si).max()
+        s /= abs(s).max()
+        npt.assert_array_almost_equal(s, si)
+
+
 
 class TestPilotSignal(object):
     @pytest.mark.parametrize("N", [2 ** 18, 2 ** 12, 2 ** 14])

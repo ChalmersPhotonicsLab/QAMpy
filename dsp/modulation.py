@@ -67,6 +67,11 @@ class SignalBase(np.ndarray):
     _inheritattr_ = []  # list of attributes names that should be inherited
     __array_priority__ = 1
 
+    @staticmethod
+    def _copy_inherits(objold, objnew):
+        for attr in objold._inheritattr_:
+            setattr(objnew, attr, getattr(objold, attr))
+
     def __array_finalize__(self, obj):
         if obj is None: return
         for attr in self._inheritattr_:
@@ -88,15 +93,16 @@ class SignalBase(np.ndarray):
     def _resample_array(cls, arr, fnew, fold, fb, **kwargs):
         os = fnew / fold
         if np.isclose(os, 1):
-            return obj.copy().view(cls)
-        onew = np.empty((obj.shape[0], int(os * obj.shape[1])), dtype=obj.dtype)
-        for i in range(obj.shape[0]):
-            onew[i, :] = resample.rrcos_resample_zeroins(obj[i], fold, fnew, Ts=1 / fb, **kwargs)
+            return arr.copy().view(cls)
+        onew = np.empty((arr.shape[0], int(os * arr.shape[1])), dtype=arr.dtype)
+        for i in range(arr.shape[0]):
+            onew[i, :] = resample.rrcos_resample_zeroins(arr[i], fold, fnew, Ts=1 / fb, **kwargs)
         onew = np.asarray(onew).view(cls)
+        cls._copy_inherits(arr, onew)
         return onew
 
     def resample(self, fnew, **kwargs):
-        out = self._resample_array(self, fnew, **kwargs)
+        out = self._resample_array(self, fnew, self.fs, self.fb, **kwargs)
         out._symbols = self._symbols.copy()
         out._fs = fnew
         return out
@@ -342,7 +348,7 @@ class SignalBase(np.ndarray):
 
 class QAMSymbolsGrayCoded(SignalBase):
     _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code",
-                     "_coded_symbols"]
+                     "_coded_symbols", "_fs"]
 
     @staticmethod
     def _demodulate(symbols, encoding):
@@ -479,6 +485,7 @@ class QAMSymbolsGrayCoded(SignalBase):
         obj._coded_symbols = coded_symbols
         obj._M = M
         obj._fb = fb
+        obj._fs = fb
         obj._code = _graycode
         obj._bits = bits
         obj._symbols = obj.copy()
@@ -523,6 +530,10 @@ class QAMSymbolsGrayCoded(SignalBase):
     @property
     def fb(self):
         return self._fb
+
+    @property
+    def fs(self):
+        return self._fs
 
     @property
     def Nbits(self):
@@ -570,7 +581,7 @@ class QAMSymbolsGrayCoded(SignalBase):
 
 
 # TODO: signal quality mixing should really go to the symbols not the signal
-class Signal(SignalBase):
+class Signal2(SignalBase):
     _inheritattr_ = ["_symbols", "_fs", "_fb"]
     __array_priority__ = 2
 
@@ -657,7 +668,7 @@ class Signal(SignalBase):
 
 #TODO: Currently Signal Quality functions do not work for TDHQAMSymbols
 class TDHQAMSymbols(SignalBase):
-    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols"]
+    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols", "_fs"]
 
     @staticmethod
     def _cal_fractions(fr):
@@ -816,7 +827,7 @@ class TDHQAMSymbols(SignalBase):
         raise NotImplementedError("Use modulation of subclasses")
 
 
-class SignalWithPilots(Signal):
+class SignalWithPilots(SignalBase):
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes", "_fs"]
 
     @staticmethod
@@ -846,7 +857,7 @@ class SignalWithPilots(Signal):
         out_symbs[:, idx_dat] = symbs
         out_symbs = np.tile(out_symbs, nframes)
         fb = symbs.fb
-        obj = cls._resample_array(out_symbs, fs, fb=fb, **resamplekw)
+        obj = cls._resample_array(out_symbs, fs, fold=fb, fb=fb, **resamplekw)
         #obj = out_symbs.view(cls)
         obj._fs = fs
         obj._frame_len = frame_len
