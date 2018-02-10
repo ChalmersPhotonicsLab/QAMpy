@@ -64,16 +64,21 @@ class PRBSBits(np.ndarray):
 
 class SignalBase(np.ndarray):
     __metaclass__ = abc.ABCMeta
+    _inheritbase_ = ["_fs", "_fb", "_M"]
     _inheritattr_ = []  # list of attributes names that should be inherited
     __array_priority__ = 1
 
     @staticmethod
     def _copy_inherits(objold, objnew):
+        for attr in objold._inheritbase_:
+            setattr(objnew, attr, getattr(objold, attr))
         for attr in objold._inheritattr_:
             setattr(objnew, attr, getattr(objold, attr))
 
     def __array_finalize__(self, obj):
         if obj is None: return
+        for attr in self._inheritbase_:
+            setattr(self, attr, getattr(obj, attr, None))
         for attr in self._inheritattr_:
             setattr(self, attr, getattr(obj, attr, None))
         if hasattr(obj, "_symbols"):
@@ -347,8 +352,8 @@ class SignalBase(np.ndarray):
 
 
 class SignalQAMGrayCoded(SignalBase):
-    _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code",
-                     "_coded_symbols", "_fs"]
+    _inheritattr_ = ["_symbols", "_bits", "_encoding", "_bitmap_mtx",  "_code",
+                     "_coded_symbols" ]
 
     @staticmethod
     def _demodulate(symbols, encoding):
@@ -591,14 +596,14 @@ class ResampledQAM(SignalQAMGrayCoded):
 
     @classmethod
     def from_symbol_array(cls, array, fs, **kwargs):
-        onew = cls._resample_array(array, fs, **kwargs)
+        onew = cls._resample_array(array, fs, array.fs, array.fb, **kwargs)
         onew._fs = fs
         return onew
 
 
 #TODO: Currently Signal Quality functions do not work for TDHQAMSymbols
 class TDHQAMSymbols(SignalBase):
-    _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols", "_fs"]
+    _inheritattr_ = ["_symbols_M1", "_symbols_M2", "_fr", "_symbols" ]
 
     @staticmethod
     def _cal_fractions(fr):
@@ -758,7 +763,7 @@ class TDHQAMSymbols(SignalBase):
 
 
 class SignalWithPilots(SignalBase):
-    _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes", "_fs"]
+    _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes"]
 
     @staticmethod
     def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):

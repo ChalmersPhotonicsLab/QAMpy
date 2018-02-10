@@ -159,6 +159,7 @@ class TestQAMSymbolsGray(object):
         s = modulation.SignalQAMGrayCoded(128, N)
         sn = s.resample(os, beta=0.2, renormalise=False)
         assert sn.fs == os
+        assert s.fb ==1
         assert sn.fb == 1
 
     @pytest.mark.parametrize("os", np.arange(2, 5))
