@@ -580,90 +580,20 @@ class SignalQAMGrayCoded(SignalBase):
         return self._demodulate(symbols, self._encoding)
 
 
-# TODO: signal quality mixing should really go to the symbols not the signal
-class Signal2(SignalBase):
-    _inheritattr_ = ["_symbols", "_fs", "_fb"]
-    __array_priority__ = 2
+class ResampledQAM(SignalQAMGrayCoded):
 
-    def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=SignalQAMGrayCoded, dtype=np.complex128,
-                classkwargs={}, resamplekwargs={"beta": 0.1}):
-        obj = symbolclass(M, N, fb=fb, nmodes=nmodes, **classkwargs)
+    def __new__(cls, M, N, fb=1, fs=1, resamplekwargs={"beta": 0.1}, **kwargs):
+        obj = super().__new__(cls, M, N, fb=fb, **kwargs)
         # TODO: check if we are not wasting memory here
-        onew = cls._resample_array(obj, fs, **resamplekwargs)
-        onew._symbols = obj
+        onew = cls._resample_array(obj, fs, fb, fb, **resamplekwargs)
         onew._fs = fs
         return onew
-
-    @classmethod
-    def _resample_array(cls, obj, fs, fb=None, **kwargs):
-        if fb is None:
-            if hasattr(obj, "fs"):
-                fold = obj.fs
-                fb = obj.fb
-            else:
-                fb = obj.fb
-                fold = fb
-        else:
-            fold = fb
-        os = fs / fold
-        if np.isclose(os, 1):
-            return obj.copy().view(cls)
-        onew = np.empty((obj.shape[0], int(os * obj.shape[1])), dtype=obj.dtype)
-        for i in range(obj.shape[0]):
-            onew[i, :] = resample.rrcos_resample_zeroins(obj[i], fold, fs, Ts=1 / fb, **kwargs)
-        onew = np.asarray(onew).view(cls)
-        #syms = getattr(obj, "_symbols", None)
-        #if syms is None:
-            #onew._symbols = obj.copy()
-        #else:
-            #onew._symbols = obj._symbols
-        #onew._fs = fs
-        return onew
-
-    @property
-    def fs(self):
-        return self._fs
-
-    #@property
-    #def M(self):
-    #    return self._symbols.M
-
-    #@property
-    #def fb(self):
-    #    return self._symbols._fb
-
-    @property
-    def symbols(self):
-        return self._symbols
 
     @classmethod
     def from_symbol_array(cls, array, fs, **kwargs):
-        #os = fs / array.fb
-        #if not np.isclose(os, 1):
         onew = cls._resample_array(array, fs, **kwargs)
-        #else:
-        #    onew = array.copy().view(cls)
-        onew._symbols = array
         onew._fs = fs
         return onew
-
-    def resample(self, fnew, **kwargs):
-        out = self._resample_array(self, fnew, **kwargs)
-        out._symbols = self._symbols.copy()
-        out._fs = fnew
-        return out
-
-    def demodulate(self, *args, **kwargs):
-        return self.symbols.demodulate(*args, **kwargs)
-
-    def modulate(self, *args, **kwargs):
-        return self.symbols.modulate(*args, **kwargs)
-
-    def quantize(self, *args, **kwargs):
-        return self.symbols.quantize(*args, **kwargs)
-
-    def __getattr__(self, attr):
-        return getattr(self._symbols, attr)
 
 
 #TODO: Currently Signal Quality functions do not work for TDHQAMSymbols
@@ -931,24 +861,24 @@ class SignalWithPilots(SignalBase):
     def cal_ser(self, signal_rx=None, synced=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return super().cal_ser(signal_rx, synced)
+        return self.symbols.cal_ser(signal_rx, synced)
 
     def cal_ber(self, signal_rx=None, synced=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return super().cal_ber(signal_rx, synced)
+        return self.symbols.cal_ber(signal_rx, synced)
 
     def cal_evm(self, signal_rx=None, blind=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return super().cal_evm(signal_rx, blind)
+        return self.symbols.cal_evm(signal_rx, blind)
 
     def cal_gmi(self, signal_rx=None):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return super().cal_gmi(signal_rx)
+        return self.symbols.cal_gmi(signal_rx)
 
     def est_snr(self, signal_rx=None, synced=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return super().est_snr(signal_rx, synced)
+        return self.symbols.est_snr(signal_rx, synced)
