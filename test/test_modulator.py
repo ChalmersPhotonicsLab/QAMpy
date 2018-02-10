@@ -541,12 +541,3 @@ class TestPilotSignalQualityOnSignal(object):
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
-
-
-@pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
-@pytest.mark.parametrize("ndims", range(1, 3))
-def test_gmi_cal(M, ndims):
-    Q = modulation.QAMModulator(M)
-    sig, syms, bits = Q.generate_signal(2 ** 15, None, ndim=ndims)
-    gmi = Q.cal_gmi(sig)[0]
-    npt.assert_almost_equal(gmi, np.log2(M), decimal=1)
