@@ -88,15 +88,15 @@ def apply_PMD_to_field(field, theta, t_dgd, fs):
     H = H_PMD(theta, t_dgd, omega)
     return _applyPMD(field, H)
 
-def phase_noise(N, df, fs):
+def phase_noise(sz, df, fs):
     """
     Calculate phase noise from local oscillators, based on a Wiener noise process with a variance given by :math:`\sigma^2=2\pi df/fs`
 
     Parameters
     ----------
 
-    N  : integer
-        length of the phase noise vector
+    sz  : tuple
+        size of the phase noise array
 
     df : float
         combined linewidth of local oscillators in the system
@@ -111,8 +111,8 @@ def phase_noise(N, df, fs):
 
     """
     var = 2*np.pi*df/fs
-    f = np.random.normal(scale=np.sqrt(var), size=N)
-    return np.cumsum(f)
+    f = np.random.normal(scale=np.sqrt(var), size=sz)
+    return np.cumsum(f, axis=1)
 
 def apply_phase_noise(signal, df, fs):
     """
@@ -136,7 +136,7 @@ def apply_phase_noise(signal, df, fs):
        output signal with phase noise
 
     """
-    N = signal.shape[0]
+    N = signal.shape
     ph = phase_noise(N, df, fs)
     return signal*np.exp(1.j*ph)
 
