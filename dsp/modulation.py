@@ -62,7 +62,7 @@ class PRBSBits(np.ndarray):
         self._seed = getattr(obj, "_seed", None)
         self._order = getattr(obj, "_order", None)
 
-class SymbolBase(np.ndarray):
+class SignalBase(np.ndarray):
     __metaclass__ = abc.ABCMeta
     _inheritattr_ = []  # list of attributes names that should be inherited
     __array_priority__ = 1
@@ -324,7 +324,7 @@ class SymbolBase(np.ndarray):
         pass
 
 
-class QAMSymbolsGrayCoded(SymbolBase):
+class QAMSymbolsGrayCoded(SignalBase):
     _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code",
                      "_coded_symbols"]
 
@@ -554,7 +554,7 @@ class QAMSymbolsGrayCoded(SymbolBase):
 
 
 # TODO: signal quality mixing should really go to the symbols not the signal
-class Signal(SymbolBase):
+class Signal(SignalBase):
     _inheritattr_ = ["_symbols", "_fs", "_fb"]
     __array_priority__ = 2
 
@@ -635,7 +635,7 @@ class Signal(SymbolBase):
         return getattr(self._symbols, attr)
 
 
-class TDHQAMSymbols(SymbolBase):
+class TDHQAMSymbols(SignalBase):
     _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols"]
 
     @staticmethod
