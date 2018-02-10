@@ -70,8 +70,8 @@ class Test2dcapability(object):
     @pytest.mark.parametrize("ndim", [1, 2, 3])
     def test_moving_avg(self, ndim):
         x = np.random.randn(ndim, 2**15) + 0.j
-        y = filter.moving_average(x)
-        assert x.shape == y.shape
+        y = filter.moving_average(x, N=3)
+        assert x.shape[0] == y.shape[0]
 
     def test_moving_avg_1d(self):
         x = np.random.randn(2**15) + 0.j

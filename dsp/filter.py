@@ -61,7 +61,7 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
         f = np.linspace(-fs/2, fs/2, sig.shape[1], endpoint=False)
         w = cutoff/(2*np.sqrt(2*np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
         g = np.exp(-f**2/(2*w**2))
-        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig, axes=-1), axis=-1), axes=-1) * g[np.newaxis,:]
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig, axes=-1), axis=-1), axes=-1) * g
         if signal.ndim == 1:
             return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal))).flatten()
         else:
@@ -71,7 +71,7 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
         w = cutoff/(np.sqrt(2*np.log(2)**2)) # might need to add a factor of 2 here do we want FWHM or HWHM?
         g = np.exp(-np.sqrt((f**2/(2*w**2))))
         g /= g.max()
-        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g[np.newaxis, :]
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
         if signal.ndim == 1:
             return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal))).flatten()
         else:
@@ -110,12 +110,16 @@ def rrcos_pulseshaping(sig, fs, T, beta):
     sign_out : array_like
         filtered signal in time domain
     """
-    f = np.linspace(-fs/2, fs/2, sig.shape[0], endpoint=False)
+    sign = np.atleast_2d(sig)
+    f = np.linspace(-fs/2, fs/2, sign.shape[1], endpoint=False)
     nyq_fil = rrcos_freq(f, beta, T)
     nyq_fil /= nyq_fil.max()
-    sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig)))
-    sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil)))
-    return sig_out
+    sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sign, axes=-1), axis=-1), axes=-1)
+    sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil, axes=-1), axis=-1), axes=-1)
+    if sig.ndim == 1:
+        return sig_out.flatten()
+    else:
+        return sig_out
 
 
 def moving_average(sig, N=3):
@@ -135,5 +139,9 @@ def moving_average(sig, N=3):
     mvg : array_like
         Average signal of length len(sig)-n+1
     """
-    ret = np.cumsum(np.insert(sig, 0,0), dtype=float)
-    return (ret[N:] - ret[:-N])/N
+    sign = np.atleast_2d(sig)
+    ret = np.cumsum(np.insert(sign, 0,0, axis=-1), dtype=float, axis=-1)
+    if sig.ndim == 1:
+        return ((ret[:, N:] - ret[:,:-N])/N).flatten()
+    else:
+        return (ret[:, N:] - ret[:,:-N])/N
