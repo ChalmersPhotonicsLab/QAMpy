@@ -538,7 +538,7 @@ class SignalQualityMixing(object):
             GMI[mode] = np.sum(GMI_per_bit[mode])
         return GMI, GMI_per_bit
 
-
+#TODO: signal quality mixing should really go to the symbols not the signal
 class Signal(SymbolBase, SignalQualityMixing):
     _inheritattr_ = ["_bits", "_symbols", "_fs", "_fb"]
     def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=QAMSymbolsGrayCoded, dtype=np.complex128,
