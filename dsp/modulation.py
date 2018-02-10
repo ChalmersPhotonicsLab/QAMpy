@@ -635,6 +635,7 @@ class Signal(SignalBase):
         return getattr(self._symbols, attr)
 
 
+#TODO: Currently Signal Quality functions do not work for TDHQAMSymbols
 class TDHQAMSymbols(SignalBase):
     _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols"]
 
@@ -796,7 +797,7 @@ class TDHQAMSymbols(SignalBase):
 
 
 class SignalWithPilots(Signal):
-    _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes"]
+    _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes", "_fs"]
 
     @staticmethod
     def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):
@@ -813,7 +814,7 @@ class SignalWithPilots(Signal):
         idx_dat = ~idx_pil
         return idx, idx_dat, idx_pil
 
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1,
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1, fs=1,
                 dataclass=QAMSymbolsGrayCoded, nmodes=1, **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
@@ -824,6 +825,9 @@ class SignalWithPilots(Signal):
         symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out_symbs = np.tile(out_symbs, nframes)
+        fb = symbs.fb
+
+
         obj = out_symbs.view(cls)
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
