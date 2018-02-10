@@ -67,44 +67,6 @@ class SymbolBase(np.ndarray):
     _inheritattr_ = []  # list of attributes names that should be inherited
     __array_priority__ = 1
 
-    @classmethod
-    @abc.abstractmethod
-    def _demodulate(cls, symbols):
-        """
-        Demodulate an array of input symbols to bits according
-
-        Parameters
-        ----------
-        symbols   : array_like
-            array of complex input symbols
-        mapping   : array_like
-            mapping between symbols and bits
-        kwargs
-            other arguments to use
-
-        Returns
-        -------
-        bits   : array_like
-            array of booleans representing bits with same number of dimensions as symbols
-        """
-
-    @classmethod
-    @abc.abstractmethod
-    def _modulate(cls, bits):
-        """
-        Modulate a bit sequence into symbols
-
-        Parameters
-        ----------
-        bits     : array_like
-           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
-
-        Returns
-        -------
-        outdata  : array_like
-            1D array of complex symbol values. Normalised to energy of 1
-        """
-
     def __array_finalize__(self, obj):
         if obj is None: return
         for attr in self._inheritattr_:
@@ -116,243 +78,12 @@ class SymbolBase(np.ndarray):
             else:
                 self._symbols = obj._symbols
 
-
-class QAMSymbolsGrayCoded(SymbolBase):
-    _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code",
-                     "_coded_symbols"]
-
-    @staticmethod
-    def _demodulate(symbols, encoding):
-        """
-        Decode array of input symbols to bits according to the coding of the modulator.
-
-        Parameters
-        ----------
-        symbols   : array_like
-            array of complex input symbols
-        encoding  : array_like
-            mapping between symbols and bits
-
-        Note
-        ----
-        Unlike the other functions this function does not always return a 2D array.
-
-        Returns
-        -------
-        outbits   : array_like
-            array of booleans representing bits with same number of dimensions as symbols
-        """
-        if symbols.ndim is 1:
-            bt = bitarray()
-            bt.encode(encoding, symbols.view(dtype="S16"))
-            return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
-        bits = []
-        for i in range(symbols.shape[0]):
-            bt = bitarray()
-            bt.encode(encoding, symbols[i].view(dtype="S16"))
-            bits.append(np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool))
-        return np.array(bits)
-
-    @staticmethod
-    def _modulate(data, encoding, M, dtype=np.complex128):
-        """
-        Modulate a bit sequence into QAM symbols
-
-        Parameters
-        ----------
-        data     : array_like
-           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
-
-        Returns
-        -------
-        outdata  : array_like
-            1D array of complex symbol values. Normalised to energy of 1
-        """
-        data = np.atleast_2d(data)
-        nmodes = data.shape[0]
-        bitspsym = int(np.log2(M))
-        Nsym = data.shape[1] // bitspsym
-        out = np.empty((nmodes, Nsym), dtype=dtype)
-        N = data.shape[1] - data.shape[1] % bitspsym
-        for i in range(nmodes):
-            datab = bitarray()
-            datab.pack(data[i, :N].tobytes())
-            # the below is not really the fastest method but easy encoding/decoding is possible
-            out[i, :] = np.fromstring(b''.join(datab.decode(encoding)), dtype=dtype)
-        return out
-
-    @classmethod
-    def from_symbol_array(cls, symbs, M=None, fb=1):
-        symbs = np.atleast_2d(symbs)
-        if M is None:
-            warnings.warn("no M given, estimating how mnay unique symbols are in array, this can cause errors")
-            M = np.unique(symbs).shape[0]
-        scale = np.sqrt(theory.cal_scaling_factor_qam(M)) / np.sqrt((abs(np.unique(symbs)) ** 2).mean())
-        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
-        out = np.empty_like(symbs)
-        for i in range(symbs.shape[0]):
-            out[i] = quantize(symbs[i], coded_symbols)
-        bits = cls._demodulate(out, encoding)
-        obj = np.asarray(out).view(cls)
-        obj._M = M
-        obj._fb = fb
-        obj._bits = bits
-        obj._encoding = encoding
-        obj._code = graycode
-        obj._coded_symbols = coded_symbols
-        obj._symbols = None
-        return obj
-
-    @classmethod
-    def from_bit_array(cls, bits, M, fb=1):
-        arr = np.atleast_2d(bits)
-        nbits = int(np.log2(M))
-        if arr.shape[1] % nbits > 0:
-            warnings.warn("Length of bits not divisible by log2(M) truncating")
-            len = arr.shape[1] // nbits * nbits
-            arr = arr[:, :len]
-        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
-        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
-        # out = []
-        # for i in range(arr.shape[0]):
-        #    out.append( cls._modulate(arr[i], encoding, M))
-        out = cls._modulate(arr, encoding, M)
-        # out = np.asarray(out)
-        obj = np.asarray(out).view(cls)
-        obj._M = M
-        obj._fb = fb
-        obj._bits = bits
-        obj._encoding = encoding
-        obj._code = graycode
-        obj._coded_symbols = coded_symbols
-        obj._symbols = None
-        return obj
-
-    @classmethod
-    def _generate_mapping(cls, M, scale):
-        Nbits = np.log2(M)
-        symbols = theory.cal_symbols_qam(M)
-        # check if this gives the correct mapping
-        symbols /= scale
-        _graycode = theory.gray_code_qam(M)
-        coded_symbols = symbols[_graycode]
-        bformat = "0%db" % Nbits
-        encoding = dict([(symbols[i].tobytes(),
-                          bitarray(format(_graycode[i], bformat)))
-                         for i in range(len(_graycode))])
-        bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M)
-        return coded_symbols, _graycode, encoding, bitmap_mtx
-
-    # using Randombits as default class because they are slightly faster
-    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, **kwargs):
-        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
-        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
-        Nbits = int(N * np.log2(M))
-        bits = bitclass(Nbits, nmodes=nmodes, **kwargs)
-        obj = cls._modulate(bits, encoding, M)
-        obj = obj.view(cls)
-        obj._bitmap_mtx = bitmap_mtx
-        obj._encoding = encoding
-        obj._coded_symbols = coded_symbols
-        obj._M = M
-        obj._fb = fb
-        obj._code = _graycode
-        obj._bits = bits
-        obj._symbols = None
-        return obj
-
-    @property
-    def symbols(self):
-        return self._symbols
-
-    @property
-    def coded_symbols(self):
-        return self._coded_symbols
-
-    @property
-    def bits(self):
-        return self._bits
-
-    @property
-    def M(self):
-        return self._M
-
-    @property
-    def fb(self):
-        return self._fb
-
-    @property
-    def Nbits(self):
-        """
-        Number of bits per symbol
-        """
-        return int(np.log2(self.M))
-
-    def modulate(self, data):
-        """
-        Modulate a bit sequence into QAM symbols
-
-        Parameters
-        ----------
-        data     : array_like
-           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
-
-        Returns
-        -------
-        outdata  : array_like
-            1D array of complex symbol values. Normalised to energy of 1
-        """
-        return self._modulate(data, self._encoding, self.M)
-
-    def demodulate(self, symbols):
-        """
-        Decode array of input symbols to bits according to the coding of the modulator.
-
-        Parameters
-        ----------
-        symbols   : array_like
-            array of complex input symbols
-
-        Note
-        ----
-        Unlike the other functions this function does not always return a 2D array.
-
-        Returns
-        -------
-        outbits   : array_like
-             for i in range(signal.shape[0]):
-            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)       array of booleans representing bits with same number of dimensions as symbols
-        """
-        return self._demodulate(symbols, self._encoding)
-
-
-class SignalQualityMixing(object):
-
     def _signal_present(self, signal):
         if signal is None:
             return self
         else:
             return np.atleast_2d(signal)
 
-    def quantize(self, signal=None):
-        """
-        Make symbol decisions based on the input field. Decision is made based on difference from constellation points
-
-        Parameters
-        ----------
-        signal   : array_like
-            2D array of the input signal
-
-        Returns
-        -------
-        symbols  : array_like
-            2d array of the detected symbols
-        """
-        signal = self._signal_present(signal)
-        outsyms = np.zeros_like(signal)
-        for i in range(signal.shape[0]):
-            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)
-        return outsyms
 
     def _sync_and_adjust(self, tx, rx):
         tx_out = []
@@ -542,10 +273,289 @@ class SignalQualityMixing(object):
             GMI[mode] = np.sum(GMI_per_bit[mode])
         return GMI, GMI_per_bit
 
+    @classmethod
+    @abc.abstractmethod
+    def _demodulate(cls, symbols):
+        """
+        Demodulate an array of input symbols to bits according
+
+        Parameters
+        ----------
+        symbols   : array_like
+            array of complex input symbols
+        mapping   : array_like
+            mapping between symbols and bits
+        kwargs
+            other arguments to use
+
+        Returns
+        -------
+        bits   : array_like
+            array of booleans representing bits with same number of dimensions as symbols
+        """
+
+    @classmethod
+    @abc.abstractmethod
+    def _modulate(cls, bits):
+        """
+        Modulate a bit sequence into symbols
+
+        Parameters
+        ----------
+        bits     : array_like
+           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
+
+        Returns
+        -------
+        outdata  : array_like
+            1D array of complex symbol values. Normalised to energy of 1
+        """
+
+    @abc.abstractmethod
+    def modulate(self):
+        pass
+
+    @abc.abstractmethod
+    def quantize(self):
+        pass
+
+    @abc.abstractmethod
+    def demodulate(self):
+        pass
+
+
+class QAMSymbolsGrayCoded(SymbolBase):
+    _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code",
+                     "_coded_symbols"]
+
+    @staticmethod
+    def _demodulate(symbols, encoding):
+        """
+        Decode array of input symbols to bits according to the coding of the modulator.
+
+        Parameters
+        ----------
+        symbols   : array_like
+            array of complex input symbols
+        encoding  : array_like
+            mapping between symbols and bits
+
+        Note
+        ----
+        Unlike the other functions this function does not always return a 2D array.
+
+        Returns
+        -------
+        outbits   : array_like
+            array of booleans representing bits with same number of dimensions as symbols
+        """
+        if symbols.ndim is 1:
+            bt = bitarray()
+            bt.encode(encoding, symbols.view(dtype="S16"))
+            return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
+        bits = []
+        for i in range(symbols.shape[0]):
+            bt = bitarray()
+            bt.encode(encoding, symbols[i].view(dtype="S16"))
+            bits.append(np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool))
+        return np.array(bits)
+
+    @staticmethod
+    def _modulate(data, encoding, M, dtype=np.complex128):
+        """
+        Modulate a bit sequence into QAM symbols
+
+        Parameters
+        ----------
+        data     : array_like
+           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
+
+        Returns
+        -------
+        outdata  : array_like
+            1D array of complex symbol values. Normalised to energy of 1
+        """
+        data = np.atleast_2d(data)
+        nmodes = data.shape[0]
+        bitspsym = int(np.log2(M))
+        Nsym = data.shape[1] // bitspsym
+        out = np.empty((nmodes, Nsym), dtype=dtype)
+        N = data.shape[1] - data.shape[1] % bitspsym
+        for i in range(nmodes):
+            datab = bitarray()
+            datab.pack(data[i, :N].tobytes())
+            # the below is not really the fastest method but easy encoding/decoding is possible
+            out[i, :] = np.fromstring(b''.join(datab.decode(encoding)), dtype=dtype)
+        return out
+
+    @classmethod
+    def from_symbol_array(cls, symbs, M=None, fb=1):
+        symbs = np.atleast_2d(symbs)
+        if M is None:
+            warnings.warn("no M given, estimating how mnay unique symbols are in array, this can cause errors")
+            M = np.unique(symbs).shape[0]
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M)) / np.sqrt((abs(np.unique(symbs)) ** 2).mean())
+        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        out = np.empty_like(symbs)
+        for i in range(symbs.shape[0]):
+            out[i] = quantize(symbs[i], coded_symbols)
+        bits = cls._demodulate(out, encoding)
+        obj = np.asarray(out).view(cls)
+        obj._M = M
+        obj._fb = fb
+        obj._bits = bits
+        obj._encoding = encoding
+        obj._code = graycode
+        obj._coded_symbols = coded_symbols
+        obj._symbols = obj.copy()
+        return obj
+
+    @classmethod
+    def from_bit_array(cls, bits, M, fb=1):
+        arr = np.atleast_2d(bits)
+        nbits = int(np.log2(M))
+        if arr.shape[1] % nbits > 0:
+            warnings.warn("Length of bits not divisible by log2(M) truncating")
+            len = arr.shape[1] // nbits * nbits
+            arr = arr[:, :len]
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        # out = []
+        # for i in range(arr.shape[0]):
+        #    out.append( cls._modulate(arr[i], encoding, M))
+        out = cls._modulate(arr, encoding, M)
+        # out = np.asarray(out)
+        obj = np.asarray(out).view(cls)
+        obj._M = M
+        obj._fb = fb
+        obj._bits = bits
+        obj._encoding = encoding
+        obj._code = graycode
+        obj._coded_symbols = coded_symbols
+        obj._symbols = obj.copy()
+        return obj
+
+    @classmethod
+    def _generate_mapping(cls, M, scale):
+        Nbits = np.log2(M)
+        symbols = theory.cal_symbols_qam(M)
+        # check if this gives the correct mapping
+        symbols /= scale
+        _graycode = theory.gray_code_qam(M)
+        coded_symbols = symbols[_graycode]
+        bformat = "0%db" % Nbits
+        encoding = dict([(symbols[i].tobytes(),
+                          bitarray(format(_graycode[i], bformat)))
+                         for i in range(len(_graycode))])
+        bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M)
+        return coded_symbols, _graycode, encoding, bitmap_mtx
+
+    # using Randombits as default class because they are slightly faster
+    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, **kwargs):
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        Nbits = int(N * np.log2(M))
+        bits = bitclass(Nbits, nmodes=nmodes, **kwargs)
+        obj = cls._modulate(bits, encoding, M)
+        obj = obj.view(cls)
+        obj._bitmap_mtx = bitmap_mtx
+        obj._encoding = encoding
+        obj._coded_symbols = coded_symbols
+        obj._M = M
+        obj._fb = fb
+        obj._code = _graycode
+        obj._bits = bits
+        obj._symbols = obj.copy()
+        return obj
+
+    def quantize(self, signal=None):
+        """
+        Make symbol decisions based on the input field. Decision is made based on difference from constellation points
+
+        Parameters
+        ----------
+        signal   : array_like
+            2D array of the input signal
+
+        Returns
+        -------
+        symbols  : array_like
+            2d array of the detected symbols
+        """
+        signal = self._signal_present(signal)
+        outsyms = np.zeros_like(signal)
+        for i in range(signal.shape[0]):
+            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)
+        return outsyms
+
+    @property
+    def symbols(self):
+        return self._symbols
+
+    @property
+    def coded_symbols(self):
+        return self._coded_symbols
+
+    @property
+    def bits(self):
+        return self._bits
+
+    @property
+    def M(self):
+        return self._M
+
+    @property
+    def fb(self):
+        return self._fb
+
+    @property
+    def Nbits(self):
+        """
+        Number of bits per symbol
+        """
+        return int(np.log2(self.M))
+
+    def modulate(self, data):
+        """
+        Modulate a bit sequence into QAM symbols
+
+        Parameters
+        ----------
+        data     : array_like
+           1D array of bits represented as bools. If the len(data)%self.M != 0 then we only encode up to the nearest divisor
+
+        Returns
+        -------
+        outdata  : array_like
+            1D array of complex symbol values. Normalised to energy of 1
+        """
+        return self._modulate(data, self._encoding, self.M)
+
+    def demodulate(self, symbols):
+        """
+        Decode array of input symbols to bits according to the coding of the modulator.
+
+        Parameters
+        ----------
+        symbols   : array_like
+            array of complex input symbols
+
+        Note
+        ----
+        Unlike the other functions this function does not always return a 2D array.
+
+        Returns
+        -------
+        outbits   : array_like
+             for i in range(signal.shape[0]):
+            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)       array of booleans representing bits with same number of dimensions as symbols
+        """
+        return self._demodulate(symbols, self._encoding)
+
 
 # TODO: signal quality mixing should really go to the symbols not the signal
-class Signal(SymbolBase, SignalQualityMixing):
-    _inheritattr_ = ["_bits", "_symbols", "_fs", "_fb"]
+class Signal(SymbolBase):
+    _inheritattr_ = ["_symbols", "_fs", "_fb"]
     __array_priority__ = 2
 
     def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=QAMSymbolsGrayCoded, dtype=np.complex128,
@@ -576,7 +586,7 @@ class Signal(SymbolBase, SignalQualityMixing):
         onew = np.asarray(onew).view(cls)
         syms = getattr(obj, "_symbols", None)
         if syms is None:
-            onew._symbols = obj
+            onew._symbols = obj.copy()
         else:
             onew._symbols = obj._symbols
         onew._fs = fs
@@ -604,7 +614,7 @@ class Signal(SymbolBase, SignalQualityMixing):
         if not np.isclose(os, 1):
             onew = cls._resample_array(array, fs, **kwargs)
         else:
-            onew = array.view(cls)
+            onew = array.copy().view(cls)
             onew._symbols = array
             onew._fs = fs
         return onew
@@ -612,11 +622,20 @@ class Signal(SymbolBase, SignalQualityMixing):
     def resample(self, fnew, **kwargs):
         return self._resample_array(self, fnew, **kwargs)
 
+    def demodulate(self, *args, **kwargs):
+        return self.symbols.demodulate(*args, **kwargs)
+
+    def modulate(self, *args, **kwargs):
+        return self.symbols.modulate(*args, **kwargs)
+
+    def quantize(self, *args, **kwargs):
+        return self.symbols.quantize(*args, **kwargs)
+
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
 
 
-class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
+class TDHQAMSymbols(SymbolBase):
     _inheritattr_ = ["_M", "_symbols_M1", "_symbols_M2", "_fb", "_fr", "_symbols"]
 
     @staticmethod
@@ -776,7 +795,7 @@ class TDHQAMSymbols(SymbolBase, SignalQualityMixing):
         raise NotImplementedError("Use modulation of subclasses")
 
 
-class SignalWithPilots(Signal, SignalQualityMixing):
+class SignalWithPilots(Signal):
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes"]
 
     @staticmethod
