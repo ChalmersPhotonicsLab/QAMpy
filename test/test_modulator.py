@@ -377,7 +377,8 @@ class TestSignal(object):
         N = 1000
         s = modulation.Signal(16, N, fs=2)
         sn = s.resample(1, beta=0.2)
-        assert sn.symbols is s.symbols
+        npt.assert_array_almost_equal(s.symbols, sn.symbols)
+        #assert sn.symbols is s.symbols
 
     @pytest.mark.parametrize("attr", ["M", "bits", "_encoding", "_bitmap_mtx",
                                       "fb", "_code", "coded_symbols"])

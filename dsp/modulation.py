@@ -567,8 +567,8 @@ class Signal(SignalBase):
             onew = cls._resample_array(obj, fs, **resamplekwargs)
         else:
             onew = obj.copy().view(cls)
-            onew._symbols = obj
-            onew._fs = fs
+        onew._symbols = obj
+        onew._fs = fs
         return onew
 
     @classmethod
@@ -584,12 +584,12 @@ class Signal(SignalBase):
         for i in range(obj.shape[0]):
             onew[i, :] = resample.rrcos_resample_zeroins(obj[i], fold, fs, Ts=1 / fb, **kwargs)
         onew = np.asarray(onew).view(cls)
-        syms = getattr(obj, "_symbols", None)
-        if syms is None:
-            onew._symbols = obj.copy()
-        else:
-            onew._symbols = obj._symbols
-        onew._fs = fs
+        #syms = getattr(obj, "_symbols", None)
+        #if syms is None:
+            #onew._symbols = obj.copy()
+        #else:
+            #onew._symbols = obj._symbols
+        #onew._fs = fs
         return onew
 
     @property
@@ -615,12 +615,15 @@ class Signal(SignalBase):
             onew = cls._resample_array(array, fs, **kwargs)
         else:
             onew = array.copy().view(cls)
-            onew._symbols = array
-            onew._fs = fs
+        onew._symbols = array
+        onew._fs = fs
         return onew
 
     def resample(self, fnew, **kwargs):
-        return self._resample_array(self, fnew, **kwargs)
+        out = self._resample_array(self, fnew, **kwargs)
+        out._symbols = self._symbols.copy()
+        out._fs = fnew
+        return out
 
     def demodulate(self, *args, **kwargs):
         return self.symbols.demodulate(*args, **kwargs)
