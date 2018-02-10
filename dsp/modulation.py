@@ -561,25 +561,26 @@ class Signal(SignalBase):
     def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=QAMSymbolsGrayCoded, dtype=np.complex128,
                 classkwargs={}, resamplekwargs={"beta": 0.1}):
         obj = symbolclass(M, N, fb=fb, nmodes=nmodes, **classkwargs)
-        os = fs / fb
         # TODO: check if we are not wasting memory here
-        if not np.isclose(os, 1):
-            onew = cls._resample_array(obj, fs, **resamplekwargs)
-        else:
-            onew = obj.copy().view(cls)
+        onew = cls._resample_array(obj, fs, **resamplekwargs)
         onew._symbols = obj
         onew._fs = fs
         return onew
 
     @classmethod
-    def _resample_array(cls, obj, fs, **kwargs):
-        if hasattr(obj, "fs"):
-            fold = obj.fs
-            fb = obj.fb
+    def _resample_array(cls, obj, fs, fb=None, **kwargs):
+        if fb is None:
+            if hasattr(obj, "fs"):
+                fold = obj.fs
+                fb = obj.fb
+            else:
+                fb = obj.fb
+                fold = fb
         else:
-            fb = obj.fb
             fold = fb
         os = fs / fold
+        if np.isclose(os, 1):
+            return obj.copy().view(cls)
         onew = np.empty((obj.shape[0], int(os * obj.shape[1])), dtype=obj.dtype)
         for i in range(obj.shape[0]):
             onew[i, :] = resample.rrcos_resample_zeroins(obj[i], fold, fs, Ts=1 / fb, **kwargs)
@@ -596,13 +597,13 @@ class Signal(SignalBase):
     def fs(self):
         return self._fs
 
-    @property
-    def M(self):
-        return self._symbols.M
+    #@property
+    #def M(self):
+    #    return self._symbols.M
 
-    @property
-    def fb(self):
-        return self._symbols._fb
+    #@property
+    #def fb(self):
+    #    return self._symbols._fb
 
     @property
     def symbols(self):
@@ -610,11 +611,11 @@ class Signal(SignalBase):
 
     @classmethod
     def from_symbol_array(cls, array, fs, **kwargs):
-        os = fs / array.fb
-        if not np.isclose(os, 1):
-            onew = cls._resample_array(array, fs, **kwargs)
-        else:
-            onew = array.copy().view(cls)
+        #os = fs / array.fb
+        #if not np.isclose(os, 1):
+        onew = cls._resample_array(array, fs, **kwargs)
+        #else:
+        #    onew = array.copy().view(cls)
         onew._symbols = array
         onew._fs = fs
         return onew
@@ -818,7 +819,7 @@ class SignalWithPilots(Signal):
         return idx, idx_dat, idx_pil
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1, fs=1,
-                dataclass=QAMSymbolsGrayCoded, nmodes=1, **kwargs):
+                dataclass=QAMSymbolsGrayCoded, nmodes=1, resamplekw={"beta":0.1}, **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
         pilots = QAMSymbolsGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **kwargs) * scale_pilots
@@ -829,9 +830,9 @@ class SignalWithPilots(Signal):
         out_symbs[:, idx_dat] = symbs
         out_symbs = np.tile(out_symbs, nframes)
         fb = symbs.fb
-
-
-        obj = out_symbs.view(cls)
+        obj = cls._resample_array(out_symbs, fs, fb=fb, **resamplekw)
+        #obj = out_symbs.view(cls)
+        obj._fs = fs
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
@@ -856,6 +857,7 @@ class SignalWithPilots(Signal):
         out_symbs[:, idx_dat] = data[:, :Ndat]
         out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
+        obj._fs = data.fb
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
