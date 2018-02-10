@@ -15,11 +15,16 @@ def pre_filter(signal, bw):
     bw     : float
         bandwidth of the rejected part, given as fraction of overall length
     """
-    N = len(signal)
+    sig = np.atleast_2d(signal)
+    N = sig.shape
     h = np.zeros(N, dtype=np.float64)
-    h[int(N/(bw/2)):-int(N/(bw/2))] = 1
-    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(signal))*h))
-    return s
+    h[:,int(N[1]/(bw/2)):-int(N[1]/(bw/2))] = 1
+    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(sig, axis=-1), axes=-1)*h, axes=-1), axis=-1)
+    if signal.ndim < 2:
+        return s.flatten()
+    else:
+        return s
+
 
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
     nyq = 0.5*fs
@@ -51,26 +56,39 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
     signalout : array_like
         filtered output signal
     """
+    sig = np.atleast_2d(signal)
     if ftype == "gauss":
-        f = np.linspace(-fs/2, fs/2, signal.shape[0], endpoint=False)
+        f = np.linspace(-fs/2, fs/2, sig.shape[1], endpoint=False)
         w = cutoff/(2*np.sqrt(2*np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
         g = np.exp(-f**2/(2*w**2))
-        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
-        return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig, axes=-1), axis=-1), axes=-1) * g[np.newaxis,:]
+        if signal.ndim == 1:
+            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal))).flatten()
+        else:
+            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
     if ftype == "exp":
-        f = np.linspace(-fs/2, fs/2, signal.shape[0], endpoint=False)
+        f = np.linspace(-fs/2, fs/2, sig.shape[1], endpoint=False)
         w = cutoff/(np.sqrt(2*np.log(2)**2)) # might need to add a factor of 2 here do we want FWHM or HWHM?
         g = np.exp(-np.sqrt((f**2/(2*w**2))))
         g /= g.max()
-        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
-        return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g[np.newaxis, :]
+        if signal.ndim == 1:
+            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal))).flatten()
+        else:
+            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
     if ftype == "bessel":
         system = scisig.bessel(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
     elif ftype == "butter":
-        system = scisig.butter(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
-    t = np.arange(0, signal.shape[0])*1/fs
-    to, yo, xo = scisig.lsim(system, signal, t)
-    return yo
+        system = scisig.butter(order, cutoff*2*np.pi, 'low',  analog=True)
+    t = np.arange(0, sig.shape[1])*1/fs
+    sig2 = np.zeros_like(sig)
+    for i in range(sig.shape[0]):
+        to, yo, xo = scisig.lsim(system, sig[i], t)
+        sig2[i] = yo
+    if signal.ndim == 1:
+        return sig2.flatten()
+    else:
+        return sig2
 
 def rrcos_pulseshaping(sig, fs, T, beta):
     """
