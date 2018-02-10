@@ -45,9 +45,10 @@ class Test2dcapability(object):
         assert x.shape == y.shape
 
     @pytest.mark.parametrize("ndim", [1, 2, 3])
-    def test_filter_signal_analog(self, ndim):
+    @pytest.mark.parametrize("ftype", ["gauss", "exp", "bessel", "butter"])
+    def test_filter_signal_analog(self, ndim, ftype):
         x = np.random.randn(ndim, 2**15) + 0.j
-        y = filter.filter_signal_analog(x, 2, 0.01)
+        y = filter.filter_signal_analog(x, 2, 0.01, ftype=ftype)
         assert x.shape == y.shape
 
     def test_filter_signal_analog_1d(self):
