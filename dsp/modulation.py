@@ -84,6 +84,22 @@ class SignalBase(np.ndarray):
         else:
             return np.atleast_2d(signal)
 
+    @classmethod
+    def _resample_array(cls, arr, fnew, fold, fb, **kwargs):
+        os = fnew / fold
+        if np.isclose(os, 1):
+            return obj.copy().view(cls)
+        onew = np.empty((obj.shape[0], int(os * obj.shape[1])), dtype=obj.dtype)
+        for i in range(obj.shape[0]):
+            onew[i, :] = resample.rrcos_resample_zeroins(obj[i], fold, fnew, Ts=1 / fb, **kwargs)
+        onew = np.asarray(onew).view(cls)
+        return onew
+
+    def resample(self, fnew, **kwargs):
+        out = self._resample_array(self, fnew, **kwargs)
+        out._symbols = self._symbols.copy()
+        out._fs = fnew
+        return out
 
     def _sync_and_adjust(self, tx, rx):
         tx_out = []
