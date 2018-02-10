@@ -346,7 +346,7 @@ class SignalBase(np.ndarray):
         pass
 
 
-class QAMSymbolsGrayCoded(SignalBase):
+class SignalQAMGrayCoded(SignalBase):
     _inheritattr_ = ["_M", "_symbols", "_bits", "_encoding", "_bitmap_mtx", "_fb", "_code",
                      "_coded_symbols", "_fs"]
 
@@ -585,7 +585,7 @@ class Signal2(SignalBase):
     _inheritattr_ = ["_symbols", "_fs", "_fb"]
     __array_priority__ = 2
 
-    def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=QAMSymbolsGrayCoded, dtype=np.complex128,
+    def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=SignalQAMGrayCoded, dtype=np.complex128,
                 classkwargs={}, resamplekwargs={"beta": 0.1}):
         obj = symbolclass(M, N, fb=fb, nmodes=nmodes, **classkwargs)
         # TODO: check if we are not wasting memory here
@@ -686,7 +686,7 @@ class TDHQAMSymbols(SignalBase):
         return idx, idx1, idx2
 
     def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, nmodes=1, fb=1,
-                M1class=QAMSymbolsGrayCoded, M2class=QAMSymbolsGrayCoded, **kwargs):
+                M1class=SignalQAMGrayCoded, M2class=SignalQAMGrayCoded, **kwargs):
         """
         Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
 
@@ -846,10 +846,10 @@ class SignalWithPilots(SignalBase):
         return idx, idx_dat, idx_pil
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1, fs=1,
-                dataclass=QAMSymbolsGrayCoded, nmodes=1, resamplekw={"beta":0.1}, **kwargs):
+                dataclass=SignalQAMGrayCoded, nmodes=1, resamplekw={"beta":0.1}, **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
-        pilots = QAMSymbolsGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **kwargs) * scale_pilots
+        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **kwargs) * scale_pilots
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
@@ -878,7 +878,7 @@ class SignalWithPilots(SignalBase):
             warnings.warn("Data for frame is shorter than length of data array, truncating")
         out_symbs = np.empty((nmodes, frame_len), dtype=data.dtype)
         Ndat = np.count_nonzero(idx_dat)
-        pilots = QAMSymbolsGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **pilot_kwargs) / np.sqrt(
+        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **pilot_kwargs) / np.sqrt(
             scale_pilots)
         out_symbs[:, idx_pil] = pilots
         out_symbs[:, idx_dat] = data[:, :Ndat]
