@@ -15,6 +15,53 @@ from .prbs import make_prbs_extXOR
 from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
 
+
+class RandomBits(np.ndarray):
+    def __new__(cls, N, nmodes=1, seed=None):
+        R = np.random.RandomState(seed)
+        bitsq = R.randint(0, high=2, size=(nmodes, N)).astype(np.bool)
+        obj = bitsq.view(cls)
+        obj._rand_state = R
+        obj._seed = seed
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self._seed = getattr(obj, "_seed", None)
+        self._rand_state = getattr(obj, "_rand_state", None)
+
+
+class PRBSBits(np.ndarray):
+    def __new__(cls, N, nmodes=1, seed=[None, None], order=[15, 23]):
+        if len(order) < nmodes:
+            warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
+            order_n = []
+            seed_n = []
+            orders = [15, 23]
+            for i in range(nmodes):
+                try:
+                    order_n.append(order[i])
+                    seed_n.append(seed[i])
+                except IndexError:
+                    o = np.random.choice(orders)
+                    order_n.append(o)
+                    s = np.random.randint(0, 2 ** o)
+                    seed_n.append(s)
+                order = order_n
+                seed = seed_n
+        bits = np.empty((nmodes, N), dtype=np.bool)
+        for i in range(nmodes):
+            bits[i][:] = make_prbs_extXOR(order[i], N, seed[i])
+        obj = bits.view(cls)
+        obj._order = order
+        obj._seed = seed
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self._seed = getattr(obj, "_seed", None)
+        self._order = getattr(obj, "_order", None)
+
 class SymbolBase(np.ndarray):
     __metaclass__ = abc.ABCMeta
     _inheritattr_ = []  # list of attributes names that should be inherited
@@ -68,53 +115,6 @@ class SymbolBase(np.ndarray):
                 self._symbols = obj
             else:
                 self._symbols = obj._symbols
-
-
-class RandomBits(np.ndarray):
-    def __new__(cls, N, nmodes=1, seed=None):
-        R = np.random.RandomState(seed)
-        bitsq = R.randint(0, high=2, size=(nmodes, N)).astype(np.bool)
-        obj = bitsq.view(cls)
-        obj._rand_state = R
-        obj._seed = seed
-        return obj
-
-    def __array_finalize__(self, obj):
-        if obj is None: return
-        self._seed = getattr(obj, "_seed", None)
-        self._rand_state = getattr(obj, "_rand_state", None)
-
-
-class PRBSBits(np.ndarray):
-    def __new__(cls, N, nmodes=1, seed=[None, None], order=[15, 23]):
-        if len(order) < nmodes:
-            warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
-            order_n = []
-            seed_n = []
-            orders = [15, 23]
-            for i in range(nmodes):
-                try:
-                    order_n.append(order[i])
-                    seed_n.append(seed[i])
-                except IndexError:
-                    o = np.random.choice(orders)
-                    order_n.append(o)
-                    s = np.random.randint(0, 2 ** o)
-                    seed_n.append(s)
-                order = order_n
-                seed = seed_n
-        bits = np.empty((nmodes, N), dtype=np.bool)
-        for i in range(nmodes):
-            bits[i][:] = make_prbs_extXOR(order[i], N, seed[i])
-        obj = bits.view(cls)
-        obj._order = order
-        obj._seed = seed
-        return obj
-
-    def __array_finalize__(self, obj):
-        if obj is None: return
-        self._seed = getattr(obj, "_seed", None)
-        self._order = getattr(obj, "_order", None)
 
 
 class QAMSymbolsGrayCoded(SymbolBase):
