@@ -165,7 +165,7 @@ class SymbolBase(np.ndarray):
         # TODO: need to rename decode to demodulate
         bits_demod = self.demodulate(syms_demod)
         tx_synced = self.demodulate(symbols_tx)
-        errs = np.count_nonzero(tx_synced - bits_demod, axis=-1)
+        errs = np.count_nonzero(tx_synced ^ bits_demod, axis=-1)
         return np.asarray(errs) / bits_demod.shape[1]
 
     def cal_evm(self, signal_rx=None, blind=False):
