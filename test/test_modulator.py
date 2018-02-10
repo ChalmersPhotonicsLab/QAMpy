@@ -8,21 +8,22 @@ from dsp import modulation, signal_quality
 
 def _flip_symbols(sig, idx, d):
     for i in idx:
-        if np.random.randint(0,2):
+        if np.random.randint(0, 2):
             if sig[i].real > 0:
                 sig[i] -= d
             else:
                 sig[i] += d
         else:
             if sig[i].imag > 0:
-                sig[i] -= 1.j*d
+                sig[i] -= 1.j * d
             else:
-                sig[i] += 1.j*d
+                sig[i] += 1.j * d
     return sig
+
 
 class TestBits(object):
     @pytest.mark.parametrize("ctype", [modulation.PRBSBits, modulation.RandomBits])
-    @pytest.mark.parametrize("N", [2**10, 2**14, 2**18])
+    @pytest.mark.parametrize("N", [2 ** 10, 2 ** 14, 2 ** 18])
     @pytest.mark.parametrize("nmodes", np.arange(1, 4))
     def testshape(self, ctype, N, nmodes):
         b = ctype(N, nmodes=nmodes)
@@ -35,9 +36,9 @@ class TestBits(object):
 
     @pytest.mark.parametrize("ctype", [modulation.PRBSBits, modulation.RandomBits])
     def testdist(self, ctype):
-        c = ctype(10**6)
+        c = ctype(10 ** 6)
         ones = np.count_nonzero(c)
-        assert (ones-10**6/2)<1000
+        assert (ones - 10 ** 6 / 2) < 1000
 
     def testprbspreserveattr(self):
         c = modulation.PRBSBits(1000)
@@ -53,76 +54,76 @@ class TestBits(object):
 
 
 class TestQAMSymbolsGray(object):
-    @pytest.mark.parametrize("N", [np.random.randint(1,2**20)])
+    @pytest.mark.parametrize("N", [np.random.randint(1, 2 ** 20)])
     @pytest.mark.parametrize("nmodes", np.arange(1, 4))
     def test_shape(self, N, nmodes):
         s = modulation.QAMSymbolsGrayCoded(16, N, nmodes)
         assert s.shape == (nmodes, N)
 
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def testavgpow(self, M):
-        s = modulation.QAMSymbolsGrayCoded(M, 2**18)
-        p = (abs(s)**2).mean()
+        s = modulation.QAMSymbolsGrayCoded(M, 2 ** 18)
+        p = (abs(s) ** 2).mean()
         npt.assert_almost_equal(p, 1, 2)
 
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def test_symbols(self, M):
         s = modulation.QAMSymbolsGrayCoded(M, 1000, nmodes=1)
         si = np.unique(s)
-        thsyms = modulation.theory.cal_symbols_qam(M)/np.sqrt(modulation.theory.cal_scaling_factor_qam(M))
-        d = np.min(abs(s[0,:, np.newaxis]-thsyms), axis=1)
+        thsyms = modulation.theory.cal_symbols_qam(M) / np.sqrt(modulation.theory.cal_scaling_factor_qam(M))
+        d = np.min(abs(s[0, :, np.newaxis] - thsyms), axis=1)
         assert si.shape[0] == M
         npt.assert_array_almost_equal(d, 0)
 
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
-    @pytest.mark.parametrize("prbsseed", np.arange(1,10))
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
+    @pytest.mark.parametrize("prbsseed", np.arange(1, 10))
     def testbits(self, M, prbsseed):
         s = modulation.QAMSymbolsGrayCoded(M, 1000, nmodes=1, seed=[prbsseed])
         npt.assert_array_almost_equal(s.demodulate(s), s.bits)
 
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
-    @pytest.mark.parametrize("prbsseed", np.arange(1,10))
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
+    @pytest.mark.parametrize("prbsseed", np.arange(1, 10))
     def testbits2(self, M, prbsseed):
         N = 1000
         s = modulation.QAMSymbolsGrayCoded(M, N, nmodes=1, seed=[prbsseed], bitclass=modulation.PRBSBits)
-        bitsq = modulation.make_prbs_extXOR(s.bits._order[0], N*np.log2(M), prbsseed)
+        bitsq = modulation.make_prbs_extXOR(s.bits._order[0], N * np.log2(M), prbsseed)
         npt.assert_array_almost_equal(s.demodulate(s)[0], bitsq)
 
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def testfromarray_order(self, M):
         a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
         s = modulation.QAMSymbolsGrayCoded.from_symbol_array(a)
         assert np.unique(s).shape[0] is M
 
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def testfromarray_avgpow(self, M):
         a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
         s = modulation.QAMSymbolsGrayCoded.from_symbol_array(a)
-        npt.assert_almost_equal((abs(s)**2).mean(), (abs(s)**2).mean())
+        npt.assert_almost_equal((abs(s) ** 2).mean(), (abs(s) ** 2).mean())
 
-    @pytest.mark.parametrize("N", [1024, 12423, 100000, 2**18])
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
-    def testfrombits_len(self,  N, M):
+    @pytest.mark.parametrize("N", [1024, 12423, 100000, 2 ** 18])
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
+    def testfrombits_len(self, N, M):
         b = modulation.make_prbs_extXOR(15, N)
         s = modulation.QAMSymbolsGrayCoded.from_bit_array(b, M)
         nbit = int(np.log2(M))
-        nbitlen = N//nbit
+        nbitlen = N // nbit
         assert s.shape[1] == nbitlen
 
-    @pytest.mark.parametrize("N", [1024, 12423, 100000, 2**18])
-    @pytest.mark.parametrize("M", [2**i for i in range(2, 8)])
-    def testfrombits_bits(self,  N, M):
+    @pytest.mark.parametrize("N", [1024, 12423, 100000, 2 ** 18])
+    @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
+    def testfrombits_bits(self, N, M):
         b = modulation.make_prbs_extXOR(15, N)
         s = modulation.QAMSymbolsGrayCoded.from_bit_array(b, M)
         nbit = int(np.log2(M))
-        nbitlen = N//nbit
-        npt.assert_almost_equal(s.demodulate(s)[0], b[:nbitlen*nbit])
+        nbitlen = N // nbit
+        npt.assert_almost_equal(s.demodulate(s)[0], b[:nbitlen * nbit])
 
     @pytest.mark.parametrize("attr", ["_M", "_bits", "_encoding", "_bitmap_mtx",
                                       "_fb", "_code", "_coded_symbols"])
     def test_preserveattr(self, attr):
         s1 = modulation.QAMSymbolsGrayCoded(16, 1000)
-        s2 = s1+10
+        s2 = s1 + 10
         a1 = getattr(s1, attr)
         a2 = getattr(s2, attr)
         if isinstance(a1, np.ndarray):
@@ -136,30 +137,31 @@ class TestQAMSymbolsGray(object):
         npt.assert_array_almost_equal(s1, s2.symbols)
 
     def test_symbols_implace_op(self):
-        s = modulation.QAMSymbolsGrayCoded(4, 2**12)
-        avg1 = (abs(s)**2).mean()
+        s = modulation.QAMSymbolsGrayCoded(4, 2 ** 12)
+        avg1 = (abs(s) ** 2).mean()
         s += 5
-        avg2 = (abs(s.symbols)**2).mean()
+        avg2 = (abs(s.symbols) ** 2).mean()
         npt.assert_array_almost_equal(avg1, avg2)
 
+
 class TestPilotSignal(object):
-    @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
+    @pytest.mark.parametrize("N", [2 ** 18, 2 ** 12, 2 ** 14])
     @pytest.mark.parametrize("nmodes", range(1, 4))
     def testshape(self, N, nmodes):
-        s = modulation.SignalWithPilots(128, N, 256, 32, 1, nmodes=nmodes )
+        s = modulation.SignalWithPilots(128, N, 256, 32, 1, nmodes=nmodes)
         assert s.shape[1] == N and s.shape[0] == nmodes
 
     @pytest.mark.parametrize("N", [1, 123, 256, 534])
     def testseqlen(self, N):
         QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
-        s = modulation.SignalWithPilots(128, 2**18, N, 0, 1 )
+        s = modulation.SignalWithPilots(128, 2 ** 18, N, 0, 1)
         dist = abs(s[0, :N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
     def testphpilots(self, N):
         QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
-        s = modulation.SignalWithPilots(128, 2**18, 0, N, 1 )
+        s = modulation.SignalWithPilots(128, 2 ** 18, 0, N, 1)
         dist = abs(s[0, ::N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
@@ -167,75 +169,73 @@ class TestPilotSignal(object):
     @pytest.mark.parametrize("ph_i", [2, 32, 64, 128])
     def test_symbols(self, Nseq, ph_i):
         ph_fr = 50
-        s = modulation.SignalWithPilots(128, ph_fr*ph_i+Nseq , Nseq, ph_i, 1)
-        idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(ph_fr*ph_i+Nseq, Nseq, ph_i)
-        npt.assert_array_almost_equal(s[:,idx_d], s.symbols)
+        s = modulation.SignalWithPilots(128, ph_fr * ph_i + Nseq, Nseq, ph_i, 1)
+        idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(ph_fr * ph_i + Nseq, Nseq, ph_i)
+        npt.assert_array_almost_equal(s[:, idx_d], s.symbols)
 
     @pytest.mark.parametrize("N", np.arange(2, 5))
     def testframes_shape(self, N):
-        s = modulation.SignalWithPilots(128, 2**16, 128, 32, nframes=N)
-        assert 2**16*N == s.shape[1]
+        s = modulation.SignalWithPilots(128, 2 ** 16, 128, 32, nframes=N)
+        assert 2 ** 16 * N == s.shape[1]
 
     @pytest.mark.parametrize("N", np.arange(2, 5))
     def testframes_data(self, N):
-        flen = 2**16
+        flen = 2 ** 16
         s = modulation.SignalWithPilots(128, flen, 128, 32, nframes=N)
-        for i in range(1,N):
-            npt.assert_array_almost_equal(s[:,:flen], s[:, i*flen:(i+1)*flen])
+        for i in range(1, N):
+            npt.assert_array_almost_equal(s[:, :flen], s[:, i * flen:(i + 1) * flen])
 
     @pytest.mark.parametrize("N", [1, 123, 256, 534])
     def test_from_data_seqlen(self, N):
         QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
-        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
-        s = modulation.SignalWithPilots.from_data_array(data, 2**12, N, 0, 1)
+        data = modulation.QAMSymbolsGrayCoded(128, 2 ** 12)
+        s = modulation.SignalWithPilots.from_data_array(data, 2 ** 12, N, 0, 1)
         dist = abs(s[0, :N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
     def test_from_data_phpilots(self, N):
         QPSK = modulation.QAMSymbolsGrayCoded(4, 200)
-        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
-        s = modulation.SignalWithPilots.from_data_array(data, 2**12, 0, N, 1)
+        data = modulation.QAMSymbolsGrayCoded(128, 2 ** 12)
+        s = modulation.SignalWithPilots.from_data_array(data, 2 ** 12, 0, N, 1)
         dist = abs(s[0, ::N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
-
     def test_from_data_symbols(self):
-        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
-        s = modulation.SignalWithPilots.from_data_array(data, 2**12, 128, 16, 1)
+        data = modulation.QAMSymbolsGrayCoded(128, 2 ** 12)
+        s = modulation.SignalWithPilots.from_data_array(data, 2 ** 12, 128, 16, 1)
         npt.assert_array_almost_equal(data[:, :s.symbols.shape[1]], s.symbols)
 
     def test_from_data_symbols2(self):
-        data = modulation.QAMSymbolsGrayCoded(128, 2**12)
-        idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(2**12, 128, 16)
-        s = modulation.SignalWithPilots.from_data_array(data, 2**12, 128, 16, 1)
-        npt.assert_array_almost_equal(s[:,idx_d], data[:, :np.count_nonzero(idx_d)])
+        data = modulation.QAMSymbolsGrayCoded(128, 2 ** 12)
+        idx, idx_d, idx_p = modulation.SignalWithPilots._cal_pilot_idx(2 ** 12, 128, 16)
+        s = modulation.SignalWithPilots.from_data_array(data, 2 ** 12, 128, 16, 1)
+        npt.assert_array_almost_equal(s[:, idx_d], data[:, :np.count_nonzero(idx_d)])
 
     @pytest.mark.parametrize("p_ins", [0, 1, 16, 32])
     def test_from_data_symbols3(self, p_ins):
-        data = modulation.QAMSymbolsGrayCoded(128, 2**12-128)
-        s = modulation.SignalWithPilots.from_data_array(data, 2**12, 128, p_ins, 1)
-        assert s.shape[1] == 2**12
+        data = modulation.QAMSymbolsGrayCoded(128, 2 ** 12 - 128)
+        s = modulation.SignalWithPilots.from_data_array(data, 2 ** 12, 128, p_ins, 1)
+        assert s.shape[1] == 2 ** 12
 
-    @pytest.mark.parametrize("os", np.arange(2,5))
+    @pytest.mark.parametrize("os", np.arange(2, 5))
     def test_resample(self, os):
-        N = 2**12-128
-        Nn = os*N
+        N = 2 ** 12 - 128
+        Nn = os * N
         s = modulation.QAMSymbolsGrayCoded(128, N)
-        sn = modulation.SignalWithPilots.from_data_array(s, 2**12, 128, None, 1)
+        sn = modulation.SignalWithPilots.from_data_array(s, 2 ** 12, 128, None, 1)
         si = sn.resample(2, beta=0.2, renormalise=False)
         assert si.shape[0] == sn.shape[0]
-        assert si.shape[1] == 2*sn.shape[1]
-        npt.assert_array_almost_equal(s ,si.symbols)
+        assert si.shape[1] == 2 * sn.shape[1]
+        npt.assert_array_almost_equal(s, si.symbols)
 
     @pytest.mark.parametrize("Nseq", [64, 128])
     @pytest.mark.parametrize("ph_i", [2, 32, 64])
     @pytest.mark.parametrize("nframes", [1, 2, 3, 4])
     def test_get_data(self, Nseq, ph_i, nframes):
-        N = 2**16
+        N = 2 ** 16
         s = modulation.SignalWithPilots(64, N, Nseq, ph_i, nframes=nframes)
         npt.assert_array_almost_equal(s.get_data(), np.tile(s.symbols, nframes))
-
 
 
 class TestTDHybridsSymbols(object):
@@ -257,21 +257,21 @@ class TestTDHybridsSymbols(object):
         if math.gcd(r1, r2) > 1:
             assert True
             return
-        r = r1+r2
-        o = modulation.TDHQAMSymbols((16,4),1000, fr=r2/r)
+        r = r1 + r2
+        o = modulation.TDHQAMSymbols((16, 4), 1000, fr=r2 / r)
         for i in range(r):
             s = o[0, i::r]
-            if i%r < r1:
-                d = np.min(abs(s[:, np.newaxis]-o._symbols_M1), axis=1)
+            if i % r < r1:
+                d = np.min(abs(s[:, np.newaxis] - o._symbols_M1), axis=1)
                 npt.assert_array_almost_equal(d, 0)
             else:
-                d = np.min(abs(s[:, np.newaxis]-o._symbols_M2), axis=1)
+                d = np.min(abs(s[:, np.newaxis] - o._symbols_M2), axis=1)
                 npt.assert_array_almost_equal(d, 0)
 
     def testclass(self):
-        s = modulation.TDHQAMSymbols((16,4), 1000)
-        type(s._symbols_M1 ) is modulation.QAMSymbolsGrayCoded
-        type(s._symbols_M2 ) is modulation.QAMSymbolsGrayCoded
+        s = modulation.TDHQAMSymbols((16, 4), 1000)
+        type(s._symbols_M1) is modulation.QAMSymbolsGrayCoded
+        type(s._symbols_M2) is modulation.QAMSymbolsGrayCoded
 
     @pytest.mark.parametrize("r1", np.arange(1, 3))
     @pytest.mark.parametrize("r2", np.arange(1, 3))
@@ -280,11 +280,11 @@ class TestTDHybridsSymbols(object):
         if math.gcd(r1, r2) > 1:
             assert True
             return
-        r = r1+r2
-        s1 = modulation.QAMSymbolsGrayCoded(16, 1000*r1)
-        s2 = modulation.QAMSymbolsGrayCoded(4, 1000*r2)
-        o = modulation.TDHQAMSymbols.from_symbol_arrays(s1, s2, r2/r)
-        assert o.shape == (1, 1000*(r1+r2))
+        r = r1 + r2
+        s1 = modulation.QAMSymbolsGrayCoded(16, 1000 * r1)
+        s2 = modulation.QAMSymbolsGrayCoded(4, 1000 * r2)
+        o = modulation.TDHQAMSymbols.from_symbol_arrays(s1, s2, r2 / r)
+        assert o.shape == (1, 1000 * (r1 + r2))
 
     @pytest.mark.parametrize("r1", np.arange(1, 3))
     @pytest.mark.parametrize("r2", np.arange(1, 3))
@@ -293,29 +293,30 @@ class TestTDHybridsSymbols(object):
         if math.gcd(r1, r2) > 1:
             assert True
             return
-        r = r1+r2
-        s1 = modulation.QAMSymbolsGrayCoded(16, 1000*r1, seed=[1,2])
-        s2 = modulation.QAMSymbolsGrayCoded(4, 1000*r2, seed=[1,2])
-        o = modulation.TDHQAMSymbols.from_symbol_arrays(s1, s2, r2/r)
-        o2 = modulation.TDHQAMSymbols((16, 4), 1000*(r1+r2), fr=r2/r, seed=[1,2] )
+        r = r1 + r2
+        s1 = modulation.QAMSymbolsGrayCoded(16, 1000 * r1, seed=[1, 2])
+        s2 = modulation.QAMSymbolsGrayCoded(4, 1000 * r2, seed=[1, 2])
+        o = modulation.TDHQAMSymbols.from_symbol_arrays(s1, s2, r2 / r)
+        o2 = modulation.TDHQAMSymbols((16, 4), 1000 * (r1 + r2), fr=r2 / r, seed=[1, 2])
         npt.assert_array_almost_equal(o, o2)
 
     @pytest.mark.parametrize("attr", ["fb", "M", "f_M1", "f_M2", "f_M", "fr"])
     def test_preserveattr(self, attr):
         s1 = modulation.TDHQAMSymbols((16, 4), 1000, 0.5)
-        s2 = s1+10
+        s2 = s1 + 10
         a1 = getattr(s1, attr)
         a2 = getattr(s2, attr)
         if isinstance(a1, np.ndarray):
             npt.assert_array_almost_equal(a1, a2)
         else:
             assert a1 == a2
+
 
 class TestSignal(object):
     @pytest.mark.parametrize("attr", ["fb", "M", "fs", "symbols"])
     def test_preserveattr(self, attr):
         s1 = modulation.Signal(16, 1000, fs=2)
-        s2 = s1+10
+        s2 = s1 + 10
         a1 = getattr(s1, attr)
         a2 = getattr(s2, attr)
         if isinstance(a1, np.ndarray):
@@ -323,18 +324,18 @@ class TestSignal(object):
         else:
             assert a1 == a2
 
-    @pytest.mark.parametrize("os", np.arange(2,5))
-    @pytest.mark.parametrize("nmodes", np.arange(1,3))
+    @pytest.mark.parametrize("os", np.arange(2, 5))
+    @pytest.mark.parametrize("nmodes", np.arange(1, 3))
     def test_samplerate(self, os, nmodes):
         N = 1000
-        Nn = os*N
+        Nn = os * N
         s = modulation.Signal(16, N, fs=os, nmodes=nmodes)
         assert s.shape == (nmodes, Nn)
 
-    @pytest.mark.parametrize("os", np.arange(2,5))
+    @pytest.mark.parametrize("os", np.arange(2, 5))
     def test_resample(self, os):
         N = 1000
-        Nn = os*N
+        Nn = os * N
         s = modulation.QAMSymbolsGrayCoded(128, N)
         sn = modulation.Signal.from_symbol_array(s, fs=os, beta=0.2, renormalise=False)
         si = sn.resample(1, beta=0.2, renormalise=False)
@@ -342,19 +343,19 @@ class TestSignal(object):
         s /= abs(s).max()
         npt.assert_array_almost_equal(s, si)
 
-    @pytest.mark.parametrize("os", np.arange(2,5))
+    @pytest.mark.parametrize("os", np.arange(2, 5))
     def test_from_symbol_array(self, os):
-        N =1000
-        Nn = os*N
+        N = 1000
+        Nn = os * N
         s = modulation.QAMSymbolsGrayCoded(128, N)
         sn = modulation.Signal.from_symbol_array(s, fs=os, beta=0.2, renormalise=False)
-        assert sn.shape[1] == s.shape[1]*os
+        assert sn.shape[1] == s.shape[1] * os
 
     def test_symbols_implace_op(self):
         s = modulation.Signal(4, 2 ** 12)
-        avg1 = (abs(s.symbols)**2).mean()
+        avg1 = (abs(s.symbols) ** 2).mean()
         s += 5
-        avg2 = (abs(s.symbols)**2).mean()
+        avg2 = (abs(s.symbols) ** 2).mean()
         npt.assert_array_almost_equal(avg1, avg2)
 
     def test_symbolinherit(self):
@@ -367,7 +368,7 @@ class TestSignal(object):
         N = 1000
         s = modulation.QAMSymbolsGrayCoded(128, N)
         sn = modulation.Signal.from_symbol_array(s, fs=2, beta=0.2, renormalise=False)
-        sn2 = sn+2
+        sn2 = sn + 2
         assert sn2.symbols is s
 
     def test_symbolinherit3(self):
@@ -416,7 +417,7 @@ class TestSignalQualityOnSignal(object):
 
     def test_ber_value(self):
         s = modulation.Signal(16, 2 ** 16)
-        s += 0.05*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        s += 0.05 * (np.random.randn(2 ** 16) + 1.j * np.random.randn(2 ** 16))
         ber = s.cal_ber()
         assert ber[0] == 0
 
@@ -440,10 +441,11 @@ class TestSignalQualityOnSignal(object):
     @pytest.mark.parametrize("M", [16, 128, 256])
     def test_cal_gmi_value(self, M):
         s = modulation.Signal(M, 2 ** 16)
-        s += 0.0004*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        s += 0.0004 * (np.random.randn(2 ** 16) + 1.j * np.random.randn(2 ** 16))
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
+
 
 class TestPilotSignalQualityOnSignal(object):
 
@@ -477,7 +479,7 @@ class TestPilotSignalQualityOnSignal(object):
 
     def test_ber_value(self):
         s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
-        s += 0.05*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        s += 0.05 * (np.random.randn(2 ** 16) + 1.j * np.random.randn(2 ** 16))
         ber = s.cal_ber()
         assert ber[0] == 0
 
@@ -501,10 +503,11 @@ class TestPilotSignalQualityOnSignal(object):
     @pytest.mark.parametrize("M", [16, 128, 256])
     def test_cal_gmi_value(self, M):
         s = modulation.SignalWithPilots(M, 2 ** 16, 128, 32, nmodes=1)
-        s += 0.0004*(np.random.randn(2**16) + 1.j*np.random.randn(2**16))
+        s += 0.0004 * (np.random.randn(2 ** 16) + 1.j * np.random.randn(2 ** 16))
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
+
 
 class TestModulatorAttr(object):
     Q = modulation.QAMModulator(16)
@@ -532,8 +535,8 @@ class TestModulatorAttr(object):
         pass
 
     @pytest.mark.parametrize("Nerrors", range(5))
-    @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
-    @pytest.mark.parametrize("ndims", range(1,4))
+    @pytest.mark.parametrize("shiftN", np.random.randint(0, 2 ** 10, size=10))
+    @pytest.mark.parametrize("ndims", range(1, 4))
     def test_ser(self, Nerrors, shiftN, ndims):
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=ndims)
         for i in range(ndims):
@@ -543,37 +546,38 @@ class TestModulatorAttr(object):
         ser = self.Q.cal_ser(sig)
         # note that for the npt.assert_... functions if the desired is scalar, all array values are checked
         # against the scalar hence it passes if ser is 1- or multi-dim
-        npt.assert_almost_equal(ser, Nerrors/sig.shape[1])
+        npt.assert_almost_equal(ser, Nerrors / sig.shape[1])
 
     @pytest.mark.parametrize("Nerrors", range(5))
-    @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
-    @pytest.mark.parametrize("ndims", range(1,3))
+    @pytest.mark.parametrize("shiftN", np.random.randint(0, 2 ** 10, size=10))
+    @pytest.mark.parametrize("ndims", range(1, 3))
     def test_ber(self, Nerrors, shiftN, ndims):
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=ndims)
         for i in range(ndims):
             idx = random.sample(range(sig.shape[1]), Nerrors)
             _flip_symbols(sig[i], idx, self.d)
-            sig[i] = np.roll(sig[i], shift=(shiftN+i*np.random.randint(0, 100)))
+            sig[i] = np.roll(sig[i], shift=(shiftN + i * np.random.randint(0, 100)))
         ber = self.Q.cal_ber(sig)
-        npt.assert_almost_equal(ber, Nerrors/(sig.shape[1]*self.Q.Nbits))
+        npt.assert_almost_equal(ber, Nerrors / (sig.shape[1] * self.Q.Nbits))
 
     @pytest.mark.parametrize("snr", [10, 15, 20])
-    @pytest.mark.parametrize("ndims", range(2,3))
+    @pytest.mark.parametrize("ndims", range(2, 3))
     def test_evm(self, snr, ndims):
         sig, sym, bits = self.Q.generate_signal(2 ** 15, snr, beta=0.01, ndim=ndims)
         evm = self.Q.cal_evm(sig, blind=False)
-        npt.assert_almost_equal(-10*np.log10(evm**2), snr, decimal=0)
+        npt.assert_almost_equal(-10 * np.log10(evm ** 2), snr, decimal=0)
 
     @pytest.mark.parametrize("snr", [10, 15, 20])
     def test_est_snr(self, snr):
         sig, sym, bits = self.Q.generate_signal(2 ** 15, snr, beta=0.01, ndim=1)
         e_snr = self.Q.est_snr(sig)
-        npt.assert_almost_equal(10*np.log10(e_snr), snr, decimal=1)
+        npt.assert_almost_equal(10 * np.log10(e_snr), snr, decimal=1)
+
 
 class TestPilotModulator(object):
     Q = modulation.PilotModulator(128)
 
-    @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
+    @pytest.mark.parametrize("N", [2 ** 18, 2 ** 12, 2 ** 14])
     @pytest.mark.parametrize("ndims", range(1, 4))
     def testshape(self, N, ndims):
         s, d, p = self.Q.generate_signal(N, 256, 32, ndims)
@@ -582,14 +586,14 @@ class TestPilotModulator(object):
     @pytest.mark.parametrize("N", [1, 123, 256, 534])
     def testseqlen(self, N):
         QPSK = modulation.QAMModulator(4)
-        s, d, p = self.Q.generate_signal(2**16, N, 0, 1)
+        s, d, p = self.Q.generate_signal(2 ** 16, N, 0, 1)
         dist = abs(s[0, :N, np.newaxis] - QPSK.symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
     @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
     def testphpilots(self, N):
         QPSK = modulation.QAMModulator(4)
-        s, d, p = self.Q.generate_signal(2**16, 0, N, 1)
+        s, d, p = self.Q.generate_signal(2 ** 16, 0, N, 1)
         dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
@@ -613,35 +617,23 @@ class TestTDHybrid(object):
         if math.gcd(r1, r2) > 1:
             assert True
             return
-        r = r1+r2
-        hm = modulation.TDHQAMModulator(16, 4, r2/r)
+        r = r1 + r2
+        hm = modulation.TDHQAMModulator(16, 4, r2 / r)
         o = hm.generate_signal(1000)
         for i in range(r):
             s = o[0, i::r]
-            if i%r < r1:
-                d = np.min(abs(s[:, np.newaxis]-hm.mod_M1.symbols), axis=1)
+            if i % r < r1:
+                d = np.min(abs(s[:, np.newaxis] - hm.mod_M1.symbols), axis=1)
                 npt.assert_array_almost_equal(d, 0)
             else:
-                d = np.min(abs(s[:, np.newaxis]-hm.mod_M2.symbols), axis=1)
+                d = np.min(abs(s[:, np.newaxis] - hm.mod_M2.symbols), axis=1)
                 npt.assert_array_almost_equal(d, 0)
-
-
-
 
 
 @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
-@pytest.mark.parametrize("ndims", range(1,3))
+@pytest.mark.parametrize("ndims", range(1, 3))
 def test_gmi_cal(M, ndims):
     Q = modulation.QAMModulator(M)
-    sig, syms, bits = Q.generate_signal(2**15, None, ndim=ndims)
+    sig, syms, bits = Q.generate_signal(2 ** 15, None, ndim=ndims)
     gmi = Q.cal_gmi(sig)[0]
     npt.assert_almost_equal(gmi, np.log2(M), decimal=1)
-
-
-
-
-
-
-
-
-
