@@ -10,6 +10,7 @@ class TestReturnObjects(object):
         s2 = analog_frontend.comp_IQ_inbalance(self.s)
         assert type(self.s) is type(s2)
 
+    #TODO: currently rf delay fails
     def test_comp_rf_delay(self):
         s2 = analog_frontend.comp_rf_delay(self.s, 0.001, self.s.fs)
         assert type(self.s) is type(s2)

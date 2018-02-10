@@ -38,6 +38,7 @@ def comp_IQ_inbalance(signal):
     return comp_singal
 
 
+#TODO: this should be fixed for multi-dim
 def comp_rf_delay(signal, delay, sampling_rate = 50e9 ):
     """
     Adds a delay of X picoseconds to the signal in frequency domain. Can be 
@@ -66,6 +67,7 @@ def comp_rf_delay(signal, delay, sampling_rate = 50e9 ):
     # Phase-dealyed version
     sig_out = np.fft.ifft(np.exp(-1j*2*np.pi*delay*1e-12*freqVector)*\
                           np.fft.fft(signal))
-    
+    #TODO: the factor 1e-12 should really be cleaned up
+
     # Real part of output
     return sig_out.real
