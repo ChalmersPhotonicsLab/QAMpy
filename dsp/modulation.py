@@ -18,6 +18,7 @@ from .signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, sof
 class SymbolBase(np.ndarray):
     __metaclass__ = abc.ABCMeta
     _inheritattr_ = []  # list of attributes names that should be inherited
+    __array_priority__ = 1
 
     @classmethod
     @abc.abstractmethod
@@ -545,6 +546,7 @@ class SignalQualityMixing(object):
 # TODO: signal quality mixing should really go to the symbols not the signal
 class Signal(SymbolBase, SignalQualityMixing):
     _inheritattr_ = ["_bits", "_symbols", "_fs", "_fb"]
+    __array_priority__ = 2
 
     def __new__(cls, M, N, fb=1, fs=1, nmodes=1, symbolclass=QAMSymbolsGrayCoded, dtype=np.complex128,
                 classkwargs={}, resamplekwargs={"beta": 0.1}):
