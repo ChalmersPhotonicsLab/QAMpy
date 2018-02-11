@@ -20,6 +20,19 @@ class TestReturnObjects(object):
         s2 = impairments.apply_phase_noise(self.s, 1e-3, self.s.fs)
         assert type(self.s) is type(s2)
 
+    def test_change_snr(self):
+        s2 = impairments.change_snr(self.s, 30, self.s.fb, self.s.fs)
+        assert type(self.s) is type(s2)
+
+    def test_add_carrier_offset(self):
+        s2 = impairments.add_carrier_offset(self.s, self.s.fb, self.s.fs)
+        assert type(self.s) is type(s2)
+
+    def test_simulate_transmission(self):
+        s2 = impairments.simulate_transmission(self.s, self.s.fb, self.s.fs, snr=20, freq_off=1e-4, lwdth=1e-4,
+                                               dgd=1e-2)
+        assert type(self.s) is type(s2)
+
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_add_awgn(self, attr):
         s2 = impairments.add_awgn(self.s, 0.01)
