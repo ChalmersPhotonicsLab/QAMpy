@@ -182,7 +182,7 @@ def change_snr(sig, snr, fb, fs):
     os = fs/fb
     p = np.mean(abs(sign)**2)
     n = 10 ** (-snr / 20) * np.sqrt(os)
-    return add_awgn(sig, p/n)
+    return add_awgn(sig, p*n)
 
 def add_carrier_offset(sig, fo, fs):
     """
