@@ -1,5 +1,4 @@
-from .core import equalisation
-from . import modulation
+from . import core
 
 def apply_filter(sig, wxy):
     """
@@ -21,7 +20,7 @@ def apply_filter(sig, wxy):
         equalised signal
     """
     os = int(sig.fs/sig.fb)
-    sig_out = core.equalisation.apply_filter(E, os, wxy)
+    sig_out = core.equalisation.apply_filter(sig, os, wxy)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma",
@@ -68,7 +67,7 @@ def equalise_signal(sig, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, meth
        estimation error for x and y polarisation
     """
     os = int(sig.fs/sig.fb)
-    return core.equalisation(sig, os, mu, M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
+    return core.equalisation.equalise_signal(sig, os, mu, M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize, print_itt=print_itt, **kwargs)
 
 def dual_mode_equalisation(sig, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"),
