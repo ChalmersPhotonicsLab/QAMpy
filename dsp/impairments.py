@@ -159,6 +159,31 @@ def add_awgn(sig, strgth):
     """
     return sig + strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2) # sqrt(2) because of var vs std
 
+def change_snr(sig, snr, fb, fs):
+    """
+    Change the SNR of a signal assuming that the input signal is noiseless
+
+    Parameters
+    ----------
+    sig : array_like
+        the signal to change
+    snr : float
+        the desired signal to noise ratio in dB
+    fb  : float
+        the symbol rate
+    fs  : float
+        the sampling rate
+
+    Returns
+    -------
+    sig : array_like
+        output signal with given SNR
+    """
+    os = fs/fb
+    p = np.mean(abs(sign)**2)
+    n = 10 ** (-snr / 20) * np.sqrt(os)
+    return add_awgn(sig, p/n)
+
 def add_carrier_offset(sig, fo, fs):
     """
     Add frequency offset to signal
@@ -179,6 +204,45 @@ def add_carrier_offset(sig, fo, fs):
     """
     sign = np.atleast_2d(sig)
     if sig.ndim == 1:
-        return  (sign * np.exp(2.j * np.pi * np.arange(sig.shape[1])) * fo / fs).flatten()
+        return  (sign * np.exp(2.j * np.pi * np.arange(sign.shape[1])) * fo / fs).flatten()
     else:
-        return  sign * np.exp(2.j * np.pi * np.arange(sig.shape[1])) * fo / fs
+        return  sign * np.exp(2.j * np.pi * np.arange(sign.shape[1])) * fo / fs
+
+def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731):
+    """
+    Convenience function to simulate impairments on signal at once
+
+    Parameters
+    ----------
+    sig : array_like
+        input signal
+    fb  : flaot
+        symbol rate of the signal
+    fs  : float
+        sampling rate of the signal
+    snr : flaat, optional
+        desired signal-to-noise ratio of the signal. (default: None, don't change SNR)
+    freq_off : float, optional
+        apply a carrier offset to signal (default: None, don't apply offset)
+    lwdth : float
+        linewidth of the transmitter and LO lasers (default: None, infinite linewidth)
+    dgd : float
+        first-order PMD (differential group delay) (default: None, do not apply PMD)
+    theta : float
+        rotation angle to principle states of polarization
+
+    Returns
+    -------
+    signal : array_like
+        signal with transmission impairments applied
+    """
+    if lwdth is not None:
+        sig = apply_phase_noise(sig, lwdth, fs)
+    if freq_off is not None:
+        sig = add_carrier_offset(sig, freq_off, fs)
+    if snr is not None:
+        sig = change_snr(sig, snr, fb, fs)
+    if dgd is not None:
+        sig = apply_PMD_to_field(sig, theta, dgd, fs)
+    return sig
+
