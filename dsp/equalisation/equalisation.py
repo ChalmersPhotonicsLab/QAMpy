@@ -163,20 +163,20 @@ def _init_taps(Ntaps, pols):
     return wx
 
 def _init_orthogonaltaps(wx):
-    wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
-    wy = -np.conj(wx)[::-1,::-1]
+    wy = wx[::-1,::-1]
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
-    delay = abs(wYmaxidx[1] - wXmaxidx[1])
-    pad = np.zeros((2, delay), dtype=np.complex128)
-    if delay > 0:
-        wy = wy[:, delay:]
-        wy = np.hstack([wy, pad])
-    elif delay < 0:
-        wy = wy[:, 0:Ntaps - delay - 1]
-        wy = np.hstack([pad, wy])
+    delay = abs(wYmaxidx[0] - wXmaxidx[0])
+    if delay != 0:
+        pad = np.zeros((2, delay), dtype=np.complex128)
+        if delay > 0:
+            wy = wy[:, delay:]
+            wy = np.hstack([wy, pad])
+        elif delay < 0:
+            wy = wy[:, 0:Ntaps - delay - 1]
+            wy = np.hstack([pad, wy])
     return wy
 
 def generate_partition_codes_complex(M):
