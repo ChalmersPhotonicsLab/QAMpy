@@ -219,6 +219,15 @@ class TestQAMSymbolsGray(object):
         a = getattr(s2, attr[0].strip("_"))
         assert a is attr[1]
 
+    def test_recreate_from_np_array_attr5(self):
+        N = 1000
+        N2 = 2*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(1000, dtype=np.complex128)
+        s2 = s.recreate_from_np_array(arr, fs=4)
+        a = s2.fs
+        assert a is 4
+
     @pytest.mark.parametrize("factor", [0.5, 1, 2])
     def test_recreate_from_np_array_shape(self, factor):
         N = 1000
