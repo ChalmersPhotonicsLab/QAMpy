@@ -339,7 +339,7 @@ def phase_partition_16qam(E, N):
     return (E * np.exp(-1.j * phi_est))[:(L // Nblock) * Nblock]
 
 
-def find_freq_offset(sig, os=1, average_over_modes = True, fft_size = 4096):
+def find_freq_offset(sig, os=1, average_over_modes = True, fft_size = 2**16):
     """
     Find the frequency offset by searching in the spectrum of the signal
     raised to 4. Doing so eliminates the modulation for QPSK but the method also
