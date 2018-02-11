@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pylab as plt
 
-import dsp.adv.resample
+import dsp.core.resample
 from dsp import equalisation, analog_frontend, modulation
-from dsp.adv import phaserecovery, signal_quality
+from dsp.core import phaserecovery, signal_quality
 from scipy.io import loadmat
 
 
@@ -31,8 +31,8 @@ Y = Y.flatten()
 #Y = utils.pre_filter(Y, 2*3.9)
 #X = utils.resample(X, 2.5, 2)
 #Y = utils.resample(Y, 2.5, 2)
-X = dsp.adv.resample.rrcos_resample_zeroins(X, 2.5, 2, beta=0.05, Ts=1)
-Y = dsp.adv.resample.rrcos_resample_zeroins(Y, 2.5, 2, beta=0.05, Ts=1)
+X = dsp.core.resample.rrcos_resample_zeroins(X, 2.5, 2, beta=0.05, Ts=1)
+Y = dsp.core.resample.rrcos_resample_zeroins(Y, 2.5, 2, beta=0.05, Ts=1)
 X = analog_frontend.comp_IQ_inbalance(X)
 Y = analog_frontend.comp_IQbalance(Y)
 print(X.shape)

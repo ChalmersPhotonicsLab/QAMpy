@@ -5,10 +5,10 @@ import fractions
 import warnings
 from bitarray import bitarray
 
-from .adv import resample, utils, theory
-from .adv import ber_functions
-from .adv.prbs import make_prbs_extXOR
-from .adv.signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
+from .core import resample, utils, theory
+from .core import ber_functions
+from .core.prbs import make_prbs_extXOR
+from .core.signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
 
 

@@ -2,7 +2,7 @@
 import numpy as np
 
 from dsp import equalisation, modulation
-from dsp.adv import impairments
+from dsp.core import impairments
 
 #pr = cProfile.Profile()
 fb = 40.e9

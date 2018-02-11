@@ -2,7 +2,7 @@ import pytest
 import numpy.testing as npt
 
 from dsp import modulation
-from dsp.adv import impairments, equalisation
+from dsp.core import impairments, equalisation
 
 
 class TestReturnObject(object):

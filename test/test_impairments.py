@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from dsp.adv import impairments
+from dsp.core import impairments
 from dsp import modulation
 
 

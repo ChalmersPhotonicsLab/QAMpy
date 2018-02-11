@@ -1,6 +1,6 @@
 #import cProfile
 import numpy as np
-from dsp.adv import processing, utils
+from dsp.core import processing, utils
 from dsp import modulation
 import multiprocessing
 import zmq

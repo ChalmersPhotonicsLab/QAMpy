@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from dsp import equalisation, modulation
-from dsp.adv import utils, theory
+from dsp.core import utils, theory
 
 """
 Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]

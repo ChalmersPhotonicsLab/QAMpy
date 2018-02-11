@@ -1,6 +1,6 @@
 import pytest
 
-from dsp.adv import analog_frontend
+from dsp.core import analog_frontend
 from dsp import modulation
 
 

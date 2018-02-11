@@ -1,6 +1,6 @@
 import numpy as np
 from dsp import equalisation, modulation
-from dsp.adv import impairments
+from dsp.core import impairments
 from timeit import default_timer as timer
 
 

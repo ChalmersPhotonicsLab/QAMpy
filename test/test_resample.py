@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp.adv import resample, utils
+from dsp.core import resample, utils
 
 
 class TestRRcosZeroins(object):

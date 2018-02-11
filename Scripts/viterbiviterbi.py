@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp.adv import phaserecovery
+from dsp.core import phaserecovery
 from dsp import modulation
 
 fb = 40.e9

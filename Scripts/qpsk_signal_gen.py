@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp.adv import signal_quality, theory
+from dsp.core import signal_quality, theory
 from dsp import modulation
 
 """ Check the symbol rate of a QPSK signal against the theoretical symbol rate"""

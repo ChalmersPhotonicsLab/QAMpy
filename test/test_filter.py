@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp.adv import filter
+from dsp.core import filter
 from dsp import modulation
 
 

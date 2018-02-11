@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp.adv import filter, utils, theory
+from dsp.core import filter, utils, theory
 from dsp import modulation
 
 """
