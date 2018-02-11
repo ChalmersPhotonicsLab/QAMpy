@@ -158,3 +158,34 @@ def gray_code_qam(M):
     gidx = bin2gray(idx)
     return ((gidx[0] << N) | gidx[1]).flatten()
 
+def hybrid_qam_ber_vs_esn0(snr, pr, fr, M1, M2):
+    """
+    Calculate  bit error rate as function of SNR for time-domain hybrid QAM (according to _[1]).
+
+    Parameters
+    ----------
+    snr : float
+        signal ot noise ratio in dB
+    pr  : float
+        ratio of average signal power modulated with first QAM order over avg power of second QAM order
+    fr  : float
+        format ratio, fraction of symbols with modulation M2 of the overall frame.
+    M1 : integer
+        First QAM format
+    M2 : integer
+        Second QAM format
+
+    Returns
+    -------
+    ber : float
+        theoretical bit error rate for the given TD hybrid QAM
+
+    References
+    ----------
+    ..[1] Curri et al. "Time-division hybrid modulation formats: Tx operation strategies and countermeasures to
+        nonlinear propagation", OFC 2014
+    """
+    snr = 10**(snr/10)
+    bps1 = np.log2(M1)
+    bps2 = np.log2(M2)
+    return 1/((1-fr)*bps1+fr*bps2)*((1-fr)*bps1*theory.MQAM_BERvsEsN0(snr/((1-fr)+fr*pr), M1) + fr*bps2*theory.MQAM_BERvsEsN0(pr*snr/((1-fr)+fr*pr), M2))

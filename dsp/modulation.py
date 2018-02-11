@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import fractions
 import warnings
 from bitarray import bitarray
 
@@ -440,5 +441,157 @@ class QAMModulator(object):
                 GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[mode, bit::self.Nbits])*l_values[bit::self.Nbits])))
             GMI[mode] = np.sum(GMI_per_bit[mode])
         return GMI, GMI_per_bit
+
+
+class PilotModulator(object):
+    def __init__(self, M):
+        self.mod_data = QAMModulator(M)
+        self.mod_pilot = QAMModulator(4)
+
+    def generate_signal(self, frame_len, pilot_seq_len, pilot_ins_rat, ndim, **kwargs):
+        """
+        Generate a pilot based symbol sequence
+
+        Parameters
+        ----------
+        frame_len : integer
+            length of the data frame without pilot sequence
+        pilot_seq_len : integer
+            length of the pilot sequence at the beginning of the frame
+        pilot_ins_rat : integer
+            phase pilot insertion ratio, if 0 or None do not insert phase pilots
+        ndim : integer
+            number of dimensions of the signal
+        kwargs
+            keyword arguments to pass to QAMmodulator.generate_signal
+
+        Returns
+        -------
+        symbols : array_like
+            data frame with pilots
+        data : array_like
+            data symbols
+        pilots : array_like
+            pilot sequence
+        """
+        if pilot_ins_rat is 0 or pilot_ins_rat is None:
+            N_ph_frames = 0
+        else:
+            if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
+                raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
+            N_ph_frames = (frame_len - pilot_seq_len)//pilot_ins_rat
+        N_pilots = pilot_seq_len + N_ph_frames
+        out_symbs = np.zeros([ndim, frame_len], dtype=complex)
+        self.mod_pilot.generate_signal(N_pilots, None, ndim=ndim, **kwargs)
+        out_symbs[:, :pilot_seq_len] = self.mod_pilot.symbols_tx[:, :pilot_seq_len]
+        if N_ph_frames:
+            if not pilot_ins_rat == 1:
+                self.mod_data.generate_signal(N_ph_frames * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
+                # Note that currently the phase pilots start one symbol after the sequence
+                # TODO: we should probably fix this
+                out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
+                for j in range(N_pilots):
+                    out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
+                          pilot_seq_len + (j + 1) * pilot_ins_rat] = \
+                        self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
+            else:
+                out_symbs[:, pilot_seq_len:] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
+        else:
+            self.mod_data.generate_signal(frame_len-pilot_seq_len, None, ndim=ndim, **kwargs)
+            out_symbs[:, pilot_seq_len:] = self.mod_data.symbols_tx[:,:]
+        self.symbols_tx = out_symbs
+        self.pilot_ins_rat = pilot_ins_rat
+        self.pilot_seq_len = pilot_seq_len
+        if pilot_ins_rat == 1:
+            return out_symbs, np.array([], dtype=complex), self.mod_pilot.symbols_tx
+        return out_symbs, self.mod_data.symbols_tx, self.mod_pilot.symbols_tx
+
+    @property
+    def pilot_seq(self):
+        return self.mod_pilot.symbols_tx[:, :self.pilot_seq_len]
+
+    @property
+    def ph_pilots(self):
+        return self.mod_pilot.symbols_tx[:, self.pilot_seq_len::self.pilot_ins_rat]
+
+
+class TDHQAMModulator(object):
+    def __init__(self, M1, M2, fr, power_method="dist", snr=None):
+        """
+        Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
+
+        Parameters
+        ----------
+        M1 : integer
+            QAM order of the first part.
+        M2 : integer
+            QAM order of the second part
+        fr : float
+            fraction of the second format of the overall frame length
+        power_method : string, optional
+            method to calculate the power ratio of the different orders, currently on "dist" is implemented
+        snr : float
+            Design signal-to-noise ratio needed when using BER for calculation of the power ratio, currently does nothing
+        """
+        if power_method is "ber":
+            assert snr is not None, "snr needs to be given to calculate the power ratio based on ber"
+        self.M1 = M1
+        self.M2 = M2
+        self.fr = fr
+        self.mod_M1 = QAMModulator(M1)
+        if power_method is "dist":
+            d1 = np.min(abs(np.diff(np.unique(self.mod_M1.symbols))))
+            M2symbols = theory.cal_symbols_qam(M2)
+            d2 = np.min(abs(np.diff(np.unique(M2symbols))))
+            scf = (d2/d1)**2
+            self.mod_M2 = QAMModulator(M2, scaling_factor=scf)
+        else:
+            raise NotImplementedError("no other methods are implemented yet")
+
+    def generate_signal(self, N, ndim=1, **kwargs):
+        """
+        Generate a hybrid qam signal
+
+        Parameters
+        ----------
+        N : integer
+            length of the signal
+        ndim : integer, optional
+            number of dimensions (modes, polarizations)
+        kwargs
+            arguments to pass to the modulator signal generations
+
+        Returns
+        -------
+        out : array_like
+            hybrid qam signal
+        """
+        ratn = fractions.Fraction(self.fr).limit_denominator()
+        f_M2 = ratn.numerator
+        f_M = ratn.denominator
+        f_M1 = f_M - f_M2
+        frms = N//f_M
+        frms_rem = N%f_M
+        N1 = frms * f_M1
+        N2 = frms * f_M2
+        out = np.zeros((ndim, N), dtype=np.complex128)
+        if frms_rem:
+            mi1 = min(f_M1, frms_rem)
+            N1 += mi1
+            frms_rem -= mi1
+            if frms_rem > 0:
+                assert frms_rem < f_M2, "remaining symbols should be less than symbol 2 frames"
+                N2 += frms_rem
+        sig1, sym1, bits1, = self.mod_M1.generate_signal(N1, None, ndim=ndim, **kwargs)
+        sig2, sym2, bits2, = self.mod_M2.generate_signal(N2, None, ndim=ndim, **kwargs)
+        idx = np.arange(N)
+        idx1 = idx%f_M < f_M1
+        idx2 = idx%f_M >= f_M1
+        out[:,idx1] = sym1
+        out[:,idx2] = sym2
+        self.symbols_tx = out
+        return out
+
+
 
 
