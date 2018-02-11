@@ -171,6 +171,13 @@ class TestQAMSymbolsGray(object):
         s /= abs(s).max()
         npt.assert_array_almost_equal(s, si)
 
+    @pytest.mark.parametrize("M", [4, 16, 32, 64])
+    def test_scale(self, M):
+        N = 1000
+        s = modulation.SignalQAMGrayCoded(M, N, nmodes=1)
+        p = np.mean(abs(s.coded_symbols)**2)
+        npt.assert_almost_equal(p, 1)
+
 
 
 class TestPilotSignal(object):
