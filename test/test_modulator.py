@@ -1,10 +1,8 @@
 import pytest
 import numpy as np
-import random
 import numpy.testing as npt
-import matplotlib.pylab as plt
 
-from dsp import modulation, signal_quality
+from dsp import modulation
 
 def _flip_symbols(sig, idx, d):
     for i in idx:
