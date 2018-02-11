@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation
-from dsp.core import impairments
+from dsp import equalisation, modulation, impairments
+#from dsp.core import impairments
 
 fb = 40.e9
 os = 2
@@ -10,7 +10,7 @@ N = 5*10**5
 theta = 1* np.pi/4.5
 theta2 = np.pi/4
 M = 64
-QAM = modulation.QAMModulator(M)
+#QAM = modulation.QAMModulator(M)
 snr = 25
 muCMA = 0.09e-2
 muRDE = 0.09e-2
@@ -22,24 +22,29 @@ t_pmd = 100.e-12
 Ncma = None
 Nrde = None
 
-sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23), beta=0.01, ndim=2)
+#sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23), beta=0.01, ndim=2)
+sig = modulation.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.01, "renormalise":True})
+sig = impairments.change_snr(sig, snr, sig.fb, sig.fs)
+#sig = impairments.add_awgn(sig, 10 ** (-snr / 20) * np.sqrt(2))
 #Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
+SS = sig
 SS = impairments.apply_PMD_to_field(sig, theta, t_pmd, fs)
 #SS = np.vstack([X,Y])
 SS = impairments.rotate_field(SS, theta2)
 
-E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
-E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
-E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
+E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS,  (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
+E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS,  (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
+E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS,  (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
-evm = QAM.cal_evm(sig[:, ::2])
-evmE = QAM.cal_evm(E)
-evmE_m = QAM.cal_evm(E_m)
-evmE_s = QAM.cal_evm(E_s)
-gmiE = QAM.cal_gmi(E)
-print(gmiE)
+#evm = .cal_evm(sig[:, ::2])
+evm = sig.cal_evm()
+evmE = E.cal_evm()
+evmE_m = E_m.cal_evm()
+evmE_s = E_s.cal_evm()
+#gmiE = E.cal_gmi()
+#print(gmiE)
 
 
 #sys.exit()
