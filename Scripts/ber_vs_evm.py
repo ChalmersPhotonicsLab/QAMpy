@@ -1,10 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import theory, ber_functions, modulation, utils, equalisation, filter
-from scipy.signal import fftconvolve
-import sys
-
-
+from dsp.adv import filter, utils, theory
+from dsp import modulation
 
 """
 Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]
@@ -74,7 +71,7 @@ for M in Mqams:
         print("SNR = %2f.0 dB"%sr)
         modulator = modulation.QAMModulator(M)
         signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta, dual_pol=False)
-        signalx = np.atleast_2d(filter.rrcos_pulseshaping(signal, fs, 1/fb, beta))
+        signalx = np.atleast_2d(filter.rrcos_pulseshaping(signal, fs, 1 / fb, beta))
         signalafter = np.atleast_2d(signalx[0,::2])
         evm1[i] = modulator.cal_evm(signalafter[0])
         evm_known[i] = modulator.cal_evm(signalafter[0], syms)
@@ -83,16 +80,16 @@ for M in Mqams:
         ser[i] = modulator.cal_ser(signalafter[0], symbol_tx=syms)
         ber[i] = modulator.cal_ber(signalafter[0], bits_tx=bits)
         i += 1
-    ax1.plot(snrf, theory.ber_vs_es_over_n0_qam(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax1.plot(snrf, theory.ber_vs_es_over_n0_qam(10 ** (snrf / 10), M), color=c[j], label="%d-QAM theory" % M)
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax2.plot(snrf, theory.ser_vs_es_over_n0_qam(10**(snrf/10), M), color=c[j], label="%d-QAM theory"%M)
+    ax2.plot(snrf, theory.ser_vs_es_over_n0_qam(10 ** (snrf / 10), M), color=c[j], label="%d-QAM theory" % M)
     ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax3.plot(evmf, theory.ber_vs_evm_qam(evmf, M), color=c[j], label="%d-QAM theory"%M)
-    ax3.plot(utils.lin2dB(evm1**2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
+    ax3.plot(evmf, theory.ber_vs_evm_qam(evmf, M), color=c[j], label="%d-QAM theory" % M)
+    ax3.plot(utils.lin2dB(evm1 ** 2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM" % M)
     # illustrate the difference between a blind and non-blind EVM
-    ax3.plot(utils.lin2dB(evm_known**2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
-    ax4.plot(snr, utils.lin2dB(evm1**2), color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
-    ax4.plot(snr, utils.lin2dB(evm_known**2), color=c[j], marker='*', lw=0, label="%d-QAM non-blind"%M)
+    ax3.plot(utils.lin2dB(evm_known ** 2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind" % M)
+    ax4.plot(snr, utils.lin2dB(evm1 ** 2), color=c[j], marker=s[j], lw=0, label="%d-QAM" % M)
+    ax4.plot(snr, utils.lin2dB(evm_known ** 2), color=c[j], marker='*', lw=0, label="%d-QAM non-blind" % M)
     #ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
     j += 1
 ax1.legend()

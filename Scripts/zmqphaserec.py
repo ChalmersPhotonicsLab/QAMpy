@@ -1,9 +1,7 @@
 #import cProfile
 import numpy as np
-import matplotlib.pylab as plt
-from dsp import equalisation, modulation, utils, phaserecovery, processing
-from timeit import default_timer as timer
-import time
+from dsp.adv import processing, utils
+from dsp import modulation
 import multiprocessing
 import zmq
 

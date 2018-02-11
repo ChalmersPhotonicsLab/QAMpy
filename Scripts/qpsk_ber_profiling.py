@@ -1,10 +1,8 @@
 #import cProfile
 import numpy as np
 
-import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, impairments
-
-
+from dsp import equalisation, modulation
+from dsp.adv import impairments
 
 #pr = cProfile.Profile()
 fb = 40.e9

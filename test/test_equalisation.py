@@ -1,11 +1,12 @@
 import pytest
-import numpy as np
 import numpy.testing as npt
 
-from dsp import modulation, impairments, equalisation
+from dsp import modulation
+from dsp.adv import impairments, equalisation
+
 
 class TestReturnObject(object):
-    s = modulation.ResampledQAM(16, 2**16, fb=20e9, fs=40e9, nmodes=2)
+    s = modulation.ResampledQAM(16, 2 ** 16, fb=20e9, fs=40e9, nmodes=2)
     os = 2
 
     def test_apply_filter(self):

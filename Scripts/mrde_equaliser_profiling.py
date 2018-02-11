@@ -1,6 +1,6 @@
 import numpy as np
-import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, impairments
+from dsp import equalisation, modulation
+from dsp.adv import impairments
 from timeit import default_timer as timer
 
 

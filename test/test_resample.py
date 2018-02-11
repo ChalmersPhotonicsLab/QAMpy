@@ -1,10 +1,9 @@
 import pytest
 import numpy as np
-import random
 import numpy.testing as npt
-import matplotlib.pylab as plt
 
-from dsp import resample, filter, utils
+from dsp.adv import resample, utils
+
 
 class TestRRcosZeroins(object):
     @pytest.mark.parametrize("N", np.arange(1, 6))

@@ -8,10 +8,8 @@ Pilot-Based DSP Transmitter for MQAM with M>4
 @author: mazurm
 """
 import numpy as np
-from dsp import equalisation, modulation, utils, phaserecovery, dsp_cython, signal_quality,resample, impairments
-from dsp.prbs import make_prbs_extXOR
-import matplotlib.pylab as plt
-
+from  import impairments, resample, utils
+from .. import modulation
 
 
 def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1),npols=2, frame_length = 2**18, pilot_seq_len = 256, pilot_ins_ratio = 32):

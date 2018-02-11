@@ -2,8 +2,8 @@ import fractions
 import numpy as np
 from scipy import signal as scisig
 
-from dsp.utils import normalise_and_center, rrcos_time, rrcos_freq
-from dsp.filter import rrcos_pulseshaping
+from .utils import normalise_and_center, rrcos_time, rrcos_freq
+from .filter import rrcos_pulseshaping
 
 
 def _resamplingfactors(fold, fnew):

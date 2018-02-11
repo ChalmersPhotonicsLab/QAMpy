@@ -1,9 +1,7 @@
 #import cProfile
 import numpy as np
-import matplotlib.pylab as plt
-from dsp import equalisation, modulation, utils, phaserecovery, io
-from timeit import default_timer as timer
-import arrayfire as af
+from dsp.adv import io
+from dsp import modulation
 import os as os_mod
 
 

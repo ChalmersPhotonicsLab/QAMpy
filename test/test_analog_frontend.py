@@ -1,10 +1,11 @@
 import pytest
 
-from dsp import modulation, analog_frontend
+from dsp.adv import analog_frontend
+from dsp import modulation
 
 
 class TestReturnObjects(object):
-    s = modulation.ResampledQAM(16, 2**14, fs=2, nmodes=2)
+    s = modulation.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
     def test_comp_IQ(self):
         s2 = analog_frontend.comp_IQ_inbalance(self.s)

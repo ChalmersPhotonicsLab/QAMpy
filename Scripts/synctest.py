@@ -1,9 +1,7 @@
 #import cProfile
 import numpy as np
-import matplotlib.pylab as plt
-from dsp import equalisation, modulation, utils, phaserecovery, impairments
-
-
+from dsp.adv import impairments, phaserecovery
+from dsp import modulation
 
 fb = 40.e9
 os = 1

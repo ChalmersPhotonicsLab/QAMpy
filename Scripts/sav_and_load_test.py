@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import theory, ber_functions, modulation, utils, equalisation, io
-from scipy.signal import fftconvolve
-import sys
+from dsp import equalisation, modulation
+from dsp.adv import io, theory
 import os as os_mod
 
 
@@ -75,7 +74,7 @@ osnr = pms['osnr']
 ber = io.query_table_for_references(hf.root.parameters.experiment, hf.root.analysis.dsp.signal, 'ber', "wl==1550")
 snrf = np.linspace(osnr[0], osnr[-1], 100)
 plt.plot(osnr, ber, 'o')
-plt.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M))
+plt.plot(snrf, theory.MQAM_BERvsEsN0(10 ** (snrf / 10), M))
 plt.show()
 hf.close()
 

@@ -2,7 +2,8 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import modulation, ber_functions
+from dsp import modulation
+from dsp.adv import ber_functions
 
 
 class TestFindSequenceOffset(object):

@@ -3,9 +3,9 @@ import numpy as np
 from .utils import cabssquared
 from .theory import  cal_symbols_qam, cal_scaling_factor_qam
 from .equalisation import quantize as _quantize_pyx
-from . import modulation, ber_functions
+from . import ber_functions
+from .. import modulation
 from .dsp_cython import soft_l_value_demapper
-import numba
 
 try:
     import arrayfire as af

@@ -7,7 +7,10 @@ Created on Sat May 27 17:11:02 2017
 """
 
 import numpy as np
-from dsp import equalisation, phaserecovery
+from . import equalisation
+from . import phaserecovery
+
+
 def pilot_based_foe(rec_symbs,pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
@@ -242,7 +245,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
          
         # Apply filter taps to the long sequence
         symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
-        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l,:], foe_corse[l,:])
+        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l, :], foe_corse[l, :])
         # Check for pi/2 ambiguties
         max_phase_rot = np.zeros([4])
         found_delay = np.zeros([4])
@@ -313,12 +316,12 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
             if foe_symbs is None:
                 foePerMode = phaserecovery.find_freq_offset(foe_est_symbs)
             else:
-                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs[:,:foe_symbs],fft_size=foe_symbs)
+                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs[:, :foe_symbs], fft_size=foe_symbs)
         if avg_foe_modes:
             foe = np.mean(foePerMode)
             foePerMode = np.ones(foePerMode.shape)*foe
         # Apply FO-compensation
-        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
+        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal, foePerMode, os=os)
     else:
         # Signal should be DC-centered. Do nothing. 
         sig_dc_center = rx_signal

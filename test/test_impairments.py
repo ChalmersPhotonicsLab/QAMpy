@@ -1,19 +1,19 @@
 import pytest
 import numpy as np
-import numpy.testing as npt
 
-from dsp import modulation, impairments
+from dsp.adv import impairments
+from dsp import modulation
 
 
 class TestReturnObjects(object):
-    s = modulation.ResampledQAM(16, 2**14, fs=2, nmodes=2)
+    s = modulation.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
     def test_rotate_field(self):
-        s2 = impairments.rotate_field(self.s, np.pi/3)
+        s2 = impairments.rotate_field(self.s, np.pi / 3)
         assert type(self.s) is type(s2)
 
     def test_apply_PMD(self):
-        s2 = impairments.apply_PMD_to_field(self.s, np.pi/3, 1e-3, self.s.fs)
+        s2 = impairments.apply_PMD_to_field(self.s, np.pi / 3, 1e-3, self.s.fs)
         assert type(self.s) is type(s2)
 
     def test_apply_phase_noise(self):
@@ -40,12 +40,12 @@ class TestReturnObjects(object):
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_rotate_field_attr(self, attr):
-        s2 = impairments.rotate_field(self.s, np.pi/3)
+        s2 = impairments.rotate_field(self.s, np.pi / 3)
         assert getattr(self.s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_apply_PMD_attr(self, attr):
-        s2 = impairments.apply_PMD_to_field(self.s, np.pi/3, 1e-3, self.s.fs)
+        s2 = impairments.apply_PMD_to_field(self.s, np.pi / 3, 1e-3, self.s.fs)
         assert getattr(self.s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])

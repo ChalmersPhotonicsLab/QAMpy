@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pylab as plt
 
-import dsp.resample
-from dsp import  equalisation, modulation, utils, phaserecovery, signal_quality, analog_frontend
+import dsp.adv.resample
+from dsp import equalisation, analog_frontend, modulation
+from dsp.adv import phaserecovery, signal_quality
 from scipy.io import loadmat
 
 
@@ -30,8 +31,8 @@ Y = Y.flatten()
 #Y = utils.pre_filter(Y, 2*3.9)
 #X = utils.resample(X, 2.5, 2)
 #Y = utils.resample(Y, 2.5, 2)
-X = dsp.resample.rrcos_resample_zeroins(X, 2.5, 2, beta=0.05, Ts=1)
-Y = dsp.resample.rrcos_resample_zeroins(Y, 2.5, 2, beta=0.05, Ts=1)
+X = dsp.adv.resample.rrcos_resample_zeroins(X, 2.5, 2, beta=0.05, Ts=1)
+Y = dsp.adv.resample.rrcos_resample_zeroins(Y, 2.5, 2, beta=0.05, Ts=1)
 X = analog_frontend.comp_IQ_inbalance(X)
 Y = analog_frontend.comp_IQbalance(Y)
 print(X.shape)
@@ -46,10 +47,10 @@ X = signal_quality.norm_to_s0(E[0, :], M)
 Y = signal_quality.norm_to_s0(E[1, :], M)
 E = np.vstack([X,Y])
 
-foe = phaserecovery.find_freq_offset(E,fft_size = 2**10)
+foe = phaserecovery.find_freq_offset(E, fft_size =2 ** 10)
 
 
-E = phaserecovery.comp_freq_offset(E,foe)
+E = phaserecovery.comp_freq_offset(E, foe)
 
 #Ec = E[:,2e4:-2e4]
 wx, err_both = equalisation.equalise_signal(E, 1, muRDE, M,Niter=4, Ntaps=ntaps, method="sbd" , adaptive_stepsize=False)

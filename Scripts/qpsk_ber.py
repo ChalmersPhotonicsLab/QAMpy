@@ -1,8 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, utils
-
-
+from dsp import equalisation, modulation
 
 fb = 40.e9
 os = 2

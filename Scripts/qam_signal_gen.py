@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import  theory, modulation
-
+from dsp import modulation
 
 """ Check the symbol rate of a QAM signal against the theoretical symbol rate"""
 

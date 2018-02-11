@@ -3,6 +3,8 @@ import numpy as np
 import numpy.testing as npt
 
 from dsp import modulation
+from dsp.adv import theory
+
 
 def _flip_symbols(sig, idx, d):
     for i in idx:
@@ -68,7 +70,7 @@ class TestQAMSymbolsGray(object):
     def test_symbols(self, M):
         s = modulation.SignalQAMGrayCoded(M, 1000, nmodes=1)
         si = np.unique(s)
-        thsyms = modulation.theory.cal_symbols_qam(M) / np.sqrt(modulation.theory.cal_scaling_factor_qam(M))
+        thsyms = theory.cal_symbols_qam(M) / np.sqrt(theory.cal_scaling_factor_qam(M))
         d = np.min(abs(s[0, :, np.newaxis] - thsyms), axis=1)
         assert si.shape[0] == M
         npt.assert_array_almost_equal(d, 0)
@@ -89,13 +91,13 @@ class TestQAMSymbolsGray(object):
 
     @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def testfromarray_order(self, M):
-        a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
+        a = np.random.choice(theory.cal_symbols_qam(M), 1000)
         s = modulation.SignalQAMGrayCoded.from_symbol_array(a)
         assert np.unique(s).shape[0] is M
 
     @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def testfromarray_avgpow(self, M):
-        a = np.random.choice(modulation.theory.cal_symbols_qam(M), 1000)
+        a = np.random.choice(theory.cal_symbols_qam(M), 1000)
         s = modulation.SignalQAMGrayCoded.from_symbol_array(a)
         npt.assert_almost_equal((abs(s) ** 2).mean(), (abs(s) ** 2).mean())
 
