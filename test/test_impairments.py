@@ -1,8 +1,7 @@
 import pytest
 import numpy as np
 
-from dsp.core import impairments
-from dsp import modulation
+from dsp import modulation, impairments
 
 
 class TestReturnObjects(object):
