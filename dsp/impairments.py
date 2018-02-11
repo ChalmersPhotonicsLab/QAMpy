@@ -183,7 +183,7 @@ def change_snr(sig, snr, fb, fs):
         output signal with given SNR
     """
     os = fs/fb
-    p = np.mean(abs(sign)**2)
+    p = np.mean(abs(sig)**2)
     n = 10 ** (-snr / 20) * np.sqrt(os)
     return add_awgn(sig, p/n)
 
