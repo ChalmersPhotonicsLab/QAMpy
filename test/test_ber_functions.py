@@ -2,22 +2,20 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import modulation
-from dsp.adv import ber_functions
+from dsp import modulation, ber_functions, impairments
 
 
 class TestFindSequenceOffset(object):
-    Q = modulation.QAMModulator(16)
-    d = np.diff(np.unique(Q.symbols.real)).min()
+    s = modulation.SignalQAMGrayCoded(16, 3*10**4, nmodes=1)
+    d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*3*10**4//4+1, (l+1)*3*10**4//4) for l in range(4)])
     @pytest.mark.parametrize("snr", [5, 20, 40])
     @pytest.mark.parametrize("N1", [None, 4000])
     def test_shift(self, shiftN, snr, N1):
-        N = 3*10**4 # needs to be larger than PRBS pattern
-        sig, syms, bits = self.Q.generate_signal(N, snr, ndim=1)
+        sig = impairments.change_snr(self.s, self.s.fb, self.s.fs, snr)
         sig = sig[0]
-        syms = syms[0]
+        syms = sig.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
         assert (offset == shiftN)
@@ -25,10 +23,8 @@ class TestFindSequenceOffset(object):
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("N1", [None, 4000])
     def test_data(self, shiftN, N1):
-        N = 2*(2**15-1)
-        sig, syms, bits = self.Q.generate_signal(N, None, beta=0.01, ndim=1)
-        sig = sig[0]
-        syms = syms[0]
+        sig = self.s[0]
+        syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
         sig2 = np.roll(sig2, -offset)
@@ -36,18 +32,16 @@ class TestFindSequenceOffset(object):
 
 
 class TestFindSequenceOffsetComplex(object):
-    Q = modulation.QAMModulator(16)
-    d = np.diff(np.unique(Q.symbols.real)).min()
+    s = modulation.SignalQAMGrayCoded(16, 2*(2**15-1), nmodes=1)
+    d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("i", range(4))
     @pytest.mark.parametrize("snr", [5, 20, 40])
     @pytest.mark.parametrize("N1", [None, 4000])
     def test_shift(self, shiftN, i, snr, N1):
-        N = 2*(2**15-1)
-        sig, syms, bits = self.Q.generate_signal(N, None, PRBS=False, beta=0.01, ndim=1)
-        sig = sig[0]
-        syms = syms[0]
+        sig = self.s[0]
+        syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1]*1j**i, sig2)
         assert (offset == shiftN)
@@ -56,10 +50,8 @@ class TestFindSequenceOffsetComplex(object):
     @pytest.mark.parametrize("i", range(4))
     @pytest.mark.parametrize("N1", [None, 4000])
     def test_data(self, shiftN, i, N1):
-        N = 2*(2**15-1)
-        sig, syms, bits = self.Q.generate_signal(N, None, beta=0.01, ndim=1)
-        sig = sig[0]
-        syms = syms[0]
+        sig = self.s[0]
+        syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1]*1j**i, sig2)
         sig2 = np.roll(sig2, -offset)
@@ -68,24 +60,21 @@ class TestFindSequenceOffsetComplex(object):
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("i", range(4))
     def test_rotation(self, shiftN, i):
-        N = 2*(2**15-1)
-        sig, syms, bits = self.Q.generate_signal(N, None, beta=0.01, ndim=1)
-        sig = sig[0]
-        syms = syms[0]
+        sig = self.s[0]
+        syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms*1j**i, sig2)
         assert (4-ii)%4 == i
 
 class TestSyncAndAdjust(object):
-    Q = modulation.QAMModulator(16)
-    d = np.diff(np.unique(Q.symbols.real)).min()
+    s = modulation.SignalQAMGrayCoded(16, 3*10**4, nmodes=1)
+    d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("N1, N2, adjust", [(None, 1000, "tx"),(None, 1000, "rx" ), (1000, None, "tx"), (1000, None, "rx") ])
     def test_length(self, N1, N2, adjust):
-        N = 3*10**4 # needs to be larger than PRBS pattern
-        sig, syms, bits = self.Q.generate_signal(N, None, PRBS=False, beta=0.01, ndim=1)
-        sig = sig[0]
-        syms = syms[0]
+        sig = self.s[0]
+        N = self.s.shape[1]
+        syms = self.s.symbols[0]
         tx, rx = ber_functions.sync_and_adjust(sig[:N1], sig[:N2], adjust=adjust)
         if N1 is None and adjust is "tx":
             assert (tx.shape[0] == N2) and (rx.shape[0] == N2)
@@ -99,10 +88,9 @@ class TestSyncAndAdjust(object):
     def test_flip(self, adjust, shiftN):
         Np = 2**15-1
         N = 2*Np
-        sig, syms, bits = self.Q.generate_signal(N, None, PRBS=True, beta=0.01, ndim=1)
-        #shiftN = np.random.randint(1, N)
-        sig = sig[0]
-        syms = syms[0]
+        s = modulation.SignalQAMGrayCoded(16, N, bitclass=modulation.PRBSBits)
+        sig = s[0]
+        syms = s.symbols[0]
         syms2 = np.roll(syms, shift=shiftN)
         tx, rx = ber_functions.sync_and_adjust(syms, syms2, adjust=adjust)
         npt.assert_allclose(tx, rx)
@@ -116,24 +104,23 @@ class TestSyncAndAdjust(object):
     def test_rotated_and_diff_length(self, adjust, tx_i, rx_i, N1, N2, shiftN):
         Np = 2**15-1
         N = 2*Np
-        sig, syms, bits = self.Q.generate_signal(N, None, PRBS=True, beta=0.01, ndim=1)
-        sig = sig[0]
-        syms = syms[0]
+        s = modulation.SignalQAMGrayCoded(16, N, bitclass=modulation.PRBSBits)
+        sig = s[0]
+        syms = s.symbols[0]
         syms2 = np.roll(syms, shift=shiftN)
         tx, rx = ber_functions.sync_and_adjust(syms[:N1]*1j**tx_i, syms2[:N2]*1j**rx_i, adjust=adjust)
         npt.assert_allclose(tx, rx)
 
 class TestAdjustDataLength(object):
-    Q = modulation.QAMModulator(16)
-    d = np.diff(np.unique(Q.symbols.real)).min()
+    s = modulation.SignalQAMGrayCoded(16, 3*10**4, nmodes=1)
+    d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("N1, N2", [(None, 1000), (1000, None)])
     @pytest.mark.parametrize("method", ["truncate", "extend", None])
     def test_length(self, N1, N2, method):
-        N = 3*10**4 # needs to be larger than PRBS pattern
-        sig, syms, bits = self.Q.generate_signal(N, None, PRBS=False, beta=0.01, ndim=1)
-        sig = sig[0]
-        syms = syms[0]
+        sig = self.s[0]
+        N = self.s.shape[1]
+        syms = self.s.symbols[0]
         tx, rx = ber_functions.adjust_data_length(sig[:N1], sig[:N2], method=method)
         if method is "truncate":
             N_ex = N1 or N2
