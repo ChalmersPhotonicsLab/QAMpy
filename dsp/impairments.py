@@ -158,3 +158,27 @@ def add_awgn(sig, strgth):
 
     """
     return sig + strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2) # sqrt(2) because of var vs std
+
+def add_carrier_offset(sig, fo, fs):
+    """
+    Add frequency offset to signal
+
+    Parameters
+    ----------
+    sig : array_like
+        signal input array
+    df : float
+        frequency offset
+    fs : float
+        sampling rate
+
+    Returns
+    -------
+    signal : array_like
+        signal with added offset
+    """
+    sign = np.atleast_2d(sig)
+    if sig.ndim == 1:
+        return  (sign * np.exp(2.j * np.pi * np.arange(sig.shape[1])) * fo / fs).flatten()
+    else:
+        return  sign * np.exp(2.j * np.pi * np.arange(sig.shape[1])) * fo / fs
