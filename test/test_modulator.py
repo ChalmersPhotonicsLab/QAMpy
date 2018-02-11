@@ -173,6 +173,81 @@ class TestQAMSymbolsGray(object):
         s /= abs(s).max()
         npt.assert_array_almost_equal(s, si)
 
+    def test_recreate_from_np_array(self):
+        N = 1000
+        N2 = 2*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(1000, dtype=np.complex128)
+        s2 = s.recreate_from_np_array(arr)
+        assert type(s) is type(s2)
+
+    def test_recreate_from_np_array_attr(self):
+        N = 1000
+        N2 = 2*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(1000, dtype=np.complex128)
+        s2 = s.recreate_from_np_array(arr)
+        for attr in s._inheritattr_:
+            assert getattr(s, attr) is getattr(s2, attr)
+
+    def test_recreate_from_np_array_attr2(self):
+        N = 1000
+        N2 = 2*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(1000, dtype=np.complex128)
+        s2 = s.recreate_from_np_array(arr)
+        for attr in s._inheritbase_:
+            assert getattr(s, attr) is getattr(s2, attr)
+
+    @pytest.mark.parametrize("attr", [("_fs", 2), ("fs", 2), ("symbols", np.arange(10)), ("bla", "a")])
+    def test_recreate_from_np_array_attr3(self, attr):
+        N = 1000
+        N2 = 2*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(1000, dtype=np.complex128)
+        s2 = s.recreate_from_np_array(arr, **dict([attr]))
+        a = getattr(s2, attr[0])
+        assert a is attr[1]
+
+    @pytest.mark.parametrize("attr", [("_fs", 2), ("_symbols", np.arange(10))])
+    def test_recreate_from_np_array_attr4(self, attr):
+        N = 1000
+        N2 = 2*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(1000, dtype=np.complex128)
+        s2 = s.recreate_from_np_array(arr, **dict([attr]))
+        a = getattr(s2, attr[0].strip("_"))
+        assert a is attr[1]
+
+    @pytest.mark.parametrize("factor", [0.5, 1, 2])
+    def test_recreate_from_np_array_shape(self, factor):
+        N = 1000
+        N2 = factor*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(N2, dtype=np.complex128)
+        s2 = s.recreate_from_np_array(arr)
+        assert s2.shape[0] == N2
+
+    @pytest.mark.parametrize("nmodes", [1, 2, 3])
+    @pytest.mark.parametrize("ndims", [1, 2, 3])
+    def test_recreate_from_np_array_shape2(self, nmodes, ndims):
+        N = 1000
+        s = modulation.SignalQAMGrayCoded(128, N, nmodes=nmodes)
+        arr = np.arange(ndims*N, dtype=np.complex128).reshape(ndims, N)
+        s2 = s.recreate_from_np_array(arr)
+        assert s2.shape == (ndims, N)
+
+    @pytest.mark.parametrize("dtype", [np.float32, np.int, np.complex64, np.complex128])
+    def test_recreate_from_np_array_dtype(self, dtype):
+        N = 1000
+        N2 = 2*N
+        s = modulation.SignalQAMGrayCoded(128, N)
+        arr = np.arange(1000, dtype=dtype)
+        s2 = s.recreate_from_np_array(arr)
+        assert type(s) is type(s2)
+        assert s2.dtype is np.dtype(dtype)
+
+
 
 
 class TestPilotSignal(object):

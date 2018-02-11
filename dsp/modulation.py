@@ -93,6 +93,12 @@ class SignalBase(np.ndarray):
     def recreate_from_np_array(self, arr, **kwargs):
         obj = arr.view(self.__class__)
         self._copy_inherits(self, obj)
+        for k, v in kwargs.items():
+            if "_"+k in self._inheritattr_:
+                k = "_" + k
+            if "_"+k in self._inheritbase_:
+                k = "_" + k
+            setattr(obj, k, v)
         return obj
 
     @classmethod
