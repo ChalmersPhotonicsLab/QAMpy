@@ -518,7 +518,7 @@ class SignalQAMGrayCoded(SignalBase):
         signal = self._signal_present(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
-            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)
+            outsyms[i] = quantize(signal[i], self.coded_symbols)
         return outsyms
 
     @property
