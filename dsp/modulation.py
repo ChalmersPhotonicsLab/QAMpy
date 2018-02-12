@@ -343,18 +343,6 @@ class SignalBase(np.ndarray):
             1D array of complex symbol values. Normalised to energy of 1
         """
 
-    #@abc.abstractmethod
-    #def modulate(self):
-    #    pass
-
-#    @abc.abstractmethod
-#    def quantize(self):
-#        pass
-
-    #@abc.abstractmethod
-    #def demodulate(self):
-    #    pass
-
 
 class SignalQAMGrayCoded(SignalBase):
     _inheritattr_ = ["_symbols", "_bits", "_encoding", "_bitmap_mtx",  "_code",
