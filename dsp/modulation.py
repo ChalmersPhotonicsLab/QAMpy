@@ -829,7 +829,7 @@ class SignalWithPilots(SignalBase):
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
         obj._nframes = nframes
-        obj._symbols = data[:, :Ndat]
+        obj._symbols = data[:, :Ndat].copy()
         obj._pilots = pilots
         obj._idx_dat = idx_dat
         return obj
@@ -845,6 +845,10 @@ class SignalWithPilots(SignalBase):
     @property
     def pilots(self):
         return self._pilots
+
+    @property
+    def symbols(self):
+        return self._symbols
 
     @property
     def nframes(self):

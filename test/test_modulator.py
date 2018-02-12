@@ -273,6 +273,30 @@ class TestPilotSignal(object):
         s = modulation.SignalWithPilots(64, N, Nseq, ph_i, nframes=nframes)
         npt.assert_array_almost_equal(s.get_data(), np.tile(s.symbols, nframes))
 
+    def test_symbol_inherit(self):
+        s = modulation.SignalQAMGrayCoded(128, 2**16, nmodes=2)
+        sp = modulation.SignalWithPilots.from_data_array(s, 2**16, 256, 32)
+        npt.assert_array_almost_equal(sp.symbols, sp.get_data())
+
+    def test_symbol_inherit_shape(self):
+        s = modulation.SignalQAMGrayCoded(128, 2**16, nmodes=2)
+        sp = modulation.SignalWithPilots.from_data_array(s, 2**16, 256, 32)
+        N = 2**16-256
+        ph = N//32
+        NN = N-ph
+        assert sp.symbols.shape[1] == NN
+
+    def test_symbol_inherit2(self):
+        sp = modulation.SignalWithPilots(128, 2**16, 256, 32, nmodes=2)
+        npt.assert_array_almost_equal(sp.symbols, sp.get_data())
+
+    def test_symbol_inherit_shape2(self):
+        sp = modulation.SignalWithPilots(128, 2**16, 256, 32, nmodes=2)
+        N = 2**16-256
+        ph = N//32
+        NN = N-ph
+        assert sp.symbols.shape[1] == NN
+
 
 class TestTDHybridsSymbols(object):
     @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])
