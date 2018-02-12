@@ -4,18 +4,18 @@ import numpy.testing as npt
 
 from dsp import modulation
 
-def _flip_symbols(sig, idx, d):
+def _flip_symbols(sig, idx, d, mode=0):
     for i in idx:
         if np.random.randint(0, 2):
-            if sig[i].real > 0:
-                sig[i] -= d
+            if sig[mode,i].real > 0:
+                sig[mode,i] -= d
             else:
-                sig[i] += d
+                sig[mode,i] += d
         else:
-            if sig[i].imag > 0:
-                sig[i] -= 1.j * d
+            if sig[mode,i].imag > 0:
+                sig[mode,i] -= 1.j * d
             else:
-                sig[i] += 1.j * d
+                sig[mode,i] += 1.j * d
     return sig
 
 
@@ -446,6 +446,38 @@ class TestSignal(object):
         s = modulation.ResampledQAM(16, 2000, fs=2)
         a = getattr(s, attr)
         assert a is not None
+
+class TestSignalQualityCorrectnes(object):
+    @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
+    def test_ser_calculation(self, err_syms):
+        N = 1000
+        s = modulation.SignalQAMGrayCoded(64, N, nmodes=1)
+        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        ii = np.arange(1,err_syms+1)
+        s2 = _flip_symbols(s, ii, d)
+        ser = s.cal_ser()
+        npt.assert_almost_equal(ser.flatten(), err_syms/N)
+
+    @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
+    def test_ser_calculation2(self, err_syms):
+        N = 1000
+        s = modulation.SignalQAMGrayCoded(64, N, nmodes=1)
+        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        ii = np.arange(1,err_syms+1)
+        s2 = _flip_symbols(s, ii, 2*d)
+        ser = s.cal_ser()
+        npt.assert_almost_equal(ser.flatten(), err_syms/N)
+
+    @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
+    def test_ber_calculation(self, err_syms):
+        N = 1000
+        M = 64
+        s = modulation.SignalQAMGrayCoded(M, N, nmodes=1)
+        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        ii = np.arange(1,err_syms+1)
+        s2 = _flip_symbols(s, ii, d)
+        ber = s.cal_ber()
+        npt.assert_almost_equal(ber.flatten(), err_syms/(N*np.log2(M)))
 
 
 class TestSignalQualityOnSignal(object):
