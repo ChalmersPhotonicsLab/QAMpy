@@ -446,7 +446,7 @@ def comp_freq_offset(sig, freq_offset, os=1 ):
     npols = sig.shape[0]
 
     # Output Vector
-    comp_signal = np.zeros([npols,np.shape(sig)[1]],dtype=complex)
+    comp_signal = np.zeros([npols, np.shape(sig)[1]], dtype=sig.dtype)
 
     # Fix output
     sig_len = len(sig[0,:])
