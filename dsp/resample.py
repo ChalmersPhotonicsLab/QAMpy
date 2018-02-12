@@ -39,12 +39,13 @@ def resample_poly(signal, fold, fnew, window=None, renormalise=False):
     L = len(signal)
     up, down = _resamplingfactors(fold, fnew)
     if window is None:
-        signal = scisig.resample_poly(signal, up, down)
+        sig_new = scisig.resample_poly(signal, up, down)
     else:
-        signal = scisig.resample_poly(signal, up, down, window=window)
+        sig_new = scisig.resample_poly(signal, up, down, window=window)
     if renormalise:
-        signal = normalise_and_center(signal)
-    return signal
+        p = np.mean(abs(signal)**2)
+        sig_new = normalise_and_center(sig_new)*np.sqrt(p)
+    return sig_new
 
 def rrcos_resample(signal, fold, fnew, Ts=None, beta=None, taps=4001, renormalise=False):
     """
@@ -83,5 +84,6 @@ def rrcos_resample(signal, fold, fnew, Ts=None, beta=None, taps=4001, renormalis
     nqf /= nqf.max()
     sig_new = scisig.resample_poly(signal, up, down, window=nqf)
     if renormalise:
-        sig_new = normalise_and_center(sig_new)
+        p = np.mean(abs(signal)**2)
+        sig_new = normalise_and_center(sig_new)*np.sqrt(p)
     return sig_new
