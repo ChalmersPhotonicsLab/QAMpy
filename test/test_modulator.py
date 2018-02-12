@@ -6,18 +6,18 @@ from dsp import modulation
 from dsp.core import theory
 
 
-def _flip_symbols(sig, idx, d):
+def _flip_symbols(sig, idx, d, mode=0):
     for i in idx:
         if np.random.randint(0, 2):
-            if sig[i].real > 0:
-                sig[i] -= d
+            if sig[mode,i].real > 0:
+                sig[mode,i] -= d
             else:
-                sig[i] += d
+                sig[mode,i] += d
         else:
-            if sig[i].imag > 0:
-                sig[i] -= 1.j * d
+            if sig[mode,i].imag > 0:
+                sig[mode,i] -= 1.j * d
             else:
-                sig[i] += 1.j * d
+                sig[mode,i] += 1.j * d
     return sig
 
 
@@ -533,6 +533,38 @@ class TestSignal(object):
         a = getattr(s, attr)
         assert a is not None
 
+class TestSignalQualityCorrectnes(object):
+    @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
+    def test_ser_calculation(self, err_syms):
+        N = 1000
+        s = modulation.SignalQAMGrayCoded(64, N, nmodes=1)
+        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        ii = np.arange(1,err_syms+1)
+        s2 = _flip_symbols(s, ii, d)
+        ser = s.cal_ser()
+        npt.assert_almost_equal(ser.flatten(), err_syms/N)
+
+    @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
+    def test_ser_calculation2(self, err_syms):
+        N = 1000
+        s = modulation.SignalQAMGrayCoded(64, N, nmodes=1)
+        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        ii = np.arange(1,err_syms+1)
+        s2 = _flip_symbols(s, ii, 2*d)
+        ser = s.cal_ser()
+        npt.assert_almost_equal(ser.flatten(), err_syms/N)
+
+    @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
+    def test_ber_calculation(self, err_syms):
+        N = 1000
+        M = 64
+        s = modulation.SignalQAMGrayCoded(M, N, nmodes=1)
+        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        ii = np.arange(1,err_syms+1)
+        s2 = _flip_symbols(s, ii, d)
+        ber = s.cal_ber()
+        npt.assert_almost_equal(ber.flatten(), err_syms/(N*np.log2(M)))
+
 
 class TestSignalQualityOnSignal(object):
 
@@ -604,8 +636,9 @@ class TestPilotSignalQualityOnSignal(object):
         ser = s.cal_ser()
         assert ser.shape[0] == nmodes
 
-    def test_ser_value(self):
-        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
+    @pytest.mark.parametrize("nframes", np.arange(1, 4))
+    def test_ser_value(self, nframes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1, nframes=nframes)
         ser = s.cal_ser()
         assert ser[0] == 0
 
@@ -615,8 +648,9 @@ class TestPilotSignalQualityOnSignal(object):
         evm = s.cal_evm()
         assert evm.shape[0] == nmodes
 
-    def test_evm_value(self):
-        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
+    @pytest.mark.parametrize("nframes", np.arange(1, 4))
+    def test_evm_value(self, nframes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1, nframes=nframes)
         evm = s.cal_evm()
         assert evm[0] < 1e-4
 
@@ -626,9 +660,10 @@ class TestPilotSignalQualityOnSignal(object):
         ber = s.cal_ber()
         assert ber.shape[0] == nmodes
 
-    def test_ber_value(self):
-        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
-        s += 0.05 * (np.random.randn(2 ** 16) + 1.j * np.random.randn(2 ** 16))
+    @pytest.mark.parametrize("nframes", np.arange(1, 4))
+    def test_ber_value(self, nframes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1, nframes=nframes)
+        s += 0.05 * (np.random.randn(2 ** 16*nframes) + 1.j * np.random.randn(2 ** 16*nframes))
         ber = s.cal_ber()
         assert ber[0] == 0
 
@@ -638,8 +673,9 @@ class TestPilotSignalQualityOnSignal(object):
         snr = s.est_snr()
         assert snr.shape[0] == nmodes
 
-    def test_est_snr_value(self):
-        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1)
+    @pytest.mark.parametrize("nframes", np.arange(1, 4))
+    def test_est_snr_value(self, nframes):
+        s = modulation.SignalWithPilots(16, 2 ** 16, 128, 32, nmodes=1, nframes=nframes)
         snr = s.est_snr()
         assert snr[0] > 1e25
 
@@ -650,9 +686,12 @@ class TestPilotSignalQualityOnSignal(object):
         assert gmi.shape[0] == nmodes
 
     @pytest.mark.parametrize("M", [16, 128, 256])
-    def test_cal_gmi_value(self, M):
-        s = modulation.SignalWithPilots(M, 2 ** 16, 128, 32, nmodes=1)
-        s += 0.0004 * (np.random.randn(2 ** 16) + 1.j * np.random.randn(2 ** 16))
+    @pytest.mark.parametrize("nframes", np.arange(1, 4))
+    def test_cal_gmi_value(self, M, nframes):
+        s = modulation.SignalWithPilots(M, 2 ** 16, 128, 32, nmodes=1, nframes=nframes)
+        s += 0.0004 * (np.random.randn(2 ** 16*nframes) + 1.j * np.random.randn(2 ** 16*nframes))
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
+
+

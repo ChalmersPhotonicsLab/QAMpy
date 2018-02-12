@@ -30,21 +30,27 @@ def viterbiviterbi(E, N, M):
     Eout : array_like
         Field with compensated phases
     """
-    E = E.flatten()
-    L = len(E)
-    phi = np.angle(E)
-    E_raised = np.exp(1.j * phi)**M
-    sa = segment_axis(E_raised, N, N - 1)
-    phase_est = np.sum(sa, axis=1)
-    phase_est = np.unwrap(np.angle(phase_est))
+    E2d = np.atleast_2d(E)
+    L = E2d.shape[1]
+    for i in range(E2d.shape[0]):
+        Et = E2d[i]
+        L = len(Et)
+        phi = np.angle(Et)
+        E_raised = np.exp(1.j * phi)**M
+        sa = segment_axis(E_raised, N, N - 1)
+        phase_est = np.sum(sa, axis=1)
+        phase_est = np.unwrap(np.angle(phase_est))
+    phase_est = (phase_est - np.pi)/M
     if N % 2:
-        E = E[(N - 1) // 2:L - (N - 1) // 2]
+        E2d[:, (N - 1) // 2:L - (N - 1) // 2] *= phase_est
     else:
-        E = E[N // 2 - 1:L - (N // 2)]
+        E2d[:, N // 2 - 1:L - (N // 2)] *= phase_est
     #if M == 4: # QPSK needs pi/4 shift
     # need a shift by pi/M for constellation points to not be on the axis
-    phase_est = phase_est - np.pi
-    return E * np.exp(-1.j * phase_est / M)
+    if E.ndim == 1:
+        return  E2d.flatten(), phase_est.flatten()
+    else:
+        return E2d, phase_est
 
 def _bps_py(E, Mtestangles, symbols, N):
     """
@@ -65,7 +71,7 @@ def _bps_py(E, Mtestangles, symbols, N):
 
 def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     """
-    Perform a blind phase search phase recovery after _[1]
+    Perform a blind phase search after _[1]
 
     Parameters
     ----------
@@ -91,7 +97,7 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     Returns
     -------
     Eout    : array_like
-        phase compensated field
+        signal with compensated phase
     ph      : array_like
         unwrapped angle from phase recovery
 
@@ -108,14 +114,21 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     else:
         raise("Method needs to be 'pyx' or 'af'")
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
-    idx =  bps_fct(E, angles, symbols, N, **kwargs)
-    ph = select_angles(angles, idx)
+    Ew = np.atleast_2d(E)
+    ph = []
+    for i in range(Ew.shape[0]):
+        idx =  bps_fct(Ew[i], angles, symbols, N, **kwargs)
+        ph.append(select_angles(angles, idx))
+    ph = np.asarray(ph)
     # ignore the phases outside the averaging window
     # better to use normal unwrap instead of fancy tricks
     #ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
-    ph[N:-N] = np.unwrap(ph[N:-N]*4)/4
-    Eout = E*np.exp(1.j*ph)
-    return Eout, ph
+    ph[:, N:-N] = np.unwrap(ph[:, N:-N]*4)/4
+    #Eout = E*np.exp(1.j*ph)
+    if E.ndim == 1:
+        return (Ew*np.exp(1.j*ph)).flatten(), ph.flatten()
+    else:
+        return Ew*np.exp(1.j*ph), ph
 
 def _movavg_af(X, N, axis=0):
     """
@@ -244,15 +257,23 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
     else:
         raise("Method needs to be 'pyx' or 'af'")
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
-    idx = bps_fct(E, angles, symbols, N, **kwargs)
-    ph = select_angles(angles, idx)
-    b = np.linspace(-B/2, B/2, B)
-    phn = ph[:,np.newaxis] + b[np.newaxis,:]/(B*Mtestangles)*np.pi/2
-    idx2 = bps_fct(E, phn, symbols, N, **kwargs)
-    phf = select_angles(phn, idx2)
-    angles_adj = np.unwrap(phf*4, discont=np.pi*4/4)/4
-    En = E*np.exp(1.j*angles_adj)
-    return En, angles_adj
+    Ew = np.atleast_2d(E)
+    ph_out = []
+    for i in range(Ew.shape[0]):
+        idx =  bps_fct(Ew[i], angles, symbols, N, **kwargs)
+        ph = select_angles(angles, idx)
+        b = np.linspace(-B/2, B/2, B)
+        phn = ph[:,np.newaxis] + b[np.newaxis,:]/(B*Mtestangles)*np.pi/2
+        idx2 = bps_fct(Ew[i], phn, symbols, N, **kwargs)
+        phf = select_angles(phn, idx2)
+        ph_out.append(np.unwrap(phf*4, discont=np.pi*4/4)/4)
+    ph_out = np.asarray(ph_out)
+    En = Ew*np.exp(1.j*ph_out)
+    if E.ndim == 1:
+        return En.flatten(), ph_out.flatten()
+    else:
+        return En, ph_out
+
 
 
 def partition_16qam(E):
@@ -291,7 +312,7 @@ def partition_16qam(E):
     return class1_mask, class2_mask
 
 
-def phase_partition_16qam(E, N):
+def phase_partition_16qam(E, Nblock):
     r"""16-QAM blind phase recovery using QPSK partitioning.
 
     A blind phase estimator for 16-QAM signals based on partitioning the signal
@@ -302,13 +323,15 @@ def phase_partition_16qam(E, N):
     ----------
         E : array_like
             electric field of the signal
-        N : int
+        Nblock : int
             number of samples in an averaging block
 
     Returns
     -------
         E_rec : array_like
             electric field of the signal with recovered phase.
+        phase : array_like
+            recovered phase array
 
     References
     ----------
@@ -317,26 +340,33 @@ def phase_partition_16qam(E, N):
        Photonics Technol. Lett. IEEE, vol. 22, no. 9, pp. 631–633, May 2010.
 
     """
+    E2d = np.atleast_2d(E)
     dphi = np.pi / 4 + np.arctan(1 / 3)
-    L = len(E)
-    # partition QPSK signal into qpsk constellation and non-qpsk const
-    c1_m, c2_m = partition_16qam(E)
-    Sx = np.zeros(len(E), dtype=np.complex128)
-    Sx[c2_m] = (E[c2_m] * np.exp(1.j * dphi))**4
-    So = np.zeros(len(E), dtype=np.complex128)
-    So[c2_m] = (E[c2_m] * np.exp(1.j * -dphi))**4
-    S1 = np.zeros(len(E), dtype=np.complex128)
-    S1[c1_m] = (E[c1_m])**4
-    E_n = np.zeros(len(E), dtype=np.complex128)
-    phi_est = np.zeros(len(E), dtype=np.float64)
-    for i in range(0, L, Nblock):
-        S1_sum = np.sum(S1[i:i + Nblock])
-        Sx_tmp = np.min(
-            [S1_sum - Sx[i:i + Nblock], S1_sum - So[i:i + Nblock]],
-            axis=0)[c2_m[i:i + Nblock]]
-        phi_est[i:i + Nblock] = np.angle(S1_sum + Sx_tmp.sum())
-    phi_est = np.unwrap(phi_est) / 4 - np.pi / 4
-    return (E * np.exp(-1.j * phi_est))[:(L // Nblock) * Nblock]
+    modes, L = E2d.shape
+    ph_out = []
+    for j in range(modes):
+        # partition QPSK signal into qpsk constellation and non-qpsk const
+        c1_m, c2_m = partition_16qam(E2d[j])
+        Sx = np.zeros(L, dtype=np.complex128)
+        Sx[c2_m] = (E2d[j, c2_m] * np.exp(1.j * dphi))**4
+        So = np.zeros(L, dtype=np.complex128)
+        So[c2_m] = (E2d[j, c2_m] * np.exp(1.j * -dphi))**4
+        S1 = np.zeros(L, dtype=np.complex128)
+        S1[c1_m] = (E2d[j, c1_m])**4
+        E_n = np.zeros(L, dtype=np.complex128)
+        phi_est = np.zeros(L, dtype=np.float64)
+        for i in range(0, L, Nblock):
+            S1_sum = np.sum(S1[i:i + Nblock])
+            Sx_tmp = np.min(
+                [S1_sum - Sx[i:i + Nblock], S1_sum - So[i:i + Nblock]],
+                axis=0)[c2_m[i:i + Nblock]]
+            phi_est[i:i + Nblock] = np.angle(S1_sum + Sx_tmp.sum())
+        ph_out.append(np.unwrap(phi_est) / 4 - np.pi / 4)
+    phi_out = np.asarray(ph_out)
+    if E.ndim == 1:
+        return (E2d * np.exp(-1.j * phi_est)).flatten(), phi_out.flatten
+    else:
+        return E2d * np.exp(-1.j * phi_est), phi_out
 
 
 def find_freq_offset(sig, os=1, average_over_modes = False, fft_size = 4096):
@@ -369,7 +399,7 @@ def find_freq_offset(sig, os=1, average_over_modes = False, fft_size = 4096):
 
     # Fix number of stuff
     sig = np.atleast_2d(sig)
-    npols = sig.shape[0]
+    npols, L = sig.shape
 
     # Find offset for all modes
     freq_sig = np.zeros([npols,fft_size])
@@ -410,8 +440,9 @@ def comp_freq_offset(sig, freq_offset, os=1 ):
 
     """
     # Fix number of stuff
+    ndim = sig.ndim
     sig = np.atleast_2d(sig)
-    freq_offset = np.atleast_2d(freq_offset)
+    #freq_offset = np.atleast_2d(freq_offset)
     npols = sig.shape[0]
 
     # Output Vector
@@ -423,5 +454,7 @@ def comp_freq_offset(sig, freq_offset, os=1 ):
     for l in range(npols):
         lin_phase = 2 * np.pi * time_vec * freq_offset[l] /  os
         comp_signal[l,:] = sig[l,:] * np.exp(-1j * lin_phase)
-
-    return comp_signal
+    if ndim == 1:
+        return comp_signal.flatten()
+    else:
+        return comp_signal
