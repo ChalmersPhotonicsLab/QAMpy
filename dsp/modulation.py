@@ -238,7 +238,7 @@ class SignalBase(np.ndarray):
         return np.asarray(
             np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
 
-    def est_snr(self, signal_rx=None, synced=False):
+    def est_snr(self, signal_rx=None, synced=False, symbols_tx=None):
         """
         Estimate the SNR of a given input signal, using known symbols.
 
@@ -258,10 +258,10 @@ class SignalBase(np.ndarray):
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
-        if not synced:
-            symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx)
-        else:
+        if symbols_tx is None:
             symbols_tx = self.symbols
+        if not synced:
+            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx)
         snr = np.zeros(nmodes, dtype=np.float64)
         for i in range(nmodes):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols)
@@ -293,7 +293,7 @@ class SignalBase(np.ndarray):
         mm = np.sqrt(np.mean(np.abs(signal_rx) ** 2, axis=-1))
         signal_rx = signal_rx / mm[:, np.newaxis]
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx)
-        snr = self.est_snr(rx, synced=True)
+        snr = self.est_snr(rx, synced=True, symbols_tx=tx)
         bits = self.demodulate(self.quantize(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
@@ -343,17 +343,17 @@ class SignalBase(np.ndarray):
             1D array of complex symbol values. Normalised to energy of 1
         """
 
-    @abc.abstractmethod
-    def modulate(self):
-        pass
+    #@abc.abstractmethod
+    #def modulate(self):
+    #    pass
 
-    @abc.abstractmethod
-    def quantize(self):
-        pass
+#    @abc.abstractmethod
+#    def quantize(self):
+#        pass
 
-    @abc.abstractmethod
-    def demodulate(self):
-        pass
+    #@abc.abstractmethod
+    #def demodulate(self):
+    #    pass
 
 
 class SignalQAMGrayCoded(SignalBase):
@@ -768,7 +768,8 @@ class TDHQAMSymbols(SignalBase):
 
 
 class SignalWithPilots(SignalBase):
-    _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes"]
+    _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
+                     "_idx_dat"]
 
     @staticmethod
     def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):
@@ -875,24 +876,24 @@ class SignalWithPilots(SignalBase):
     def cal_ser(self, signal_rx=None, synced=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return self.symbols.cal_ser(signal_rx, synced)
+        return super().cal_ser(signal_rx, synced)
 
     def cal_ber(self, signal_rx=None, synced=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return self.symbols.cal_ber(signal_rx, synced)
+        return super().cal_ber(signal_rx, synced)
 
     def cal_evm(self, signal_rx=None, blind=False):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return self.symbols.cal_evm(signal_rx, blind)
+        return super().cal_evm(signal_rx, blind)
 
     def cal_gmi(self, signal_rx=None):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return self.symbols.cal_gmi(signal_rx)
+        return super().cal_gmi(signal_rx)
 
-    def est_snr(self, signal_rx=None, synced=False):
+    def est_snr(self, signal_rx=None, synced=False, symbols_tx=None):
         if signal_rx is None:
             signal_rx = self.get_data()
-        return self.symbols.est_snr(signal_rx, synced)
+        return super().est_snr(signal_rx, synced, symbols_tx)
