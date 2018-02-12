@@ -39,7 +39,7 @@ E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS,  (muCMA, m
 
 
 #evm = .cal_evm(sig[:, ::2])
-evm = sig.cal_evm()
+evm = sig[:,::2].cal_evm()
 evmE = E.cal_evm()
 evmE_m = E_m.cal_evm()
 evmE_s = E_s.cal_evm()
