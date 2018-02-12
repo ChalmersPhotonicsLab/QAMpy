@@ -39,12 +39,13 @@ def resample_poly(signal, fold, fnew, window=None, renormalise=False):
     L = len(signal)
     up, down = _resamplingfactors(fold, fnew)
     if window is None:
-        signal = scisig.resample_poly(signal, up, down)
+        sig_new = scisig.resample_poly(signal, up, down)
     else:
-        signal = scisig.resample_poly(signal, up, down, window=window)
+        sig_new = scisig.resample_poly(signal, up, down, window=window)
     if renormalise:
-        signal = normalise_and_center(signal)
-    return signal
+        p = np.mean(abs(signal)**2)
+        sig_new = normalise_and_center(sig_new)*np.sqrt(p)
+    return sig_new
 
 
 def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=0., renormalise=False):
@@ -84,9 +85,11 @@ def rrcos_resample_zeroins(signal, fold, fnew, Ts=None, beta=0., renormalise=Fal
     #nqf = rrcos_time(tup, beta, Ts)
     #nqf /= nqf.max()
     #sig_new = scisig.fftconvolve(sig_new, nqf, 'same')
-    sig_new = rrcos_pulseshaping(sig_new, up*fold, Ts, beta)
+    if not np.isclose(beta, 0):
+        sig_new = rrcos_pulseshaping(sig_new, up*fold, Ts, beta)
     if renormalise:
-        sig_new = normalise_and_center(sig_new[::down])
+        p = np.mean(abs(signal)**2)
+        sig_new = normalise_and_center(sig_new[::down])*np.sqrt(p)
     else:
         sig_new = sig_new[::down]
     return sig_new
@@ -135,5 +138,6 @@ def rrcos_resample_poly(signal, fold, fnew, Ts=None, beta=None, taps=4000, renor
     nqf /= nqf.max()
     sig_new = scisig.resample_poly(signal, up, down, window=nqf)
     if renormalise:
-        sig_new = normalise_and_center(sig_new)
+        p = np.mean(abs(signal)**2)
+        sig_new = normalise_and_center(sig_new)*np.sqrt(p)
     return sig_new
