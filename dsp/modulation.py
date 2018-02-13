@@ -224,7 +224,7 @@ class QAMModulator(object):
                 outdata = resample.resample_poly(baudrate, samplingrate, outdata)
             else:
                 os = samplingrate/baudrate
-                outdata = resample.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
+                outdata = resample.rrcos_resample(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
                 if snr is not None:
                     outdata = impairments.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
             outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
