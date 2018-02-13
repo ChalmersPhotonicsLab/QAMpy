@@ -1,5 +1,5 @@
 import numpy as np
-from .utils import rrcos_freq
+from .utils import rrcos_freq, rrcos_time
 import scipy.signal as scisig
 
 def pre_filter(signal, bw):
@@ -24,7 +24,6 @@ def pre_filter(signal, bw):
         return s.flatten()
     else:
         return s
-
 
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
     nyq = 0.5*fs
@@ -90,9 +89,10 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
     else:
         return sig2
 
-def rrcos_pulseshaping(sig, fs, T, beta):
+def _rrcos_pulseshaping_freq(sig, fs, T, beta):
     """
-    Root-raised cosine filter applied in the spectral domain.
+    Root-raised cosine filter in the spectral domain by multiplying the fft of the signal with the
+    frequency response of the rrcos filter.
 
     Parameters
     ----------
@@ -110,16 +110,46 @@ def rrcos_pulseshaping(sig, fs, T, beta):
     sign_out : array_like
         filtered signal in time domain
     """
-    sign = np.atleast_2d(sig)
-    f = np.linspace(-fs/2, fs/2, sign.shape[1], endpoint=False)
+    f = np.fft.fftfreq(sig.shape[0])*fs
     nyq_fil = rrcos_freq(f, beta, T)
     nyq_fil /= nyq_fil.max()
-    sig_f = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sign, axes=-1), axis=-1), axes=-1)
-    sig_out = np.fft.ifftshift(np.fft.ifft(np.fft.ifftshift(sig_f*nyq_fil, axes=-1), axis=-1), axes=-1)
-    if sig.ndim == 1:
-        return sig_out.flatten()
+    sig_f = np.fft.fft(np.fft.fftshift(sig))
+    sig_out = np.fft.ifftshift(np.fft.ifft(sig_f*nyq_fil))
+    return sig_out
+
+def rrcos_pulseshaping(sig, fs, T, beta, taps=1001):
+    """
+    Root-raised cosine filter applied in the time domain using fftconvolve.
+
+    Parameters
+    ----------
+    sig    : array_like
+        input time distribution of the signal
+    fs    : float
+        sampling frequency of the signal
+    T     : float
+        width of the filter (typically this is the symbol period)
+    beta  : float
+        filter roll-off factor needs to be in range [0, 1]
+    taps : int, optional
+        number of filter taps (if None do a spectral domain filter)
+
+    Returns
+    -------
+    sign_out : array_like
+        filtered signal in time domain
+    """
+    if taps is None:
+        return _rrcos_pulseshaping_freq(sig, fs, T, beta)
+    t = np.linspace(-taps/2, taps/2, taps, endpoint=False)/fs
+    nqt = rrcos_time(t, beta, T)
+    if sig.ndim > 1:
+        sig_out = np.zeros_like(sig)
+        for i in range(sig.shape[0]):
+            sig_out[i] = scisig.fftconvolve(sig[i], nqt, 'same')
     else:
-        return sig_out
+        sig_out = scisig.fftconvolve(sig, nqt, 'same')
+    return sig_out
 
 
 def moving_average(sig, N=3):
