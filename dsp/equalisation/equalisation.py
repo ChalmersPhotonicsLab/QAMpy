@@ -250,15 +250,17 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
             wy = _init_orthogonaltaps(wxy[0])
             wxy = [wxy[0],wy]
     else:
-        if pols == 2:
+        if pols > 1:
             Ntaps = wxy[0].shape[1]
         else:
             try:
+#               The following code makes no sense??? MIkael
                 wxy = wxy.flatten()
                 Ntaps = len(wxy)
                 wxy = [wxy.copy(),]
             except:
                 Ntaps = len(wxy[0])
+
     if not TrSyms:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
