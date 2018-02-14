@@ -141,7 +141,7 @@ def rrcos_pulseshaping(sig, fs, T, beta, taps=1001):
     """
     if taps is None:
         return _rrcos_pulseshaping_freq(sig, fs, T, beta)
-    t = np.linspace(-taps/2, taps/2, taps, endpoint=False)/fs
+    t = np.linspace(-taps//2, taps//2, taps, endpoint=False)/fs
     nqt = rrcos_time(t, beta, T)
     if sig.ndim > 1:
         sig_out = np.zeros_like(sig)

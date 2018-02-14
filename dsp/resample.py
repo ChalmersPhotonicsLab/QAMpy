@@ -79,7 +79,7 @@ def rrcos_resample(signal, fold, fnew, Ts=None, beta=None, taps=4001, renormalis
         Ts = 1/fold
     up, down = _resamplingfactors(fold, fnew)
     fup = up*fold
-    t = np.linspace(-taps/2, taps/2, taps, endpoint=False)/fup
+    t = np.linspace(-taps//2, taps//2, taps, endpoint=False)/fup
     nqf = rrcos_time(t, beta, Ts)
     nqf /= nqf.max()
     sig_new = scisig.resample_poly(signal, up, down, window=nqf)

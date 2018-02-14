@@ -106,7 +106,7 @@ class SignalBase(np.ndarray):
             return arr.copy().view(cls)
         onew = np.empty((arr.shape[0], int(os * arr.shape[1])), dtype=arr.dtype)
         for i in range(arr.shape[0]):
-            onew[i, :] = resample.rrcos_resample_zeroins(arr[i], fold, fnew, Ts=1 / fb, **kwargs)
+            onew[i, :] = resample.rrcos_resample(arr[i], fold, fnew, Ts=1 / fb, **kwargs)
         onew = np.asarray(onew).view(cls)
         cls._copy_inherits(arr, onew)
         return onew
