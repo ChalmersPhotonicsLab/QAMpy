@@ -501,6 +501,7 @@ class SignalQAMGrayCoded(SignalBase):
         obj = np.asarray(out).view(cls)
         obj._M = M
         obj._fb = fb
+        obj._fs = fb
         obj._bits = bits
         obj._encoding = encoding
         obj._code = graycode
@@ -526,6 +527,7 @@ class SignalQAMGrayCoded(SignalBase):
         obj = np.asarray(out).view(cls)
         obj._M = M
         obj._fb = fb
+        obj._fs = fb
         obj._bits = bits
         obj._encoding = encoding
         obj._code = graycode
