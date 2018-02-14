@@ -161,15 +161,18 @@ class TestQAMSymbolsGray(object):
         assert sn.fb == 1
 
     @pytest.mark.parametrize("os", np.arange(2, 5))
-    def test_resample2(self, os):
-        N = 1000
+    @pytest.mark.parametrize("ntaps", [4000, 4001, 2**14, 2**14+1, None])
+    def test_resample2(self, os, ntaps):
+        N = 2**16
+        #ntaps=4001
         Nn = os * N
         s = modulation.SignalQAMGrayCoded(128, N)
-        sn = s.resample(os, beta=0.2, renormalise=False)
-        si = sn.resample(1, beta=0.2, renormalise=False)
-        si /= abs(si).max()
-        s /= abs(s).max()
-        npt.assert_array_almost_equal(s, si)
+        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps)
+        si = sn.resample(1, beta=0.2, renormalise=True, taps=ntaps)
+        #si /= abs(si).max()
+        #s /= abs(s).max()
+        npt.assert_array_almost_equal(s, si, 2)
+
 
     @pytest.mark.parametrize("M", [4, 16, 32, 64])
     def test_scale(self, M):

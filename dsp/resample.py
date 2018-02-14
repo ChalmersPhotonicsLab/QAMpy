@@ -79,10 +79,18 @@ def rrcos_resample(signal, fold, fnew, Ts=None, beta=None, taps=4001, renormalis
         Ts = 1/fold
     up, down = _resamplingfactors(fold, fnew)
     fup = up*fold
-    t = np.linspace(-taps//2, taps//2, taps, endpoint=False)/fup
-    nqf = rrcos_time(t, beta, Ts)
-    nqf /= nqf.max()
-    sig_new = scisig.resample_poly(signal, up, down, window=nqf)
+    if taps is None or taps > signal.size/4 or taps > 2**13:
+        sig_new = np.zeros((up*signal.size,), dtype=signal.dtype)
+        sig_new[::up] = signal
+        sig_new = rrcos_pulseshaping(sig_new, fnew, Ts, beta, taps)
+        sig_new = sig_new[::down]
+    else:
+        t = np.linspace(0, taps, endpoint=False)
+        t -= t[(t.size-1)//2]
+        t /= fup
+        nqf = rrcos_time(t, beta, Ts)
+        nqf /= nqf.max()
+        sig_new = scisig.resample_poly(signal, up, down, window=nqf)
     if renormalise:
         p = np.mean(abs(signal)**2)
         sig_new = normalise_and_center(sig_new)*np.sqrt(p)
