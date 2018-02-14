@@ -151,28 +151,50 @@ class TestQAMSymbolsGray(object):
         assert s.shape == (nmodes, Nn)
 
     @pytest.mark.parametrize("os", np.arange(2, 5))
-    def test_resample(self, os):
+    @pytest.mark.parametrize("fftconv", [True, False])
+    def test_resample(self, os, fftconv):
         N = 1000
         Nn = os * N
         s = modulation.SignalQAMGrayCoded(128, N)
-        sn = s.resample(os, beta=0.2, renormalise=False)
+        sn = s.resample(os, beta=0.2, renormalise=False, fftconv=fftconv)
         assert sn.fs == os
         assert s.fb ==1
         assert sn.fb == 1
 
+    @pytest.mark.parametrize("fftconv", [True, False])
     @pytest.mark.parametrize("os", np.arange(2, 5))
-    @pytest.mark.parametrize("ntaps", [4000, 4001, 2**14, 2**14+1, None])
-    def test_resample2(self, os, ntaps):
+    @pytest.mark.parametrize("ntaps", [4000, 4001, None]) # taps should hit all filter cases
+    def test_resample2(self, fftconv, os, ntaps):
         N = 2**16
-        #ntaps=4001
         Nn = os * N
         s = modulation.SignalQAMGrayCoded(128, N)
-        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps)
-        si = sn.resample(1, beta=0.2, renormalise=True, taps=ntaps)
-        #si /= abs(si).max()
-        #s /= abs(s).max()
-        npt.assert_array_almost_equal(s, si, 2)
+        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        si = sn.resample(1, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        npt.assert_array_almost_equal(s[10:-10], si[10:-10], 2) # need to not ignore edges due to errors there
 
+    @pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("ntaps", [4000, 4001, None])
+    def test_resample_filter(self, fftconv, ntaps):
+        # test to check if filtering is actually working
+        # as I had bug where resample did not filter
+        N = 2**16
+        os = 2
+        s = modulation.SignalQAMGrayCoded(128, N)
+        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        sp = abs(np.fft.fftshift(np.fft.fft(sn[0])))**2
+        assert sp[2*N//8] < sp.max()/1000
+
+    @pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("ntaps", [4000, 4001, None])
+    def test_resample_filter2(self, fftconv, ntaps):
+        # test to check if filtering is actually working
+        # as I had bug where resample did not filter
+        N = 2**16
+        os = 2
+        s = modulation.SignalQAMGrayCoded(128, N)
+        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        sp = abs(np.fft.fftshift(np.fft.fft(sn[0])))**2
+        assert np.mean(sp[0:int(1/8*sp.size)]) < np.mean(sp[int(3/8*sp.size):int(1/2*sp.size)])/1000
 
     @pytest.mark.parametrize("M", [4, 16, 32, 64])
     def test_scale(self, M):
@@ -180,7 +202,6 @@ class TestQAMSymbolsGray(object):
         s = modulation.SignalQAMGrayCoded(M, N, nmodes=1)
         p = np.mean(abs(s.coded_symbols)**2)
         npt.assert_almost_equal(p, 1)
-
 
 
 class TestPilotSignal(object):
