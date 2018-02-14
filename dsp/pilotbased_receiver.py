@@ -8,6 +8,33 @@ Created on Sat May 27 17:11:02 2017
 
 import numpy as np
 from dsp import equalisation, phaserecovery
+import matplotlib.pylab as plt
+import copy
+
+def pre_filter(signal, bw, os,center_freq = 0):
+    """
+    Low-pass pre-filter signal with square shape filter
+
+    Parameters
+    ----------
+
+    signal : array_like
+        single polarization signal
+
+    bw     : float
+        bandwidth of the rejected part, given as fraction of overall length
+    """
+    N = len(signal)
+    freq_axis = np.fft.fftfreq(N, 1 / os)
+
+    idx = np.where(abs(freq_axis-center_freq) < bw / 2)
+
+    h = np.zeros(N, dtype=np.float64)
+    # h[int(N/(bw/2)):-int(N/(bw/2))] = 1
+    h[idx] = 1
+    s = np.fft.ifftshift(np.fft.ifft(np.fft.fft(signal) * h))
+    return s
+
 def pilot_based_foe(rec_symbs,pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
@@ -349,8 +376,9 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
     return eq_pilots, foePerMode, out_taps, shift_factor
 
 
-def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None,blind_foe_payload=False):
+def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None,blind_foe_payload=False,ch_sep=2):
     
+    rx_signal_2 = copy.deepcopy(rx_signal)
     
     # Check for propper dim
     if not len(rx_signal) == 3:
@@ -371,11 +399,12 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         raise ValueError("Different number of modes in the signal and reference symbosl")
     
     # Inital settings
-    rx_signal_center = np.atleast_2d(rx_signal[1])       
+    rx_signal_center = rx_signal_2[1]
     pilot_seq_len = len(ref_symbs_center[0,:])    
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     tmp_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     out_taps = []
+
 
     # Tap update and extract the propper pilot sequuence    
     if not((ntaps[1]-ntaps[0])%os  ==  0):
@@ -390,56 +419,71 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
             wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
             symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
             tmp_pilots[l,:] = symbs_out[l,:]
-       
+
         foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs_center)
-        foePerMode = np.ones(foePerMode.shape)*np.mean(foePerMode)
-        
-        # extract other signals
-#        sig_left = rx_signal[0][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-#        sig_right = rx_signal[2][:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+        foePerMode = np.ones(foePerMode.shape)*np.mean(foePerMode)*0
         
         # Apply FO-compensation, create final signal
-        sig_dc_left = phaserecovery.comp_freq_offset(rx_signal[0],foePerMode,os=os)
+        sig_dc_left = phaserecovery.comp_freq_offset(rx_signal_2[0],foePerMode,os=os)
+        #sig_dc_left[0] = pre_filter(sig_dc_left[0],0.02,os,center_freq=ch_sep/2)
+        #sig_dc_left[1] = pre_filter(sig_dc_left[1],0.02,os,center_freq=ch_sep/2)
+
+        
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal_center,foePerMode,os=os)
-        sig_dc_right = phaserecovery.comp_freq_offset(rx_signal[1],foePerMode,os=os)
+        
+        sig_dc_right = phaserecovery.comp_freq_offset(rx_signal_2[2],foePerMode,os=os)
+        #sig_dc_right[0] = pre_filter(sig_dc_right[0],0.02,os,center_freq=-ch_sep/2)
+        #sig_dc_right[1] = pre_filter(sig_dc_right[1],0.02,os,center_freq=-ch_sep/2)
+
+
+        sig_dc_left *= np.exp(-1j*2*np.pi*ch_sep*np.linspace(0,sig_dc_left.shape[1]/os,sig_dc_left.shape[1]))
+        sig_dc_right *= np.exp(1j*2*np.pi*ch_sep*np.linspace(0,sig_dc_right.shape[1]/os,sig_dc_right.shape[1]))
+        full_spec_combined = np.concatenate((sig_dc_left,sig_dc_center,sig_dc_right),axis=0)
+        
+
+
     else:
         # Signal should be DC-centered. Do nothing. 
         sig_dc_center = rx_signal_center
         foePerMode = np.zeros([npols,1])
         
     # First step Eq
+    data_out = []
     for l in range(npols):
         pilot_seq = sig_dc_center[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
         wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
-        
-        pilot_seq_wdm = np.concatenate((sig_dc_left,sig_dc_center,sig_dc_right),axis=0)
-        pilot_seq_wdm = pilot_seq_wdm[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
 
-        for pol in range(len(wxy_init)):
-            wxy_init[pol] = np.concatenate((np.zeros(wxy_init[pol].shape,dtype=complex),wxy_init[pol],np.zeros(wxy_init[pol].shape,dtype=complex)),axis=0)
-        
+        pilot_seq_wdm = full_spec_combined[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
         wxy_init_wdm = []
-        wxy_init_wdm.append(np.zeros(wxy_init[0].shape,dtype=complex))
-        wxy_init_wdm.append(np.zeros(wxy_init[1].shape,dtype=complex))
-        wxy_init_wdm.append(wxy_init[0])
-        wxy_init_wdm.append(wxy_init[1])        
-        wxy_init_wdm.append(np.zeros(wxy_init[0].shape,dtype=complex))
-        wxy_init_wdm.append(np.zeros(wxy_init[1].shape,dtype=complex))
+        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
+        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
+        wxy_init_wdm.append(np.vstack((np.zeros(ntaps[1],dtype=complex),
+                                       np.zeros(ntaps[1],dtype=complex),
+                                       wxy_init[0][0],wxy_init[0][1],
+                                       np.zeros(ntaps[1],dtype=complex),
+                                       np.zeros(ntaps[1],dtype=complex))))
         
-        #wxy_wdm = np.vstack((np.zeros(wxy_init.shape),wxy_init,np.zeros(wxy_init.shape)))
+        wxy_init_wdm.append(np.vstack((np.zeros(ntaps[1],dtype=complex),np.zeros(ntaps[1],dtype=complex),
+                                                     wxy_init[1][0],wxy_init[1][1],np.zeros(ntaps[1],dtype=complex),
+                                                     np.zeros(ntaps[1],dtype=complex))))          
+        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
+        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
 
-        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+
+        #wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, 1e-4, 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
         out_taps.append(wx)
-        symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,out_taps[l])
-        print("Hej")
-        print(symbs_out.shape)
+        symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,wx)
         eq_pilots[l,:] = symbs_out[2+l,:]
 
 
-
-
-
-#
+        rx_mode_sig = full_spec_combined[:,shift_factor[l] - tap_cor:shift_factor[l] - tap_cor + frame_length * os + ntaps[1] - 1]
+        symbs_out_tmp = equalisation.apply_filter(rx_mode_sig,os,wx)
+        plt.figure()
+        plt.hist2d(symbs_out_tmp[l+2].flatten().real,symbs_out_tmp[l+2].flatten().imag,bins=200)
+        plt.title("Inside Func")
+        data_out.append(symbs_out_tmp[l+2])
+#   
 #    # Equalize using additional frames if selected
 #    for frame_id in range(0,process_frame_id+1):
 #        for l in range(npols):
@@ -453,7 +497,7 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
 #                eq_pilots[l,:] = symbs_out[l,:]
 #                shift_factor[l] = shift_factor[l] + process_frame_id*os*frame_length  
 
-    return eq_pilots, foePerMode, out_taps, shift_factor
+    return eq_pilots, foePerMode, out_taps, shift_factor, full_spec_combined,data_out
 
 def find_const_phase_offset(rec_pilots, ref_symbs):
     """
