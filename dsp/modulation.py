@@ -625,6 +625,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         obj = np.asarray(out).view(cls)
         M = coded_symbols.size
         obj._M = M
+        obj._coded_symbols = coded_symbols
         obj._fb = fb
         obj._fs = fb
         obj._symbols = obj.copy()

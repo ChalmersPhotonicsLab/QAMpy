@@ -646,3 +646,31 @@ class TestSymbolOnlySignal(object):
         d = np.min(abs(s[0, :, np.newaxis] - syms), axis=1)
         npt.assert_almost_equal(0, d)
 
+    def test_from_array_class(self):
+        syms = theory.cal_symbols_qam(32)
+        symsN = np.random.choice(syms, (1, 1000))
+        s = modulation.SymbolOnlySignal(32, 20, syms, nmodes=1)
+        s2 = modulation.SymbolOnlySignal.from_symbol_array(symsN)
+        assert type(s) is type(s2)
+
+    @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
+    def test_from_array_coded_symbols(self, M):
+        syms = theory.cal_symbols_qam(M)
+        symsN = np.random.choice(syms, (1, 1000))
+        s = modulation.SymbolOnlySignal.from_symbol_array(symsN)
+        d = np.min(abs(s.coded_symbols[:, np.newaxis] - syms), axis=1)
+        npt.assert_almost_equal(0, d)
+
+    @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
+    def test_from_array_coded_symbols2(self, M):
+        syms = theory.cal_symbols_qam(M)
+        symsN = np.random.choice(syms, (1, 4000))
+        s = modulation.SymbolOnlySignal.from_symbol_array(symsN)
+        assert s.coded_symbols.size == M
+
+    def test_from_array_coded_symbols3(self):
+        syms = theory.cal_symbols_qam(32)
+        symsN = np.random.choice(syms, (1, 1000))
+        s = modulation.SymbolOnlySignal.from_symbol_array(symsN, coded_symbols=syms)
+        npt.assert_array_almost_equal(s.coded_symbols, syms)
+
