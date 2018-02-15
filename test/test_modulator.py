@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import modulation
+from dsp import modulation, theory
 
 def _flip_symbols(sig, idx, d, mode=0):
     for i in idx:
@@ -632,4 +632,17 @@ class TestPilotSignalQualityOnSignal(object):
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
 
+class TestSymbolOnlySignal(object):
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    @pytest.mark.parametrize("N", [2**i for i in np.arange(10, 14)])
+    def test_shape(self, nmodes, N):
+        syms = theory.cal_symbols_qam(32)
+        s = modulation.SymbolOnlySignal(32, N, syms, nmodes=nmodes)
+        assert s.shape == (nmodes, N)
+
+    def test_syms_from_set(self):
+        syms = theory.cal_symbols_qam(32)
+        s = modulation.SymbolOnlySignal(32, 20, syms, nmodes=1)
+        d = np.min(abs(s[0, :, np.newaxis] - syms), axis=1)
+        npt.assert_almost_equal(0, d)
 
