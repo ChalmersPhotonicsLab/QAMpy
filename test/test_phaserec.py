@@ -1,37 +1,37 @@
 import pytest
 import numpy as np
-from dsp import modulation, impairments, phaserecovery
+from dsp import modulation, impairments, phaserec
 from dsp.core import phaserecovery as cphaserecovery
 
 class TestReturnObject(object):
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_viterbi(self, ndim):
         s = modulation.SignalQAMGrayCoded(4, 2**16, fb=20e9,  nmodes=ndim)
-        s2, ph = phaserecovery.viterbiviterbi(s, 10, 4)
+        s2, ph = phaserec.viterbiviterbi(s, 10, 4)
         assert type(s2) is type(s)
 
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_bps(self, ndim):
         s = modulation.SignalQAMGrayCoded(32, 2**16, fb=20e9,  nmodes=ndim)
-        s2, ph = phaserecovery.bps(s, 32 , s.coded_symbols, 10)
+        s2, ph = phaserec.bps(s, 32, s.coded_symbols, 10)
         assert type(s2) is type(s)
 
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_bps_twostage(self, ndim):
         s = modulation.SignalQAMGrayCoded(32, 2**16, fb=20e9,  nmodes=ndim)
-        s2, ph = phaserecovery.bps_twostage(s, 32 , s.coded_symbols, 10)
+        s2, ph = phaserec.bps_twostage(s, 32, s.coded_symbols, 10)
         assert type(s2) is type(s)
 
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_phase_partition_16qam(self, ndim):
         s = modulation.SignalQAMGrayCoded(16, 2**16, fb=20e9,  nmodes=ndim)
-        s2, ph = phaserecovery.phase_partition_16qam(s, 10)
+        s2, ph = phaserec.phase_partition_16qam(s, 10)
         assert type(s2) is type(s)
 
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_comp_freq_offset(self, ndim):
         s = modulation.SignalQAMGrayCoded(16, 2**16, fb=20e9,  nmodes=ndim)
-        s2 = phaserecovery.comp_freq_offset(s, np.ones(ndim)*1e6 )
+        s2 = phaserec.comp_freq_offset(s, np.ones(ndim) * 1e6)
         assert type(s2) is type(s)
 
 class Test2DCapability(object):
