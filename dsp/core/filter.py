@@ -174,6 +174,7 @@ def moving_average(sig, N=3):
     """
     sign = np.atleast_2d(sig)
     ret = np.cumsum(np.insert(sign, 0,0, axis=-1), dtype=float, axis=-1)
+    return ret
     if sig.ndim == 1:
         return ((ret[:, N:] - ret[:,:-N])/N).flatten()
     else:

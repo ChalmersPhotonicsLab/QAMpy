@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from dsp import resample
+from dsp.core import resample
 
 
 @pytest.mark.parametrize("arr", [np.random.randn(N)+1.j*np.random.randn(N)

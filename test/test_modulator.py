@@ -508,11 +508,11 @@ class TestSignal(object):
         N = 1000
         Nn = os * N
         s = modulation.SignalQAMGrayCoded(128, N)
-        sn = modulation.ResampledQAM.from_symbol_array(s, fs=os, beta=0.2, renormalise=False)
-        si = sn.resample(1, beta=0.2, renormalise=False)
-        si /= abs(si).max()
-        s /= abs(s).max()
-        npt.assert_array_almost_equal(s, si)
+        sn = modulation.ResampledQAM.from_symbol_array(s, fs=os, beta=0.2, renormalise=True)
+        si = sn.resample(1, beta=0.2, renormalise=True)
+        #si /= abs(si).max()
+        #s /= abs(s).max()
+        npt.assert_array_almost_equal(s[10:-10], si[10:-10])
 
     @pytest.mark.parametrize("os", np.arange(2, 5))
     def test_from_symbol_array(self, os):
