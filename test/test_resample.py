@@ -5,11 +5,11 @@ import numpy.testing as npt
 from dsp.core import resample, utils
 
 
-class TestRRcosZeroins(object):
+class TestRRcosresample(object):
     @pytest.mark.parametrize("N", np.arange(1, 6))
     def test_len(self, N):
         x = np.random.randn(1000) + 1.j
-        xn = resample.rrcos_resample(x, fold=1, fnew=N, Ts=None, beta=0.)
+        xn = resample.rrcos_resample(x, fold=1, fnew=N, Ts=None, beta=0.1)
         assert xn.shape[0] == x.shape[0]*N
 
     @pytest.mark.parametrize("beta", np.linspace(0.1, 2, 20))

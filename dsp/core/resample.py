@@ -79,6 +79,7 @@ def rrcos_resample(signal, fold, fnew, Ts=None, beta=None, taps=4001, renormalis
     """
     if beta is None:
         return resample_poly(signal, fold, fnew)
+    assert 0 < beta <= 1, "beta needs to be in interval (0,1]"
     if Ts is None:
         Ts = 1/fold
     up, down = _resamplingfactors(fold, fnew)
