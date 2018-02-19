@@ -115,7 +115,7 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
 
         # Upsample and pulse shaping
         if os > 1:
-            sig[l, :] = resample.rrcos_resample_zeroins(curr_frame, 1, os, beta=beta, renormalise=True)
+            sig[l, :] = resample.rrcos_resample(curr_frame, 1, os, beta=beta, renormalise=True)
 
         # Add AWGN
         if snr is not None:

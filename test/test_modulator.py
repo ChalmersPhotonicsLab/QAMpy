@@ -153,25 +153,50 @@ class TestQAMSymbolsGray(object):
         assert s.shape == (nmodes, Nn)
 
     @pytest.mark.parametrize("os", np.arange(2, 5))
-    def test_resample(self, os):
+    @pytest.mark.parametrize("fftconv", [True, False])
+    def test_resample(self, os, fftconv):
         N = 1000
         Nn = os * N
         s = modulation.SignalQAMGrayCoded(128, N)
-        sn = s.resample(os, beta=0.2, renormalise=False)
+        sn = s.resample(os, beta=0.2, renormalise=False, fftconv=fftconv)
         assert sn.fs == os
         assert s.fb ==1
         assert sn.fb == 1
 
+    @pytest.mark.parametrize("fftconv", [True, False])
     @pytest.mark.parametrize("os", np.arange(2, 5))
-    def test_resample2(self, os):
-        N = 1000
+    @pytest.mark.parametrize("ntaps", [4000, 4001, None]) # taps should hit all filter cases
+    def test_resample2(self, fftconv, os, ntaps):
+        N = 2**16
         Nn = os * N
         s = modulation.SignalQAMGrayCoded(128, N)
-        sn = s.resample(os, beta=0.2, renormalise=False)
-        si = sn.resample(1, beta=0.2, renormalise=False)
-        si /= abs(si).max()
-        s /= abs(s).max()
-        npt.assert_array_almost_equal(s, si)
+        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        si = sn.resample(1, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        npt.assert_array_almost_equal(s[10:-10], si[10:-10], 2) # need to not ignore edges due to errors there
+
+    @pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("ntaps", [4000, 4001, None])
+    def test_resample_filter(self, fftconv, ntaps):
+        # test to check if filtering is actually working
+        # as I had bug where resample did not filter
+        N = 2**16
+        os = 2
+        s = modulation.SignalQAMGrayCoded(128, N)
+        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        sp = abs(np.fft.fftshift(np.fft.fft(sn[0])))**2
+        assert sp[2*N//8] < sp.max()/1000
+
+    @pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("ntaps", [4000, 4001, None])
+    def test_resample_filter2(self, fftconv, ntaps):
+        # test to check if filtering is actually working
+        # as I had bug where resample did not filter
+        N = 2**16
+        os = 2
+        s = modulation.SignalQAMGrayCoded(128, N)
+        sn = s.resample(os, beta=0.2, renormalise=True, taps=ntaps, fftconv=fftconv)
+        sp = abs(np.fft.fftshift(np.fft.fft(sn[0])))**2
+        assert np.mean(sp[0:int(1/8*sp.size)]) < np.mean(sp[int(3/8*sp.size):int(1/2*sp.size)])/1000
 
     @pytest.mark.parametrize("M", [4, 16, 32, 64])
     def test_scale(self, M):
@@ -694,4 +719,45 @@ class TestPilotSignalQualityOnSignal(object):
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
 
+class TestSymbolOnlySignal(object):
+    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    @pytest.mark.parametrize("N", [2**i for i in np.arange(10, 14)])
+    def test_shape(self, nmodes, N):
+        syms = theory.cal_symbols_qam(32)
+        s = modulation.SymbolOnlySignal(32, N, syms, nmodes=nmodes)
+        assert s.shape == (nmodes, N)
+
+    def test_syms_from_set(self):
+        syms = theory.cal_symbols_qam(32)
+        s = modulation.SymbolOnlySignal(32, 20, syms, nmodes=1)
+        d = np.min(abs(s[0, :, np.newaxis] - syms), axis=1)
+        npt.assert_almost_equal(0, d)
+
+    def test_from_array_class(self):
+        syms = theory.cal_symbols_qam(32)
+        symsN = np.random.choice(syms, (1, 1000))
+        s = modulation.SymbolOnlySignal(32, 20, syms, nmodes=1)
+        s2 = modulation.SymbolOnlySignal.from_symbol_array(symsN)
+        assert type(s) is type(s2)
+
+    @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
+    def test_from_array_coded_symbols(self, M):
+        syms = theory.cal_symbols_qam(M)
+        symsN = np.random.choice(syms, (1, 1000))
+        s = modulation.SymbolOnlySignal.from_symbol_array(symsN)
+        d = np.min(abs(s.coded_symbols[:, np.newaxis] - syms), axis=1)
+        npt.assert_almost_equal(0, d)
+
+    @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
+    def test_from_array_coded_symbols2(self, M):
+        syms = theory.cal_symbols_qam(M)
+        symsN = np.random.choice(syms, (1, 4000))
+        s = modulation.SymbolOnlySignal.from_symbol_array(symsN)
+        assert s.coded_symbols.size == M
+
+    def test_from_array_coded_symbols3(self):
+        syms = theory.cal_symbols_qam(32)
+        symsN = np.random.choice(syms, (1, 1000))
+        s = modulation.SymbolOnlySignal.from_symbol_array(symsN, coded_symbols=syms)
+        npt.assert_array_almost_equal(s.coded_symbols, syms)
 

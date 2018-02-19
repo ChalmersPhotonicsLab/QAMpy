@@ -108,7 +108,7 @@ class SignalBase(np.ndarray):
             return arr.copy().view(cls)
         onew = np.empty((arr.shape[0], int(os * arr.shape[1])), dtype=arr.dtype)
         for i in range(arr.shape[0]):
-            onew[i, :] = resample.rrcos_resample_zeroins(arr[i], fold, fnew, Ts=1 / fb, **kwargs)
+            onew[i, :] = resample.rrcos_resample(arr[i], fold, fnew, Ts=1 / fb, **kwargs)
         onew = np.asarray(onew).view(cls)
         cls._copy_inherits(arr, onew)
         return onew
@@ -345,7 +345,6 @@ class SignalBase(np.ndarray):
             1D array of complex symbol values. Normalised to energy of 1
         """
 
-
 class SignalQAMGrayCoded(SignalBase):
     _inheritattr_ = ["_symbols", "_bits", "_encoding", "_bitmap_mtx",  "_code",
                      "_coded_symbols" ]
@@ -425,6 +424,7 @@ class SignalQAMGrayCoded(SignalBase):
         obj = np.asarray(out).view(cls)
         obj._M = M
         obj._fb = fb
+        obj._fs = fb
         obj._bits = bits
         obj._encoding = encoding
         obj._code = graycode
@@ -450,6 +450,7 @@ class SignalQAMGrayCoded(SignalBase):
         obj = np.asarray(out).view(cls)
         obj._M = M
         obj._fb = fb
+        obj._fs = fb
         obj._bits = bits
         obj._encoding = encoding
         obj._code = graycode
@@ -579,6 +580,85 @@ class SignalQAMGrayCoded(SignalBase):
         """
         return self._demodulate(symbols, self._encoding)
 
+
+class SymbolOnlySignal(SignalQAMGrayCoded):
+    _inheritattr_ = ["_symbols",  "_coded_symbols" ]
+
+    def __new__(cls, M, N, symbols, nmodes=1, fb=1):
+        coded_symbols = symbols
+        obj = np.random.choice(symbols, (nmodes, N))
+        obj = obj.view(cls)
+        obj._coded_symbols = coded_symbols
+        obj._M = M
+        obj._fb = fb
+        obj._fs = fb
+        obj._symbols = obj.copy()
+        return obj
+
+    def quantize(self, signal=None):
+        """
+        Make symbol decisions based on the input field. Decision is made based on difference from constellation points
+
+        Parameters
+        ----------
+        signal   : array_like
+            2D array of the input signal
+
+        Returns
+        -------
+        symbols  : array_like
+            2d array of the detected symbols
+        """
+        signal = self._signal_present(signal)
+        outsyms = np.zeros_like(signal)
+        for i in range(signal.shape[0]):
+            outsyms[i] = quantize(signal[i], self.coded_symbols)
+        return outsyms
+
+    @classmethod
+    def from_symbol_array(cls, symbs, coded_symbols=None, fb=1):
+        symbs = np.atleast_2d(symbs)
+        if coded_symbols is None:
+            coded_symbols = np.unique(symbs).flatten()
+        # not sure if this is really necessary, but avoids numerical error issues
+        out = np.empty_like(symbs)
+        for i in range(symbs.shape[0]):
+            out[i] = quantize(symbs[i], coded_symbols)
+        obj = np.asarray(out).view(cls)
+        M = coded_symbols.size
+        obj._M = M
+        obj._coded_symbols = coded_symbols
+        obj._fb = fb
+        obj._fs = fb
+        obj._symbols = obj.copy()
+        return obj
+
+    @staticmethod
+    def _demodulate(symbols, encoding):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits")
+
+    @staticmethod
+    def _modulate(data, encoding, M, dtype=np.complex128):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits")
+
+    def demodulate(self, symbols):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits")
+
+    def modulate(self, data):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits")
+
+    @classmethod
+    def from_bit_array(cls, bits, M, fb=1):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits")
+
+    def cal_gmi(self, signal_rx=None):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits gmi calculation not possible")
+
+    def cal_ber(self, signal_rx=None):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits ber calculation not possible")
+
+    def est_snr(self, signal_rx=None):
+        raise NotImplementedError("SymbolOnlySignal class does not have bits snr estimation not possible")
 
 class ResampledQAM(SignalQAMGrayCoded):
 
