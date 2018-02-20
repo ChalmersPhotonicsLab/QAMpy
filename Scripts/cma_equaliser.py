@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation
-from dsp.core import impairments
+from dsp import equalisation, modulation, impairments
 
 fb = 40.e9
 os = 2
@@ -13,42 +12,39 @@ theta2 = np.pi/4
 t_pmd = 75e-12
 M = 4
 ntaps=40
+snr =  12
 
-QAM = modulation.QAMModulator(M)
+sig = modulation.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
+S = sig.resample(fs, renormalise=True, beta=0.2)
+S = impairments.change_snr(S, snr)
 
-S, s, b = QAM.generate_signal(N, 14, baudrate=fb, samplingrate=fs)
-
-SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
-wxy, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="cma")
-wxy_m, err_m = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="mcma")
-E = equalisation.apply_filter(SS, os, wxy)
-E_m = equalisation.apply_filter(SS, os, wxy_m)
+SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
+wxy, err = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="cma")
+wxy_m, err_m = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="mcma")
+E = equalisation.apply_filter(SS,  wxy)
+E_m = equalisation.apply_filter(SS, wxy_m)
 print(E.shape)
 print(SS.shape)
 
-
-evmX = QAM.cal_evm(S[0, ::2])
-evmY = QAM.cal_evm(S[1, ::2])
-evmEx = QAM.cal_evm(E[0])
-evmEy = QAM.cal_evm(E[1])
-evmEx_m = QAM.cal_evm(E_m[0])
-evmEy_m = QAM.cal_evm(E_m[1])
+evm = E.cal_evm()
+evm_m = E_m.cal_evm()
+evm0 = S[:, ::2].cal_evm()
 #sys.exit()
 plt.figure()
 plt.subplot(131)
 plt.title('Recovered CMA')
-plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx))
-plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy*100))
+plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evm[0]))
+plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evm[1]*100))
 plt.legend()
 plt.subplot(132)
 plt.title('Recovered MCMA')
-plt.plot(E_m[0].real, E_m[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmEx_m))
-plt.plot(E_m[1].real, E_m[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evmEy_m*100))
+plt.plot(E_m[0].real, E_m[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evm_m[0]))
+plt.plot(E_m[1].real, E_m[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evm_m[1]*100))
 plt.legend()
 plt.subplot(133)
 plt.title('Original')
-plt.plot(S[0,::2].real, S[0,::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evmX))
-plt.plot(S[1,::2].real, S[1,::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evmY))
+plt.plot(S[0,::2].real, S[0,::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evm0[0]))
+plt.plot(S[1,::2].real, S[1,::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evm0[1]))
 plt.legend()
 
 plt.figure()
