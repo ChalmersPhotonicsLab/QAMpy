@@ -1,7 +1,8 @@
 import pytest
 import numpy as np
+import numpy.testing as npt
 
-from dsp import modulation, impairments
+from dsp import modulation, impairments, theory, helpers
 
 
 class TestReturnObjects(object):
@@ -56,3 +57,14 @@ class TestReturnObjects(object):
     def test_add_awgn_attr(self, attr):
         s2 = impairments.add_awgn(self.s, 0.01)
         assert getattr(self.s, attr) is getattr(s2, attr)
+
+@pytest.mark.parametrize("M", [4, 16, 64, 128])
+@pytest.mark.parametrize("snr", [0, 2, 4])
+def test_snrvstheory_ser(M, snr):
+    off = {4: 6, 16: 13, 64: 18, 128: 20}
+    s = modulation.SignalQAMGrayCoded(M, 2**16)
+    ss = impairments.change_snr(s, snr+off[M])
+    ser = ss.cal_ser()
+    ser_t = theory.ser_vs_es_over_n0_qam(10**((snr+off[M])/10), M)
+    npt.assert_allclose(ser, ser_t, rtol=0.3)
+
