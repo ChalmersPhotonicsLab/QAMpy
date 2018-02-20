@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import dsp.helpers
-from dsp.core import filter, utils
-from dsp import modulation, theory
+from dsp import filtering
+from dsp import modulation, theory, impairments
 
 """
 Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]
@@ -19,7 +19,6 @@ snrf = np.linspace(5, 30, 500)
 evmf = np.linspace(-30, 0, 500)
 N = 2**16
 Mqams = [ 4, 16, 64, 128]
-
 plt.figure()
 ax1 = plt.subplot(221)
 ax2 = plt.subplot(222)
@@ -71,16 +70,17 @@ for M in Mqams:
     i = 0
     for sr in snr:
         print("SNR = %2f.0 dB"%sr)
-        modulator = modulation.QAMModulator(M)
-        signal, syms, bits = modulator.generate_signal(N, sr, samplingrate=fs, baudrate=fb, beta=beta, dual_pol=False)
-        signalx = np.atleast_2d(filter.rrcos_pulseshaping(signal, fs, 1 / fb, beta))
-        signalafter = np.atleast_2d(signalx[0,::2])
-        evm1[i] = modulator.cal_evm(signalafter[0])
-        evm_known[i] = modulator.cal_evm(signalafter[0], syms)
+        #modulator = modulation.QAMModulator(M)
+        signal = modulation.SignalQAMGrayCoded(M, N, nmodes=1, fb=fb)
+        signal = signal.resample(fnew=fs, beta=beta, renormalise=True)
+        signal_s  = impairments.change_snr(signal, sr)
+        signalafter = signal_s.resample(signal.fb, beta=beta, renormalise=True)
+        evm1[i] = signalafter.cal_evm(blind=True)
+        evm_known[i] = signalafter.cal_evm()
         # check to see that we can recovery timing delay
-        signalafter = np.roll(signalafter * 1.j**np.random.randint(0,4), np.random.randint(4, 3000))
-        ser[i] = modulator.cal_ser(signalafter[0], symbol_tx=syms)
-        ber[i] = modulator.cal_ber(signalafter[0], bits_tx=bits)
+        signalafter = np.roll(signalafter * 1.j**np.random.randint(0,4), np.random.randint(4, 3000), axis=1)
+        ser[i] = signalafter.cal_ser()
+        ber[i] = signalafter.cal_ber()
         i += 1
     ax1.plot(snrf, theory.ber_vs_es_over_n0_qam(10 ** (snrf / 10), M), color=c[j], label="%d-QAM theory" % M)
     ax1.plot(snr, ber, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
