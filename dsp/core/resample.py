@@ -2,7 +2,8 @@ import fractions
 import numpy as np
 from scipy import signal as scisig
 
-from .utils import normalise_and_center, rrcos_time, rrcos_freq
+from .utils import normalise_and_center
+from dsp.core.special_fcts import rrcos_freq, rrcos_time
 from .filter import rrcos_pulseshaping
 
 

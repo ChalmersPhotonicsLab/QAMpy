@@ -1,20 +1,11 @@
 from __future__ import division
 import numpy as np
 from scipy.special import erfc
-from dsp.core.utils import bin2gray, dB2lin
+
+from .core.special_fcts import q_function
+from .core.utils import bin2gray, dB2lin
 
 # All the formulas below are taken from dsplog.com
-
-def q_function(x):
-    """The Q function is the tail probability of the standard normal distribution see _[1,2] for a definition and its relation to the erfc. In _[3] it is called the Gaussian co-error function.
-
-    References
-    ----------
-    ...[1] https://en.wikipedia.org/wiki/Q-function
-    ...[2] https://en.wikipedia.org/wiki/Error_function#Integral_of_error_function_with_Gaussian_density_function
-    ...[3] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
-    """
-    return 0.5*erfc(x/np.sqrt(2))
 
 def ser_vs_es_over_n0_qam(snr, M):
     """Calculate the symbol error rate (SER) of an M-QAM signal as a function
@@ -50,7 +41,7 @@ def ber_vs_evm_qam(evm_dB, M):
     """
     L = np.sqrt(M)
     evm = dB2lin(evm_dB)
-    ber = 2*(1-1/L)/np.log2(L)*q_function(np.sqrt(3*np.log2(L)/(L**2-1)*(2/(evm*np.log2(M)))))
+    ber = 2 * (1-1/L) / np.log2(L) * q_function(np.sqrt(3 * np.log2(L) / (L ** 2 - 1) * (2 / (evm * np.log2(M)))))
     return ber
 
 
@@ -78,7 +69,7 @@ def ber_vs_es_over_n0_qam(snr, M):
     ...[3] Shafik, R. (2006). On the extended relationships among EVM, BER and SNR as performance metrics. In Conference on Electrical and Computer Engineering (p. 408). Retrieved from http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=4178493
     """
     L = np.sqrt(M)
-    ber = 2*(1-1/L)/np.log2(L)*q_function(np.sqrt(3*np.log2(L)/(L**2-1)*(2*snr/np.log2(M))))
+    ber = 2 * (1-1/L) / np.log2(L) * q_function(np.sqrt(3 * np.log2(L) / (L ** 2 - 1) * (2 * snr / np.log2(M))))
     return ber
 
 def ser_vs_es_over_n0_psk(snr, M):

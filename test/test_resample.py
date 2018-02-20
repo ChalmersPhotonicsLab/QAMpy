@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
+import dsp.core.special_fcts
 from dsp.core import resample, utils
 
 
@@ -20,7 +21,7 @@ class TestRRcosresample(object):
         x[N//2] = 1
         xn = resample.rrcos_resample(x, fold=1, fnew=4, Ts=1, beta=beta)
         t = np.linspace(0, N, xn.shape[0], endpoint=False) - N//2
-        b = utils.rrcos_time(t, beta, 1)
+        b = dsp.core.special_fcts.rrcos_time(t, beta, 1)
         xn /= xn.max()
         b /= b.max()
         npt.assert_array_almost_equal(xn, b, decimal=1)

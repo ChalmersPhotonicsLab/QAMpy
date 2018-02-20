@@ -20,79 +20,6 @@ def lin2dB(x):
     """
     return 10*np.log10(x)
 
-def ttanh(x, A, x0, w):
-    """
-    Calculate the hyperbolic tangent with a given amplitude, zero offset and
-    width.
-
-    Parameters
-    ----------
-    x : array_like
-        Input array variable
-    A : float
-        Amplitude
-    x0 : float
-        Zero-offset
-    w : float
-        Width
-
-    Returns
-    -------
-    array_like
-        calculated array
-    """
-    return A * tanh((x - x0) / w)
-
-
-def gauss(x, A, x0, w):
-    """
-    Calculate the Gaussian function with a given amplitude, zero offset and
-    width.
-
-    Parameters
-    ----------
-    x : array_like
-        Input array variable
-    A : float
-        Amplitude
-    x0 : float
-        Zero offset
-    w : float
-        Width
-
-    Returns
-    -------
-    array_like
-        calculated array
-    """
-    return A * np.exp(-((x - x0) / w)**2 / 2.)
-
-
-def supergauss(x, A, x0, w, o):
-    """
-    Calculate the Supergaussian functions with a given amplitude,
-    zero offset, width and order.
-
-    Parameters
-    ----------
-    x : array_like
-        Input array variable
-    A : float
-        Amplitude
-    x0 : float
-        Zero offset
-    w : float
-        Width
-    o : float
-        order of the supergaussian
-
-    Returns
-    -------
-    array_like
-        calculated array
-    """
-    return A * np.exp(-((x - x0) / w)**(2 * o) / 2.)
-
 
 def normalise_and_center(E):
     """
@@ -108,29 +35,6 @@ def normalise_and_center(E):
         P = np.sqrt(np.mean(cabssquared(E)))
         E /= P
     return E
-
-def sech(x, A, x0, w):
-    """
-    Calculate the hyperbolic secant function with a given
-    amplitude, zero offset and width.
-
-    Parameters
-    ----------
-    x : array_like
-        Input array variable
-    A : float
-        Amplitude
-    x0 : float
-        Zero offset
-    w : float
-        Width
-
-    Returns
-    -------
-    array_like
-        calculated array
-    """
-    return A / np.cosh((x - x0) / w)
 
 
 def factorial(n):
@@ -299,78 +203,6 @@ def rolling_window(data, size):
     strides = data.strides + (data.strides[-1], )
     return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
 
-def rcos_time(t, beta, T):
-    """Time response of a raised cosine filter with a given roll-off factor and width """
-    return np.sinc(t / T) * np.cos(t / T * np.pi * beta) / (1 - 4 *
-                                                            (beta * t / T)**2)
-
-def rcos_freq(f, beta, T):
-    """Frequency response of a raised cosine filter with a given roll-off factor and width """
-    rc = np.zeros(f.shape[0], dtype=f.dtype)
-    rc[np.where(np.abs(f) <= (1 - beta) / (2 * T))] = T
-    idx = np.where((np.abs(f) > (1 - beta) / (2 * T)) & (np.abs(f) <= (
-        1 + beta) / (2 * T)))
-    rc[idx] = T / 2 * (1 + np.cos(np.pi * T / beta *
-                                                     (np.abs(f[idx]) - (1 - beta) /
-                                                      (2 * T))))
-    return rc
-
-def rrcos_freq(f, beta, T):
-    """Frequency transfer function of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
-
-    Parameters
-    ----------
-
-    f   : array_like
-        frequency vector
-    beta : float
-        roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
-
-    T   : float
-        symbol period
-
-    Returns
-    -------
-    y   : array_like
-       filter response
-
-    References
-    ----------
-    ..[1] B.P. Lathi, Z. Ding Modern Digital and Analog Communication Systems
-    """
-    return np.sqrt(rcos_freq(f, beta, T))
-
-def rrcos_time(t, beta, T):
-    """Time impulse response of the square-root-raised cosine filter with a given roll-off factor and time width/sampling period after _[1]
-    This implementation differs by a factor 2 from the previous.
-
-    Parameters
-    ----------
-
-    t   : array_like
-        time vector
-    beta : float
-        roll-off factor needs to be between 0 and 1 (0 corresponds to a sinc pulse, square spectrum)
-
-    T   : float
-        symbol period
-
-    Returns
-    -------
-    y   : array_like
-       filter response
-
-    References
-    ----------
-    ..[1] https://en.wikipedia.org/wiki/Root-raised-cosine_filter
-    """
-    rrcos = 1/T*((np.sin(np.pi*t/T*(1-beta)) +  4*beta*t/T*np.cos(np.pi*t/T*(1+beta)))/(np.pi*t/T*(1-(4*beta*t/T)**2)))
-    eps = abs(t[0]-t[1])/4
-    idx1 = np.where(abs(t)<eps)
-    rrcos[idx1] = 1/T*(1+beta*(4/np.pi-1))
-    idx2 = np.where(abs(abs(t)-abs(T/(4*beta)))<eps)
-    rrcos[idx2] = beta/(T*np.sqrt(2))*((1+2/np.pi)*np.sin(np.pi/(4*beta))+(1-2/np.pi)*np.cos(np.pi/(4*beta)))
-    return rrcos
 
 def bin2gray(value):
     """
