@@ -72,3 +72,47 @@ def comp_rf_delay(signal, delay, sampling_rate=50e9 ):
         return sig_out.real
     else:
         return sig_out.real.flatten()
+
+
+def orthonormalize_signal(E, os=1):
+    """
+    Orthogonalizing signal using the Gram-Schmidt process _[1].
+
+    Parameters
+    ----------
+    E : array_like
+       input signal
+    os : int, optional
+        oversampling ratio of the signal
+
+    Returns
+    -------
+    E_out : array_like
+        orthonormalized signal
+
+    References
+    ----------
+    .. [1] https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process for more
+       detailed description.
+    """
+
+    E = np.atleast_2d(E)
+    E_out = np.empty_like(E)
+    for l in range(E.shape[0]):
+        # Center
+        real_out = E[l,:].real - E[l,:].real.mean()
+        tmp_imag = E[l,:].imag - E[l,:].imag.mean()
+
+        # Calculate scalar products
+        mean_pow_inphase = np.mean(real_out**2)
+        mean_pow_quadphase = np.mean(tmp_imag**2)
+        mean_pow_imb = np.mean(real_out*tmp_imag)
+
+        # Output, Imag orthogonal to Real part of signal
+        sig_out = real_out / np.sqrt(mean_pow_inphase) +\
+                                    1j*(tmp_imag - mean_pow_imb * real_out / mean_pow_inphase) / np.sqrt(mean_pow_quadphase)
+        # Final total normalization to ensure IQ-power equals 1
+        E_out[l,:] = sig_out - np.mean(sig_out[::os])
+        E_out[l,:] = E_out[l,:] / np.sqrt(np.mean(np.abs(E_out[l,::os])**2))
+
+    return E_out
