@@ -37,7 +37,7 @@ def comp_IQ_inbalance(signal):
     
     return comp_singal
 
-def comp_rf_delay(signal, delay, sampling_rate = 50e9 ):
+def comp_rf_delay(signal, delay, sampling_rate=50e9 ):
     """
     Adds a delay of X picoseconds to the signal in frequency domain. Can be 
     used to compensate for impairments such as RF cables of different length 
