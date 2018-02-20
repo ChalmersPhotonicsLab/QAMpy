@@ -1,7 +1,7 @@
 import pytest
 
 from dsp.core import analog_frontend as canalog
-from dsp import modulation
+from dsp import modulation, analog_frontend
 
 class TestMultiDim(object):
     @pytest.mark.parametrize("ndim", [1,2,3])
@@ -24,7 +24,7 @@ class TestReturnObjects(object):
         s2 = canalog.comp_IQ_inbalance(self.s)
         assert type(self.s) is type(s2)
 
-    #TODO: currently rf delay fails
+    @pytest.mark.xfail(reason="core function does not preserve object type")
     def test_comp_rf_delay(self):
         s2 = canalog.comp_rf_delay(self.s, 0.001, self.s.fs)
         assert type(self.s) is type(s2)
@@ -34,7 +34,26 @@ class TestReturnObjects(object):
         s2 = canalog.comp_IQ_inbalance(self.s)
         assert getattr(self.s, attr) is getattr(s2, attr)
 
+    @pytest.mark.xfail(reason="core function does not preserve object type")
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_comp_rf_delay_attr(self, attr):
         s2 = canalog.comp_rf_delay(self.s, 0.001, self.s.fs)
+        assert getattr(self.s, attr) is getattr(s2, attr)
+
+    def test_comp_IQ2(self):
+        s2 = analog_frontend.comp_IQ_inbalance(self.s)
+        assert type(self.s) is type(s2)
+
+    def test_comp_rf_delay2(self):
+        s2 = analog_frontend.comp_rf_delay(self.s, 0.001)
+        assert type(self.s) is type(s2)
+
+    @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
+    def test_comp_IQ_attr2(self, attr):
+        s2 = analog_frontend.comp_IQ_inbalance(self.s)
+        assert getattr(self.s, attr) is getattr(s2, attr)
+
+    @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
+    def test_comp_rf_delay_attr2(self, attr):
+        s2 = analog_frontend.comp_rf_delay(self.s, 0.001)
         assert getattr(self.s, attr) is getattr(s2, attr)
