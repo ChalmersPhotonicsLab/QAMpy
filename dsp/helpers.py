@@ -26,10 +26,9 @@ def normalise_and_center(E):
     Normalise and center the input field, by calculating the mean power for each polarisation separate and dividing by its square-root
     """
     if E.ndim > 1:
-        for i in range(E.shape[0]):
-            E[i] -= np.mean(E[i])
-            P = np.sqrt(np.mean(cabssquared(E[i])))
-            E[i] /= P
+        E = E - np.mean(E, axis=-1)[:, np.newaxis]
+        P = np.sqrt(np.mean(cabssquared(E), axis=-1))
+        E /= P[:, np.newaxis]
     else:
         E = E.real - np.mean(E.real) + 1.j * (E.imag-np.mean(E.imag))
         P = np.sqrt(np.mean(cabssquared(E)))

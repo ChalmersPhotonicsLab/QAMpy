@@ -60,3 +60,15 @@ class Test2DCap(object):
         s2 = helpers.dump_edges(s, 100)
         assert s.shape == (s2.shape[0], s2.shape[1]+200)
 
+
+@pytest.mark.parametrize("nmodes", [1, 2, 3])
+def test_normalise(nmodes):
+    s = modulation.SignalQAMGrayCoded(64, 2**12, nmodes=nmodes)
+    s2 = helpers.normalise_and_center(s)
+    s3 = np.zeros(s.shape, dtype=s.dtype)
+    for i in range(nmodes):
+        s3[i] = helpers.normalise_and_center(s[i])
+    npt.assert_array_almost_equal(s2, s3)
+
+
+
