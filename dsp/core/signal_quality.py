@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from .utils import cabssquared
-from .theory import  cal_symbols_qam, cal_scaling_factor_qam
+from dsp.theory import  cal_symbols_qam, cal_scaling_factor_qam
 from .equalisation import quantize as _quantize_pyx
 from . import ber_functions
 from .. import modulation

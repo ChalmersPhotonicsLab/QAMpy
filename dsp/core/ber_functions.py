@@ -1,8 +1,9 @@
 from __future__ import division, print_function
 import numpy as np
 from scipy.signal import fftconvolve
-from . import utils, prbs
-from . import theory
+from . import utils
+
+
 #TODO: refactor to use remove all unneeded functions
 
 class DataSyncError(Exception):

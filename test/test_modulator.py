@@ -2,8 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import modulation
-from dsp.core import theory
+from dsp import modulation, theory
 
 
 def _flip_symbols(sig, idx, d, mode=0):

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp.core import filter, utils, theory
-from dsp import modulation
+from dsp.core import filter, utils
+from dsp import modulation, theory
 
 """
 Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]

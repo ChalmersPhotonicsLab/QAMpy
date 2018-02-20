@@ -5,7 +5,8 @@ import fractions
 import warnings
 from bitarray import bitarray
 
-from .core import resample, utils, theory
+from .core import resample, utils
+from dsp import theory
 from .core import ber_functions
 from .core.prbs import make_prbs_extXOR
 from .core.signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper

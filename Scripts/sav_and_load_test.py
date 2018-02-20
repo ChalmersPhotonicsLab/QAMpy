@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import equalisation, modulation
-from dsp.core import io, theory
+from dsp import equalisation, modulation, theory
+from dsp.core import io
 import os as os_mod
 
 

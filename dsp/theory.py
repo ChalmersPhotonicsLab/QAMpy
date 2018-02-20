@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from scipy.special import erfc
-from .utils import bin2gray, dB2lin
+from dsp.core.utils import bin2gray, dB2lin
 
 # All the formulas below are taken from dsplog.com
 

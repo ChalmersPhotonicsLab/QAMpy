@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 
 from .. import utils
-from ..theory import cal_symbols_qam, cal_scaling_factor_qam
+from ...theory import cal_symbols_qam, cal_scaling_factor_qam
 from ..segmentaxis import segment_axis
 
 #TODO: update documentation with all references
