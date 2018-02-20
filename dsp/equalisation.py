@@ -39,8 +39,8 @@ def equalise_signal(sig, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, meth
     M       : integer
         QAM order
 
-    wxy     : tuple(array_like, array_like), optional
-        tuple of the wx and wy filter taps. Either this or Ntaps has to be given.
+    wxy     : array_like, optional
+        the wx and wy filter taps. Either this or Ntaps has to be given.
 
     Ntaps   : int
         number of filter taps. Either this or wxy need to be given. If given taps are initialised as [00100]
