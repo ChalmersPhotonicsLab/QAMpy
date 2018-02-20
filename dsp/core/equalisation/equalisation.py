@@ -2,6 +2,7 @@
 from __future__ import division
 import numpy as np
 
+import dsp.helpers
 from .. import utils
 from ...theory import cal_symbols_qam, cal_scaling_factor_qam
 from ..segmentaxis import segment_axis
@@ -248,7 +249,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     pols = E.shape[0]
     L = E.shape[1]
     # scale signal
-    E = utils.normalise_and_center(E)
+    E = dsp.helpers.normalise_and_center(E)
     if wxy is None:
         wxy = [_init_taps(Ntaps, pols),]
         if pols == 2:

@@ -5,6 +5,7 @@ import fractions
 import warnings
 from bitarray import bitarray
 
+import dsp.helpers
 from .core import resample, utils
 from dsp import theory
 from .core import ber_functions
@@ -239,7 +240,7 @@ class SignalBase(np.ndarray):
         nmodes = signal_rx.shape[0]
         symbols_tx, signal_ad = self._sync_and_adjust(self.symbols, signal_rx)
         return np.asarray(
-            np.sqrt(np.mean(utils.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
+            np.sqrt(np.mean(dsp.helpers.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
 
     def est_snr(self, signal_rx=None, synced=False, symbols_tx=None):
         """

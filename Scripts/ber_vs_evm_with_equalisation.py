@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
+import dsp.helpers
 from dsp import equalisation, modulation, theory
 from dsp.core import utils
 
@@ -83,11 +85,11 @@ for M in Mqams:
     ax2.plot(snrf, theory.ser_vs_es_over_n0_qam(10 ** (snrf / 10), M), color=c[j], label="%d-QAM theory" % M)
     ax2.plot(snr, ser, color=c[j], marker=s[j], lw=0, label="%d-QAM"%M)
     ax3.plot(evmf, theory.ber_vs_evm_qam(evmf, M), color=c[j], label="%d-QAM theory" % M)
-    ax3.plot(utils.lin2dB(evm1 ** 2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM" % M)
+    ax3.plot(dsp.helpers.lin2dB(evm1 ** 2), ber, color=c[j], marker=s[j], lw=0, label="%d-QAM" % M)
     # illustrate the difference between a blind and non-blind EVM
-    ax3.plot(utils.lin2dB(evm_known ** 2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind" % M)
-    ax4.plot(snr, utils.lin2dB(evm1 ** 2), color=c[j], marker=s[j], lw=0, label="%d-QAM" % M)
-    ax4.plot(snr, utils.lin2dB(evm_known ** 2), color=c[j], marker='*', lw=0, label="%d-QAM non-blind" % M)
+    ax3.plot(dsp.helpers.lin2dB(evm_known ** 2), ber, color=c[j], marker='*', lw=0, label="%d-QAM non-blind" % M)
+    ax4.plot(snr, dsp.helpers.lin2dB(evm1 ** 2), color=c[j], marker=s[j], lw=0, label="%d-QAM" % M)
+    ax4.plot(snr, dsp.helpers.lin2dB(evm_known ** 2), color=c[j], marker='*', lw=0, label="%d-QAM non-blind" % M)
     #ax4.plot(snr, utils.lin2dB(evm2), color=c[j], marker='*', lw=0, label="%d-QAM signalq"%M)
     j += 1
 ax1.legend()
