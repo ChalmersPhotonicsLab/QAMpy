@@ -69,15 +69,18 @@ class Test2dcapability(object):
         assert x.shape == y.shape
 
     @pytest.mark.parametrize("ndim", [1, 2, 3])
-    def test_moving_avg(self, ndim):
+    @pytest.mark.parametrize("N", [3, 4, 10])
+    def test_moving_avg(self, ndim, N):
         x = np.random.randn(ndim, 2**15) + 0.j
-        y = cfilter.moving_average(x, N=3)
+        y = cfilter.moving_average(x, N=N)
         assert x.shape[0] == y.shape[0]
+        assert x.shape[1] - N + 1 == y.shape[1]
 
-    def test_moving_avg_1d(self):
+    @pytest.mark.parametrize("N", [3, 4, 10])
+    def test_moving_avg_1d(self, N):
         x = np.random.randn(2**15) + 0.j
-        y = cfilter.moving_average(x)
-        assert x.shape == y.shape
+        y = cfilter.moving_average(x, N=N)
+        assert x.shape[0] - N + 1 == y.shape[0]
 
 class TestReturnObjectsAdv(object):
     s = modulation.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
