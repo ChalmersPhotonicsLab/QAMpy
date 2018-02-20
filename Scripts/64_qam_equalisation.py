@@ -24,12 +24,12 @@ Nrde = None
 
 #sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23), beta=0.01, ndim=2)
 sig = modulation.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.01, "renormalise":True})
-sig = impairments.change_snr(sig, snr, sig.fb, sig.fs)
+sig = impairments.change_snr(sig, snr)
 #sig = impairments.add_awgn(sig, 10 ** (-snr / 20) * np.sqrt(2))
 #Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
 SS = sig
-SS = impairments.apply_PMD_to_field(sig, theta, t_pmd, fs)
+SS = impairments.apply_PMD_to_field(sig, theta, t_pmd)
 #SS = np.vstack([X,Y])
 SS = impairments.rotate_field(SS, theta2)
 
