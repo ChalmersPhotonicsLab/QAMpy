@@ -10,7 +10,6 @@ class TestMultiDim(object):
         s2 = canalog.comp_IQ_inbalance(s)
         assert s.shape == s2.shape
 
-    #TODO: currently rf delay fails
     @pytest.mark.parametrize("ndim", [1,2,3])
     def test_comp_rf_delay(self, ndim):
         s = modulation.SignalQAMGrayCoded(64, 2**12, nmodes=ndim)
