@@ -41,4 +41,7 @@ def dump_edges(E, N):
     """
     Remove N samples from the front and end of the input field.
     """
-    return E[N:-N]
+    if E.ndim > 1:
+        return E[:,N:-N]
+    else:
+        return E[N:-N]
