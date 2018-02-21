@@ -4,7 +4,7 @@ from dsp.helpers import cabssquared
 from dsp.theory import  cal_symbols_qam, cal_scaling_factor_qam
 from .equalisation import quantize as _quantize_pyx
 from . import ber_functions
-from .. import modulation
+#from .. import modulation
 from .dsp_cython import soft_l_value_demapper
 
 try:
@@ -272,32 +272,6 @@ def generate_bitmapping_mtx(coded_symbs, coded_bits, M):
         bit_map[bit,:,0] = coded_symbs[~out_mtx[:,bit]]
         bit_map[bit,:,1] = coded_symbs[out_mtx[:,bit]]
     return bit_map
-
-def calc_gmi(rx_symbs, tx_symbs, M):
-    rx_symbs = np.atleast_2d(rx_symbs)
-    tx_symbs = np.atleast_2d(tx_symbs)
-    mod = modulation.QAMModulator(M)
-    symbs = mod.gray_coded_symbols
-    bit_map = mod.bitmap_mtx#
-    num_bits = mod.Nbits
-    GMI = np.zeros(rx_symbs.shape[0])
-    GMI_per_bit = np.zeros((rx_symbs.shape[0],num_bits))
-    SNR_est = np.zeros(rx_symbs.shape[0])
-    # For every mode present, calculate GMI based on SD-demapping
-    for mode in range(rx_symbs.shape[0]):
-        # GMI Calc
-        rx_symbs[mode] = rx_symbs[mode] / np.sqrt(np.mean(np.abs(rx_symbs[mode]) ** 2))
-        tx, rx = ber_functions.sync_and_adjust(tx_symbs[mode],rx_symbs[mode])
-        snr = estimate_snr(rx, tx, symbs)
-        SNR_est[mode] = 10*np.log10(snr)
-        l_values = soft_l_value_demapper(rx, M, snr, bit_map)
-        bits = mod.decode(mod.quantize(tx)).astype(np.int).flatten()
-        # GMI per bit
-        for bit in range(num_bits):
-            GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[bit::num_bits])*l_values[bit::num_bits])))
-        # Sum GMI
-        GMI[mode] = np.sum(GMI_per_bit[mode])
-    return GMI, GMI_per_bit, SNR_est
 
 def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
     """
