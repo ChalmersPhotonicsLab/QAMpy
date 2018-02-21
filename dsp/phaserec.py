@@ -1,5 +1,5 @@
 from . import core
-from .core.phaserecovery import viterbiviterbi, bps, bps_twostage, phase_partition_16qam
+from .core.phaserecovery import bps, bps_twostage, phase_partition_16qam
 
 
 def find_freq_offset(sig, average_over_modes = False, fft_size = 4096):
@@ -46,3 +46,22 @@ def comp_freq_offset(sig, freq_offset):
     """
     arr = core.phaserecovery.comp_freq_offset(sig, freq_offset, sig.fs)
     return sig.recreate_from_np_array(arr)
+
+def viterbiviterbi(E, N):
+    """
+    Viterbi-Viterbi blind phase recovery for an M-PSK signal
+
+    Parameters
+    ----------
+    E : array_like
+        the electric field of the signal
+    N : int
+        block length of samples to average over
+
+    Returns
+    -------
+    Eout : array_like
+        Field with compensated phases
+    """
+    return core.phaserecovery.viterbiviterbi(E, N, E.M)
+
