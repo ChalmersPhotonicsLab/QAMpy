@@ -64,12 +64,12 @@ def _select_errorfct(method, M, **kwargs):
         return ErrorFctCMA(_cal_Rconstant(M))
     elif method in ["rde"]:
         p, c = generate_partition_codes_radius(M)
-        return RDEErr(p, c)
+        return ErrorFctRDE(p, c)
     elif method in ["mrde"]:
         p, c = generate_partition_codes_complex(M)
         return ErrorFctMRDE(p, c)
     elif method in ["sca"]:
-        return ErrFctSCA(_cal_Rsca(M))
+        return ErrorFctSCA(_cal_Rsca(M))
     elif method in ["cme"]:
         syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
         d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
