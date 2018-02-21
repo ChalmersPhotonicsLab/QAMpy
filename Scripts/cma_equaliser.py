@@ -1,18 +1,18 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation, impairments
+from dsp import equalisation, modulation, impairments, helpers
 
 fb = 40.e9
 os = 2
 fs = os*fb
 N = 10**5
 mu = 4e-4
-theta = np.pi/2.45
+theta = np.pi/5.45
 theta2 = np.pi/4
 t_pmd = 75e-12
 M = 4
 ntaps=40
-snr =  12
+snr =  13
 
 sig = modulation.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
 S = sig.resample(fs, renormalise=True, beta=0.2)
@@ -23,8 +23,9 @@ wxy, err = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="cma")
 wxy_m, err_m = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="mcma")
 E = equalisation.apply_filter(SS,  wxy)
 E_m = equalisation.apply_filter(SS, wxy_m)
-print(E.shape)
-print(SS.shape)
+E = helpers.normalise_and_center(E)
+E_m = helpers.normalise_and_center(E_m)
+
 
 evm = E.cal_evm()
 evm_m = E_m.cal_evm()
