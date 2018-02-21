@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation, impairments
+from dsp import equalisation, modulation, impairments, helpers
 #from dsp.core import impairments
 
 fb = 40.e9
@@ -18,7 +18,7 @@ t_pmd = 100.e-12
 Ncma = None
 Nrde = None
 
-sig = modulation.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.1, "renormalise":True})
+sig = modulation.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.01, "renormalise":True})
 sig = impairments.change_snr(sig, snr)
 
 SS = impairments.apply_PMD_to_field(sig, theta, t_pmd)
@@ -28,6 +28,9 @@ E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS,  (muCMA
 E, wxy, (err, err_rde) = equalisation.dual_mode_equalisation(SS,  (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
+E = helpers.normalise_and_center(E)
+E_s = helpers.normalise_and_center(E_s)
+E_m = helpers.normalise_and_center(E_m)
 evm = sig[:,::2].cal_evm()
 evmE = E.cal_evm()
 evmE_m = E_m.cal_evm()
