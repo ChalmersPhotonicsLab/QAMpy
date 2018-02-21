@@ -42,12 +42,12 @@ References
 
 #TODO: include selection for either numba or cython code
 try:
-    from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from .equaliser_cython import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, ErrorFct
 except:
     #use python code if cython code is not available
     #raise Warning("can not use cython training functions")
-    from .equaliser_numba import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from .equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
 
 TRAINING_FCTS = ["cma", "mcma",
