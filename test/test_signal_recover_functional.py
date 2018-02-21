@@ -5,7 +5,6 @@ import numpy.testing as npt
 
 from dsp import modulation, helpers, phaserec, equalisation, impairments
 
-
 @pytest.mark.parametrize("lw", np.linspace(10, 1000, 4))
 @pytest.mark.parametrize("M", [4, 16, 32, 64])
 def test_phaserec_bps(lw, M):
@@ -53,7 +52,6 @@ class TestCMA(object):
         os = 2
         fs = os*fb
         N = 2**16
-        snr = 15
         beta = 0.1
         mu = 0.1e-1
         M = 4
@@ -84,6 +82,7 @@ class TestCMA(object):
         s = impairments.apply_PMD_to_field(s, theta, dgd)
         wxy, err = equalisation.equalise_signal(s, mu, M, Ntaps=ntaps, method=method, adaptive_stepsize=False)
         sout = equalisation.apply_filter(s, wxy)
+        sout = helpers.normalise_and_center(sout)
         ser = sout.cal_ser()
         npt.assert_allclose(ser, 0)
 
@@ -100,16 +99,17 @@ class TestCMA(object):
         N = 2**16
         snr = 15
         beta = 0.1
-        mu = 4e-5
+        mu = 1e-4
         M = 4
         ntaps = 21
         s = modulation.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=0.1, renormalise=True)
         s = impairments.apply_PMD_to_field(s, theta, dgd)
-        wxy, err = equalisation.equalise_signal(s, mu, M, Ntaps=ntaps, method=method, adaptive_stepsize=False)
+        wxy, err = equalisation.equalise_signal(s, mu, M, Ntaps=ntaps, Niter=3, method=method, adaptive_stepsize=False)
         sout = equalisation.apply_filter(s, wxy)
+        sout = helpers.normalise_and_center(sout)
         ser = sout.cal_ser()
-        npt.assert_allclose(ser, 0)
+        npt.assert_allclose(ser, 0, atol=1.01*4/N)
 
     @pytest.mark.parametrize("method", ["cma", "mcma"])
     @pytest.mark.parametrize("phi", np.linspace(4.3, 5.7, 2))
@@ -133,6 +133,7 @@ class TestCMA(object):
         wxy, err = equalisation.equalise_signal(s, mu, M, Ntaps=ntaps, method=method, adaptive_stepsize=False)
         sout = equalisation.apply_filter(s, wxy)
         sout, ph = phaserec.viterbiviterbi(sout,11)
+        sout = helpers.normalise_and_center(sout)
         sout = helpers.dump_edges(sout, 30)
         ser = sout.cal_ser()
         npt.assert_allclose(ser, 0, atol=1.01*3/N)# Three wrong symbols is ok
@@ -160,8 +161,10 @@ class TestCMA(object):
         wxy, err = equalisation.equalise_signal(s, mu, M, Ntaps=ntaps, method=method, adaptive_stepsize=False)
         sout = equalisation.apply_filter(s, wxy)
         sout, ph = phaserec.viterbiviterbi(sout,11)
+        sout = helpers.normalise_and_center(sout)
         sout = helpers.dump_edges(sout, 20)
         ser = sout.cal_ser()
         npt.assert_allclose(ser, 0)
+
 
 
