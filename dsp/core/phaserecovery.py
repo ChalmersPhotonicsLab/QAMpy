@@ -40,11 +40,11 @@ def viterbiviterbi(E, N, M):
         sa = segment_axis(E_raised, N, N - 1)
         phase_est = np.sum(sa, axis=1)
         phase_est = np.unwrap(np.angle(phase_est))
-    phase_est = (phase_est - np.pi)/M
-    if N % 2:
-        E2d[:, (N - 1) // 2:L - (N - 1) // 2] *= phase_est
-    else:
-        E2d[:, N // 2 - 1:L - (N // 2)] *= phase_est
+        phase_est = (phase_est - np.pi)/M
+        if N % 2:
+            E2d[i, (N - 1) // 2:L - (N - 1) // 2] *= np.exp(-1.j*phase_est)
+        else:
+            E2d[i, N // 2 - 1:L - (N // 2)] *= np.exp(-1.j*phase_est)
     #if M == 4: # QPSK needs pi/4 shift
     # need a shift by pi/M for constellation points to not be on the axis
     if E.ndim == 1:
