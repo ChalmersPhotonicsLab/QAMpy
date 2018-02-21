@@ -113,8 +113,8 @@ def _rrcos_pulseshaping_freq(sig, fs, T, beta):
     f = np.fft.fftfreq(sig.shape[0])*fs
     nyq_fil = rrcos_freq(f, beta, T)
     nyq_fil /= nyq_fil.max()
-    sig_f = np.fft.fft(np.fft.fftshift(sig))
-    sig_out = np.fft.ifftshift(np.fft.ifft(sig_f*nyq_fil))
+    sig_f = np.fft.fft(sig)
+    sig_out = np.fft.ifft(sig_f*nyq_fil)
     return sig_out
 
 def rrcos_pulseshaping(sig, fs, T, beta, taps=1001):
@@ -141,8 +141,11 @@ def rrcos_pulseshaping(sig, fs, T, beta, taps=1001):
     """
     if taps is None:
         return _rrcos_pulseshaping_freq(sig, fs, T, beta)
-    t = np.linspace(-taps/2, taps/2, taps, endpoint=False)/fs
+    t = np.linspace(0, taps, taps, endpoint=False)
+    t -= t[(t.size-1)//2]
+    t /= fs
     nqt = rrcos_time(t, beta, T)
+    nqt /= nqt.max()
     if sig.ndim > 1:
         sig_out = np.zeros_like(sig)
         for i in range(sig.shape[0]):
