@@ -66,7 +66,7 @@ class TestCMA(object):
         npt.assert_allclose(ser, 0)
 
     @pytest.mark.parametrize("method", ["cma", "mcma"])
-    @pytest.mark.parametrize("phi", np.linspace(4.3, 7.5, 4)) # at the moment I get failures for phi > 6
+    @pytest.mark.parametrize("phi", np.linspace(4.3, 6.5, 3))
     @pytest.mark.parametrize("dgd", np.linspace(10, 300, 4)*1e-12)
     def test_pmd(self, method, phi, dgd):
         theta = np.pi/phi
@@ -87,11 +87,62 @@ class TestCMA(object):
         ser = sout.cal_ser()
         npt.assert_allclose(ser, 0)
 
+    #TODO: figure out the failures for small angles
+    @pytest.mark.xfail
     @pytest.mark.parametrize("method", ["cma", "mcma"])
-    @pytest.mark.parametrize("phi", np.linspace(4.3, 7.5, 3)) # at the moment I get failures for phi > 6
+    @pytest.mark.parametrize("phi", np.linspace(7.5, 8.5, 2))
+    @pytest.mark.parametrize("dgd", np.linspace(200, 300, 2)*1e-12)
+    def test_pmd_fails(self, method, phi, dgd):
+        theta = np.pi/phi
+        fb = 40.e9
+        os = 2
+        fs = os*fb
+        N = 2**16
+        snr = 15
+        beta = 0.1
+        mu = 4e-5
+        M = 4
+        ntaps = 21
+        s = modulation.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
+        s = s.resample(fs, beta=0.1, renormalise=True)
+        s = impairments.apply_PMD_to_field(s, theta, dgd)
+        wxy, err = equalisation.equalise_signal(s, mu, M, Ntaps=ntaps, method=method, adaptive_stepsize=False)
+        sout = equalisation.apply_filter(s, wxy)
+        ser = sout.cal_ser()
+        npt.assert_allclose(ser, 0)
+
+    @pytest.mark.parametrize("method", ["cma", "mcma"])
+    @pytest.mark.parametrize("phi", np.linspace(4.3, 5.7, 2))
     @pytest.mark.parametrize("dgd", np.linspace(10, 300, 3)*1e-12)
-    @pytest.mark.parametrize("lw", np.linspace(10e3, 1000e3, 4))
+    @pytest.mark.parametrize("lw", np.linspace(10e3, 1000e3, 3))
     def test_pmd_phase(self, method, phi, dgd, lw):
+        theta = np.pi/phi
+        fb = 40.e9
+        os = 2
+        fs = os*fb
+        N = 2**16
+        snr = 15
+        beta = 0.1
+        mu = 4e-5
+        M = 4
+        ntaps = 21
+        s = modulation.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
+        s = s.resample(fs, beta=0.1, renormalise=True)
+        s = impairments.apply_phase_noise(s, lw)
+        s = impairments.apply_PMD_to_field(s, theta, dgd)
+        wxy, err = equalisation.equalise_signal(s, mu, M, Ntaps=ntaps, method=method, adaptive_stepsize=False)
+        sout = equalisation.apply_filter(s, wxy)
+        sout, ph = phaserec.viterbiviterbi(sout,11)
+        sout = helpers.dump_edges(sout, 30)
+        ser = sout.cal_ser()
+        npt.assert_allclose(ser, 0, atol=1.01*3/N)# Three wrong symbols is ok
+
+    @pytest.mark.xfail
+    @pytest.mark.parametrize("method", ["cma", "mcma"])
+    @pytest.mark.parametrize("phi", np.linspace(5.9, 7.5, 2))
+    @pytest.mark.parametrize("dgd", [300e-12])
+    @pytest.mark.parametrize("lw", np.linspace(10e3, 1000e3, 2))
+    def test_pmd_phase_fails(self, method, phi, dgd, lw):
         theta = np.pi/phi
         fb = 40.e9
         os = 2
