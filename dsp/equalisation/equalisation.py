@@ -252,7 +252,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     # scale signal
     E = utils.normalise_and_center(E)
     if wxy is None:
-        wxy = [_init_taps(Ntaps, pols),]
+        wxy = np.asarray([_init_taps(Ntaps, pols),])
         if pols == 2:
             wy = _init_orthogonaltaps(wxy[0])
             wxy = np.asarray([wxy[0],wy])
