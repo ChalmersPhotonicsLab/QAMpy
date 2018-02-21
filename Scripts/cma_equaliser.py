@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation, impairments, helpers
+from dsp import equalisation, modulation, impairments, helpers, phaserec
 
 fb = 40.e9
 os = 2
@@ -12,40 +12,46 @@ theta2 = np.pi/4
 t_pmd = 75e-12
 M = 4
 ntaps=40
-snr =  13
+snr =  14
 
 sig = modulation.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
-S = sig.resample(fs, renormalise=True, beta=0.2)
+S = sig.resample(fs, renormalise=True, beta=0.1)
+S = impairments.apply_phase_noise(S, 100e3)
 S = impairments.change_snr(S, snr)
 
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
-wxy, err = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="cma")
-wxy_m, err_m = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="mcma")
+wxy, err = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="cma", adaptive_step=True)
+wxy_m, err_m = equalisation.equalise_signal(SS, mu, M, Ntaps=ntaps, method="mcma", adaptive_step=True)
 E = equalisation.apply_filter(SS,  wxy)
 E_m = equalisation.apply_filter(SS, wxy_m)
 E = helpers.normalise_and_center(E)
 E_m = helpers.normalise_and_center(E_m)
+E, ph = phaserec.viterbiviterbi(E, 11)
+E_m, ph = phaserec.viterbiviterbi(E_m, 11)
+E = helpers.dump_edges(E, 20)
+E_m = helpers.dump_edges(E_m, 20)
 
 
-evm = E.cal_evm()
-evm_m = E_m.cal_evm()
-evm0 = S[:, ::2].cal_evm()
+# note that because of the noise we get sync failures doing SER
+ser = E.cal_ser()
+ser_m = E_m.cal_ser()
+ser0 = S[:, ::2].cal_ser()
 #sys.exit()
 plt.figure()
 plt.subplot(131)
 plt.title('Recovered CMA')
-plt.plot(E[0].real, E[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evm[0]))
-plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evm[1]*100))
+plt.plot(E[0].real, E[0].imag, 'ro', label=r"$SER_x=%.1f\%%$"%(100*ser[0]))
+plt.plot(E[1].real, E[1].imag, 'go' ,label=r"$SER=%.1f\%%$"%(ser[1]*100))
 plt.legend()
 plt.subplot(132)
 plt.title('Recovered MCMA')
-plt.plot(E_m[0].real, E_m[0].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evm_m[0]))
-plt.plot(E_m[1].real, E_m[1].imag, 'go' ,label=r"$EVM_y=%.1f\%%$"%(evm_m[1]*100))
+plt.plot(E_m[0].real, E_m[0].imag, 'ro', label=r"$SER_x=%.1f\%%$"%(100*ser_m[0]))
+plt.plot(E_m[1].real, E_m[1].imag, 'go' ,label=r"$SER_y=%.1f\%%$"%(ser_m[1]*100))
 plt.legend()
 plt.subplot(133)
 plt.title('Original')
-plt.plot(S[0,::2].real, S[0,::2].imag, 'ro', label=r"$EVM_x=%.1f\%%$"%(100*evm0[0]))
-plt.plot(S[1,::2].real, S[1,::2].imag, 'go', label=r"$EVM_y=%.1f\%%$"%(100*evm0[1]))
+plt.plot(S[0,::2].real, S[0,::2].imag, 'ro', label=r"$SER_x=%.1f\%%$"%(100*ser0[0]))
+plt.plot(S[1,::2].real, S[1,::2].imag, 'go', label=r"$SER_y=%.1f\%%$"%(100*ser0[1]))
 plt.legend()
 
 plt.figure()
