@@ -8,46 +8,34 @@ os = 2
 fs = os*fb
 N = 2**17
 theta = 1* np.pi/4.5
-theta2 = np.pi/4.2
+theta2 = np.pi/4.3
 M = 64
-QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 0.19e-3
-muRDE = 0.19e-3
-ntaps = 11
+muCMA = 0.19e-2
+muRDE = 0.19e-2
+ntaps = 15
 t_pmd = 100.e-12
-#Ncma = N//4//os -int(1.5*ntaps)
-#Ncma = 60000
-#Nrde = 4*N//5//os -int(1.5*ntaps)
 Ncma = None
 Nrde = None
 
-#sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23), beta=0.01, ndim=2)
-sig = modulation.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.01, "renormalise":True})
+sig = modulation.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.1, "renormalise":True})
 sig = impairments.change_snr(sig, snr)
-#sig = impairments.add_awgn(sig, 10 ** (-snr / 20) * np.sqrt(2))
-#Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
-#SS = sig
 SS = impairments.apply_PMD_to_field(sig, theta, t_pmd)
-#SS = np.vstack([X,Y])
-SS = impairments.rotate_field(SS, theta2)
 
 E_m, wxy_m, (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS,  (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
 E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS,  (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
 E, wxy, (err, err_rde) = equalisation.dual_mode_equalisation(SS,  (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
-#evm = .cal_evm(sig[:, ::2])
 evm = sig[:,::2].cal_evm()
 evmE = E.cal_evm()
 evmE_m = E_m.cal_evm()
 evmE_s = E_s.cal_evm()
-#gmiE = E.cal_gmi()
-#print(gmiE)
+gmiE = E.cal_gmi()
+print(gmiE)
 
 
-#sys.exit()
 plt.figure()
 plt.subplot(241)
 plt.title('Recovered MCMA/MDDMA')
@@ -77,8 +65,6 @@ plt.legend()
 plt.subplot(248)
 plt.hexbin(sig[1,::2].real, sig[1,::2].imag,  label=r"$EVM_y=%.1f\%%$"%(100*evm[1]))
 plt.legend()
-plt.show()
-sys.exit()
 
 plt.figure()
 plt.subplot(331)
