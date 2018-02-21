@@ -19,7 +19,7 @@ for lw in lw_LO:
     s = modulation.SignalQAMGrayCoded(M, N, fb=fb)
     s = s.resample(fs, beta=0.1, renormalise=True)
     s = impairments.change_snr(s, snr)
-    xtest = np.roll(s, shiftN, axis=1)
+    s = np.roll(s, shiftN, axis=1)
     pp = impairments.apply_phase_noise(s, lw)
     recoverd, ph1 = phaserec.bps_twostage(pp, 28, s.coded_symbols, 14, method='pyx')
     recoverd_2, ph2 = phaserec.bps(pp, 64, s.coded_symbols, 14, method='pyx')
