@@ -253,15 +253,16 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
         wxy = [_init_taps(Ntaps, pols),]
         if pols == 2:
             wy = _init_orthogonaltaps(wxy[0])
-            wxy = [wxy[0],wy]
+            wxy = np.asarray([wxy[0],wy])
     else:
+        wxy = np.asarray(wxy)
         if pols == 2:
             Ntaps = wxy[0].shape[1]
         else:
             try:
                 wxy = wxy.flatten()
                 Ntaps = len(wxy)
-                wxy = [wxy.copy(),]
+                wxy = np.asarray([wxy.copy(),])
             except:
                 Ntaps = len(wxy[0])
     if not TrSyms:
@@ -342,8 +343,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     M       : integer
         QAM order
 
-    wxy     : tuple(array_like, array_like), optional
-        tuple of the wx and wy filter taps. Either this or Ntaps has to be given.
+    wxy     : array_like optional
+        the wx and wy filter taps. Either this or Ntaps has to be given.
 
     Ntaps   : int
         number of filter taps. Either this or wxy need to be given. If given taps are initialised as [00100]
