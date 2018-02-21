@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation, impairments
+from dsp import equalisation, modulation, impairments, helpers
 
 
 
@@ -8,7 +8,7 @@ fb = 40.e9
 os = 2
 fs = os*fb
 N = 10**6
-theta = np.pi/2.35
+theta = np.pi/4.6
 M = 32
 snr = 25
 muCMA = 1e-3
@@ -26,12 +26,9 @@ S = impairments.change_snr(S, snr)
 
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
 
-#E_m, wx_m, wy_m, err_m, err_rde_m = equalisation.FS_MCMA_MRDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-#E_s, wx_s, wy_s, err_s, err_rde_s = equalisation.FS_MCMA_SBD(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-#E, wx, wy, err, err_rde = equalisation.FS_MCMA_MDDMA(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
-#E, wx, wy, err, err_rde = equalisation.FS_CMA_RDE(SS, Ncma, Nrde, ntaps, os, muCMA, muRDE, M)
 E , wx, (err, err_rde) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), M, ntaps, adaptive=(True, True) ,
                                                              methods=("mcma", "sbd"))
+E = helpers.normalise_and_center(E)
 evm = E.cal_evm()
 evm_s = S[:,::2].cal_evm()
 
