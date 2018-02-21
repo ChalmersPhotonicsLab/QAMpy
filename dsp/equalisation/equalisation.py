@@ -177,6 +177,7 @@ def _init_taps(Ntaps, pols):
     return wx
 
 def _init_orthogonaltaps(wx):
+    Ntaps = wx.shape[1]
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
     wy = -np.conj(wx)[::-1,::-1]
