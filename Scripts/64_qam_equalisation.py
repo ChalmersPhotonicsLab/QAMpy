@@ -8,12 +8,12 @@ os = 2
 fs = os*fb
 N = 2**17
 theta = 1* np.pi/4.5
-theta2 = np.pi/4
+theta2 = np.pi/4.2
 M = 64
-#QAM = modulation.QAMModulator(M)
+QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 0.19e-2
-muRDE = 0.19e-2
+muCMA = 0.19e-3
+muRDE = 0.19e-3
 ntaps = 11
 t_pmd = 100.e-12
 #Ncma = N//4//os -int(1.5*ntaps)
@@ -111,10 +111,10 @@ plt.plot(abs(err_rde_m[0]), color='r')
 plt.plot(abs(err_rde_m[1])-10, color='g')
 plt.subplot(337)
 plt.title('MCMA/SBD Taps')
-plt.plot(wx_s[0,:], 'r')
-plt.plot(wx_s[1,:], '--r')
-plt.plot(wy_s[0,:], 'g')
-plt.plot(wy_s[1,:], '--g')
+plt.plot(wxy_s[0, 0,:], 'r')
+plt.plot(wxy_s[0, 1,:], '--r')
+plt.plot(wxy_s[1, 0,:], 'g')
+plt.plot(wxy_s[1, 1,:], '--g')
 plt.subplot(338)
 plt.title('MCMA/SBD error cma')
 plt.plot(abs(err_s[0]), color='r')

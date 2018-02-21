@@ -180,8 +180,9 @@ def _init_taps(Ntaps, pols):
 def _init_orthogonaltaps(wx):
     Ntaps = wx.shape[1]
     wy = np.zeros(wx.shape, dtype=np.complex128)
-    # initialising the taps to be ortthogonal to the x polarisation
-    wy = -np.conj(wx)[::-1,::-1]
+    # initialising the taps to be opposite orthogonal to the x polarisation (note that we do not want fully orthogonal
+    # (wx.conj()[::-1,::-1] as this causes convergence onto the x-pol
+    wy = wx[::-1,::-1]
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
@@ -382,9 +383,6 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             if print_itt:
                 print("Pol-%d - LMS iteration %d"%(l,i))
             err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
-        #TODO: adjust for more than two polarizations
-        if l < 1:
-            wxy[1] = _init_orthogonaltaps(wxy[0])
     return wxy, err
 
 #
