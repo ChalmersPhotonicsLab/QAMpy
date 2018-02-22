@@ -5,7 +5,6 @@ import numpy.testing as npt
 
 from dsp import modulation, helpers, phaserec, equalisation, impairments, core
 
-import matplotlib.pylab as plt
 
 @pytest.mark.parametrize("lw", np.linspace(10, 1000, 4))
 @pytest.mark.parametrize("M", [4, 16, 32, 64])
