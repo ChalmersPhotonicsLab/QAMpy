@@ -24,6 +24,7 @@ X = Dat['CH1'] + 1.j * Dat['CH2']
 Y = Dat['CH3'] + 1.j * Dat['CH4']
 X = X.flatten()
 Y = Y.flatten()
+
 #X = X[len(X)//2:]
 #Y = Y[len(Y)//2:]
 
@@ -41,7 +42,8 @@ SS = np.vstack([X[5000:-5000],Y[5000:-5000]])
 
 SS = SS[:,:int(2e5)]
 
-E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(5,5), methods=("mcma", "sbd"), adaptive_stepsize=(True,True) )
+E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, M, ntaps, Niter=(5, 5), methods=("mcma", "sbd"),
+                                                       adaptive_stepsize=(True, True))
 
 X = signal_quality.norm_to_s0(E[0, :], M)
 Y = signal_quality.norm_to_s0(E[1, :], M)
@@ -53,7 +55,7 @@ foe = phaserecovery.find_freq_offset(E, fft_size =2 ** 10)
 E = phaserecovery.comp_freq_offset(E, foe)
 
 #Ec = E[:,2e4:-2e4]
-wx, err_both = equalisation.equalise_signal(E, 1, muRDE, M,Niter=4, Ntaps=ntaps, method="sbd" , adaptive_stepsize=False)
+wx, err_both = equalisation.equalise_signal(E, 1, M, Ntaps=ntaps, Niter=4, method="sbd", adaptive_stepsize=False)
 Ec = equalisation.apply_filter(E, 1, wx)
 E = Ec
 

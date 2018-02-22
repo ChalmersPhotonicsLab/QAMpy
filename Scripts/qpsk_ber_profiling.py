@@ -23,7 +23,7 @@ t_pmd = 75e-12
 
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 #pr.enable()
-wx, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="mcma", adaptive_stepsize=True)
+wx, err = equalisation.equalise_signal(SS, os, M, Ntaps=ntaps, method="mcma", adaptive_stepsize=True)
 E = equalisation.apply_filter(SS, os, wx)
 #E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, ntaps, os, mu, M)
 

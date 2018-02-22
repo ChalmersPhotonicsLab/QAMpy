@@ -23,8 +23,8 @@ def apply_filter(sig, wxy):
     sig_out = core.equalisation.apply_filter(sig, os, wxy)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
-def equalise_signal(sig, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma",
-                    adaptive_stepsize=False, print_itt = False, **kwargs):
+def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
+                    print_itt=False, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary.
 
@@ -35,9 +35,6 @@ def equalise_signal(sig, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, meth
 
     mu      : float
         step size parameter
-
-    M       : integer
-        QAM order
 
     wxy     : array_like, optional
         the wx and wy filter taps. Either this or Ntaps has to be given.
@@ -67,10 +64,10 @@ def equalise_signal(sig, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, meth
        estimation error for x and y polarisation
     """
     os = int(sig.fs/sig.fb)
-    return core.equalisation.equalise_signal(sig, os, mu, M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
+    return core.equalisation.equalise_signal(sig, os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize, print_itt=print_itt, **kwargs)
 
-def dual_mode_equalisation(sig, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"),
+def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
                            adaptive_stepsize=(False, False), **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE.
@@ -83,9 +80,6 @@ def dual_mode_equalisation(sig, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), m
 
     mu      : tuple(float, float)
         step size parameter for the first and second equaliser method
-
-    M       : integer
-        QAM order
 
     Ntaps   : int
         number of filter taps. Either this or wxy need to be given. If given taps are initialised as [00100]
@@ -115,7 +109,7 @@ def dual_mode_equalisation(sig, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), m
        estimation error for x and y polarisation for each equaliser mode
     """
     os = int(sig.fs/sig.fb)
-    sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, M, Ntaps, TrSyms=TrSyms, methods=methods,
+    sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, **kwargs)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
 

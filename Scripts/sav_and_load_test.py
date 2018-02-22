@@ -56,7 +56,7 @@ syms = list(io.get_from_table(inp_table, ids, "symbols"))
 bits = list(io.get_from_table(inp_table, ids, "bits"))
 i = 0
 for d_array in m_arrays:
-    wx, er =  equalisation.equalise_signal(d_array, os, mu, M, Ntaps=ntaps, adaptive_step=astep, method=method[0])
+    wx, er = equalisation.equalise_signal(d_array, os, M, Ntaps=ntaps, method=method[0], adaptive_step=astep)
     signalafter = equalisation.apply_filter(d_array, os, wx )
     evm_x = modulator.cal_EVM(signalafter[0], syms[ids[i]][0])
     evm_y = modulator.cal_EVM(signalafter[1], syms[ids[i]][1])

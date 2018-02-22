@@ -21,7 +21,8 @@ Nrde = 5*N//6//os -int(1.5*ntaps)
 S, symbols, bits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 
-E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma","mrde" ))
+E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, M, ntaps, methods=("mcma", "mrde"),
+                                                                            TrSyms=(Ncma, Nrde))
 
 
 evmX = QAM.cal_evm(S[0, ::2])

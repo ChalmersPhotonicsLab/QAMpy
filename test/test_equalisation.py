@@ -12,7 +12,7 @@ class TestReturnObject(object):
 
     def test_apply_filter_basic(self):
         s2 = impairments.simulate_transmission(self.s, self.s.fb, self.s.fs, snr=20, dgd=100e-12)
-        wx, err = equalisation.equalise_signal(s2, 1e-3, s2.M, Ntaps=11)
+        wx, err = equalisation.equalise_signal(s2, 1e-3, Ntaps=11)
         s3 = equalisation.apply_filter(s2, wx)
         assert type(s3) is type(self.s)
 

@@ -18,7 +18,7 @@ S, symbols, bits = QAM.generate_signal(N, snr, PRBSorder=(15,23), baudrate=fb, s
 t_pmd = 75e-12
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 
-wxy, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=30)
+wxy, err = equalisation.equalise_signal(SS, os, M, Ntaps=30)
 E = equalisation.apply_filter(SS, os, wxy)
 E = E[:,1000:-1000]
 

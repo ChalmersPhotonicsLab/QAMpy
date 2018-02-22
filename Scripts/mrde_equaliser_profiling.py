@@ -27,7 +27,7 @@ t_pmd = 50e-12
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 
 t1 = timer()
-E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, methods=methods, beta=4)
+E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, M, ntaps, methods=methods, beta=4)
 t2 = timer()
 print("EQ time: %.1f"%(t2-t1))
 

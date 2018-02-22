@@ -26,8 +26,8 @@ S = impairments.change_snr(S, snr)
 
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
 
-E , wx, (err, err_rde) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), M, ntaps, adaptive=(True, True) ,
-                                                             methods=("mcma", "sbd"))
+E , wx, (err, err_rde) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, methods=("mcma", "sbd"),
+                                                             adaptive=(True, True))
 E = helpers.normalise_and_center(E)
 evm = E.cal_evm()
 evm_s = S[:,::2].cal_evm()
