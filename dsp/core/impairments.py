@@ -117,6 +117,7 @@ def phase_noise(sz, df, fs):
     f = np.random.normal(scale=np.sqrt(var), size=sz)
     return np.cumsum(f, axis=1)
 
+#TODO: make multi-dim phase noise configurable
 def apply_phase_noise(signal, df, fs):
     """
     Add phase noise from local oscillators, based on a Wiener noise process.
