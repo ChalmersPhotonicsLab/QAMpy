@@ -1,6 +1,6 @@
 import numpy as np
 from dsp import impairments, phaserec
-from dsp import modulation, helpers
+from dsp import signals, helpers
 
 
 
@@ -16,7 +16,7 @@ sers = []
 
 for lw in lw_LO:
     shiftN = np.random.randint(-N/2, N/2, 1)
-    s = modulation.SignalQAMGrayCoded(M, N, fb=fb)
+    s = signals.SignalQAMGrayCoded(M, N, fb=fb)
     s = s.resample(fs, beta=0.1, renormalise=True)
     s = impairments.change_snr(s, snr)
     s = np.roll(s, shiftN, axis=1)

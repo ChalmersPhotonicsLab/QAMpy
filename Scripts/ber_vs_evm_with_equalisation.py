@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import dsp.helpers
-from dsp import equalisation, modulation, theory, helpers, filtering, impairments
+from dsp import equalisation, signals, theory, helpers, filtering, impairments
 from dsp.core import utils
 
 """
@@ -67,7 +67,7 @@ for M in Mqams:
     i = 0
     for sr in snr:
         print("SNR = %2f.0 dB"%sr)
-        signal = modulation.SignalQAMGrayCoded(M, N, nmodes=1, fb=fb)
+        signal = signals.SignalQAMGrayCoded(M, N, nmodes=1, fb=fb)
         signal = signal.resample(fnew=fs, beta=beta, renormalise=True)
         signal_s = impairments.change_snr(signal, sr)
         #signalx = np.atleast_2d(filtering.rrcos_pulseshaping(signal_s, beta))

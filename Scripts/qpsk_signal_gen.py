@@ -1,14 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from dsp.core import signal_quality
-from dsp import modulation, theory
+from dsp import signals, theory
 
 """ Check the symbol rate of a QPSK signal against the theoretical symbol rate"""
 
 snr = np.arange(2, 15, 1)
 ser = []
 ser2 = []
-QAM = modulation.QAMModulator(4)
+QAM = signals.QAMModulator(4)
 N = 10**5
 
 for sr in snr:

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation, impairments, helpers
+from dsp import equalisation, signals, impairments, helpers
 
 
 
@@ -20,7 +20,7 @@ Ncma = 10000
 Nrde = N//2//os -int(1.5*ntaps)
 
 #S, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
-sig = modulation.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
+sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
 S  = sig.resample(fs, beta=0.1, renormalise=True)
 S = impairments.change_snr(S, snr)
 

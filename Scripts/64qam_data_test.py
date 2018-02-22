@@ -2,14 +2,14 @@ import numpy as np
 import matplotlib.pylab as plt
 
 import dsp.core.resample
-from dsp import equalisation, analog_frontend, modulation
+from dsp import equalisation, analog_frontend, signals
 from dsp.core import phaserecovery, signal_quality
 from scipy.io import loadmat
 
 
 os = 2
 M = 64
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 snr = 35
 muCMA = 1e-5
 muRDE = 5e-5

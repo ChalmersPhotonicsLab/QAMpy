@@ -1,7 +1,7 @@
 #import cProfile
 import numpy as np
 
-from dsp import equalisation, modulation
+from dsp import equalisation, signals
 from dsp.core import impairments
 
 #pr = cProfile.Profile()
@@ -12,7 +12,7 @@ N = 10**6
 theta = np.pi/2.45
 theta2 = np.pi/4
 M = 4
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 snr = 12
 mu = 1e-3
 ntaps = 30

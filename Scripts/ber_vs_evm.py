@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 import dsp.helpers
 from dsp import filtering
-from dsp import modulation, theory, impairments
+from dsp import signals, theory, impairments
 
 """
 Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]
@@ -71,7 +71,7 @@ for M in Mqams:
     for sr in snr:
         print("SNR = %2f.0 dB"%sr)
         #modulator = modulation.QAMModulator(M)
-        signal = modulation.SignalQAMGrayCoded(M, N, nmodes=1, fb=fb)
+        signal = signals.SignalQAMGrayCoded(M, N, nmodes=1, fb=fb)
         signal = signal.resample(fnew=fs, beta=beta, renormalise=True)
         signal_s  = impairments.change_snr(signal, sr)
         signalafter = signal_s.resample(signal.fb, beta=beta, renormalise=True)

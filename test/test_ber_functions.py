@@ -2,12 +2,12 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import modulation
+from dsp import signals
 from dsp.core import ber_functions, impairments
 
 
 class TestFindSequenceOffset(object):
-    s = modulation.SignalQAMGrayCoded(16, 3*10**4, nmodes=1)
+    s = signals.SignalQAMGrayCoded(16, 3 * 10 ** 4, nmodes=1)
     d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*3*10**4//4+1, (l+1)*3*10**4//4) for l in range(4)])
@@ -33,7 +33,7 @@ class TestFindSequenceOffset(object):
 
 
 class TestFindSequenceOffsetComplex(object):
-    s = modulation.SignalQAMGrayCoded(16, 2*(2**15-1), nmodes=1)
+    s = signals.SignalQAMGrayCoded(16, 2 * (2 ** 15 - 1), nmodes=1)
     d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
@@ -68,7 +68,7 @@ class TestFindSequenceOffsetComplex(object):
         assert (4-ii)%4 == i
 
 class TestSyncAndAdjust(object):
-    s = modulation.SignalQAMGrayCoded(16, 3*10**4, nmodes=1)
+    s = signals.SignalQAMGrayCoded(16, 3 * 10 ** 4, nmodes=1)
     d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("N1, N2, adjust", [(None, 1000, "tx"),(None, 1000, "rx" ), (1000, None, "tx"), (1000, None, "rx") ])
@@ -89,7 +89,7 @@ class TestSyncAndAdjust(object):
     def test_flip(self, adjust, shiftN):
         Np = 2**15-1
         N = 2*Np
-        s = modulation.SignalQAMGrayCoded(16, N, bitclass=modulation.PRBSBits)
+        s = signals.SignalQAMGrayCoded(16, N, bitclass=signals.PRBSBits)
         sig = s[0]
         syms = s.symbols[0]
         syms2 = np.roll(syms, shift=shiftN)
@@ -105,7 +105,7 @@ class TestSyncAndAdjust(object):
     def test_rotated_and_diff_length(self, adjust, tx_i, rx_i, N1, N2, shiftN):
         Np = 2**15-1
         N = 2*Np
-        s = modulation.SignalQAMGrayCoded(16, N, bitclass=modulation.PRBSBits)
+        s = signals.SignalQAMGrayCoded(16, N, bitclass=signals.PRBSBits)
         sig = s[0]
         syms = s.symbols[0]
         syms2 = np.roll(syms, shift=shiftN)
@@ -113,7 +113,7 @@ class TestSyncAndAdjust(object):
         npt.assert_allclose(tx, rx)
 
 class TestAdjustDataLength(object):
-    s = modulation.SignalQAMGrayCoded(16, 3*10**4, nmodes=1)
+    s = signals.SignalQAMGrayCoded(16, 3 * 10 ** 4, nmodes=1)
     d = np.diff(np.unique(s.symbols.real)).min()
 
     @pytest.mark.parametrize("N1, N2", [(None, 1000), (1000, None)])

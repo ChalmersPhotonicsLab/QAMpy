@@ -1,5 +1,5 @@
 import numpy as np
-from dsp import equalisation, modulation
+from dsp import equalisation, signals
 from dsp.core import impairments
 from timeit import default_timer as timer
 
@@ -12,7 +12,7 @@ fs = os*fb
 N = 10**6
 theta = np.pi/2.35
 M = 16
-QAM = modulation.QAMModulator(16)
+QAM = signals.QAMModulator(16)
 snr = 24
 muCMA = 3e-4
 muRDE = 3e-4

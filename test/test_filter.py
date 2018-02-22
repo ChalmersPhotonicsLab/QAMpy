@@ -3,7 +3,7 @@ import numpy as np
 import numpy.testing as npt
 
 from dsp.core import filter as cfilter
-from dsp import modulation, filtering
+from dsp import signals, filtering
 
 
 class TestMovingAvg(object):
@@ -83,7 +83,7 @@ class Test2dcapability(object):
         assert x.shape[0] - N + 1 == y.shape[0]
 
 class TestReturnObjectsAdv(object):
-    s = modulation.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+    s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
     @pytest.mark.xfail(reason="core version does not preserve subclass")
     def test_pre_filter(self):
@@ -137,7 +137,7 @@ class TestReturnObjectsAdv(object):
         assert getattr(self.s, attr) is getattr(s2, attr)
 
 class TestReturnObjectsBasic(object):
-    s = modulation.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+    s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
     def test_pre_filter(self):
         s2 = filtering.pre_filter(self.s, 0.01)

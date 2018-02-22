@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation
+from dsp import equalisation, signals
 
 fb = 40.e9
 os = 2
@@ -9,7 +9,7 @@ N = 10**6
 theta = np.pi/2.45
 theta2 = np.pi/4
 M = 4
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 snr = 14
 mu = 1e-3
 

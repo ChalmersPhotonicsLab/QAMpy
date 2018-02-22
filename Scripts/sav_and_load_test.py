@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import equalisation, modulation, theory
+from dsp import equalisation, signals, theory
 from dsp.core import io
 import os as os_mod
 
@@ -36,7 +36,7 @@ dsp_dict = {"stepsize":(mu, 0), "trsyms":(None, None), "iterations":(1,1), "ntap
 
 for wl in wls:
     for sr in snr:
-        modulator = modulation.QAMModulator(M)
+        modulator = signals.QAMModulator(M)
         signalX, symsX, bitsX = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
         signalY, symsY, bitsY = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
         signal = np.vstack([signalX, signalY])

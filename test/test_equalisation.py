@@ -1,13 +1,13 @@
 import pytest
 import numpy.testing as npt
 
-from dsp import modulation, equalisation
+from dsp import signals, equalisation
 from dsp.core import impairments
 from dsp.core import equalisation as cequalisation
 
 
 class TestReturnObject(object):
-    s = modulation.ResampledQAM(16, 2 ** 16, fb=20e9, fs=40e9, nmodes=2)
+    s = signals.ResampledQAM(16, 2 ** 16, fb=20e9, fs=40e9, nmodes=2)
     os = 2
 
     def test_apply_filter_basic(self):

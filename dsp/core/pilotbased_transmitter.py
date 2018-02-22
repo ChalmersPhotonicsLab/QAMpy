@@ -9,7 +9,7 @@ Pilot-Based DSP Transmitter for MQAM with M>4
 """
 import numpy as np
 from  import impairments, resample, utils
-from .. import modulation
+from .. import signals
 
 
 def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1),npols=2, frame_length = 2**18, pilot_seq_len = 256, pilot_ins_ratio = 32):
@@ -24,10 +24,10 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
         raise ValueError("Pilot insertion ratio not propper selected")
 
     # Modulators to generate hybrid QAM
-    pilot_modualtor = modulation.QAMModulator(4)
+    pilot_modualtor = signals.QAMModulator(4)
     data_modulators = []
     for mod in M:
-        data_modulators.append(modulation.QAMModulator(mod))
+        data_modulators.append(signals.QAMModulator(mod))
         
     # Arrange to have same average power of both
     N_data_symbs = int(N_data_frames * (pilot_ins_ratio - 1))

@@ -1,11 +1,11 @@
 import pytest
 import numpy as np
 
-from dsp import modulation, impairments
+from dsp import signals, impairments
 
 
 class TestReturnObjects(object):
-    s = modulation.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+    s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
     def test_rotate_field(self):
         s2 = impairments.rotate_field(self.s, np.pi / 3)

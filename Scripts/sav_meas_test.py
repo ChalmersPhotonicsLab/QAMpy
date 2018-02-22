@@ -1,7 +1,7 @@
 #import cProfile
 import numpy as np
 from dsp.core import io
-from dsp import modulation
+from dsp import signals
 import os as os_mod
 
 
@@ -11,7 +11,7 @@ os = 2
 fs = os*fb
 N = 3*10**5
 M = 64
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 snrs = [10, 20, 30]
 #lw_LO = [100e3]
 

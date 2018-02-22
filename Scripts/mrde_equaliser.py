@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation
+from dsp import equalisation, signals
 from dsp.core import impairments
 
 fb = 40.e9
@@ -9,7 +9,7 @@ fs = os*fb
 N = 2**18
 theta = np.pi/2.35
 M = 16
-QAM = modulation.QAMModulator(16)
+QAM = signals.QAMModulator(16)
 snr = 24
 muCMA = 1e-3
 muRDE = 0.5e-3

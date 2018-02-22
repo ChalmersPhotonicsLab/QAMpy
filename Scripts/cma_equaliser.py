@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, modulation, impairments, helpers, phaserec
+from dsp import equalisation, signals, impairments, helpers, phaserec
 
 fb = 40.e9
 os = 2
@@ -14,7 +14,7 @@ M = 4
 ntaps=40
 snr =  14
 
-sig = modulation.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
+sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
 S = sig.resample(fs, renormalise=True, beta=0.1)
 S = impairments.apply_phase_noise(S, 100e3)
 S = impairments.change_snr(S, snr)

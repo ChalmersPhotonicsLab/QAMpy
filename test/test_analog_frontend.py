@@ -1,29 +1,29 @@
 import pytest
 
 from dsp.core import analog_frontend as canalog
-from dsp import modulation, analog_frontend
+from dsp import signals, analog_frontend
 
 class TestMultiDim(object):
     @pytest.mark.parametrize("ndim", [1,2,3])
     def test_comp_IQ(self, ndim):
-        s = modulation.SignalQAMGrayCoded(64, 2**12, nmodes=ndim)
+        s = signals.SignalQAMGrayCoded(64, 2 ** 12, nmodes=ndim)
         s2 = canalog.comp_IQ_inbalance(s)
         assert s.shape == s2.shape
 
     @pytest.mark.parametrize("ndim", [1,2,3])
     def test_comp_rf_delay(self, ndim):
-        s = modulation.SignalQAMGrayCoded(64, 2**12, nmodes=ndim)
+        s = signals.SignalQAMGrayCoded(64, 2 ** 12, nmodes=ndim)
         s2 = canalog.comp_rf_delay(s, 0.001, s.fs)
         assert s.shape == s2.shape
 
     @pytest.mark.parametrize("ndim", [1,2,3])
     def test_orthonormalize_signal(self, ndim):
-        s = modulation.SignalQAMGrayCoded(64, 2**12, nmodes=ndim)
+        s = signals.SignalQAMGrayCoded(64, 2 ** 12, nmodes=ndim)
         s2 = canalog.orthonormalize_signal(s, int(s.fs//s.fb))
         assert s.shape == s2.shape
 
 class TestReturnObjects(object):
-    s = modulation.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+    s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
     def test_comp_IQ(self):
         s2 = canalog.comp_IQ_inbalance(self.s)
