@@ -27,22 +27,16 @@ cdef extern from "complex.h" nogil:
     float complex conjf(float complex)
 
 cdef extern from "complex.h" nogil:
-    long double complex conjl(long double complex)
-
-cdef extern from "complex.h" nogil:
-    double creal(double complex)
-
-cdef extern from "complex.h" nogil:
     double cabs(double complex)
-
-cdef extern from "complex.h" nogil:
-    long double cabsl(long double complex)
 
 cdef extern from "complex.h" nogil:
     float cabsf(float complex)
 
 cdef extern from "complex.h":
     double cimag(double complex)
+
+cdef extern from "complex.h" nogil:
+    double creal(double complex)
 
 cdef complexing cconj(complexing x) nogil:
     if complexing is complex64_t:
