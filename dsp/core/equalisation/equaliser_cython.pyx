@@ -20,16 +20,16 @@ ctypedef fused complexing:
 cdef extern from "math.h":
     double sin(double)
 
-cdef extern from "complex.h":
+cdef extern from "complex.h" nogil:
     double complex conj(double complex)
 
-cdef extern from "complex.h":
+cdef extern from "complex.h" nogil:
     float complex conjf(float complex)
 
-cdef extern from "complex.h":
+cdef extern from "complex.h" nogil:
     long double complex conjl(long double complex)
 
-cdef extern from "complex.h":
+cdef extern from "complex.h" nogil:
     double creal(double complex)
 
 cdef extern from "complex.h" nogil:
@@ -44,7 +44,7 @@ cdef extern from "complex.h" nogil:
 cdef extern from "complex.h":
     double cimag(double complex)
 
-cdef complexing cconj(complexing x):
+cdef complexing cconj(complexing x) nogil:
     if complexing is complex64_t:
         return conjf(x)
     else:
@@ -236,7 +236,7 @@ cdef class ErrorFctCME(ErrorFct):
     cpdef double complex calc_error(self, double complex Xest) except *:
         return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
 
-cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, unsigned int pols):
+cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, unsigned int pols) nogil:
     cdef int j, k
     cdef complexing Xest=0
     j = 1
@@ -248,7 +248,7 @@ cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, u
     return Xest
 
 cdef void update_filter(complexing[:,:] E, int Ntaps, cython.floating mu, complexing err,
-                        complexing[:,:] wx, int modes):
+                        complexing[:,:] wx, int modes) nogil:
     cdef int i,j
     for k in range(modes):
         for j in range(Ntaps):
