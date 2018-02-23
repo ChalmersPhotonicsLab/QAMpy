@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages, Extension
+from Cython.Build import cythonize
 # To use a consistent encoding
 from codecs import open
 from os import path
@@ -16,7 +17,7 @@ cython_equalisation = Extension(name="dsp.core.equalisation.cython_equalisation"
 
 dsp_cython = Extension(name="dsp.core.dsp_cython",
                        sources=["dsp/core/dsp_cython.pyx", "dsp/core/equalisation/equaliserC.c"],
-                             include_dirs=["dsp/core/equalisation", np.get_include()],
+                             include_dirs=["dsp/core/equalisation", np.get_include(), "dsp/core/"],
                        extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
 

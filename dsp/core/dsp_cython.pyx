@@ -1,15 +1,12 @@
-# cython: profile=True, boundscheck=False, wraparound=False
+# cython: profile=False, boundscheck=False, wraparound=False
 from __future__ import division
 import numpy as np
 from cython.parallel import prange
 cimport cython
-from cpython cimport bool
 cimport numpy as np
 from ccomplex cimport *
-from cmath import exp, log, pow
-
-cdef extern from "equaliserC.h" nogil:
-    double complex det_symbol(double complex *syms, unsigned int M, double complex value, double *distout)
+from .equalisation cimport cython_equalisation
+from cmath cimport exp, log, pow
 
 
 cdef double cabssq(double complex x) nogil:
@@ -36,40 +33,49 @@ def unwrap_discont(double[::1] seq, double max_diff, double period):
         new_array[i] = seq[i] + period * nperiods
     return new_array
 
-def bps(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=2, dtype=np.float64_t] testangles, np.ndarray[ndim=1, dtype=np.complex128_t] symbols, int N):
-    cdef unsigned int i, j, ph_idx
+def bps(cython_equalisation.complexing[:] E, cython.floating[:,:] testangles, cython_equalisation.complexing[:] symbols, int N):
+    cdef ssize_t i, j, ph_idx
     cdef int L = E.shape[0]
+    cdef int p = testangles.shape[0]
     cdef int M = symbols.shape[0]
     cdef int Ntestangles = testangles.shape[1]
-    cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
-    cdef np.ndarray[ndim=2, dtype=np.float64_t] dists
-    cdef np.ndarray[ndim=2, dtype=np.complex128_t] comp_angles
-    cdef double dtmp
-    cdef np.complex128_t s
-    comp_angles = np.exp(1.j*testangles)
-    dists = np.zeros((L, Ntestangles))+100.
-    idx = np.zeros(L, dtype=np.uint32)
+    cdef np.ndarray[ndim=1, dtype=ssize_t] idx
+    cdef np.ndarray[ndim=2, dtype=cython_equalisation.complexing] comp_angles
+    cdef cython.floating[:,:] dists
+    cdef cython.floating dtmp = 0.
+    cdef cython_equalisation.complexing s = 0
+    cdef cython_equalisation.complexing tmp = 0
+    if cython_equalisation.complexing is cython_equalisation.complex64_t:
+        comp_angles = np.zeros((p, Ntestangles), dtype=np.complex64)
+        comp_angles[:,:] = np.exp(1.j*np.array(testangles[:,:]))
+    else:
+        comp_angles = np.zeros((p, Ntestangles), dtype=np.complex128)
+        comp_angles[:,:] = np.exp(1.j*np.array(testangles[:,:]))
+    if cython.floating is float:
+        dists = np.zeros((L, Ntestangles), dtype=np.float32)+100.
+    else:
+        dists = np.zeros((L, Ntestangles), dtype=np.float64)+100.
     for i in prange(L, schedule='static', nogil=True):
         if testangles.shape[0] > 1:
             ph_idx = i
         else:
             ph_idx = 0
         for j in range(Ntestangles):
-            s = det_symbol(&symbols[0], M, E[i]*comp_angles[ph_idx, j], &dtmp)
-            if dtmp < dists[<unsigned int>i,<unsigned int>j]:
-                dists[<unsigned int>i, <unsigned int>j] = dtmp
-    idx = select_angle_index(dists, 2*N)
-    return idx
+            tmp = E[i] * comp_angles[ph_idx, j]
+            s = cython_equalisation.det_symbol(symbols, M, tmp, &dtmp)
+            if dtmp < dists[i, j]:
+                dists[i, j] = dtmp
+    return np.array(select_angle_index(dists, 2*N))
 
-def select_angle_index(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
-    cdef np.ndarray[ndim=2, dtype=np.float64_t] csum
-    cdef np.ndarray[ndim=1, dtype=np.uint32_t] idx
-    cdef int i,k, L, M
+cpdef ssize_t[:] select_angle_index(cython.floating[:,:] x, int N):
+    cdef np.ndarray[ndim=2, dtype=cython.floating] csum
+    cdef np.ndarray[ndim=1, dtype=ssize_t] idx
+    cdef ssize_t i,k, L, M
     cdef double dmin, dtmp
     L = x.shape[0]
     M = x.shape[1]
     csum = np.zeros((L,M))
-    idx = np.zeros(L, dtype=np.uint32)
+    idx = np.zeros(L, dtype=np.intp)
     for i in range(1, L-1):
         dmin = 1000.
         if i < N:
@@ -84,7 +90,7 @@ def select_angle_index(np.ndarray[ndim=2, dtype=np.float64_t] x, int N):
                     dmin = dtmp
     return idx
 
-def prbs_ext(np.int64_t seed, taps, int nbits, int N):
+cpdef prbs_ext(np.int64_t seed, taps, int nbits, int N):
     cdef int t
     cdef np.int64_t xor, sr
     cdef np.ndarray[ndim=1, dtype=np.uint8_t] out = np.zeros(N, dtype=np.uint8)
@@ -120,7 +126,7 @@ def lfsr_ext(np.int64_t seed, taps, int nbits):
         sr = (xor << nbits-1) + (sr >> 1)
         yield xor, sr
 
-def prbs_int(np.int64_t seed, np.int64_t mask, int N):
+cpdef prbs_int(np.int64_t seed, np.int64_t mask, int N):
     cdef np.ndarray[ndim=1, dtype=np.uint8_t] out = np.zeros(N, dtype=np.uint8)
     cdef np.int64_t state = seed
     cdef int nbits = mask.bit_length()-1
@@ -150,7 +156,7 @@ def lfsr_int(np.int64_t seed, np.int64_t mask):
             state ^= mask #this performs the modulus operation
         yield xor, state
 
-def soft_l_value_demapper(np.ndarray[ndim=1, dtype=double complex] rx_symbs, int M, double snr, np.ndarray[ndim=3, dtype=double complex] bits_map):
+cpdef soft_l_value_demapper(np.ndarray[ndim=1, dtype=double complex] rx_symbs, int M, double snr, np.ndarray[ndim=3, dtype=double complex] bits_map):
     cdef int num_bits = int(np.log2(M))
     cdef np.ndarray[ndim=1, dtype=np.float64_t] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
     cdef int mode, bit, symb, l

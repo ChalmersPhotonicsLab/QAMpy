@@ -1,7 +1,6 @@
 # cython: profile=False, boundscheck=False, wraparound=False
 from __future__ import division
 import numpy as np
-from cython.view cimport array as cvarray
 from cython.parallel import prange
 cimport cython
 from cpython cimport bool
@@ -26,6 +25,7 @@ cdef complexing det_symbol(complexing[:] syms, int M, complexing value, cython.f
         if dist < dist0:
             symbol = syms[j]
             dist0 = dist
+    dists[0] = dist0
     return symbol
 
 def quantize(complexing[:] E, complexing[:] symbols):
