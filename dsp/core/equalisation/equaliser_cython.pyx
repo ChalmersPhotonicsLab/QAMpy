@@ -52,18 +52,6 @@ cdef extern from "complex.h" nogil:
 cdef extern from "complex.h":
     double cimag(double complex)
 
-cdef extern from "equaliserC.h":
-    double complex apply_filter(double complex *E, unsigned int Ntaps, double complex *wx, unsigned int pols, unsigned int L)
-
-cdef extern from "equaliserC.h":
-    double complex mcma_error(double complex Xest, void *args)
-
-cdef extern from "equaliserC.h" nogil:
-    double complex det_symbol(double complex *syms, unsigned int M, double complex value, double *distout)
-
-cdef extern from "equaliserC.h":
-    void update_filter(double complex *E, unsigned int Ntaps, double mu, double complex err, double complex *wx, unsigned int pols, unsigned int L)
-
 cdef complex_all cconj(complex_all x):
     if complex_all is complex256_t:
         return conjl(x)
@@ -72,49 +60,13 @@ cdef complex_all cconj(complex_all x):
     else:
         return conj(x)
 
-cdef complex_all det_symbol2(complex_all[:] syms, int M, complex_all value, floating_all *dists) nogil:
+cdef complex_all det_symbol(complex_all[:] syms, int M, complex_all value, floating_all *dists) nogil:
     cdef complex_all symbol = 0
     cdef floating_all dist0
     cdef floating_all dist
     dist0 = 10000.
     for j in range(M):
         dist = (syms[j].real - value.real)**2 + (syms[j].imag - value.imag)**2
-        if dist < dist0:
-            symbol = syms[j]
-            dist0 = dist
-    return symbol
-
-cdef double complex det_symbol_d(double complex[:] syms, int M, double complex value, double *dists) nogil:
-    cdef double complex symbol = 0
-    cdef double dist0
-    cdef double dist
-    dist0 = 10000.
-    for j in range(M):
-        dist = cabs(syms[j]-value)
-        if dist < dist0:
-            symbol = syms[j]
-            dist0 = dist
-    return symbol
-
-cdef long double complex det_symbol_l(long double complex[:] syms, int M, long double complex value, long double *dists) nogil:
-    cdef long double complex symbol = 0
-    cdef long double dist0
-    cdef long double dist
-    dist0 = 10000.
-    for j in range(M):
-        dist = cabsl(syms[j]-value)
-        if dist < dist0:
-            symbol = syms[j]
-            dist0 = dist
-    return symbol
-
-cdef float complex det_symbol_f(float complex[:] syms, int M, float complex value, float *dists) nogil:
-    cdef float complex symbol = 0
-    cdef float dist0
-    cdef float dist
-    dist0 = 10000.
-    for j in range(M):
-        dist = cabsf(syms[j]-value)
         if dist < dist0:
             symbol = syms[j]
             dist0 = dist
@@ -162,30 +114,6 @@ def quantize(complex_all[:] E, complex_all[:] symbols):
             out_sym = det_symbol2(symbols, M, E[i], &distd)
             det_syms[i] = out_sym
         return det_syms
-
-def quantize2(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
-    """
-    Quantize signal to symbols, based on closest distance.
-
-    Parameters
-    ----------
-    sig     : array_like
-        input signal field, 1D array of complex values
-    symbols : array_like
-        symbol alphabet to quantize to (1D array, dtype=complex)
-
-    Returns:
-    sigsyms : array_like
-        array of detected symbols
-    """
-    cdef unsigned int L = E.shape[0]
-    cdef unsigned int M = symbols.shape[0]
-    cdef double dists
-    cdef int i
-    cdef np.ndarray[ndim =1, dtype=np.complex128_t] det_syms = np.zeros(L, dtype=np.complex128)
-    for i in prange(L, nogil=True, schedule='static', num_threads=8):
-        det_syms[i] = det_symbol(<double complex *>symbols.data, M, E[i], &dists)
-    return det_syms
 
 cdef partition_value(double signal,
                      np.float64_t[:] partitions,
@@ -281,19 +209,19 @@ cdef class ErrorFctGenericDD(ErrorFct):
 cdef class ErrorFctSBD(ErrorFctGenericDD):
     cpdef double complex calc_error(self, double complex Xest)  except *:
         cdef double complex R
-        R = det_symbol(&self.symbols[0], self.N, Xest, &self.dist)
+        R = det_symbol(self.symbols, self.N, Xest, &self.dist)
         return (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
 
 cdef class ErrorFctMDDMA(ErrorFctGenericDD):
     cpdef double complex calc_error(self, double complex Xest)  except *:
         cdef double complex R
-        R = det_symbol(&self.symbols[0], self.N, Xest, &self.dist)
+        R = det_symbol(self.symbols, self.N, Xest, &self.dist)
         return (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
 
 cdef class ErrorFctDD(ErrorFctGenericDD):
     cpdef double complex calc_error(self, double complex Xest)  except *:
         cdef double complex R
-        R = det_symbol(&self.symbols[0], self.N, Xest, &self.dist)
+        R = det_symbol(self.symbols, self.N, Xest, &self.dist)
         return Xest - R
 
 cdef class ErrorFctSCA(ErrorFct):
@@ -325,16 +253,7 @@ cdef class ErrorFctCME(ErrorFct):
     cpdef double complex calc_error(self, double complex Xest) except *:
         return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
 
-cdef complex_all apply_filter2(complex_all[:,:] E, int Ntaps, complex_all[:,:] wx, int modes) nogil:
-    cdef int j,k
-    cdef complex_all Xest
-    Xest = 0
-    for k in range(modes):
-        for j in range(Ntaps):
-            Xest += wx[k,j] * E[k, j]
-    return Xest
-
-cdef complex_all apply_filter3(complex_all[:,:] E, int Ntaps, complex_all[:,:] wx, unsigned int pols):
+cdef complex_all apply_filter(complex_all[:,:] E, int Ntaps, complex_all[:,:] wx, unsigned int pols):
     cdef int j, k
     cdef complex_all Xest=0
     j = 1
@@ -345,53 +264,12 @@ cdef complex_all apply_filter3(complex_all[:,:] E, int Ntaps, complex_all[:,:] w
             Xest += scblas.zdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
     return Xest
 
-def testapplyfilter1(complex_all[:,:] E, int taps, complex_all[:,:] wx):
-    cdef complex_all Xest = 0
-    cdef int pols = E.shape[0]
-    Xest = apply_filter2(E, taps, wx, pols)
-    return Xest
-
-def testapplyfilter2(complex_all[:,:] E, int taps, complex_all[:,:] wx):
-    cdef complex_all Xest = 0
-    cdef int pols = E.shape[0]
-    Xest = apply_filter3(E, taps, wx, pols)
-    return Xest
-
-
-cdef void update_filter2(complex_all[:,:] E, int Ntaps, floating_all mu, complex_all err,
-                        complex_all[:,:] wx, int modes):
-    cdef int i,j
-    for k in range(modes):
-        for j in range(Ntaps):
-            if complex_all is complex64_t:
-                wx[k, j] -= mu * err * conjf(E[k, j])
-            elif complex_all is complex256_t:
-                wx[k, j] -= mu * err * conjl(E[k, j])
-            else:
-                wx[k, j] -= mu * err * conj(E[k, j])
-
 cdef void update_filter3(complex_all[:,:] E, int Ntaps, floating_all mu, complex_all err,
                         complex_all[:,:] wx, int modes):
     cdef int i,j
     for k in range(modes):
         for j in range(Ntaps):
                 wx[k, j] -= mu * err * cconj(E[k, j])
-
-def testupdate1(double complex[:,:] E, int Ntaps, double mu, double complex err,
-                double complex[:,:] wx):
-    cdef int L = E.shape[1]
-    cdef int pols = E.shape[0]
-    update_filter(&E[0,0], Ntaps, mu, err, &wx[0,0], pols, L)
-
-def testupdate2(double complex[:,:] E, int Ntaps, double mu, double complex err,
-                double complex[:,:] wx):
-    cdef int pols = E.shape[0]
-    update_filter2(E, Ntaps, mu, err, wx, pols)
-
-def testupdate3(double complex[:,:] E, int Ntaps, double mu, double complex err,
-                double complex[:,:] wx):
-    cdef int pols = E.shape[0]
-    update_filter3(E, Ntaps, mu, err, wx, pols)
 
 def train_eq(double complex[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
                     int TrSyms,
