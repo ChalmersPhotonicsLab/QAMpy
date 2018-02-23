@@ -64,6 +64,13 @@ cdef extern from "equaliserC.h" nogil:
 cdef extern from "equaliserC.h":
     void update_filter(double complex *E, unsigned int Ntaps, double mu, double complex err, double complex *wx, unsigned int pols, unsigned int L)
 
+cdef complex_all cconj(complex_all x):
+    if complex_all is complex256_t:
+        return conjl(x)
+    elif complex_all is complex64_t:
+        return conjf(x)
+    else:
+        return conj(x)
 
 cdef complex_all det_symbol2(complex_all[:] syms, int M, complex_all value, floating_all *dists) nogil:
     cdef complex_all symbol = 0
@@ -368,7 +375,7 @@ cdef void update_filter3(complex_all[:,:] E, int Ntaps, floating_all mu, complex
     cdef int i,j
     for k in range(modes):
         for j in range(Ntaps):
-                wx[k, j] -= mu * err * (E[k, j].real - E[k,j].imag)
+                wx[k, j] -= mu * err * cconj(E[k, j])
 
 def testupdate1(double complex[:,:] E, int Ntaps, double mu, double complex err,
                 double complex[:,:] wx):
@@ -405,7 +412,7 @@ def train_eq(double complex[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
         Xest = apply_filter3(E[:, i*os:], Ntaps, wx, pols)
         err[i] = errfct.calc_error(Xest)
         #update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
-        update_filter2(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
+        update_filter3(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])
     return err, wx
