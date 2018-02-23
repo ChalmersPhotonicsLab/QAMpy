@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages, Extension
-from Cython.Build import cythonize
 # To use a consistent encoding
 from codecs import open
 from os import path
