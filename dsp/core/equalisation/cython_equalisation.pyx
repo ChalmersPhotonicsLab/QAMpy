@@ -7,36 +7,7 @@ cimport cython
 from cpython cimport bool
 cimport numpy as np
 cimport scipy.linalg.cython_blas as scblas
-
-ctypedef double complex complex128_t
-ctypedef float complex complex64_t
-
-ctypedef long double float128_t
-
-ctypedef fused complexing:
-    float complex
-    double complex
-
-cdef extern from "math.h":
-    double sin(double)
-
-cdef extern from "complex.h" nogil:
-    double complex conj(double complex)
-
-cdef extern from "complex.h" nogil:
-    float complex conjf(float complex)
-
-cdef extern from "complex.h" nogil:
-    double cabs(double complex)
-
-cdef extern from "complex.h" nogil:
-    float cabsf(float complex)
-
-cdef extern from "complex.h":
-    double cimag(double complex)
-
-cdef extern from "complex.h" nogil:
-    double creal(double complex)
+from ccomplex cimport *
 
 cdef complexing cconj(complexing x) nogil:
     if complexing is complex64_t:
