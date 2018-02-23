@@ -1,2 +1,2 @@
 from .equalisation import *
-from .equaliser_cython import quantize
+from .cython_equalisation import quantize

@@ -8,8 +8,8 @@ import numpy as np
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
 LINK_ARGS = ["-fopenmp", "-lm"]
 
-equaliser_cython = Extension(name="dsp.core.equalisation.equaliser_cython",
-                     sources=["dsp/core/equalisation/equaliser_cython.pyx", "dsp/core/equalisation/equaliserC.c"],
+cython_equalisation = Extension(name="dsp.core.equalisation.cython_equalisation",
+                     sources=["dsp/core/equalisation/cython_equalisation.pyx", "dsp/core/equalisation/equaliserC.c"],
                              include_dirs=["dsp/core/equalisation", np.get_include()],
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
@@ -89,7 +89,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy', 'bitarray', 'tables'],
 
-    ext_modules = [equaliser_cython, dsp_cython],
+    ext_modules = [cython_equalisation, dsp_cython],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:

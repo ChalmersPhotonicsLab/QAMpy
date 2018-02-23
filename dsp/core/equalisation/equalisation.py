@@ -43,7 +43,7 @@ References
 
 #TODO: include selection for either numba or cython code
 try:
-    from .equaliser_cython import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from .cython_equalisation import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, ErrorFct
 except:
     #use python code if cython code is not available
