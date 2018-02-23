@@ -374,12 +374,12 @@ class SignalQAMGrayCoded(SignalBase):
         """
         if symbols.ndim is 1:
             bt = bitarray()
-            bt.encode(encoding, symbols.view(dtype="S16"))
+            bt.encode(encoding, symbols)
             return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
         bits = []
         for i in range(symbols.shape[0]):
             bt = bitarray()
-            bt.encode(encoding, symbols[i].view(dtype="S16"))
+            bt.encode(encoding, symbols[i])
             bits.append(np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool))
         return np.array(bits)
 
@@ -412,14 +412,16 @@ class SignalQAMGrayCoded(SignalBase):
         return out
 
     @classmethod
-    def from_symbol_array(cls, symbs, M=None, fb=1):
+    def from_symbol_array(cls, symbs, M=None, fb=1, dtype=None):
         symbs = np.atleast_2d(symbs)
         if M is None:
             warnings.warn("no M given, estimating how mnay unique symbols are in array, this can cause errors")
             M = np.unique(symbs).shape[0]
+        if dtype is None:
+            dtype = symbs.dtype
         scale = np.sqrt(theory.cal_scaling_factor_qam(M)) / np.sqrt((abs(np.unique(symbs)) ** 2).mean())
-        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
-        out = np.empty_like(symbs)
+        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
+        out = np.empty_like(symbs).astype(dtype)
         for i in range(symbs.shape[0]):
             out[i] = quantize(symbs[i], coded_symbols)
         bits = cls._demodulate(out, encoding)
@@ -435,7 +437,7 @@ class SignalQAMGrayCoded(SignalBase):
         return obj
 
     @classmethod
-    def from_bit_array(cls, bits, M, fb=1):
+    def from_bit_array(cls, bits, M, fb=1, dtype=np.complex128):
         arr = np.atleast_2d(bits)
         nbits = int(np.log2(M))
         if arr.shape[1] % nbits > 0:
@@ -443,11 +445,11 @@ class SignalQAMGrayCoded(SignalBase):
             len = arr.shape[1] // nbits * nbits
             arr = arr[:, :len]
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))
-        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
         # out = []
         # for i in range(arr.shape[0]):
         #    out.append( cls._modulate(arr[i], encoding, M))
-        out = cls._modulate(arr, encoding, M)
+        out = cls._modulate(arr, encoding, M, dtype)
         # out = np.asarray(out)
         obj = np.asarray(out).view(cls)
         obj._M = M
@@ -461,27 +463,27 @@ class SignalQAMGrayCoded(SignalBase):
         return obj
 
     @classmethod
-    def _generate_mapping(cls, M, scale):
+    def _generate_mapping(cls, M, scale, dtype=np.complex128):
         Nbits = np.log2(M)
-        symbols = theory.cal_symbols_qam(M)
+        symbols = theory.cal_symbols_qam(M).astype(dtype)
         # check if this gives the correct mapping
         symbols /= scale
         _graycode = theory.gray_code_qam(M)
         coded_symbols = symbols[_graycode]
         bformat = "0%db" % Nbits
-        encoding = dict([(symbols[i].tobytes(),
+        encoding = dict([(symbols[i],
                           bitarray(format(_graycode[i], bformat)))
                          for i in range(len(_graycode))])
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
     # using Randombits as default class because they are slightly faster
-    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, **kwargs):
+    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, dtype=np.complex128, **kwargs):
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))
-        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale)
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
         Nbits = int(N * np.log2(M))
         bits = bitclass(Nbits, nmodes=nmodes, **kwargs)
-        obj = cls._modulate(bits, encoding, M)
+        obj = cls._modulate(bits, encoding, M, dtype=dtype)
         obj = obj.view(cls)
         obj._bitmap_mtx = bitmap_mtx
         obj._encoding = encoding
@@ -559,7 +561,7 @@ class SignalQAMGrayCoded(SignalBase):
         outdata  : array_like
             1D array of complex symbol values. Normalised to energy of 1
         """
-        return self._modulate(data, self._encoding, self.M)
+        return self._modulate(data, self._encoding, self.M, dtype=self.dtype)
 
     def demodulate(self, symbols):
         """

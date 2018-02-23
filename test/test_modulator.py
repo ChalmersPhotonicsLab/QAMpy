@@ -760,3 +760,14 @@ class TestSymbolOnlySignal(object):
         s = signals.SymbolOnlySignal.from_symbol_array(symsN, coded_symbols=syms)
         npt.assert_array_almost_equal(s.coded_symbols, syms)
 
+class TestDtype(object):
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128, np.complex256])
+    def test_SignalQAMGray_dtype(self, dt):
+        s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
+        assert s.dtype is np.dtype(dt)
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128, np.complex256])
+    def test_from_symbol_array(self, dt):
+        s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
+        ss = signals.SignalQAMGrayCoded.from_symbol_array(s)
+        assert ss.dtype is s.dtype
