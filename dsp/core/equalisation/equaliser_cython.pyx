@@ -57,7 +57,7 @@ cdef extern from "equaliserC.h":
     void update_filter(double complex *E, unsigned int Ntaps, double mu, double complex err, double complex *wx, unsigned int pols, unsigned int L)
 
 
-cdef complex_all det_symbol(complex_all[:] syms, int M, complex_all value, floating_all *dists) nogil:
+cdef complex_all det_symbol2(complex_all[:] syms, int M, complex_all value, floating_all *dists) nogil:
     cdef complex_all symbol = 0
     cdef floating_all dist0
     cdef floating_all dist
