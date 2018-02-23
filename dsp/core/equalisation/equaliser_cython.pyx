@@ -6,6 +6,8 @@ from cython.parallel import prange
 cimport cython
 from cpython cimport bool
 cimport numpy as np
+cimport scipy.linalg.cython_blas as scblas
+
 
 ctypedef double complex complex128_t
 ctypedef float complex complex64_t
@@ -28,6 +30,12 @@ cdef extern from "math.h":
 
 cdef extern from "complex.h":
     double complex conj(double complex)
+
+cdef extern from "complex.h":
+    float complex conjf(float complex)
+
+cdef extern from "complex.h":
+    long double complex conjl(long double complex)
 
 cdef extern from "complex.h":
     double creal(double complex)
@@ -319,6 +327,65 @@ cdef complex_all apply_filter2(complex_all[:,:] E, int Ntaps, complex_all[:,:] w
             Xest += wx[k,j] * E[k, j]
     return Xest
 
+cdef complex_all apply_filter3(complex_all[:,:] E, int Ntaps, complex_all[:,:] wx, unsigned int pols):
+    cdef int j, k
+    cdef complex_all Xest=0
+    j = 1
+    for k in range(0,pols):
+        if complex_all is complex64_t:
+            Xest += scblas.cdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
+        if complex_all is complex128_t:
+            Xest += scblas.zdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
+    return Xest
+
+def testapplyfilter1(complex_all[:,:] E, int taps, complex_all[:,:] wx):
+    cdef complex_all Xest = 0
+    cdef int pols = E.shape[0]
+    Xest = apply_filter2(E, taps, wx, pols)
+    return Xest
+
+def testapplyfilter2(complex_all[:,:] E, int taps, complex_all[:,:] wx):
+    cdef complex_all Xest = 0
+    cdef int pols = E.shape[0]
+    Xest = apply_filter3(E, taps, wx, pols)
+    return Xest
+
+
+cdef void update_filter2(complex_all[:,:] E, int Ntaps, floating_all mu, complex_all err,
+                        complex_all[:,:] wx, int modes):
+    cdef int i,j
+    for k in range(modes):
+        for j in range(Ntaps):
+            if complex_all is complex64_t:
+                wx[k, j] -= mu * err * conjf(E[k, j])
+            elif complex_all is complex256_t:
+                wx[k, j] -= mu * err * conjl(E[k, j])
+            else:
+                wx[k, j] -= mu * err * conj(E[k, j])
+
+cdef void update_filter3(complex_all[:,:] E, int Ntaps, floating_all mu, complex_all err,
+                        complex_all[:,:] wx, int modes):
+    cdef int i,j
+    for k in range(modes):
+        for j in range(Ntaps):
+                wx[k, j] -= mu * err * (E[k, j].real - E[k,j].imag)
+
+def testupdate1(double complex[:,:] E, int Ntaps, double mu, double complex err,
+                double complex[:,:] wx):
+    cdef int L = E.shape[1]
+    cdef int pols = E.shape[0]
+    update_filter(&E[0,0], Ntaps, mu, err, &wx[0,0], pols, L)
+
+def testupdate2(double complex[:,:] E, int Ntaps, double mu, double complex err,
+                double complex[:,:] wx):
+    cdef int pols = E.shape[0]
+    update_filter2(E, Ntaps, mu, err, wx, pols)
+
+def testupdate3(double complex[:,:] E, int Ntaps, double mu, double complex err,
+                double complex[:,:] wx):
+    cdef int pols = E.shape[0]
+    update_filter3(E, Ntaps, mu, err, wx, pols)
+
 def train_eq(double complex[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
                     int TrSyms,
                     int Ntaps,
@@ -335,9 +402,10 @@ def train_eq(double complex[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
     cdef double complex Xest
 
     for i in range(0, TrSyms):
-        Xest = apply_filter2(E[:, i*os:], Ntaps, wx, pols)
+        Xest = apply_filter3(E[:, i*os:], Ntaps, wx, pols)
         err[i] = errfct.calc_error(Xest)
-        update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
+        #update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
+        update_filter2(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])
     return err, wx
