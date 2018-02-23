@@ -99,19 +99,19 @@ def quantize(complex_all[:] E, complex_all[:] symbols):
     if complex_all is complex256_t:
         det_syms = np.zeros(L, dtype=np.complex256)
         for i in prange(L, nogil=True, schedule='static'):
-            out_sym = det_symbol2(symbols, M, E[i], &distl)
+            out_sym = det_symbol(symbols, M, E[i], &distl)
             det_syms[i] = out_sym
         return det_syms
     elif complex_all is complex64_t:
         det_syms = np.zeros(L, dtype=np.complex64)
         for i in prange(L, nogil=True, schedule='static'):
-            out_sym = det_symbol2(symbols, M, E[i], &distf)
+            out_sym = det_symbol(symbols, M, E[i], &distf)
             det_syms[i] = out_sym
         return det_syms
     else:
         det_syms = np.zeros(L, dtype=np.complex128)
         for i in prange(L, nogil=True, schedule='static'):
-            out_sym = det_symbol2(symbols, M, E[i], &distd)
+            out_sym = det_symbol(symbols, M, E[i], &distd)
             det_syms[i] = out_sym
         return det_syms
 
@@ -264,7 +264,7 @@ cdef complex_all apply_filter(complex_all[:,:] E, int Ntaps, complex_all[:,:] wx
             Xest += scblas.zdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
     return Xest
 
-cdef void update_filter3(complex_all[:,:] E, int Ntaps, floating_all mu, complex_all err,
+cdef void update_filter(complex_all[:,:] E, int Ntaps, floating_all mu, complex_all err,
                         complex_all[:,:] wx, int modes):
     cdef int i,j
     for k in range(modes):
@@ -287,10 +287,9 @@ def train_eq(double complex[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
     cdef double complex Xest
 
     for i in range(0, TrSyms):
-        Xest = apply_filter3(E[:, i*os:], Ntaps, wx, pols)
+        Xest = apply_filter(E[:, i*os:], Ntaps, wx, pols)
         err[i] = errfct.calc_error(Xest)
-        #update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
-        update_filter3(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
+        update_filter(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])
     return err, wx

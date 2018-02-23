@@ -5,6 +5,7 @@ import numpy.testing as npt
 
 from dsp import signals, helpers, phaserec, equalisation, impairments, core
 
+import matplotlib.pylab as plt
 
 @pytest.mark.parametrize("lw", np.linspace(10, 1000, 4))
 @pytest.mark.parametrize("M", [4, 16, 32, 64])
@@ -175,7 +176,11 @@ class TestCMA(object):
         s = impairments.rotate_field(s, phi)
         wxy, err = equalisation.equalise_signal(s, mu, Ntaps=3, method=method, adaptive_stepsize=True)
         sout = equalisation.apply_filter(s, wxy)
+        #plt.plot(sout[0].real, sout[0].imag, '.r')
+        #plt.show()
         ser = sout.cal_ser()
+        #if ser.mean() > 0.5:
+           #ser = sout[::-1].cal_ser
         npt.assert_allclose(ser, 0)
 
     @pytest.mark.parametrize("method", ["cma", "mcma"])
