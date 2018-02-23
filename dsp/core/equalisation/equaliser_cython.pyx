@@ -148,75 +148,6 @@ def quantize(complex_all[:] E, complex_all[:] symbols):
             det_syms[i] = out_sym
         return det_syms
 
-def quantize3(complex_all[:] E, complex_all[:] symbols):
-    """
-    Quantize signal to symbols, based on closest distance.
-
-    Parameters
-    ----------
-    sig     : array_like
-        input signal field, 1D array of complex values
-    symbols : array_like
-        symbol alphabet to quantize to (1D array, dtype=complex)
-
-    Returns:
-    sigsyms : array_like
-        array of detected symbols
-    """
-    cdef unsigned int L = E.shape[0]
-    cdef unsigned int M = symbols.shape[0]
-    cdef int i, j, k
-    cdef double dist
-    cdef double complex disttmp
-    cdef float complex disttmpf
-    cdef long double complex disttmpl
-    cdef float distf
-    cdef long double distl
-    cdef double dist0 = 10000.
-    cdef float dist0f = 10000.
-    cdef long double dist0l = 10000.
-    cdef np.ndarray[ndim=1, dtype=complex_all] det_syms
-    #cdef np.ndarray[ndim=1, dtype=np.complex64_t] det_symsf
-    #cdef np.ndarray[ndim=1, dtype=complex256_t] det_symsl
-    #cdef double complex[:] det_syms
-    #cdef float complex[:] det_symsf
-    #cdef long double complex[:] det_symsl
-    #cdef complex_all[:] det_syms
-
-    if complex_all is complex128_t:
-        det_syms = np.zeros(L, dtype=np.complex128)
-        for i in prange(L, nogil=True, schedule='static'):
-            dist0 = 10000.
-            for j in range(M):
-                dist = cabs(symbols[j]-E[i])
-                if dist < dist0:
-                    disttmp = symbols[j]
-                    dist0 = dist
-            det_syms[i] = disttmp
-        return det_syms
-    elif complex_all is complex64_t:
-        det_syms = np.zeros(L, dtype=np.complex64)
-        for i in prange(L, nogil=True, schedule='static'):
-            dist0f = 10000.
-            for j in range(M):
-                distf = cabsf(symbols[j]-E[i])
-                if distf < dist0f:
-                    disttmpf = symbols[j]
-                    dist0f = distf
-            det_syms[i] = disttmpf
-        return det_syms
-    else:
-        det_syms = np.zeros(L, dtype=np.complex256)
-        for i in prange(L, nogil=True, schedule='static'):
-            dist0l = 10000.
-            for j in range(0, M):
-                distl = cabsl(symbols[j]-E[i])
-                if distl < dist0l:
-                    disttmpl = symbols[j]
-                    dist0l = distl
-            det_syms[i] = disttmpl
-        return det_syms
-
 def quantize2(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
     """
     Quantize signal to symbols, based on closest distance.
@@ -379,12 +310,22 @@ cdef class ErrorFctCME(ErrorFct):
     cpdef double complex calc_error(self, double complex Xest) except *:
         return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
 
-def train_eq(np.ndarray[ndim=2, dtype=double complex] E,
+cdef complex_all apply_filter2(complex_all[:,:] E, int Ntaps, complex_all[:,:] wx, int modes) nogil:
+    cdef int j,k
+    cdef complex_all Xest
+    Xest = 0
+    for k in range(modes):
+        for j in range(Ntaps):
+            Xest += wx[k,j] * E[k, j]
+    return Xest
+
+def train_eq(double complex[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
                     int TrSyms,
                     int Ntaps,
                     unsigned int os,
                     double mu,
-                    np.ndarray[ndim=2, dtype=double complex] wx,
+                    #np.ndarray[ndim=2, dtype=double complex] wx,
+                    double complex[:,:] wx,
                     ErrorFct errfct,
                     bool adaptive=False):
     cdef np.ndarray[ndim=1, dtype=double complex] err = np.zeros(TrSyms, dtype=np.complex128)
@@ -394,7 +335,7 @@ def train_eq(np.ndarray[ndim=2, dtype=double complex] E,
     cdef double complex Xest
 
     for i in range(0, TrSyms):
-        Xest = apply_filter(&E[0, i*os], Ntaps, &wx[0,0], pols, L)
+        Xest = apply_filter2(E[:, i*os:], Ntaps, wx, pols)
         err[i] = errfct.calc_error(Xest)
         update_filter(&E[0,i*os], Ntaps, mu, err[i], &wx[0,0], pols, L)
         if adaptive and i > 0:

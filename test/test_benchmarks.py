@@ -22,7 +22,7 @@ def test_quantize_precision(dtype, benchmark):
     npt.assert_array_almost_equal(s.symbols[0], o)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128, np.complex256])
-@pytest.mark.parametrize("method", [equaliser_cython.quantize, equaliser_cython.quantize3])
+@pytest.mark.parametrize("method", [equaliser_cython.quantize])#, equaliser_cython.quantize3])
 def test_quantize_precision_2(dtype, method, benchmark):
     s = signals.SignalQAMGrayCoded(128, 2**20, dtype=dtype)
     benchmark.group = "quantize precision-%d"%(8*np.dtype(dtype).itemsize)
@@ -34,3 +34,16 @@ def test_quantize_precision_3(method, benchmark):
     s = signals.SignalQAMGrayCoded(128, 2**20)
     o = benchmark(method, s[0], s.coded_symbols)
     npt.assert_array_almost_equal(s.symbols[0], o)
+
+def test_apply_filter(benchmark):
+    s = signals.SignalQAMGrayCoded(128, 2**20)
+    wx = np.random.randn(2, 1000) + 1.j*np.random.randn(2, 1000)
+    x1 = equaliser_cython.applyfiltertest(s, 1000, wx)
+    x2 = equaliser_cython.applyfiltertest2(s, 1000, wx)
+    npt.assert_array_almost_equal(x1,x2)
+
+@pytest.mark.parametrize("method", [equaliser_cython.applyfiltertest, equaliser_cython.applyfiltertest2])
+def test_apply_filter2(method, benchmark):
+    s = signals.SignalQAMGrayCoded(128, 2**20)
+    wx = np.random.randn(2, 1000) + 1.j*np.random.randn(2, 1000)
+    benchmark(method, s, 1000, wx)
