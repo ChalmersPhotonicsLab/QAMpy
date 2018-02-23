@@ -92,7 +92,7 @@ def quantize(complexing[:] E, complexing[:] symbols):
             det_syms[i] = out_sym
         return det_syms
 
-cdef partition_value(double signal,
+cdef partition_value(cython.floating signal,
                      np.float64_t[:] partitions,
                      np.float64_t[:] codebook):
                     #np.ndarray[ndim=1, dtype=np.float64_t] partitions,
@@ -103,7 +103,7 @@ cdef partition_value(double signal,
         index += 1
     return codebook[index]
 
-cdef double adapt_step(double mu, double complex err_p, double complex err):
+cdef cython.floating adapt_step(cython.floating mu, complexing err_p, complexing err):
     if err.real*err_p.real > 0 and err.imag*err_p.imag >  0:
         lm = 0
     else:
