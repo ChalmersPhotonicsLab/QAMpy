@@ -8,6 +8,7 @@ from cpython cimport bool
 cimport numpy as np
 cimport scipy.linalg.cython_blas as scblas
 from ccomplex cimport *
+from cmath import sin
 
 cdef complexing cconj(complexing x) nogil:
     if complexing is complex64_t:

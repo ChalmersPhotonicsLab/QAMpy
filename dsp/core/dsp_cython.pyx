@@ -6,31 +6,11 @@ cimport cython
 from cpython cimport bool
 cimport numpy as np
 from ccomplex cimport *
-
-
-cdef extern from "complex.h":
-    double complex conj(double complex)
+from cmath import exp, log, pow
 
 cdef extern from "equaliserC.h" nogil:
     double complex det_symbol(double complex *syms, unsigned int M, double complex value, double *distout)
 
-cdef extern from "math.h" nogil:
-    double log(double)
-
-cdef extern from "math.h" nogil:
-    double exp(double)
-
-#cdef extern from "complex.h" nogil:
-#    double cabs(double complex)
-
-#cdef extern from "complex.h" nogil:
-#    double cimag(double complex)
-
-#cdef extern from "complex.h" nogil:
-#    double creal(double complex)
-
-cdef extern from "math.h" nogil:
-    double pow(double, double)
 
 cdef double cabssq(double complex x) nogil:
     return cimag(x)*cimag(x) + creal(x)*creal(x)

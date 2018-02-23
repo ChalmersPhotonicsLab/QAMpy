@@ -7,7 +7,4 @@ ctypedef fused complexing:
     float complex
     double complex
 
-cdef extern from "math.h":
-    double sin(double)
-
 cdef complexing det_symbol(complexing[:] syms, int M, complexing value, cython.floating *dists) nogil
