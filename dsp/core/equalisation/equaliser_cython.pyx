@@ -261,7 +261,7 @@ cdef double adapt_step(double mu, double complex err_p, double complex err):
     return mu
 
 cdef class ErrorFct:
-    cpdef complex_all calc_error(self, complex_all Xest)  except *:
+    cpdef double complex calc_error(self, double complex Xest)  except *:
         return 0
     #def __call__(self, double complex Xest):
         #return self.calc_error(Xest)
