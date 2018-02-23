@@ -7,6 +7,22 @@ cimport cython
 from cpython cimport bool
 cimport numpy as np
 
+ctypedef double complex complex128_t
+ctypedef float complex complex64_t
+ctypedef long double complex complex256_t
+
+ctypedef long double float128_t
+
+ctypedef fused complex_all:
+    float complex
+    double complex
+    long double complex
+
+ctypedef fused floating_all:
+    float
+    double
+    long double
+
 cdef extern from "math.h":
     double sin(double)
 
@@ -15,6 +31,15 @@ cdef extern from "complex.h":
 
 cdef extern from "complex.h":
     double creal(double complex)
+
+cdef extern from "complex.h" nogil:
+    double cabs(double complex)
+
+cdef extern from "complex.h" nogil:
+    long double cabsl(long double complex)
+
+cdef extern from "complex.h" nogil:
+    float cabsf(float complex)
 
 cdef extern from "complex.h":
     double cimag(double complex)
@@ -32,7 +57,167 @@ cdef extern from "equaliserC.h":
     void update_filter(double complex *E, unsigned int Ntaps, double mu, double complex err, double complex *wx, unsigned int pols, unsigned int L)
 
 
-def quantize(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
+cdef complex_all det_symbol(complex_all[:] syms, int M, complex_all value, floating_all *dists) nogil:
+    cdef complex_all symbol = 0
+    cdef floating_all dist0
+    cdef floating_all dist
+    dist0 = 10000.
+    for j in range(M):
+        dist = (syms[j].real - value.real)**2 + (syms[j].imag - value.imag)**2
+        if dist < dist0:
+            symbol = syms[j]
+            dist0 = dist
+    return symbol
+
+cdef double complex det_symbol_d(double complex[:] syms, int M, double complex value, double *dists) nogil:
+    cdef double complex symbol = 0
+    cdef double dist0
+    cdef double dist
+    dist0 = 10000.
+    for j in range(M):
+        dist = cabs(syms[j]-value)
+        if dist < dist0:
+            symbol = syms[j]
+            dist0 = dist
+    return symbol
+
+cdef long double complex det_symbol_l(long double complex[:] syms, int M, long double complex value, long double *dists) nogil:
+    cdef long double complex symbol = 0
+    cdef long double dist0
+    cdef long double dist
+    dist0 = 10000.
+    for j in range(M):
+        dist = cabsl(syms[j]-value)
+        if dist < dist0:
+            symbol = syms[j]
+            dist0 = dist
+    return symbol
+
+cdef float complex det_symbol_f(float complex[:] syms, int M, float complex value, float *dists) nogil:
+    cdef float complex symbol = 0
+    cdef float dist0
+    cdef float dist
+    dist0 = 10000.
+    for j in range(M):
+        dist = cabsf(syms[j]-value)
+        if dist < dist0:
+            symbol = syms[j]
+            dist0 = dist
+    return symbol
+
+def quantize(complex_all[:] E, complex_all[:] symbols):
+    """
+    Quantize signal to symbols, based on closest distance.
+
+    Parameters
+    ----------
+    sig     : array_like
+        input signal field, 1D array of complex values
+    symbols : array_like
+        symbol alphabet to quantize to (1D array, dtype=complex)
+
+    Returns:
+    sigsyms : array_like
+        array of detected symbols
+    """
+    cdef unsigned int L = E.shape[0]
+    cdef unsigned int M = symbols.shape[0]
+    cdef int i, j, k
+    cdef double distd
+    cdef float distf
+    cdef long double distl
+    cdef np.ndarray[ndim=1, dtype=complex_all] det_syms
+    cdef complex_all out_sym
+
+    if complex_all is complex256_t:
+        det_syms = np.zeros(L, dtype=np.complex256)
+        for i in prange(L, nogil=True, schedule='static'):
+            out_sym = det_symbol2(symbols, M, E[i], &distl)
+            det_syms[i] = out_sym
+        return det_syms
+    elif complex_all is complex64_t:
+        det_syms = np.zeros(L, dtype=np.complex64)
+        for i in prange(L, nogil=True, schedule='static'):
+            out_sym = det_symbol2(symbols, M, E[i], &distf)
+            det_syms[i] = out_sym
+        return det_syms
+    else:
+        det_syms = np.zeros(L, dtype=np.complex128)
+        for i in prange(L, nogil=True, schedule='static'):
+            out_sym = det_symbol2(symbols, M, E[i], &distd)
+            det_syms[i] = out_sym
+        return det_syms
+
+def quantize3(complex_all[:] E, complex_all[:] symbols):
+    """
+    Quantize signal to symbols, based on closest distance.
+
+    Parameters
+    ----------
+    sig     : array_like
+        input signal field, 1D array of complex values
+    symbols : array_like
+        symbol alphabet to quantize to (1D array, dtype=complex)
+
+    Returns:
+    sigsyms : array_like
+        array of detected symbols
+    """
+    cdef unsigned int L = E.shape[0]
+    cdef unsigned int M = symbols.shape[0]
+    cdef int i, j, k
+    cdef double dist
+    cdef double complex disttmp
+    cdef float complex disttmpf
+    cdef long double complex disttmpl
+    cdef float distf
+    cdef long double distl
+    cdef double dist0 = 10000.
+    cdef float dist0f = 10000.
+    cdef long double dist0l = 10000.
+    cdef np.ndarray[ndim=1, dtype=complex_all] det_syms
+    #cdef np.ndarray[ndim=1, dtype=np.complex64_t] det_symsf
+    #cdef np.ndarray[ndim=1, dtype=complex256_t] det_symsl
+    #cdef double complex[:] det_syms
+    #cdef float complex[:] det_symsf
+    #cdef long double complex[:] det_symsl
+    #cdef complex_all[:] det_syms
+
+    if complex_all is complex128_t:
+        det_syms = np.zeros(L, dtype=np.complex128)
+        for i in prange(L, nogil=True, schedule='static'):
+            dist0 = 10000.
+            for j in range(M):
+                dist = cabs(symbols[j]-E[i])
+                if dist < dist0:
+                    disttmp = symbols[j]
+                    dist0 = dist
+            det_syms[i] = disttmp
+        return det_syms
+    elif complex_all is complex64_t:
+        det_syms = np.zeros(L, dtype=np.complex64)
+        for i in prange(L, nogil=True, schedule='static'):
+            dist0f = 10000.
+            for j in range(M):
+                distf = cabsf(symbols[j]-E[i])
+                if distf < dist0f:
+                    disttmpf = symbols[j]
+                    dist0f = distf
+            det_syms[i] = disttmpf
+        return det_syms
+    else:
+        det_syms = np.zeros(L, dtype=np.complex256)
+        for i in prange(L, nogil=True, schedule='static'):
+            dist0l = 10000.
+            for j in range(0, M):
+                distl = cabsl(symbols[j]-E[i])
+                if distl < dist0l:
+                    disttmpl = symbols[j]
+                    dist0l = distl
+            det_syms[i] = disttmpl
+        return det_syms
+
+def quantize2(np.ndarray[ndim=1, dtype=np.complex128_t] E, np.ndarray[ndim=1, dtype=np.complex128_t] symbols):
     """
     Quantize signal to symbols, based on closest distance.
 
@@ -76,7 +261,7 @@ cdef double adapt_step(double mu, double complex err_p, double complex err):
     return mu
 
 cdef class ErrorFct:
-    cpdef double complex calc_error(self, double complex Xest)  except *:
+    cpdef complex_all calc_error(self, complex_all Xest)  except *:
         return 0
     #def __call__(self, double complex Xest):
         #return self.calc_error(Xest)
