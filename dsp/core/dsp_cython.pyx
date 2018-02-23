@@ -5,6 +5,7 @@ from cython.parallel import prange
 cimport cython
 from cpython cimport bool
 cimport numpy as np
+from ccomplex cimport *
 
 
 cdef extern from "complex.h":
@@ -19,14 +20,14 @@ cdef extern from "math.h" nogil:
 cdef extern from "math.h" nogil:
     double exp(double)
 
-cdef extern from "complex.h" nogil:
-    double cabs(double complex)
+#cdef extern from "complex.h" nogil:
+#    double cabs(double complex)
 
-cdef extern from "complex.h" nogil:
-    double cimag(double complex)
+#cdef extern from "complex.h" nogil:
+#    double cimag(double complex)
 
-cdef extern from "complex.h" nogil:
-    double creal(double complex)
+#cdef extern from "complex.h" nogil:
+#    double creal(double complex)
 
 cdef extern from "math.h" nogil:
     double pow(double, double)
