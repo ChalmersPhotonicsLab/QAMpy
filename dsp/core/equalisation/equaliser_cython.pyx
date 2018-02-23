@@ -8,22 +8,14 @@ from cpython cimport bool
 cimport numpy as np
 cimport scipy.linalg.cython_blas as scblas
 
-
 ctypedef double complex complex128_t
 ctypedef float complex complex64_t
-ctypedef long double complex complex256_t
 
 ctypedef long double float128_t
 
-ctypedef fused complex_all:
+ctypedef fused complexing:
     float complex
     double complex
-    long double complex
-
-ctypedef fused floating_all:
-    float
-    double
-    long double
 
 cdef extern from "math.h":
     double sin(double)
@@ -52,18 +44,16 @@ cdef extern from "complex.h" nogil:
 cdef extern from "complex.h":
     double cimag(double complex)
 
-cdef complex_all cconj(complex_all x):
-    if complex_all is complex256_t:
-        return conjl(x)
-    elif complex_all is complex64_t:
+cdef complexing cconj(complexing x):
+    if complexing is complex64_t:
         return conjf(x)
     else:
         return conj(x)
 
-cdef complex_all det_symbol(complex_all[:] syms, int M, complex_all value, floating_all *dists) nogil:
-    cdef complex_all symbol = 0
-    cdef floating_all dist0
-    cdef floating_all dist
+cdef complexing det_symbol(complexing[:] syms, int M, complexing value, cython.floating *dists) nogil:
+    cdef complexing symbol = 0
+    cdef cython.floating dist0
+    cdef cython.floating dist
     dist0 = 10000.
     for j in range(M):
         dist = (syms[j].real - value.real)**2 + (syms[j].imag - value.imag)**2
@@ -72,7 +62,7 @@ cdef complex_all det_symbol(complex_all[:] syms, int M, complex_all value, float
             dist0 = dist
     return symbol
 
-def quantize(complex_all[:] E, complex_all[:] symbols):
+def quantize(complexing[:] E, complexing[:] symbols):
     """
     Quantize signal to symbols, based on closest distance.
 
@@ -92,17 +82,10 @@ def quantize(complex_all[:] E, complex_all[:] symbols):
     cdef int i, j, k
     cdef double distd
     cdef float distf
-    cdef long double distl
-    cdef np.ndarray[ndim=1, dtype=complex_all] det_syms
-    cdef complex_all out_sym
+    cdef np.ndarray[ndim=1, dtype=complexing] det_syms
+    cdef complexing out_sym
 
-    if complex_all is complex256_t:
-        det_syms = np.zeros(L, dtype=np.complex256)
-        for i in prange(L, nogil=True, schedule='static'):
-            out_sym = det_symbol(symbols, M, E[i], &distl)
-            det_syms[i] = out_sym
-        return det_syms
-    elif complex_all is complex64_t:
+    if complexing is complex64_t:
         det_syms = np.zeros(L, dtype=np.complex64)
         for i in prange(L, nogil=True, schedule='static'):
             out_sym = det_symbol(symbols, M, E[i], &distf)
@@ -253,19 +236,19 @@ cdef class ErrorFctCME(ErrorFct):
     cpdef double complex calc_error(self, double complex Xest) except *:
         return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
 
-cdef complex_all apply_filter(complex_all[:,:] E, int Ntaps, complex_all[:,:] wx, unsigned int pols):
+cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, unsigned int pols):
     cdef int j, k
-    cdef complex_all Xest=0
+    cdef complexing Xest=0
     j = 1
     for k in range(0,pols):
-        if complex_all is complex64_t:
+        if complexing is complex64_t:
             Xest += scblas.cdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
-        if complex_all is complex128_t:
+        else:
             Xest += scblas.zdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
     return Xest
 
-cdef void update_filter(complex_all[:,:] E, int Ntaps, floating_all mu, complex_all err,
-                        complex_all[:,:] wx, int modes):
+cdef void update_filter(complexing[:,:] E, int Ntaps, cython.floating mu, complexing err,
+                        complexing[:,:] wx, int modes):
     cdef int i,j
     for k in range(modes):
         for j in range(Ntaps):
