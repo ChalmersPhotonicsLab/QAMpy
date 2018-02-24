@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import signals, theory
+from dsp import signals, theory, impairments
 
 
 def _flip_symbols(sig, idx, d, mode=0):
@@ -772,5 +772,60 @@ class TestDtype(object):
         s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
         ss = signals.SignalQAMGrayCoded.from_symbol_array(s)
         assert ss.dtype is s.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    def testfrombits_bits(self, dt):
+        N = 2**12
+        M = 16
+        b = signals.make_prbs_extXOR(15, N)
+        s = signals.SignalQAMGrayCoded.from_bit_array(b, M, dtype=dt)
+        assert np.dtype(dt) is s.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    def testquantize(self, dt):
+        s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
+        s2 = impairments.change_snr(s, 30)
+        sn = s2.quantize()
+        assert  np.dtype(dt) is sn.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    @pytest.mark.parametrize("N", [0, 40])
+    def test_sync_adj1(self, dt, N):
+        s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
+        s2 = np.roll(s, 102, axis=-1)
+        s2 = s2[:,:-N or None]
+        tx, rx = s2._sync_and_adjust(s2, s2.symbols)
+        assert tx.dtype is np.dtype(dt)
+        assert rx.dtype is np.dtype(dt)
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    def test_resample(self, dt):
+        s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
+        s2 = s.resample(2, beta=0.2, renormalise=True)
+        assert np.dtype(dt) is s2.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    def test_tdhqam(self, dt):
+        s = signals.TDHQAMSymbols((64, 128), 2**12, dtype=dt)
+        assert np.dtype(dt) is s.dtype
+        assert np.dtype(dt) is s._symbols_M1.dtype
+        assert np.dtype(dt) is s._symbols_M2.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    def test_tdhqam(self, dt):
+        s1 = signals.SignalQAMGrayCoded(64, 2**12, dtype=dt)
+        s2 = signals.SignalQAMGrayCoded(32, 2**12, dtype=dt)
+        s = signals.TDHQAMSymbols.from_symbol_arrays(s1, s2, 0.5)
+        assert np.dtype(dt) is s.dtype
+
+
+
+
+
+
+
+
+
+
 
 

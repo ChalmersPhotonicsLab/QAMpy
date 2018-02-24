@@ -726,9 +726,9 @@ class TDHQAMSymbols(SignalBase):
             warnings.warn("length of overall pattern not divisable by number of frames, truncating to %d symbols" % N)
         N1 = frms * f_M1
         N2 = frms * f_M2
-        out = np.zeros((nmodes, N), dtype=np.complex128)
         syms1 = M1class(M1, N1, nmodes=nmodes, fb=fb, **kwargs)
         syms2 = M2class(M2, N2, nmodes=nmodes, fb=fb, **kwargs)
+        out = np.zeros((nmodes, N), dtype=syms1.dtype)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
         syms2 /= np.sqrt(scale)
         idx, idx1, idx2 = cls._cal_symbol_idx(N, f_M, f_M1)
@@ -773,6 +773,7 @@ class TDHQAMSymbols(SignalBase):
     @classmethod
     def from_symbol_arrays(cls, syms_M1, syms_M2, fr, power_method="dist"):
         assert syms_M1.ndim == 2 and syms_M2.ndim == 2, "input needs to have two dimensions"
+        assert syms_M1.dtype is syms_M2.dtype, "both input symbol arrays need to have the same dtype"
         assert syms_M1.shape[0] == syms_M2.shape[0], "Number of modes must be the same"
         f_M, f_M1, f_M2 = cls._cal_fractions(fr)
         scale = cls.calculate_power_ratio(syms_M1.coded_symbols, syms_M2.coded_symbols, power_method)
