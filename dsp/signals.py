@@ -148,10 +148,10 @@ class SignalBase(np.ndarray):
                 method = "truncate"
         else:
             raise ValueError("which has to be either 'tx' or 'rx'")
-        tx_out, = []
+        tx_out = []
         rx_out = []
         for i in range(nm):
-            t, r = ber_functions.adjust_data_length(tx, rx, method)
+            t, r = ber_functions.adjust_data_length(tx[i], rx[i], method)
             tx_out.append(t)
             rx_out.append(r)
         return np.array(tx_out), np.array(rx_out)
@@ -286,8 +286,7 @@ class SignalBase(np.ndarray):
         nmodes = signal_rx.shape[0]
         if symbols_tx is None:
             symbols_tx = self.symbols
-        if not synced:
-            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
+        symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = np.zeros(nmodes, dtype=np.float64)
         for i in range(nmodes):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols)
@@ -980,7 +979,7 @@ class SignalWithPilots(SignalBase):
             signal_rx = self.get_data(shift_factors)
         return super().cal_ber(signal_rx, synced=False)
 
-    def cal_evm(self, signal_rx=None, synced=False, blind=False):
+    def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
         return super().cal_evm(signal_rx, blind=blind)
