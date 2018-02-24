@@ -703,7 +703,7 @@ class ResampledQAM(SignalQAMGrayCoded):
 
 #TODO: Currently Signal Quality functions do not work for TDHQAMSymbols
 class TDHQAMSymbols(SignalBase):
-    _inheritattr_ = ["_symbols_M1", "_symbols_M2", "_fr", "_symbols" ]
+    _inheritattr_ = ["_symbols_M1", "_symbols_M2", "_fr", "_powratio" ]
 
     @staticmethod
     def _cal_fractions(fr):
@@ -758,11 +758,17 @@ class TDHQAMSymbols(SignalBase):
         obj = out.view(cls)
         obj._symbols_M1 = syms1
         obj._symbols_M2 = syms2
+        obj._powratio = scale
         obj._fr = fr
         obj._fb = fb
+        obj._fs = fb
         obj._M = M
         obj._power_method = power_method
         return obj
+
+    @property
+    def powratio(self):
+        return self._powratio
 
     @property
     def f_M(self):
@@ -782,6 +788,14 @@ class TDHQAMSymbols(SignalBase):
     @property
     def M(self):
         return (self._symbols_M1.M, self._symbols_M2.M)
+
+    @property
+    def symbols_M1(self):
+        return self._symbols_M1
+
+    @property
+    def symbols_M2(self):
+        return self._symbols_M2
 
     @property
     def fr(self):
@@ -814,8 +828,10 @@ class TDHQAMSymbols(SignalBase):
         obj = out.view(cls)
         obj._symbols_M1 = syms_M1
         obj._symbols_M2 = syms_M2
+        obj._powratio = scale
         obj._fr = fr
         obj._fb = syms_M1.fb
+        obj._fs = syms_M1.fb
         obj._power_method = power_method
         return obj
 
@@ -865,7 +881,7 @@ class TDHQAMSymbols(SignalBase):
 
 class SignalWithPilots(SignalBase):
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
-                     "_idx_dat"]
+                     "_idx_dat", "_pilot_scale"]
     _inheritbase_ = ["_fs"]
 
     @staticmethod
@@ -883,11 +899,11 @@ class SignalWithPilots(SignalBase):
         idx_dat = ~idx_pil
         return idx, idx_dat, idx_pil
 
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1,
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1,
                 dataclass=SignalQAMGrayCoded, nmodes=1, dtype=np.complex128,  **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=dtype)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
-        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * scale_pilots
+        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * pilot_scale
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
@@ -903,10 +919,11 @@ class SignalWithPilots(SignalBase):
         obj._symbols = symbs
         obj._pilots = pilots
         obj._idx_dat = idx_dat
+        obj._pilot_scale = pilot_scale
         return obj
 
     @classmethod
-    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1, **pilot_kwargs):
+    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, **pilot_kwargs):
         nmodes, N = data.shape
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
         assert np.count_nonzero(idx_dat) <= N, "data frame is to short for the given frame length"
@@ -915,12 +932,13 @@ class SignalWithPilots(SignalBase):
         out_symbs = np.empty((nmodes, frame_len), dtype=data.dtype)
         Ndat = np.count_nonzero(idx_dat)
         pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=data.dtype, **pilot_kwargs) / np.sqrt(
-            scale_pilots)
+            pilot_scale)
         out_symbs[:, idx_pil] = pilots
         out_symbs[:, idx_dat] = data[:, :Ndat]
         out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
         obj._fs = data.fb
+        obj._pilot_scale = pilot_scale
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
@@ -929,6 +947,10 @@ class SignalWithPilots(SignalBase):
         obj._pilots = pilots
         obj._idx_dat = idx_dat
         return obj
+
+    @property
+    def pilot_scale(self):
+        return self._pilot_scale
 
     @property
     def pilot_seq(self):

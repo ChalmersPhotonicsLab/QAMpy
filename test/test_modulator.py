@@ -53,6 +53,12 @@ class TestBits(object):
 
 
 class TestQAMSymbolsGray(object):
+    @pytest.mark.parametrize("attr", ["M", "fs", "fb", "bits", "coded_symbols", "_encoding",
+                                      "_bitmap_mtx", "_code", "Nbits"])
+    def test_attr_present(self, attr):
+        s = signals.ResampledQAM(128, 2**12)
+        assert getattr(s, attr) is not None
+
     @pytest.mark.parametrize("N", [np.random.randint(1, 2 ** 20)])
     @pytest.mark.parametrize("nmodes", np.arange(1, 4))
     def test_shape(self, N, nmodes):
@@ -287,10 +293,29 @@ class TestQAMSymbolsGray(object):
         assert type(s) is type(s2)
         assert s2.dtype is np.dtype(dtype)
 
-
+class TestResampledQAM(object):
+    @pytest.mark.parametrize("attr", ["M", "fs", "fb", "bits", "coded_symbols", "_encoding",
+                                      "_bitmap_mtx", "_code", "Nbits"])
+    def test_attr_present(self, attr):
+        s = signals.ResampledQAM(128, 2**12)
+        assert getattr(s, attr) is not None
 
 
 class TestPilotSignal(object):
+
+    @pytest.mark.parametrize("attr", ["M", "fs", "fb", "pilots", "symbols", "pilot_seq",
+                                      "ph_pilots", "nframes", "frame_len", "pilot_scale"])
+    def test_attr_present(self, attr):
+        s = signals.SignalWithPilots(128, 2**12, 256, 32, 1, nmodes=1)
+        assert getattr(s, attr) is not None
+
+    @pytest.mark.parametrize("attr", ["M", "fs", "fb", "pilots", "symbols", "pilot_seq",
+                                      "ph_pilots", "nframes", "frame_len", "pilot_scale"])
+    def test_attr_present_from_data(self, attr):
+        si = signals.SignalQAMGrayCoded(128, 2**12)
+        s = signals.SignalWithPilots.from_data_array(si, 2**12, 256, 32, 1)
+        assert getattr(s, attr) is not None
+
     @pytest.mark.parametrize("N", [2 ** 18, 2 ** 12, 2 ** 14])
     @pytest.mark.parametrize("nmodes", range(1, 4))
     def testshape(self, N, nmodes):
@@ -422,8 +447,13 @@ class TestPilotSignal(object):
         NN = N-ph
         assert sp.symbols.shape[1] == NN
 
-
 class TestTDHybridsSymbols(object):
+    @pytest.mark.parametrize("attr", ["M", "fs", "fb", "symbols_M1", "symbols_M2",
+                                      "fr", "f_M", "f_M1", "f_M2"])
+    def test_attr_present(self, attr):
+        s = signals.TDHQAMSymbols((64, 128), 2**12)
+        assert getattr(s, attr) is not None
+
     @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])
     @pytest.mark.parametrize("M2", [4, 16, 32, 64, 128, 256])
     def test_dist(self, M1, M2):
