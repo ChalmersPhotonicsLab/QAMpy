@@ -156,7 +156,7 @@ def lfsr_int(np.int64_t seed, np.int64_t mask):
             state ^= mask #this performs the modulus operation
         yield xor, state
 
-cpdef soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
+cpdef double[:] soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
     cdef int num_bits = int(np.log2(M))
     cdef double[:] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
     cdef int mode, bit, symb, l
@@ -164,7 +164,6 @@ cpdef soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, d
     cdef int k = bits_map.shape[1]
     cdef double tmp = 0
     cdef double tmp2 = 0
-
     for bit in range(num_bits):
         for symb in prange(N, schedule='static', nogil=True):
             tmp = 0
