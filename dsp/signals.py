@@ -968,7 +968,7 @@ class SignalWithPilots(SignalBase):
             signal_rx = self.get_data(shift_factors)
         return super().cal_gmi(signal_rx)
 
-    def est_snr(self, signal_rx=None, shift_factors=None, symbols_tx=None):
+    def est_snr(self, signal_rx=None, synced=True, shift_factors=None, symbols_tx=None):
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().est_snr(signal_rx, synced=False, symbols_tx=symbols_tx)
+        return super().est_snr(signal_rx, synced=synced, symbols_tx=symbols_tx)
