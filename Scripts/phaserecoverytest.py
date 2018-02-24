@@ -17,7 +17,7 @@ sers = []
 for lw in lw_LO:
     shiftN = np.random.randint(-N/2, N/2, 1)
     s = signals.SignalQAMGrayCoded(M, N, fb=fb)
-    s = s.resample(fs, beta=0.1, renormalise=True)
+    s = s.resample(fs, beta=0.1, renormaise=True)
     s = impairments.change_snr(s, snr)
     s = np.roll(s, shiftN, axis=1)
     pp = impairments.apply_phase_noise(s, lw)

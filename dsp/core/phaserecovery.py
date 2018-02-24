@@ -113,18 +113,22 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
         bps_fct = _bps_idx_af
     else:
         raise("Method needs to be 'pyx' or 'af'")
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
-    Ew = np.atleast_2d(E)
+    if E.dtype is np.dtype(np.complex64):
+        dtype = np.float32
+    else:
+        dtype = np.float64
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False, dtype=dtype).reshape(1,-1)
+    Ew = np.atleast_2d(E).astype(E.dtype)
     ph = []
     for i in range(Ew.shape[0]):
-        idx =  bps_fct(Ew[i], angles, symbols, N, **kwargs)
+        idx =  bps_fct(Ew[i], angles, symbols, N)
         ph.append(select_angles(angles, idx))
     ph = np.asarray(ph)
     # ignore the phases outside the averaging window
     # better to use normal unwrap instead of fancy tricks
     #ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
     ph[:, N:-N] = np.unwrap(ph[:, N:-N]*4)/4
-    #Eout = E*np.exp(1.j*ph)
+    ph = ph.astype(dtype)
     if E.ndim == 1:
         return (Ew*np.exp(1.j*ph)).flatten(), ph.flatten()
     else:
@@ -137,14 +141,9 @@ def _movavg_af(X, N, axis=0):
     cs = af.accum(X, dim=axis)
     return cs[N:] - cs[:-N]
 
-def _bps_idx_af(E, angles, symbols, N, precision=16):
+def _bps_idx_af(E, angles, symbols, N):
     global NMAX
-    if precision == 16:
-        prec_dtype = np.complex128
-    elif precision == 8:
-        prec_dtype = np.complex64
-    else:
-        raise ValueError("Precision has to be either 16 for double complex or 8 for single complex")
+    prec_dtype = E.dtype
     Ntestangles = angles.shape[1]
     Nmax = NMAX//Ntestangles//symbols.shape[0]//16
     L = E.shape[0]

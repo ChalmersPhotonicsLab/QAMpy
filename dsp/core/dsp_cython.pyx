@@ -39,22 +39,19 @@ def bps(cython_equalisation.complexing[:] E, cython.floating[:,:] testangles, cy
     cdef int p = testangles.shape[0]
     cdef int M = symbols.shape[0]
     cdef int Ntestangles = testangles.shape[1]
+    cdef float x1 = 1
+    cdef double x2 = 1
     cdef np.ndarray[ndim=1, dtype=ssize_t] idx
     cdef np.ndarray[ndim=2, dtype=cython_equalisation.complexing] comp_angles
     cdef cython.floating[:,:] dists
     cdef cython.floating dtmp = 0.
     cdef cython_equalisation.complexing s = 0
     cdef cython_equalisation.complexing tmp = 0
-    if cython_equalisation.complexing is cython_equalisation.complex64_t:
-        comp_angles = np.zeros((p, Ntestangles), dtype=np.complex64)
-        comp_angles[:,:] = np.exp(1.j*np.array(testangles[:,:]))
-    else:
-        comp_angles = np.zeros((p, Ntestangles), dtype=np.complex128)
-        comp_angles[:,:] = np.exp(1.j*np.array(testangles[:,:]))
-    if cython.floating is float:
-        dists = np.zeros((L, Ntestangles), dtype=np.float32)+100.
-    else:
-        dists = np.zeros((L, Ntestangles), dtype=np.float64)+100.
+    cdtype = "c%d"%E.itemsize
+    fdtype = "f%d"%testangles.itemsize
+    comp_angles = np.zeros((p, Ntestangles), dtype=cdtype)
+    comp_angles[:,:] = np.exp(1.j*np.array(testangles[:,:]))
+    dists = np.zeros((L, Ntestangles), dtype=fdtype)+100.
     for i in prange(L, schedule='static', nogil=True):
         if testangles.shape[0] > 1:
             ph_idx = i
@@ -68,13 +65,13 @@ def bps(cython_equalisation.complexing[:] E, cython.floating[:,:] testangles, cy
     return np.array(select_angle_index(dists, 2*N))
 
 cpdef ssize_t[:] select_angle_index(cython.floating[:,:] x, int N):
-    cdef np.ndarray[ndim=2, dtype=cython.floating] csum
-    cdef np.ndarray[ndim=1, dtype=ssize_t] idx
+    cdef cython.floating[:,:] csum
+    cdef ssize_t[:] idx
     cdef ssize_t i,k, L, M
-    cdef double dmin, dtmp
+    cdef cython.floating dmin, dtmp
     L = x.shape[0]
     M = x.shape[1]
-    csum = np.zeros((L,M))
+    csum = np.zeros((L,M), dtype="f%d"%x.itemsize)
     idx = np.zeros(L, dtype=np.intp)
     for i in range(1, L-1):
         dmin = 1000.

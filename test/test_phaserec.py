@@ -1,7 +1,11 @@
 import pytest
 import numpy as np
+import numpy.testing as npt
 from dsp import signals, impairments, phaserec
 from dsp.core import phaserecovery as cphaserecovery
+import matplotlib.pylab as plt
+
+
 
 class TestReturnObject(object):
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
@@ -99,5 +103,28 @@ class Test2DCapability(object):
         s2 = cphaserecovery.comp_freq_offset(s.flatten(), ph)
         assert 2**16 == s2.shape[0]
 
+class TestDtype(object):
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_bps(self, dtype):
+        s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
+        s *= np.exp(1.j*np.pi/3)
+        s2, ph = phaserec.bps(s, 32, s.coded_symbols, 10, method="pyx")
+        assert s2.dtype is np.dtype(dtype)
+        assert ph.dtype.itemsize is np.dtype(dtype).itemsize//2
 
+
+class TestCorrect(object):
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    @pytest.mark.parametrize("angle", np.linspace(0.1, np.pi/4.1, 8))
+    def test_bps(self, dtype, angle):
+        s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
+        s *= np.exp(1.j*angle)
+        s2, ph = phaserec.bps(s, 32, s.coded_symbols, 10, method="pyx")
+        o = ph[0][20:-20]+angle
+        #print(ph[0,12]+angle)
+        #print(o[10])
+        #plt.plot(ph[0], 'r')
+        #plt.plot(o, 'b')
+        #plt.show()
+        npt.assert_allclose(0, o, atol=2*np.pi/4/32)
 
