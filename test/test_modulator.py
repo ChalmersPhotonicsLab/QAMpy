@@ -383,6 +383,21 @@ class TestPilotSignal(object):
         s = signals.SignalWithPilots(64, N, Nseq, ph_i, nframes=nframes)
         npt.assert_array_almost_equal(s.get_data(), np.tile(s.symbols, nframes))
 
+
+    @pytest.mark.parametrize("nmodes", [1, 2, 3])
+    @pytest.mark.parametrize("nframes", [1, 2, 3])
+    def test_get_data2(self, nmodes, nframes):
+        N = 2 ** 16
+        Nseq = 256
+        ph_i = 32
+        s = signals.SignalWithPilots(64, N, Nseq, ph_i, nframes=nframes, nmodes=nmodes)
+        shifts = []
+        for i in range(nmodes):
+            sf = np.random.randint(0, 2**12)
+            shifts.append(sf)
+            s[i] = np.roll(s[i], sf)
+        npt.assert_array_almost_equal(s.get_data(shifts), np.tile(s.symbols, nframes))
+
     def test_symbol_inherit(self):
         s = signals.SignalQAMGrayCoded(128, 2 ** 16, nmodes=2)
         sp = signals.SignalWithPilots.from_data_array(s, 2 ** 16, 256, 32)

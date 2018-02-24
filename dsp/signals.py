@@ -528,6 +528,7 @@ class SignalQAMGrayCoded(SignalBase):
     def bits(self):
         return self._bits
 
+    #TODO: the following three should probably be part of the base class
     @property
     def M(self):
         return self._M
@@ -872,7 +873,7 @@ class SignalWithPilots(SignalBase):
         symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, dtype=dtype, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out_symbs = np.tile(out_symbs, nframes)
-        fb = symbs.fb
+        #fb = symbs.fb
         obj = out_symbs.view(cls)
         obj._fs = symbs.fb
         obj._frame_len = frame_len
@@ -936,13 +937,13 @@ class SignalWithPilots(SignalBase):
     def get_data(self, shift_factors=None):
         if shift_factors is None:
             idx = np.tile(self._idx_dat, self.nframes)
-            return self[:, idx]
+            return self.symbols.recreate_from_np_array(self[:, idx])
+        shift_factors = np.asarray(shift_factors)
         idxn = np.tile(self._idx_dat, self.nframes)
-        idx_o = []
-        for sf in shift_factors:
-            idx_o.append(np.roll(idxn, sf))
-        idx_o = np.array(idx_o)
-        return self[idx_o].reshape(shift_factors.shape[0], idxn.shape[0])
+        out = []
+        for i in range(shift_factors.shape[0]):
+            out.append(np.roll(self[i], -shift_factors[i])[idxn])
+        return self.symbols.recreate_from_np_array(np.array(out))
 
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
