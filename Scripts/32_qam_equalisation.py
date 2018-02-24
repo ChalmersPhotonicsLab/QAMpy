@@ -30,7 +30,7 @@ E , wx, (err, err_rde) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE),
                                                              adaptive=(True, True))
 E = helpers.normalise_and_center(E)
 evm = E.cal_evm()
-evm_s = S[:,::2].cal_evm()
+evm_s = S[:, ::2].cal_evm()
 
 #sys.exit()
 plt.figure()
