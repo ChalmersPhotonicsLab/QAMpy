@@ -121,7 +121,9 @@ class SignalBase(np.ndarray):
         out._fs = fnew
         return out
 
-    def _sync_and_adjust(self, tx, rx):
+    def _sync_and_adjust(self, tx, rx, synced=False):
+        if synced:
+            return self._adjust_only(tx, rx)
         tx_out = []
         rx_out = []
         for i in range(tx.shape[0]):
@@ -129,6 +131,31 @@ class SignalBase(np.ndarray):
             tx_out.append(t)
             rx_out.append(r)
         return np.array(tx_out), np.array(rx_out)
+
+    def _adjust_only(self, tx, rx, which="tx"):
+        if tx.shape == rx.shape:
+            return tx, rx
+        nm = tx.shape[0]
+        if which is "tx":
+            if tx.shape[1] > rx.shape[1]:
+                method = "truncate"
+            else:
+                method = "extend"
+        elif which is "rx":
+            if tx.shape[1] > rx.shape[1]:
+                method = "extend"
+            else:
+                method = "truncate"
+        else:
+            raise ValueError("which has to be either 'tx' or 'rx'")
+        tx_out, = []
+        rx_out = []
+        for i in range(nm):
+            t, r = ber_functions.adjust_data_length(tx, rx, method)
+            tx_out.append(t)
+            rx_out.append(r)
+        return np.array(tx_out), np.array(rx_out)
+
 
     def cal_ser(self, signal_rx=None, synced=False):
         """
@@ -158,10 +185,7 @@ class SignalBase(np.ndarray):
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
         data_demod = self.quantize(signal_rx)
-        if not synced:
-            symbols_tx, data_demod = self._sync_and_adjust(self.symbols, data_demod)
-        else:
-            symbols_tx = self.symbols
+        symbols_tx, data_demod = self._sync_and_adjust(self.symbols, data_demod, synced)
         errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         return np.asarray(errs) / data_demod.shape[1]
 
@@ -194,17 +218,14 @@ class SignalBase(np.ndarray):
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
         syms_demod = self.quantize(signal_rx)
-        if not synced:
-            symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod)
-        else:
-            symbols_tx = self.symbols
+        symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod, synced)
         # TODO: need to rename decode to demodulate
         bits_demod = self.demodulate(syms_demod)
         tx_synced = self.demodulate(symbols_tx)
         errs = np.count_nonzero(tx_synced ^ bits_demod, axis=-1)
         return np.asarray(errs) / bits_demod.shape[1]
 
-    def cal_evm(self, signal_rx=None, blind=False):
+    def cal_evm(self, signal_rx=None, synced=False, blind=False):
         """
         Calculate the Error Vector Magnitude of the input signal either blindly or against a known symbol sequence, after _[1].
         The EVM here is normalised to the average symbol power, not the peak as in some other definitions. Currently does not check
@@ -212,6 +233,7 @@ class SignalBase(np.ndarray):
 
         Parameters
         ----------
+        synced
         signal_rx    : array_like
             input signal to measure the EVM offset
         blind : bool, optional
@@ -238,7 +260,7 @@ class SignalBase(np.ndarray):
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
-        symbols_tx, signal_ad = self._sync_and_adjust(self.symbols, signal_rx)
+        symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx, synced)
         return np.asarray(
             np.sqrt(np.mean(dsp.helpers.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
 
@@ -265,13 +287,13 @@ class SignalBase(np.ndarray):
         if symbols_tx is None:
             symbols_tx = self.symbols
         if not synced:
-            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx)
+            symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = np.zeros(nmodes, dtype=np.float64)
         for i in range(nmodes):
             snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols)
         return np.asarray(snr)
 
-    def cal_gmi(self, signal_rx=None):
+    def cal_gmi(self, signal_rx=None, synced=False):
         """
         Calculate the generalized mutual information for the received signal.
 
@@ -296,7 +318,7 @@ class SignalBase(np.ndarray):
         GMI_per_bit = np.zeros((nmodes, self.Nbits), dtype=np.float64)
         mm = np.sqrt(np.mean(np.abs(signal_rx) ** 2, axis=-1))
         signal_rx = signal_rx / mm[:, np.newaxis]
-        tx, rx = self._sync_and_adjust(symbols_tx, signal_rx)
+        tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = self.est_snr(rx, synced=True, symbols_tx=tx)
         bits = self.demodulate(self.quantize(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
@@ -958,10 +980,10 @@ class SignalWithPilots(SignalBase):
             signal_rx = self.get_data(shift_factors)
         return super().cal_ber(signal_rx, synced=False)
 
-    def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
+    def cal_evm(self, signal_rx=None, synced=False, blind=False):
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_evm(signal_rx, blind)
+        return super().cal_evm(signal_rx, blind=blind)
 
     def cal_gmi(self, signal_rx=None, shift_factors=None):
         if signal_rx is None:
