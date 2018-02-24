@@ -66,6 +66,18 @@ class SignalBase(np.ndarray):
     _inheritattr_ = []  # list of attributes names that should be inherited
     __array_priority__ = 1
 
+    @property
+    def M(self):
+        return self._M
+
+    @property
+    def fb(self):
+        return self._fb
+
+    @property
+    def fs(self):
+        return self._fs
+
     @staticmethod
     def _copy_inherits(objold, objnew):
         for attr in objold._inheritbase_:
@@ -549,19 +561,6 @@ class SignalQAMGrayCoded(SignalBase):
     def bits(self):
         return self._bits
 
-    #TODO: the following three should probably be part of the base class
-    @property
-    def M(self):
-        return self._M
-
-    @property
-    def fb(self):
-        return self._fb
-
-    @property
-    def fs(self):
-        return self._fs
-
     @property
     def Nbits(self):
         """
@@ -867,6 +866,7 @@ class TDHQAMSymbols(SignalBase):
 class SignalWithPilots(SignalBase):
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
                      "_idx_dat"]
+    _inheritbase_ = ["_fs"]
 
     @staticmethod
     def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):
@@ -894,7 +894,6 @@ class SignalWithPilots(SignalBase):
         symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, dtype=dtype, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out_symbs = np.tile(out_symbs, nframes)
-        #fb = symbs.fb
         obj = out_symbs.view(cls)
         obj._fs = symbs.fb
         obj._frame_len = frame_len
