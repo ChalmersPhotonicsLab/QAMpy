@@ -14,4 +14,10 @@ cdef extern from "complex.h" nogil:
     double cimag(double complex)
 
 cdef extern from "complex.h" nogil:
+    float cimagf(float complex)
+
+cdef extern from "complex.h" nogil:
     double creal(double complex)
+
+cdef extern from "complex.h" nogil:
+    float crealf(float complex)

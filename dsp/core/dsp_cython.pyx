@@ -9,8 +9,11 @@ from .equalisation cimport cython_equalisation
 from cmath cimport exp, log, pow
 
 
-cdef double cabssq(double complex x) nogil:
-    return cimag(x)*cimag(x) + creal(x)*creal(x)
+cdef double cabssq(cython_equalisation.complexing x) nogil:
+    if cython_equalisation.complexing is cython_equalisation.complex64_t:
+        return cimagf(x)*cimagf(x) + crealf(x)*crealf(x)
+    else:
+        return cimag(x)*cimag(x) + creal(x)*creal(x)
 
 def unwrap_discont(double[::1] seq, double max_diff, double period):
     cdef int i
@@ -153,9 +156,9 @@ def lfsr_int(np.int64_t seed, np.int64_t mask):
             state ^= mask #this performs the modulus operation
         yield xor, state
 
-cpdef soft_l_value_demapper(np.ndarray[ndim=1, dtype=double complex] rx_symbs, int M, double snr, np.ndarray[ndim=3, dtype=double complex] bits_map):
+cpdef soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
     cdef int num_bits = int(np.log2(M))
-    cdef np.ndarray[ndim=1, dtype=np.float64_t] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
+    cdef double[:] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
     cdef int mode, bit, symb, l
     cdef int N = rx_symbs.shape[0]
     cdef int k = bits_map.shape[1]
