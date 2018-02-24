@@ -871,7 +871,6 @@ class TestDtype(object):
             s3 = s.get_data()
         assert np.dtype(dt) is s3.dtype
         assert np.dtype(dt) is s3.symbols.dtype
-        assert np.dtype(dt) is s3.pilots.dtype
 
 
 
