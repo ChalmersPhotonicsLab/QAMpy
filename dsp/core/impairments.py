@@ -51,7 +51,7 @@ def rotate_field(field, theta):
     rotated_field : array_like
         new rotated field
     """
-    h = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+    h = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype="f%d"%(field.itemsize//2))
     return np.dot(h, field)
 
 def _applyPMD(field, H):
@@ -59,9 +59,9 @@ def _applyPMD(field, H):
     SSf = np.einsum('ijk,ik -> ik',H , Sf)
     SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
     try:
-        return field.recreate_from_np_array(SS)
+        return field.recreate_from_np_array(SS.astype(field.dtype))
     except:
-        return SS
+        return SS.astype(field.dtype)
 
 def apply_PMD_to_field(field, theta, t_dgd, fs):
     """
@@ -142,7 +142,7 @@ def apply_phase_noise(signal, df, fs):
     """
     N = signal.shape
     ph = phase_noise(N, df, fs)
-    return signal*np.exp(1.j*ph)
+    return signal*np.exp(1.j*ph).astype(signal.dtype)
 
 def add_awgn(sig, strgth):
     """
@@ -161,7 +161,7 @@ def add_awgn(sig, strgth):
        output signal with added noise
 
     """
-    return sig + strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2) # sqrt(2) because of var vs std
+    return sig + (strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2)).astype(sig.dtype) # sqrt(2) because of var vs std
 
 def change_snr(sig, snr, fb, fs):
     """
@@ -208,9 +208,9 @@ def add_carrier_offset(sig, fo, fs):
     """
     sign = np.atleast_2d(sig)
     if sig.ndim == 1:
-        return  (sign * np.exp(2.j * np.pi * np.arange(sign.shape[1])) * fo / fs).flatten()
+        return  (sign * np.exp(2.j * np.pi * np.arange(sign.shape[1], dtype=sign.dtype) * fo / fs)).flatten()
     else:
-        return  sign * np.exp(2.j * np.pi * np.arange(sign.shape[1])) * fo / fs
+        return  sign * np.exp(2.j * np.pi * np.arange(sign.shape[1], dtype=sign.dtype)) * fo / fs
 
 def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731):
     """
