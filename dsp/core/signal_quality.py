@@ -264,10 +264,10 @@ def cal_ser_qam(data_rx, symbol_tx, M, method="pyx"):
     data_demod = quantize(data_rx, M, method=method)
     return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)
 
-def generate_bitmapping_mtx(coded_symbs, coded_bits, M):
+def generate_bitmapping_mtx(coded_symbs, coded_bits, M, dtype=np.complex128):
     num_bits = int(np.log2(M))
     out_mtx = np.reshape(coded_bits, (M, num_bits))
-    bit_map = np.zeros([num_bits, int(M/2),2], dtype=complex)
+    bit_map = np.zeros([num_bits, int(M/2),2], dtype=dtype)
     for bit in range(num_bits):
         bit_map[bit,:,0] = coded_symbs[~out_mtx[:,bit]]
         bit_map[bit,:,1] = coded_symbs[out_mtx[:,bit]]

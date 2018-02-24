@@ -474,7 +474,7 @@ class SignalQAMGrayCoded(SignalBase):
         encoding = dict([(symbols[i],
                           bitarray(format(_graycode[i], bformat)))
                          for i in range(len(_graycode))])
-        bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M)
+        bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
     # using Randombits as default class because they are slightly faster

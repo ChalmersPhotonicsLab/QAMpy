@@ -1,8 +1,16 @@
 import pytest
+import numpy as np
 import numpy.testing as npt
 
 from dsp import signals, impairments, theory, helpers
+from dsp.core import signal_quality
 
+class TestDtypePreserve(object):
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_generate_bitmap_mtx(self, dtype):
+        s =signals.SignalQAMGrayCoded(32, 2**16, dtype=dtype)
+        o = signal_quality.generate_bitmapping_mtx(s.coded_symbols, s.demodulate(s.coded_symbols), s.M, dtype=dtype)
+        assert np.dtype(dtype) is o.dtype
 
 class TestNoResampling(object):
     @pytest.mark.parametrize("M", [4, 16, 64, 128])
