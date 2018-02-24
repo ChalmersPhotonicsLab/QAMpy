@@ -3,6 +3,37 @@ import numpy as np
 
 from dsp import signals, impairments
 
+class TestReturnDtype(object):
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_rotate_field(self, dtype):
+        s = signals.ResampledQAM(16, 2**14, fs=2, nmodes=2, dtype=dtype)
+        s2 = impairments.rotate_field(s, np.pi / 3)
+        assert np.dtype(dtype) is s2.dtype
+
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_apply_PMD(self, dtype):
+        s = signals.ResampledQAM(16, 2**14, fs=2, nmodes=2, dtype=dtype)
+        s2 = impairments.apply_PMD_to_field(s, np.pi / 3, 1e-3)
+        assert np.dtype(dtype) is s2.dtype
+
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_apply_phase_noise(self, dtype):
+        s = signals.ResampledQAM(16, 2**14, fs=2, nmodes=2, dtype=dtype)
+        s2 = impairments.apply_phase_noise(s, 1e-3)
+        assert np.dtype(dtype) is s2.dtype
+
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_change_snr(self, dtype):
+        s = signals.ResampledQAM(16, 2**14, fs=2, nmodes=2, dtype=dtype)
+        s2 = impairments.change_snr(s, 30)
+        assert np.dtype(dtype) is s2.dtype
+
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_add_carrier_offset(self, dtype):
+        s = signals.ResampledQAM(16, 2**14, fs=2, nmodes=2, dtype=dtype)
+        s2 = impairments.add_carrier_offset(s, 1e-3)
+        assert np.dtype(dtype) is s2.dtype
+
 
 class TestReturnObjects(object):
     s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
