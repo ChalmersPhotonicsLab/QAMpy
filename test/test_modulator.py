@@ -766,12 +766,16 @@ class TestDtype(object):
     def test_SignalQAMGray_dtype(self, dt):
         s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
         assert s.dtype is np.dtype(dt)
+        assert np.dtype(dt) is s.symbols.dtype
+        assert np.dtype(dt) is s.coded_symbols.dtype
 
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
     def test_from_symbol_array(self, dt):
         s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
         ss = signals.SignalQAMGrayCoded.from_symbol_array(s)
         assert ss.dtype is s.dtype
+        assert np.dtype(dt) is s.symbols.dtype
+        assert np.dtype(dt) is s.coded_symbols.dtype
 
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
     def testfrombits_bits(self, dt):
@@ -780,6 +784,8 @@ class TestDtype(object):
         b = signals.make_prbs_extXOR(15, N)
         s = signals.SignalQAMGrayCoded.from_bit_array(b, M, dtype=dt)
         assert np.dtype(dt) is s.dtype
+        assert np.dtype(dt) is s.symbols.dtype
+        assert np.dtype(dt) is s.coded_symbols.dtype
 
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
     def testquantize(self, dt):
@@ -787,6 +793,8 @@ class TestDtype(object):
         s2 = impairments.change_snr(s, 30)
         sn = s2.quantize()
         assert  np.dtype(dt) is sn.dtype
+        assert np.dtype(dt) is sn.symbols.dtype
+        assert np.dtype(dt) is s.coded_symbols.dtype
 
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
     @pytest.mark.parametrize("N", [0, 40])
@@ -803,6 +811,8 @@ class TestDtype(object):
         s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
         s2 = s.resample(2, beta=0.2, renormalise=True)
         assert np.dtype(dt) is s2.dtype
+        assert np.dtype(dt) is s2.symbols.dtype
+        assert np.dtype(dt) is s.coded_symbols.dtype
 
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
     def test_tdhqam(self, dt):
@@ -812,11 +822,42 @@ class TestDtype(object):
         assert np.dtype(dt) is s._symbols_M2.dtype
 
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
-    def test_tdhqam(self, dt):
+    def test_tdhqam_from_symbol(self, dt):
         s1 = signals.SignalQAMGrayCoded(64, 2**12, dtype=dt)
         s2 = signals.SignalQAMGrayCoded(32, 2**12, dtype=dt)
         s = signals.TDHQAMSymbols.from_symbol_arrays(s1, s2, 0.5)
         assert np.dtype(dt) is s.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    @pytest.mark.parametrize("nframes", [1, 2])
+    def test_pilot_signal(self, dt, nframes):
+        s = signals.SignalWithPilots(32,2**12, 256, 32, nframes=nframes, dtype=dt )
+        assert np.dtype(dt) is s.dtype
+        assert np.dtype(dt) is s.symbols.dtype
+        assert np.dtype(dt) is s.pilots.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    @pytest.mark.parametrize("nframes", [1, 2])
+    def test_pilot_signal_from_data(self, dt, nframes):
+        s1 = signals.SignalQAMGrayCoded(32, 2**12, dtype=dt)
+        s = signals.SignalWithPilots.from_data_array(s1, 2**12, 256, 32, nframes=nframes)
+        assert np.dtype(dt) is s.dtype
+        assert np.dtype(dt) is s.symbols.dtype
+        assert np.dtype(dt) is s.pilots.dtype
+
+    @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
+    @pytest.mark.parametrize("shift", [None, 120, 223])
+    def test_pilot_signal(self, dt, shift):
+        s = signals.SignalWithPilots(32,2**12, 256, 32, dtype=dt )
+        if shift is not None:
+            s1 = np.roll(s, 120, axis=-1)
+            s3 = s1.get_data(np.array([shift]))
+        else:
+            s3 = s.get_data()
+        assert np.dtype(dt) is s3.dtype
+        assert np.dtype(dt) is s3.symbols.dtype
+        assert np.dtype(dt) is s3.pilots.dtype
+
 
 
 

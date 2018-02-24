@@ -861,21 +861,20 @@ class SignalWithPilots(SignalBase):
         idx_dat = ~idx_pil
         return idx, idx_dat, idx_pil
 
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1, fs=1,
-                dataclass=SignalQAMGrayCoded, nmodes=1, resamplekw={"beta":0.1}, **kwargs):
-        out_symbs = np.empty((nmodes, frame_len), dtype=np.complex128)
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, scale_pilots=1,
+                dataclass=SignalQAMGrayCoded, nmodes=1, dtype=np.complex128,  **kwargs):
+        out_symbs = np.empty((nmodes, frame_len), dtype=dtype)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
-        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **kwargs) * scale_pilots
+        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * scale_pilots
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
-        symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, **kwargs)
+        symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, dtype=dtype, **kwargs)
         out_symbs[:, idx_dat] = symbs
         out_symbs = np.tile(out_symbs, nframes)
         fb = symbs.fb
-        obj = cls._resample_array(out_symbs, fs, fold=fb, fb=fb, **resamplekw)
-        #obj = out_symbs.view(cls)
-        obj._fs = fs
+        obj = out_symbs.view(cls)
+        obj._fs = symbs.fb
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
@@ -894,7 +893,7 @@ class SignalWithPilots(SignalBase):
             warnings.warn("Data for frame is shorter than length of data array, truncating")
         out_symbs = np.empty((nmodes, frame_len), dtype=data.dtype)
         Ndat = np.count_nonzero(idx_dat)
-        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, **pilot_kwargs) / np.sqrt(
+        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=data.dtype, **pilot_kwargs) / np.sqrt(
             scale_pilots)
         out_symbs[:, idx_pil] = pilots
         out_symbs[:, idx_dat] = data[:, :Ndat]
