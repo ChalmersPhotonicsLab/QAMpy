@@ -711,9 +711,10 @@ class TestPilotSignalQualityOnSignal(object):
 
     @pytest.mark.parametrize("M", [16, 128, 256])
     @pytest.mark.parametrize("nframes", np.arange(1, 4))
-    def test_cal_gmi_value(self, M, nframes):
-        s = signals.SignalWithPilots(M, 2 ** 16, 128, 32, nmodes=1, nframes=nframes)
-        s += 0.0004 * (np.random.randn(2 ** 16*nframes) + 1.j * np.random.randn(2 ** 16*nframes))
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_cal_gmi_value(self, M, nframes, dtype):
+        s = signals.SignalWithPilots(M, 2 ** 16, 128, 32, nmodes=1, nframes=nframes, dtype=dtype)
+        s += (0.0004 * (np.random.randn(2 ** 16*nframes) + 1.j * np.random.randn(2 ** 16*nframes))).astype(dtype)
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
