@@ -948,27 +948,27 @@ class SignalWithPilots(SignalBase):
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
 
-    def cal_ser(self, signal_rx=None, synced=False):
+    def cal_ser(self, signal_rx=None, shift_factors=None):
         if signal_rx is None:
-            signal_rx = self.get_data()
-        return super().cal_ser(signal_rx, synced)
+            signal_rx = self.get_data(shift_factors)
+        return super().cal_ser(signal_rx, synced=False)
 
-    def cal_ber(self, signal_rx=None, synced=False):
+    def cal_ber(self, signal_rx=None, shift_factors=None):
         if signal_rx is None:
-            signal_rx = self.get_data()
-        return super().cal_ber(signal_rx, synced)
+            signal_rx = self.get_data(shift_factors)
+        return super().cal_ber(signal_rx, synced=False)
 
-    def cal_evm(self, signal_rx=None, blind=False):
+    def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(shift_factors)
         return super().cal_evm(signal_rx, blind)
 
-    def cal_gmi(self, signal_rx=None):
+    def cal_gmi(self, signal_rx=None, shift_factors=None):
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(shift_factors)
         return super().cal_gmi(signal_rx)
 
-    def est_snr(self, signal_rx=None, synced=False, symbols_tx=None):
+    def est_snr(self, signal_rx=None, shift_factors=None, symbols_tx=None):
         if signal_rx is None:
-            signal_rx = self.get_data()
-        return super().est_snr(signal_rx, synced, symbols_tx)
+            signal_rx = self.get_data(shift_factors)
+        return super().est_snr(signal_rx, synced=False, symbols_tx=symbols_tx)
