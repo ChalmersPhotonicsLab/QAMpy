@@ -48,7 +48,7 @@ def quantize(complexing[:] E, complexing[:] symbols):
     cdef int i, j, k
     cdef double distd
     cdef float distf
-    cdef np.ndarray[ndim=1, dtype=complexing] det_syms
+    cdef complexing[:] det_syms
     cdef complexing out_sym
 
     if complexing is complex64_t:
