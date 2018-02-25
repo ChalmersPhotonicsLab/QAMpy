@@ -318,6 +318,10 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     adaptive_stepsize : tuple(bool, bool)
         whether to adapt the step size upon training for each of the equaliser modes
 
+    symbols : array_like
+        array of coded symbols to decide on for dd-based equalisation functions
+
+
     Returns
     -------
 
@@ -331,12 +335,12 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
        estimation error for x and y polarisation for each equaliser mode
 
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=None, **kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=None,**kwargs)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, **kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols,**kwargs)
     Eest = apply_filter(E, os, wxy2)
     return Eest, wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False, print_itt = False, symbols=None, **kwargs):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -371,6 +375,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     adaptive_stepsize : bool, optional
         whether to use an adaptive stepsize or a fixed
+    symbols : array_like
+        array of coded symbols to decide on for dd-based equalisation functions
 
     Returns
     -------
@@ -389,8 +395,6 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     wxy = wxy.astype(E.dtype)
     for l in range(pols):
         for i in range(Niter):
-            if print_itt:
-                print("Pol-%d - LMS iteration %d"%(l,i))
             #err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
             err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = train_eq(E, TrSyms, Ntaps, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
 
