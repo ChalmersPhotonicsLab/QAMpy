@@ -64,8 +64,12 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
        estimation error for x and y polarisation
     """
     os = int(sig.fs/sig.fb)
+    try:
+        syms = sig.coded_symbols
+    except AttributeError:
+        syms = None
     return core.equalisation.equalise_signal(sig, os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
-                                adaptive_stepsize=adaptive_stepsize, print_itt=print_itt, **kwargs)
+                                adaptive_stepsize=adaptive_stepsize, print_itt=print_itt, symbols=syms, **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
                            adaptive_stepsize=(False, False), **kwargs):
@@ -109,8 +113,12 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
        estimation error for x and y polarisation for each equaliser mode
     """
     os = int(sig.fs/sig.fb)
+    try:
+        syms = sig.coded_symbols
+    except AttributeError:
+        syms = None
     sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
-                                                       adaptive_stepsize=adaptive_stepsize, **kwargs)
+                                                       adaptive_stepsize=adaptive_stepsize, symbols=syms, **kwargs)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
 
 

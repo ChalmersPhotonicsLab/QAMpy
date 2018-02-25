@@ -43,21 +43,21 @@ References
 
 #TODO: include selection for either numba or cython code
 try:
-    from .cython_equalisation import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
-        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, ErrorFct
-except:
-    #use python code if cython code is not available
-    #raise Warning("can not use cython training functions")
-    from .equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from .cython_errorfcts import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
+    from .cython_equalisation import train_eq, ErrorFct
+except:
+    ##use python code if cython code is not available
+    raise Warning("can not use cython training functions")
+    from .equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, train_eq
 
 TRAINING_FCTS = ["cma", "mcma",
                  "rde", "mrde",
                  "sbd", "mddma",
                  "sca", "cme",
                  "dd"]
-
-def _select_errorfct(method, M, **kwargs):
+def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["mcma"]:
         return ErrorFctMCMA(_cal_Rconstant_complex(M))
@@ -72,7 +72,11 @@ def _select_errorfct(method, M, **kwargs):
     elif method in ["sca"]:
         return ErrorFctSCA(_cal_Rsca(M))
     elif method in ["cme"]:
-        syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
+        if symbols is None:
+            syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
+            syms = syms.astype(dtype)
+        else:
+            syms = symbols
         d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
         R = _cal_Rconstant(M)
         r2 = np.mean(abs(syms)**2)
@@ -88,11 +92,15 @@ def _select_errorfct(method, M, **kwargs):
             beta = np.max(abs(syms*abs(syms)**2-A))/2
         return ErrorFctCME(R, d, beta)
     elif method in ['sbd']:
-        return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
+        if symbols is None:
+            return ErrorFctSBD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
+        else:
+            #return ErrorFctSBD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))))
+            return ErrorFctSBD(symbols)
     elif method in ['mddma']:
-        return ErrorFctMDDMA(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
+        return ErrorFctMDDMA((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
     elif method in ['dd']:
-        return ErrorFctDD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
+        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
     else:
         raise ValueError("%s is unknown method"%method)
 
@@ -276,7 +284,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
     return Eout, wxy, TrSyms, Ntaps, err, pols
 
-def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), **kwargs):
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -323,12 +331,12 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
        estimation error for x and y polarisation for each equaliser mode
 
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], **kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1], **kwargs)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=None, **kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=None,**kwargs)
     Eest = apply_filter(E, os, wxy2)
     return Eest, wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False, print_itt = False, **kwargs):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False, print_itt = False, symbols=None, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -375,14 +383,17 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     """
     method = method.lower()
-    eqfct = _select_errorfct(method, M, **kwargs)
+    eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
     # scale signal
     E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
+    wxy = wxy.astype(E.dtype)
     for l in range(pols):
         for i in range(Niter):
             if print_itt:
                 print("Pol-%d - LMS iteration %d"%(l,i))
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
+            #err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = train_eq(E, TrSyms, Ntaps, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
+
     return wxy, err
 
 #
