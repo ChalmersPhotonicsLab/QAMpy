@@ -121,8 +121,8 @@ cdef class ErrorFctMRDE(ErrorFct):
     cdef double[:] partition_imag
     cdef double[:] codebook_real
     cdef double[:] codebook_imag
-    def __init__(self, double complex[:] partition,
-                                              double complex[:] codebook):
+    def __init__(self, np.ndarray[ndim=1, dtype=double complex] partition,
+                                              np.ndarray[ndim=1, dtype=double complex] codebook):
         self.partition_real = partition.real
         self.partition_imag = partition.imag
         self.codebook_real = codebook.real
