@@ -421,26 +421,18 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
             tmp_pilots[l,:] = symbs_out[l,:]
 
         foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs_center)
-        foePerMode = np.ones(foePerMode.shape)*np.mean(foePerMode)*0
+        foePerMode = np.ones(foePerMode.shape)*np.mean(foePerMode)
         
         # Apply FO-compensation, create final signal
-        sig_dc_left = phaserecovery.comp_freq_offset(rx_signal_2[0],foePerMode,os=os)
-        #sig_dc_left[0] = pre_filter(sig_dc_left[0],0.02,os,center_freq=ch_sep/2)
-        #sig_dc_left[1] = pre_filter(sig_dc_left[1],0.02,os,center_freq=ch_sep/2)
-
-        
-        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal_center,foePerMode,os=os)
-        
+        sig_dc_left = phaserecovery.comp_freq_offset(rx_signal_2[0],foePerMode,os=os)       
+        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal_center,foePerMode,os=os)        
         sig_dc_right = phaserecovery.comp_freq_offset(rx_signal_2[2],foePerMode,os=os)
-        #sig_dc_right[0] = pre_filter(sig_dc_right[0],0.02,os,center_freq=-ch_sep/2)
-        #sig_dc_right[1] = pre_filter(sig_dc_right[1],0.02,os,center_freq=-ch_sep/2)
 
+        sig_dc_left *= np.exp(-1j*2*np.pi*ch_sep*np.linspace(0,rx_signal_2[0].shape[1]/os,rx_signal_2[0].shape[1]))
+        sig_dc_right *= np.exp(1j*2*np.pi*ch_sep*np.linspace(0,rx_signal_2[2].shape[1]/os,rx_signal_2[2].shape[1]))
 
-        sig_dc_left *= np.exp(-1j*2*np.pi*ch_sep*np.linspace(0,sig_dc_left.shape[1]/os,sig_dc_left.shape[1]))
-        sig_dc_right *= np.exp(1j*2*np.pi*ch_sep*np.linspace(0,sig_dc_right.shape[1]/os,sig_dc_right.shape[1]))
         full_spec_combined = np.concatenate((sig_dc_left,sig_dc_center,sig_dc_right),axis=0)
         
-
 
     else:
         # Signal should be DC-centered. Do nothing. 
@@ -471,7 +463,7 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
 
 
         #wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
-        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, 1e-4, 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
         out_taps.append(wx)
         symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,wx)
         eq_pilots[l,:] = symbs_out[2+l,:]
@@ -479,23 +471,8 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
 
         rx_mode_sig = full_spec_combined[:,shift_factor[l] - tap_cor:shift_factor[l] - tap_cor + frame_length * os + ntaps[1] - 1]
         symbs_out_tmp = equalisation.apply_filter(rx_mode_sig,os,wx)
-        plt.figure()
-        plt.hist2d(symbs_out_tmp[l+2].flatten().real,symbs_out_tmp[l+2].flatten().imag,bins=200)
-        plt.title("Inside Func")
         data_out.append(symbs_out_tmp[l+2])
-#   
-#    # Equalize using additional frames if selected
-#    for frame_id in range(0,process_frame_id+1):
-#        for l in range(npols):
-#            pilot_seq = sig_dc_center[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
-#            wx_1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=out_taps[l],Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
-#            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wx_1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
-#            out_taps[l] = wx
-#
-#            if frame_id == process_frame_id:
-#                symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps[l])
-#                eq_pilots[l,:] = symbs_out[l,:]
-#                shift_factor[l] = shift_factor[l] + process_frame_id*os*frame_length  
+
 
     return eq_pilots, foePerMode, out_taps, shift_factor, full_spec_combined,data_out
 
