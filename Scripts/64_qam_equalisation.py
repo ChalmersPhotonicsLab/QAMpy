@@ -23,8 +23,8 @@ sig = impairments.change_snr(sig, snr)
 
 SS = impairments.apply_PMD_to_field(sig, theta, t_pmd)
 
-E_m, wxy_m, (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
-                                                                     methods=("mcma", "mrde"),
+E_m, wxy_m, (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS.astype(np.complex64), (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
+                                                                     methods=("mcma", "sbd"),
                                                                      adaptive_stepsize=(True, True))
 E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
                                                                      methods=("mcma", "sbd"),

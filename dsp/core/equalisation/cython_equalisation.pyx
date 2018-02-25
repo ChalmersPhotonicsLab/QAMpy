@@ -7,13 +7,32 @@ from cpython cimport bool
 cimport numpy as np
 cimport scipy.linalg.cython_blas as scblas
 from ccomplex cimport *
-from cmath import sin
+#from cmath import sin, sinf
+#from cython_errorfcts cimport ErrorFct
+
+cdef class ErrorFct:
+    cpdef double complex calc_error(self, double complex Xest):
+        return 0
+    cpdef float complex calc_errorf(self, float complex Xest):
+        return 0
 
 cdef complexing cconj(complexing x) nogil:
     if complexing is complex64_t:
         return conjf(x)
     else:
         return conj(x)
+
+cdef complexing ccreal(complexing x) nogil:
+    if complexing is complex64_t:
+        return crealf(x)
+    else:
+        return creal(x)
+
+cdef complexing ccimag(complexing x) nogil:
+    if complexing is complex64_t:
+        return cimagf(x)
+    else:
+        return cimag(x)
 
 cdef complexing det_symbol(complexing[:] syms, int M, complexing value, cython.floating *dists) nogil:
     cdef complexing symbol = 0
@@ -65,12 +84,12 @@ def quantize(complexing[:] E, complexing[:] symbols):
         return det_syms
 
 cdef partition_value(cython.floating signal,
-                     np.float64_t[:] partitions,
-                     np.float64_t[:] codebook):
+                     double[:] partitions,
+                     double[:] codebook):
                     #np.ndarray[ndim=1, dtype=np.float64_t] partitions,
                     #np.ndarray[ndim=1, dtype=np.float64_t] codebook):
     cdef unsigned int index = 0
-    cdef unsigned int L = len(partitions)
+    cdef unsigned int L = partitions.shape[0]
     while index < L and signal > partitions[index]:
         index += 1
     return codebook[index]
@@ -83,124 +102,8 @@ cdef cython.floating adapt_step(cython.floating mu, complexing err_p, complexing
     mu = mu/(1+lm*mu*(err.real*err.real + err.imag*err.imag))
     return mu
 
-cdef class ErrorFct:
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        return 0
-    #def __call__(self, double complex Xest):
-        #return self.calc_error(Xest)
-    def __call__(self, np.ndarray[ndim=2, dtype=double complex] E,
-                    int TrSyms,
-                    int Ntaps,
-                    unsigned int os,
-                    double mu,
-                    np.ndarray[ndim=2, dtype=double complex] wx,
-                    bool adaptive=False):
-        return train_eq(E, TrSyms, Ntaps, os, mu, wx, self, adaptive)
+#cdef double complex I=1.j
 
-cdef double complex I=1.j
-
-cdef class ErrorFctMCMA(ErrorFct):
-    cdef double R_real
-    cdef double R_imag
-    def __init__(self, double complex R):
-        self.R_real = R.real
-        self.R_imag = R.imag
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        return (creal(Xest)**2 - self.R_real)*creal(Xest) + I*(cimag(Xest)**2 -self.R_imag)*cimag(Xest)
-
-cdef class ErrorFctCMA(ErrorFct):
-    cdef double R
-    def __init__(self, double R):
-        self.R = R
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        return (creal(Xest)**2 + cimag(Xest)**2 - self.R)*Xest
-
-cdef class ErrorFctRDE(ErrorFct):
-    cdef np.float64_t[:] partition
-    cdef np.float64_t[:] codebook
-    def __init__(self, np.ndarray[ndim=1, dtype=np.float64_t] partition,
-                                              np.ndarray[ndim=1, dtype=np.float64_t] codebook):
-        self.partition = partition
-        self.codebook = codebook
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        cdef double Ssq
-        cdef double S_DD
-        Ssq = Xest.real**2 + Xest.imag**2
-        S_DD = partition_value(Ssq, self.partition, self.codebook)
-        return Xest*(Ssq - S_DD)
-
-cdef class ErrorFctMRDE(ErrorFct):
-    cdef np.float64_t[:] partition_real
-    cdef np.float64_t[:] partition_imag
-    cdef np.float64_t[:] codebook_real
-    cdef np.float64_t[:] codebook_imag
-    def __init__(self, np.ndarray[ndim=1, dtype=np.complex128_t] partition,
-                                              np.ndarray[ndim=1, dtype=np.complex128_t] codebook):
-        self.partition_real = partition.real
-        self.partition_imag = partition.imag
-        self.codebook_real = codebook.real
-        self.codebook_imag = codebook.imag
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        cdef double complex Ssq
-        cdef double complex S_DD
-        Ssq = creal(Xest)**2 + 1.j * cimag(Xest)**2
-        S_DD = partition_value(Ssq.real, self.partition_real, self.codebook_real) + 1.j * partition_value(Ssq.imag, self.partition_imag, self.codebook_imag)
-        return (Ssq.real - S_DD.real)*Xest.real + 1.j*(Ssq.imag - S_DD.imag)*Xest.imag
-
-cdef class ErrorFctGenericDD(ErrorFct):
-    cdef double complex[:] symbols
-    cdef double dist
-    cdef int N
-    def __init__(self, np.ndarray[ndim=1, dtype=double complex] symbols):
-        self.symbols = symbols
-        self.N = symbols.shape[0]
-
-cdef class ErrorFctSBD(ErrorFctGenericDD):
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        cdef double complex R
-        R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
-
-cdef class ErrorFctMDDMA(ErrorFctGenericDD):
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        cdef double complex R
-        R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
-
-cdef class ErrorFctDD(ErrorFctGenericDD):
-    cpdef double complex calc_error(self, double complex Xest)  except *:
-        cdef double complex R
-        R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return Xest - R
-
-cdef class ErrorFctSCA(ErrorFct):
-    cdef double complex R
-    def __init__(self, double complex R):
-        self.R = R
-    cpdef double complex calc_error(self, double complex Xest) except *:
-        cdef int A
-        cdef int B
-        if abs(Xest.real) >= abs(Xest.imag):
-            A = 1
-            if abs(Xest.real) == abs(Xest.imag):
-                B = 1
-            else:
-                B = 0
-        else:
-            A = 0
-            B = 1
-        return 4*Xest.real*(4*Xest.real**2 - 4*self.R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*self.R**2)*B
-
-cdef class ErrorFctCME(ErrorFct):
-    cdef double beta
-    cdef double d
-    cdef double R
-    def __init__(self, double R, double d, double beta):
-        self.beta = beta
-        self.d = d
-        self.R = R
-    cpdef double complex calc_error(self, double complex Xest) except *:
-        return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
 
 cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, unsigned int pols) nogil:
     cdef int j, k
@@ -220,24 +123,28 @@ cdef void update_filter(complexing[:,:] E, int Ntaps, cython.floating mu, comple
         for j in range(Ntaps):
                 wx[k, j] -= mu * err * cconj(E[k, j])
 
-def train_eq(double complex[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
+def train_eq(complexing[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
                     int TrSyms,
                     int Ntaps,
                     unsigned int os,
-                    double mu,
+                    cython.floating mu,
                     #np.ndarray[ndim=2, dtype=double complex] wx,
-                    double complex[:,:] wx,
+                    complexing[:,:] wx,
                     ErrorFct errfct,
                     bool adaptive=False):
-    cdef np.ndarray[ndim=1, dtype=double complex] err = np.zeros(TrSyms, dtype=np.complex128)
+    #cdef ndim=1, dtype=double complex] err = np.zeros(TrSyms, dtype=np.complex128)
+    cdef complexing[:] err
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
     cdef unsigned int L = E.shape[1]
-    cdef double complex Xest
-
+    cdef complexing Xest
+    err = np.zeros(TrSyms, dtype="c%d"%E.itemsize)
     for i in range(0, TrSyms):
         Xest = apply_filter(E[:, i*os:], Ntaps, wx, pols)
-        err[i] = errfct.calc_error(Xest)
+        if complexing is complex64_t:
+            err[i] = errfct.calc_errorf(Xest)
+        else:
+            err[i] = errfct.calc_error(Xest)
         update_filter(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])

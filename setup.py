@@ -14,6 +14,12 @@ cython_equalisation = Extension(name="dsp.core.equalisation.cython_equalisation"
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
 
+cython_errorfcts = Extension(name="dsp.core.equalisation.cython_errorfcts",
+                     sources=["dsp/core/equalisation/cython_errorfcts.pyx"],
+                             include_dirs=["dsp/core/equalisation", np.get_include()],
+                             extra_compile_args=COMPILER_ARGS,
+                             extra_link_args=LINK_ARGS)
+
 dsp_cython = Extension(name="dsp.core.dsp_cython",
                        sources=["dsp/core/dsp_cython.pyx", "dsp/core/equalisation/equaliserC.c"],
                              include_dirs=["dsp/core/equalisation", np.get_include(), "dsp/core/"],
@@ -89,7 +95,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy', 'bitarray', 'tables'],
 
-    ext_modules = [cython_equalisation, dsp_cython],
+    ext_modules = [cython_errorfcts, cython_equalisation, dsp_cython],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:

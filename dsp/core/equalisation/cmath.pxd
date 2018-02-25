@@ -2,6 +2,9 @@ cdef extern from "math.h" nogil:
     double sin(double)
 
 cdef extern from "math.h" nogil:
+    double sinf(double)
+
+cdef extern from "math.h" nogil:
     double log(double)
 
 cdef extern from "math.h" nogil:
