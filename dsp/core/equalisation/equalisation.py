@@ -95,7 +95,6 @@ def _select_errorfct(method, M, symbols, dtype, **kwargs):
         if symbols is None:
             return ErrorFctSBD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
         else:
-            #return ErrorFctSBD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))))
             return ErrorFctSBD(symbols)
     elif method in ['mddma']:
         return ErrorFctMDDMA((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
