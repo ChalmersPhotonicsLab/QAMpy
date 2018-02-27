@@ -275,7 +275,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
                 wxy = np.asarray([wxy.copy(),])
             except:
                 Ntaps = len(wxy[0])
-    if not TrSyms:
+    if TrSyms is None:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
     # the copy below is important because otherwise the array will not be contiguous, which will cause issues in
