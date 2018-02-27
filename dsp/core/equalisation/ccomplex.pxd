@@ -21,3 +21,6 @@ cdef extern from "complex.h" nogil:
 
 cdef extern from "complex.h" nogil:
     float crealf(float complex)
+
+cdef  extern from "complex.h" nogil:
+    float complex I

@@ -13,3 +13,6 @@ cdef extern from "math.h" nogil:
 cdef extern from "math.h" nogil:
     double pow(double, double)
 
+cdef extern from "math.h" nogil:
+    float powf(float, float)
+
