@@ -1,3 +1,4 @@
+# cython: profile=False, boundscheck=False, wraparound=False
 cimport cython
 cimport numpy as np
 from cmath cimport *
