@@ -155,7 +155,6 @@ cdef void update_filter(complexing[:,:] E, int Ntaps, cython.floating mu, comple
 
 def train_eq(complexing[:,:] E,
                     int TrSyms,
-                    int Ntaps,
                     unsigned int os,
                     cython.floating mu,
                     complexing[:,:] wx,
@@ -170,8 +169,6 @@ def train_eq(complexing[:,:] E,
         signal to be equalised
     TrSyms : int
         number of training symbols to use
-    Ntaps : int
-        number of equaliser taps
     os : int
         oversampling ratio
     mu : float
@@ -194,6 +191,7 @@ def train_eq(complexing[:,:] E,
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
     cdef unsigned int L = E.shape[1]
+    cdef unsigned int Ntaps = wx.shape[1]
     cdef complexing Xest
     err = np.zeros(TrSyms, dtype="c%d"%E.itemsize)
     for i in range(0, TrSyms):

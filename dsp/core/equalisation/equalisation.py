@@ -427,7 +427,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     for l in range(pols):
         for i in range(Niter):
             #err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = train_eq(E, TrSyms, Ntaps, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
 
     return wxy, err
 
