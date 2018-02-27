@@ -116,6 +116,27 @@ cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, u
     return Xest
 
 def apply_filter_to_signal(complexing[:,:] E, int os, complexing[:,:,:] wx):
+    """
+    Apply the equaliser filter taps to the input signal.
+
+    Parameters
+    ----------
+
+    E      : array_like
+        input signal to be equalised
+
+    os     : int
+        oversampling factor
+
+    wxy    : tuple(array_like, array_like,optional)
+        filter taps for the x and y polarisation
+
+    Returns
+    -------
+
+    Eest   : array_like
+        equalised signal
+    """
     cdef complexing[:, :] output
     cdef int modes = E.shape[0]
     cdef int L = E.shape[1]//os

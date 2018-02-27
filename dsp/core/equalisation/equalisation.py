@@ -46,6 +46,7 @@ try:
     from .cython_errorfcts import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
     from .cython_equalisation import train_eq, ErrorFct
+    from .cython_equalisation import apply_filter_to_signal as apply_filter_pyx
 except:
     ##use python code if cython code is not available
     raise Warning("can not use cython training functions")
@@ -103,8 +104,39 @@ def _select_errorfct(method, M, symbols, dtype, **kwargs):
     else:
         raise ValueError("%s is unknown method"%method)
 
+def apply_filter(E, os, wxy, method="pyx"):
+    """
+    Apply the equaliser filter taps to the input signal.
 
-def apply_filter(E, os, wxy):
+    Parameters
+    ----------
+
+    E      : array_like
+        input signal to be equalised
+
+    os     : int
+        oversampling factor
+
+    wxy    : tuple(array_like, array_like,optional)
+        filter taps for the x and y polarisation
+
+    method : string
+        use python ("py") based or cython ("pyx") based function
+
+    Returns
+    -------
+
+    Eest   : array_like
+        equalised signal
+    """
+    if method == "py":
+        return apply_filter_py(E, os, wxy)
+    elif method == "pyx":
+        return apply_filter_pyx(E, os, wxy)
+    else:
+        raise NotImplementedError("Only py and pyx methods are implemented")
+
+def apply_filter_py(E, os, wxy):
     """
     Apply the equaliser filter taps to the input signal.
 
