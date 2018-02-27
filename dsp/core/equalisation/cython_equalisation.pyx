@@ -104,7 +104,6 @@ cdef cython.floating adapt_step(cython.floating mu, complexing err_p, complexing
 
 #cdef double complex I=1.j
 
-
 cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, unsigned int pols) nogil:
     cdef int j, k
     cdef complexing Xest=0
@@ -115,6 +114,20 @@ cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, u
         else:
             Xest += scblas.zdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
     return Xest
+
+def apply_filter_to_signal(complexing[:,:] E, int os, complexing[:,:,:] wx):
+    cdef complexing[:, :] output
+    cdef int modes = E.shape[0]
+    cdef int L = E.shape[1]//os
+    cdef int Ntaps = wx.shape[2]
+    cdef ssize_t i, j
+    cdef complexing Xest = 0
+    output = np.zeros((modes, L-Ntaps), dtype="c%d"%E.itemsize)
+    for j in range(modes):
+        for i in prange(L-Ntaps, nogil=True, schedule='static'):
+            Xest = apply_filter(E[:, i*os:i*os+Ntaps], Ntaps, wx[j], modes)
+            output[j, i] = Xest
+    return np.array(output)
 
 cdef void update_filter(complexing[:,:] E, int Ntaps, cython.floating mu, complexing err,
                         complexing[:,:] wx, int modes) nogil:
