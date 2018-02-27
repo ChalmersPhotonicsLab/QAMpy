@@ -24,7 +24,7 @@ def apply_filter(sig, wxy):
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
-                    print_itt=False, **kwargs):
+                    **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary.
 
@@ -69,7 +69,7 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     except AttributeError:
         syms = None
     return core.equalisation.equalise_signal(sig, os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
-                                adaptive_stepsize=adaptive_stepsize, print_itt=print_itt, symbols=syms, **kwargs)
+                                adaptive_stepsize=adaptive_stepsize,  symbols=syms, **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
                            adaptive_stepsize=(False, False), **kwargs):
