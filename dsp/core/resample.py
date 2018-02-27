@@ -48,7 +48,7 @@ def resample_poly(signal, fold, fnew, window=None, renormalise=False):
         sig_new = normalise_and_center(sig_new)*np.sqrt(p)
     return sig_new
 
-def rrcos_resample(signal, fold, fnew, Ts=None, beta=None, taps=4001, renormalise=False, fftconv=False):
+def rrcos_resample(signal, fold, fnew, Ts=None, beta=None, taps=4001, renormalise=False, fftconv=True):
     """
     Resample a signal using a root raised cosine filter. This performs pulse shaping and resampling a the same time.
     The resampling is done by scipy.signal.resample_poly. This function can be quite slow.
