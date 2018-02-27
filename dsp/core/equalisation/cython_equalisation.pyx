@@ -161,6 +161,35 @@ def train_eq(complexing[:,:] E,
                     complexing[:,:] wx,
                     ErrorFct errfct,
                     bool adaptive=False):
+    """
+    Generate the filter taps by training the equaliser.
+
+    Parameters
+    ----------
+    E : array_like
+        signal to be equalised
+    TrSyms : int
+        number of training symbols to use
+    Ntaps : int
+        number of equaliser taps
+    os : int
+        oversampling ratio
+    mu : float
+        tap update stepsize
+    wx : array_like
+        equaliser taps
+    errfct : ErrorFct
+        the equaliser error function to use
+    adaptive : bool
+        whether to use an adaptive step size
+
+    Returns
+    -------
+    err : array_like
+        error
+    wxy : array_like
+        adjusted taps
+    """
     cdef complexing[:] err
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
