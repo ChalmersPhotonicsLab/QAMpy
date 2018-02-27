@@ -6,12 +6,6 @@ from .cython_equalisation cimport complexing, det_symbol, complex64_t, \
     complex128_t, ErrorFct, partition_value
 import numpy as np
 
-#cdef class ErrorFct:
-    #cpdef double complex calc_error(self, double complex Xest):
-        #return 0
-    #cpdef float complex calc_errorf(self, float complex Xest):
-        #return 0
-
 cdef class ErrorFctGenericDD_d(ErrorFct): #TODO: need to figure out how to change this one
     cdef double complex[:] symbols
     cdef public double dist

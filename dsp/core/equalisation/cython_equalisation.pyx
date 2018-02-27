@@ -7,8 +7,6 @@ from cpython cimport bool
 cimport numpy as np
 cimport scipy.linalg.cython_blas as scblas
 from ccomplex cimport *
-#from cmath import sin, sinf
-#from cython_errorfcts cimport ErrorFct
 
 cdef class ErrorFct:
     cpdef double complex calc_error(self, double complex Xest):
@@ -102,8 +100,6 @@ cdef cython.floating adapt_step(cython.floating mu, complexing err_p, complexing
     mu = mu/(1+lm*mu*(err.real*err.real + err.imag*err.imag))
     return mu
 
-#cdef double complex I=1.j
-
 cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, unsigned int pols) nogil:
     cdef int j, k
     cdef complexing Xest=0
@@ -157,16 +153,14 @@ cdef void update_filter(complexing[:,:] E, int Ntaps, cython.floating mu, comple
         for j in range(Ntaps):
                 wx[k, j] -= mu * err * cconj(E[k, j])
 
-def train_eq(complexing[:,:] E, #np.ndarray[ndim=2, dtype=double complex] E,
+def train_eq(complexing[:,:] E,
                     int TrSyms,
                     int Ntaps,
                     unsigned int os,
                     cython.floating mu,
-                    #np.ndarray[ndim=2, dtype=double complex] wx,
                     complexing[:,:] wx,
                     ErrorFct errfct,
                     bool adaptive=False):
-    #cdef ndim=1, dtype=double complex] err = np.zeros(TrSyms, dtype=np.complex128)
     cdef complexing[:] err
     cdef unsigned int i, j, k
     cdef unsigned int pols = E.shape[0]
