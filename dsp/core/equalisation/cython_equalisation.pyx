@@ -198,9 +198,11 @@ def train_eq(complexing[:,:] E,
         Xest = apply_filter(E[:, i*os:], Ntaps, wx, pols)
         if complexing is complex64_t:
             err[i] = errfct.calc_errorf(Xest)
+            # this does make a significant difference
+            update_filter(E[:, i*os:], Ntaps, <float> mu, err[i], wx, pols)
         else:
             err[i] = errfct.calc_error(Xest)
-        update_filter(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
+            update_filter(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])
     return err, wx
