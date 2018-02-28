@@ -873,6 +873,29 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         raise NotImplementedError("SymbolOnlySignal class does not have bits snr estimation not possible")
 
 class ResampledQAM(SignalQAMGrayCoded):
+    """
+    ResampledQAM(M, N, fb=1, fs=1, resamplekwargs={"beta":0.1}, **kwargs)
+
+    Convenience object to provide a SiggnalQAMGrayCoded object with different sampling rate
+    than the symbol rate.
+
+    Parameters
+    ----------
+        M : int
+            QAM order
+        N : int
+            number of symbols per polarization
+        fb  : float, optional
+            symbol rate
+        fs : float, optional
+            sampling rate
+        **kwargs
+            kword arguments to pass to SignalQAMGrayCoded class
+
+    Returns
+    -------
+    resampled signal
+    """
 
     def __new__(cls, M, N, fb=1, fs=1, resamplekwargs={"beta": 0.1}, **kwargs):
         obj = super().__new__(cls, M, N, fb=fb, **kwargs)
@@ -890,41 +913,57 @@ class ResampledQAM(SignalQAMGrayCoded):
 
 #TODO: Currently Signal Quality functions do not work for TDHQAMSymbols
 class TDHQAMSymbols(SignalBase):
+    """
+    TDHQAMSymbols(M, N, fr=0.5, power_method="dist",
+                M1class=SignalQAMGrayCoded, M2class=SignalQAMGrayCoded, **kwargs)
+
+    Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
+
+    Parameters
+    ----------
+    M : tuple(int, int)
+        QAM orders of the two QAM components
+    fr : float, optional
+        fraction of the second format of the overall frame length
+    power_method : string, optional
+        method to calculate the power ratio of the different orders, currently on "dist" is implemented
+    M1class : SignalBase subclass, optional
+        Class of the first QAM signal subpart
+    M2class : SignalBase subclass, optional
+        Class of the second QAM signal subpart
+
+    Return
+    ------
+    time-domain hybrid signal array
+
+    Attributes
+    ----------
+    fr : float
+        fraction of the second format of the overall frame length
+    powratio : float
+        power ratio of P(M1)/P(M2)
+    f_M : int
+        total frame length
+    f_M1 : int
+        number of M1 symbols in total frame
+    f_M2 : int
+        number of M2 symbols in total frame
+    M : tuple(int, int)
+        tuple of the two QAM orders
+    symbols_M1 : SignalBase subclass object
+        the M1 symbol array
+    symbols_M2 : SignalBase subclass object
+        the M2 symbol array
+    fb : float
+        symbol rate
+    fs : float
+        sampling rate
+    """
     _inheritattr_ = ["_symbols_M1", "_symbols_M2", "_fr", "_powratio" ]
 
-    @staticmethod
-    def _cal_fractions(fr):
-        ratn = fractions.Fraction(fr).limit_denominator()
-        f_M2 = ratn.numerator
-        f_M = ratn.denominator
-        f_M1 = f_M - f_M2
-        return f_M, f_M1, f_M2
-
-    @staticmethod
-    def _cal_symbol_idx(N, f_M, f_M1):
-        idx = np.arange(N)
-        idx1 = idx % f_M < f_M1
-        idx2 = idx % f_M >= f_M1
-        return idx, idx1, idx2
-
-    def __new__(cls, M, N, fr=0.5, power_method="dist", snr=None, nmodes=1, fb=1,
+    def __new__(cls, M, N, fr=0.5, power_method="dist",
                 M1class=SignalQAMGrayCoded, M2class=SignalQAMGrayCoded, **kwargs):
-        """
-        Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
 
-        Parameters
-        ----------
-        M1 : integer
-            QAM order of the first part.
-        M2 : integer
-            QAM order of the second part
-        fr : float
-            fraction of the second format of the overall frame length
-        power_method : string, optional
-            method to calculate the power ratio of the different orders, currently on "dist" is implemented
-        snr : float
-            Design signal-to-noise ratio needed when using BER for calculation of the power ratio, currently does nothing
-        """
         M1 = M[0]
         M2 = M[1]
         f_M, f_M1, f_M2 = cls._cal_fractions(fr)
@@ -934,8 +973,9 @@ class TDHQAMSymbols(SignalBase):
             warnings.warn("length of overall pattern not divisable by number of frames, truncating to %d symbols" % N)
         N1 = frms * f_M1
         N2 = frms * f_M2
-        syms1 = M1class(M1, N1, nmodes=nmodes, fb=fb, **kwargs)
-        syms2 = M2class(M2, N2, nmodes=nmodes, fb=fb, **kwargs)
+        syms1 = M1class(M1, N1, **kwargs)
+        syms2 = M2class(M2, N2, **kwargs)
+        fb = syms1.fb
         out = np.zeros((nmodes, N), dtype=syms1.dtype)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
         syms2 /= np.sqrt(scale)
@@ -952,6 +992,21 @@ class TDHQAMSymbols(SignalBase):
         obj._M = M
         obj._power_method = power_method
         return obj
+
+    @staticmethod
+    def _cal_fractions(fr):
+        ratn = fractions.Fraction(fr).limit_denominator()
+        f_M2 = ratn.numerator
+        f_M = ratn.denominator
+        f_M1 = f_M - f_M2
+        return f_M, f_M1, f_M2
+
+    @staticmethod
+    def _cal_symbol_idx(N, f_M, f_M1):
+        idx = np.arange(N)
+        idx1 = idx % f_M < f_M1
+        idx2 = idx % f_M >= f_M1
+        return idx, idx1, idx2
 
     @property
     def powratio(self):
@@ -994,6 +1049,26 @@ class TDHQAMSymbols(SignalBase):
 
     @classmethod
     def from_symbol_arrays(cls, syms_M1, syms_M2, fr, power_method="dist"):
+        """
+        Generate a TDHQAM signal from two symbol arrays
+
+        Parameters
+        ----------
+        syms_M1 : SignalBase subclass object
+            M1 symbol array
+        syms_M2 : SignalBase subclass object
+            M2 symbol array
+        fr : float
+            fraction of M2 symbols over total frame length
+        power_method : str, optional
+            power ratio calculation currently only "dist" which spaces constellation points
+            at equal distance is supported
+
+        Returns
+        -------
+        signal : SignalBase subclass object
+            output time-domain hybrid QAM signal
+        """
         assert syms_M1.ndim == 2 and syms_M2.ndim == 2, "input needs to have two dimensions"
         assert syms_M1.dtype is syms_M2.dtype, "both input symbol arrays need to have the same dtype"
         assert syms_M1.shape[0] == syms_M2.shape[0], "Number of modes must be the same"
@@ -1024,6 +1099,24 @@ class TDHQAMSymbols(SignalBase):
 
     @staticmethod
     def calculate_power_ratio(M1symbols, M2symbols, method="dist"):
+        """
+        Calculate the power ratio between the two QAM orders
+
+        Parameters
+        ----------
+        M1symbols : SignalBase subclass object
+            M1 symbol array
+        M2symbols : SignalBase subclass object
+            M2 symbol arrayM1symbols
+        method : str
+            method to calculate power ratio calculation currently only "dist" which spaces constellation points
+            at equal distance is supported
+
+        Returns
+        -------
+        ratio : float
+            the ratio of M2 power over M1
+        """
         if method is "dist":
             d1 = np.min(abs(np.diff(np.unique(M1symbols))))
             d2 = np.min(abs(np.diff(np.unique(M2symbols))))
@@ -1067,30 +1160,70 @@ class TDHQAMSymbols(SignalBase):
 
 
 class SignalWithPilots(SignalBase):
+    """
+    SignalWithPilots(M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
+                dataclass=SignalQAMGrayCoded, nmodes=1, dtype=np.complex128,  **kwargs):
+
+    Pilot-based signal consisting of a pilot sequence at the beginning and evenly spaced phase pilots starting
+    one symbol after the pilot sequence. Pilots are placed in the same position for all modes.
+
+    Parameters
+    ----------
+    M : int
+        QAM order of the data payload
+    frame_length : int
+        overall length of the signal comprised of the pilot sequence, the phase pilots and the data payload. Note that
+        subframes = (frame_length - pilot_seq_len)/pilot_ins_rat must be an integer
+    pilot_seq_len : int
+        number of pilots at the beginning of the frame
+    pilot_ins_rat : int
+        phase pilots are spaced every pilot_ins_symbol starting at the first symbol after the pilot sequence
+    nframes : int, optional
+        how often to repeat the overall frame
+    pilot_scale : float, optional
+        factor by which to multiply the pilots for power scaling
+    Mpilots : int, optional
+        QAM order of the pilots in the sequence and the phase pilots
+    dataclass : SignaBase subclass, optional
+        class of the data signal array
+    nmodes : int, optional
+        number of spatial modes
+    dtype : np.dtype, optional
+        numpy dtype currently np.complex128 and np.complex64 are supported
+    **kwargs
+        keyword arguments to pass to the pilot and data generation classes
+
+    Returns
+    -------
+    SignalWithPilots
+        pilot-based signal of shape (nmodes, frame_len*nframes)
+
+    Attributes
+    ----------
+    pilots : SignalQAMGrayCoded
+        single array consisting of pilotsequence and phase pilots
+    pilots_seq : SignalQAMGrayCoded
+        the pilot sequence
+    ph_pilots: SignalQAMGrayCoded
+        the phase pilots
+    symbols : SignalBase subclass object
+        data symbols
+    frame_len : int
+        length of the full sequence frame
+    nframes : int
+        number of frames in the signal
+    pilot_scale : float
+        the scaling factor for the pilot amplitude
+    """
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
-                     "_idx_dat", "_pilot_scale"]
+                     "_idx_dat", "_pilot_scale", "_pilot_ins_rat"]
     _inheritbase_ = ["_fs"]
 
-    @staticmethod
-    def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):
-        idx = np.arange(frame_len)
-        idx_pil_seq = idx < pilot_seq_len
-        if pilot_ins_rat == 0 or pilot_ins_rat is None:
-            idx_pil = idx_pil_seq
-        else:
-            if (frame_len - pilot_seq_len) % pilot_ins_rat != 0:
-                raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
-            N_ph_frames = (frame_len - pilot_seq_len) // pilot_ins_rat
-            idx_ph_pil = ((idx - pilot_seq_len) % pilot_ins_rat != 0) & (idx - pilot_seq_len > 0)
-            idx_pil = ~idx_ph_pil  # ^ idx_pil_seq
-        idx_dat = ~idx_pil
-        return idx, idx_dat, idx_pil
-
-    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1,
+    def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
                 dataclass=SignalQAMGrayCoded, nmodes=1, dtype=np.complex128,  **kwargs):
         out_symbs = np.empty((nmodes, frame_len), dtype=dtype)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
-        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * pilot_scale
+        pilots = SignalQAMGrayCoded(Mpilots, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * pilot_scale
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
@@ -1109,8 +1242,50 @@ class SignalWithPilots(SignalBase):
         obj._pilot_scale = pilot_scale
         return obj
 
+    @staticmethod
+    def _cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat):
+        idx = np.arange(frame_len)
+        idx_pil_seq = idx < pilot_seq_len
+        if pilot_ins_rat == 0 or pilot_ins_rat is None:
+            idx_pil = idx_pil_seq
+        else:
+            if (frame_len - pilot_seq_len) % pilot_ins_rat != 0:
+                raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
+            N_ph_frames = (frame_len - pilot_seq_len) // pilot_ins_rat
+            idx_ph_pil = ((idx - pilot_seq_len) % pilot_ins_rat != 0) & (idx - pilot_seq_len > 0)
+            idx_pil = ~idx_ph_pil  # ^ idx_pil_seq
+        idx_dat = ~idx_pil
+        return idx, idx_dat, idx_pil
+
     @classmethod
-    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, **pilot_kwargs):
+    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4, **pilot_kwargs):
+        """
+        Generate a pilot-bases signal from a provided data signal object.
+
+        Parameters
+        ----------
+        data : SignalBase object
+            The data symbols needs to be long enough to fill one frame. If it is longer than required the data will be truncated
+        frame_length : int
+            overall length of the signal comprised of the pilot sequence, the phase pilots and the data payload.
+        pilot_seq_len : int
+            number of pilots at the beginning of the frame
+        pilot_ins_rat : int
+            phase pilots are spaced every pilot_ins_symbol starting at the first symbol after the pilot sequence
+        nframes : int, optional
+            how often to repeat the overall frame
+        pilot_scale : float, optional
+            factor by which to multiply the pilots for power scaling
+        Mpilots : int, optional
+            QAM order of the pilots in the sequence and the phase pilots    frame_len : int
+        pilot_kwargs
+            keyword arguments to pass to the pilot generation
+
+        Returns
+        -------
+        signal :
+            pilot-based signal of shape (nmodes, frame_len*nframes)
+        """
         nmodes, N = data.shape
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
         assert np.count_nonzero(idx_dat) <= N, "data frame is to short for the given frame length"
@@ -1164,10 +1339,23 @@ class SignalWithPilots(SignalBase):
         return self._frame_len
 
     def get_data(self, shift_factors=None):
+        """
+        Get data payload by removing the pilots. Note this only works on signal sampled at the symbol rate
+
+        Parameters
+        ----------
+        shift_factors : array_like, optional
+            factors by which to shift the signal to remove delays
+        Returns
+        -------
+        outdata : SignalBase object
+            the recovered data symbols
+        """
         if shift_factors is None:
             idx = np.tile(self._idx_dat, self.nframes)
             return self.symbols.recreate_from_np_array(self[:, idx])
         shift_factors = np.asarray(shift_factors)
+        assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
         idxn = np.tile(self._idx_dat, self.nframes)
         out = []
         for i in range(shift_factors.shape[0]):
@@ -1178,26 +1366,110 @@ class SignalWithPilots(SignalBase):
         return getattr(self._symbols, attr)
 
     def cal_ser(self, signal_rx=None, shift_factors=None):
+        """
+        Calculate Symbol Error Rate on the data payload.
+
+        Parameters
+        ----------
+        signal_rx : SignalBase object, optional
+            signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
+
+        Returns
+        -------
+        SER : array_like
+            SER per mode
+        """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
         return super().cal_ser(signal_rx, synced=False)
 
     def cal_ber(self, signal_rx=None, shift_factors=None):
+        """
+        Calculate Bit Error Rate on the data payload.
+
+        Parameters
+        ----------
+        signal_rx : SignalBase object, optional
+            signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
+
+        Returns
+        -------
+        BER : array_like
+            BER per mode
+        """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
         return super().cal_ber(signal_rx, synced=False)
 
     def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
+        """
+        Calculate Error Vector Magnitude on the data payload.
+
+        Parameters
+        ----------
+        signal_rx : SignalBase object, optional
+            signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
+        blind : bool, optional
+            perform blind EVM calculation without knowledge of transmitted symbols. Note that this significantly
+            underestimates the real EVM at low SNRs.
+
+        Returns
+        -------
+        EVM : array_like
+            EVM per mode
+        """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
         return super().cal_evm(signal_rx, blind=blind)
 
     def cal_gmi(self, signal_rx=None, shift_factors=None):
+        """
+        Calculate Generalised Mutual Information on the data payload
+
+        Parameters
+        ----------
+        signal_rx : SignalBase object, optional
+            signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
+
+        Returns
+        -------
+        GMI : array_like
+            GMI per mode
+        gmi_per_bit : array_like
+            generalized mutual information per transmitted bit per mode
+        """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
         return super().cal_gmi(signal_rx)
 
     def est_snr(self, signal_rx=None, synced=True, shift_factors=None, symbols_tx=None):
+        """
+        Estimate SNR using known symbols.
+
+        Parameters
+        ----------
+        signal_rx : SignalBase object, optional
+            signal on which to measure SER. Default: None -> calculate SER on self
+        synced : bool, optional
+            if the signal is synced or not
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
+        symbols_tx : array_like, optional
+            symbols to use in SNR estimation, default: None use self.symbols
+
+        Returns
+        -------
+        SNR : array_like
+            estimated SNR per mode
+        """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
         return super().est_snr(signal_rx, synced=synced, symbols_tx=symbols_tx)
