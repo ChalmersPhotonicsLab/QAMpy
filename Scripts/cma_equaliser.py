@@ -5,7 +5,7 @@ from dsp import equalisation, signals, impairments, helpers, phaserec
 fb = 40.e9
 os = 2
 fs = os*fb
-N = 10**5
+N = 4*10**5
 mu = 4e-4
 theta = np.pi/5.45
 theta2 = np.pi/4
@@ -14,14 +14,14 @@ M = 4
 ntaps=40
 snr =  14
 
-sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
+sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2, dtype=np.complex64)
 S = sig.resample(fs, renormalise=True, beta=0.1)
 S = impairments.apply_phase_noise(S, 100e3)
 S = impairments.change_snr(S, snr)
 
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
 wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, TrSyms=None, method="mcma", adaptive_step=True)
-wxy_m, err_m = equalisation.equalise_signal(SS.astype(np.complex64), mu,  TrSyms=None,Ntaps=ntaps, method="mcma", adaptive_step=True)
+wxy_m, err_m = equalisation.equalise_signal(SS, mu,  TrSyms=None,Ntaps=ntaps, method="mcma", adaptive_step=True)
 E = equalisation.apply_filter(SS,  wxy)
 E_m = equalisation.apply_filter(SS, wxy_m)
 E = helpers.normalise_and_center(E)
