@@ -735,10 +735,52 @@ class SignalQAMGrayCoded(SignalBase):
 
 
 class SymbolOnlySignal(SignalQAMGrayCoded):
+    """
+    SymbolOnlySignal(M, N, symbols nmodes=1, fb=1, dtype=np.complex128)
+
+    2-D array subclass of ndarray representing signal for a given arbitrary symbol array,
+    without a mapping to bits. This method can be used for example to create signals which
+    use an arbitrary modulation format without specifying how this maps to bits.
+
+    Parameters
+    ----------
+        M : int
+            QAM order
+        N : int
+            number of symbols per mode
+        symbols: array_like
+            symbol alphabet to choice symbols from
+        nmodes : int, optional
+            number of modes/polarizations
+        fb  : float, optional
+            symbol rate
+        dtype : numpy dtype, optional
+            dtype of the array. Should be either np.complex128 (default) for double precision or np.complex64
+
+    Note that the below attributes are read-only and should not be adjusted manually.
+
+    Attributes:
+        fb : float
+            symbol rate of the signal
+        fs : float
+            sampling rate
+        M  : int
+            QAM order
+        coded_symbols : array_like
+            the symbol alphabet
+        bits : array_like
+            the bit sequence that is modulated to the signal
+        symbol : array_like
+            the base symbols that the signal is based on, this will always be inherited in operations. Signal
+            quality measurements such as SER are comparing against this sequence
+    """
     _inheritattr_ = ["_symbols",  "_coded_symbols" ]
 
-    def __new__(cls, M, N, symbols, nmodes=1, fb=1):
-        coded_symbols = symbols
+    def __new__(cls, M, N, symbols, nmodes=1, fb=1, dtype=None):
+        if dtype is None:
+            coded_symbols = symbols
+        else:
+            coded_symbols = symbols.astype(dtype)
         obj = np.random.choice(symbols, (nmodes, N))
         obj = obj.view(cls)
         obj._coded_symbols = coded_symbols
@@ -770,6 +812,23 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
 
     @classmethod
     def from_symbol_array(cls, symbs, coded_symbols=None, fb=1):
+        """
+        Generate signal from a given symbol array.
+
+        Parameters
+        ----------
+        symbs : subclass of SignalBase
+            symbol array to base on
+        coded_symbols : array_like, optional
+            symbol alphabet, this is needed for making decisions. If None use np.unique(symbs)
+            to deduce (error-prone)
+        fb : float, optional
+            symbol rate
+        Returns
+        -------
+        output : SymbolOnlySignal
+            output signal based on symbol array
+        """
         symbs = np.atleast_2d(symbs)
         if coded_symbols is None:
             coded_symbols = np.unique(symbs).flatten()
