@@ -70,8 +70,8 @@ def test_apply_filter(dtype, benchmark):
     S = impairments.change_snr(S, snr)
     SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
     wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, method="mcma", adaptive_step=True)
-    E1 = equalisation.apply_filter(SS,  wxy)
-    E2 = cython_equalisation.apply_filter_to_signal(SS, os, wxy)
+    E1 = equalisation.apply_filter(SS,  wxy, method="pyx")
+    E2 = equalisation.apply_filter(SS, wxy, method="py")
     E2 = E1.recreate_from_np_array(E2)
     E1 = helpers.normalise_and_center(E1)
     E2 = helpers.normalise_and_center(E2)
@@ -88,7 +88,7 @@ def test_apply_filter(dtype, benchmark):
 
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", [cequalisation.apply_filter, cython_equalisation.apply_filter_to_signal, cython_equalisation.apply_filter_to_signal2 ])
+@pytest.mark.parametrize("method", ["py", "pyx"])
 def test_apply_filter_benchmark(dtype, method, benchmark):
     benchmark.group = "apply filter "+str(dtype)
     fb = 40.e9
@@ -107,5 +107,5 @@ def test_apply_filter_benchmark(dtype, method, benchmark):
     S = impairments.change_snr(S, snr)
     SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
     wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, method="mcma", adaptive_step=True)
-    benchmark(method, SS, os, wxy)
+    benchmark(equalisation.apply_filter, SS,  wxy, method)
 

@@ -1,6 +1,6 @@
 from . import core
 
-def apply_filter(sig, wxy):
+def apply_filter(sig, wxy, method="pyx"):
     """
     Apply the equaliser filter taps to the input signal.
 
@@ -13,6 +13,9 @@ def apply_filter(sig, wxy):
     wxy    : tuple(array_like, array_like,optional)
         filter taps for the x and y polarisation
 
+    method : basestring
+        which apply filter method to use (pyx=cython, py=python)
+
     Returns
     -------
 
@@ -20,7 +23,7 @@ def apply_filter(sig, wxy):
         equalised signal
     """
     os = int(sig.fs/sig.fb)
-    sig_out = core.equalisation.apply_filter(sig, os, wxy)
+    sig_out = core.equalisation.apply_filter(sig, os, wxy, method=method)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
