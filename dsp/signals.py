@@ -15,6 +15,27 @@ from .core.signal_quality import quantize, generate_bitmapping_mtx, estimate_snr
 
 
 class RandomBits(np.ndarray):
+    """
+    RandomBits(N, nmodes=1, seed=None)
+
+    Returns an 2-D array-object of random bits with shape (nmodes, N)
+    Bits are integers 0,1 generated via np.random.randint.
+
+    Parameters
+    ----------
+        N : int
+            length of the bit sequence
+        nmodes : int
+            number of modes/polarizations
+        seed : int, optional
+            seed for the numerical number generator
+
+    Attributes:
+        __seed : float
+            seed to the random number generator
+        __rand_state : np.random.RandomState
+            object of the random state
+    """
     def __new__(cls, N, nmodes=1, seed=None):
         R = np.random.RandomState(seed)
         bitsq = R.randint(0, high=2, size=(nmodes, N)).astype(np.bool)
@@ -30,6 +51,30 @@ class RandomBits(np.ndarray):
 
 
 class PRBSBits(np.ndarray):
+    """
+    PRBSBits(N, nmodes=1, seed=[None, None], order=[15, 23])
+
+    Returns an 2-D array-object of random bits with shape (nmodes, N)
+    Bits are integers 0,1 generated via a external XOR PRBS shift register
+
+    Parameters
+    ----------
+        N : int
+            length of the bit sequence
+        nmodes : int
+            number of modes/polarizations
+        seed : tuple(int,..), optional
+            seeds for the PRBS generator. If the list is shorter than nmodes, than choose random seeds
+        order : tuple(int,...), optional
+            PRBS patter order, can be one of 7, 15, 23 and 31. One for each mode should be given.
+            Otherwise we choose one from 15 and 23 (due to performance reasons)
+
+    Attributes:
+        __seed : tuple(int, ...)
+            tuple of ints for the PRBS seed, per mode
+        __order : tuple(int,...)
+            tuple of ints for the PRBS order per mode
+    """
     def __new__(cls, N, nmodes=1, seed=[None, None], order=[15, 23]):
         if len(order) < nmodes:
             warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
@@ -383,6 +428,68 @@ class SignalBase(np.ndarray):
 class SignalQAMGrayCoded(SignalBase):
     _inheritattr_ = ["_symbols", "_bits", "_encoding", "_bitmap_mtx",  "_code",
                      "_coded_symbols" ]
+    """
+    SignalQAMGrayCoded(M, N, nmodes=1, fb=1, bitclass=RandomBits, dtype=np.complex128, **kwargs)
+    
+    2-D array subclass of ndarray representing square qam symbols based on gray-coded bits. 
+    When initialised the class is one sample per symbol. The class should be inherited in operations
+    with ndarrays. 
+    
+    Parameters
+    ----------
+        M : int
+            QAM order
+        N : int
+            number of symbols per polarization
+        nmodes : int, optional
+            number of modes/polarizations
+        fb  : float, optional
+            symbol rate 
+        bitclass : Bitclass object, optional
+            class for initialising the bit arrays from which to generate the symbols, by default use
+            RandomBits.
+        dtype : numpy dtype, optional
+            dtype of the array. Should be either np.complex128 (default) for double precision or np.complex64
+        **kwargs 
+            kword arguments to pass to bitclass
+            
+    
+    Note that the below attributes are read-only and should not be adjusted manually.
+
+    Attributes:
+        fb : float
+            symbol rate of the signal
+        fs : float
+            sampling rate
+        M  : int
+            QAM order
+        coded_symbols : array_like
+            the symbol alphabet
+        bits : array_like
+            the bit sequence that is modulated to the signal
+        symbol : array_like
+            the base symbols that the signal is based on, this will always be inherited in operations. Signal
+            quality measurements such as SER are comparing against this sequence
+    """
+    # using Randombits as default class because they are slightly faster
+    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, dtype=np.complex128, **kwargs):
+        assert dtype is np.complex or dtype is np.complex64, "only np.complex128 and np.complex64 dtypes are supported"
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
+        Nbits = int(N * np.log2(M))
+        bits = bitclass(Nbits, nmodes=nmodes, **kwargs)
+        obj = cls._modulate(bits, encoding, M, dtype=dtype)
+        obj = obj.view(cls)
+        obj._bitmap_mtx = bitmap_mtx
+        obj._encoding = encoding
+        obj._coded_symbols = coded_symbols
+        obj._M = M
+        obj._fb = fb
+        obj._fs = fb
+        obj._code = _graycode
+        obj._bits = bits
+        obj._symbols = obj.copy()
+        return obj
 
     @staticmethod
     def _demodulate(symbols, encoding):
@@ -446,6 +553,26 @@ class SignalQAMGrayCoded(SignalBase):
 
     @classmethod
     def from_symbol_array(cls, symbs, M=None, fb=1, dtype=None):
+        """
+        Generate signal from a given symbol array.
+
+        Parameters
+        ----------
+        symbs : subclass of SignalBase
+            symbol array to base on
+        M  : int, optional
+            QAM order (default: None means deduce from np.unique(symbs), Note that this
+            is errorprone especially for short sequences)
+        fb : float, optional
+            symbol rate
+        dtype : np.dtype, optional
+            dtype for the signal. The default of None means use the dtype from symbols
+        Returns
+        -------
+        output : SignalQAMGrayCoded
+            output signal based on symbol array
+        """
+        assert dtype is None or dtype is np.complex or dtype is np.complex64, "only np.complex128 and np.complex64  or None dtypes are supported"
         symbs = np.atleast_2d(symbs)
         if M is None:
             warnings.warn("no M given, estimating how mnay unique symbols are in array, this can cause errors")
@@ -471,6 +598,26 @@ class SignalQAMGrayCoded(SignalBase):
 
     @classmethod
     def from_bit_array(cls, bits, M, fb=1, dtype=np.complex128):
+        """
+        Generate a signal array from a given bit array.
+
+        Parameters
+        ----------
+        bits : PRBSBits or RandomBits
+            2-D bitarray
+        M  : int
+            QAM order
+        fb : float, optional
+            symbol rate
+        dtype : np.dtype, optional
+            dtype of the signal, must be one of np.complex128 or np.complex64
+
+        Returns
+        -------
+        output : SignalQAMGrayCoded
+            output signal based on symbol array
+        """
+        assert dtype is np.complex or dtype is np.complex64, "only np.complex128 and np.complex64  dtypes are supported"
         arr = np.atleast_2d(bits)
         nbits = int(np.log2(M))
         if arr.shape[1] % nbits > 0:
@@ -509,25 +656,6 @@ class SignalQAMGrayCoded(SignalBase):
                          for i in range(len(_graycode))])
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
-
-    # using Randombits as default class because they are slightly faster
-    def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, dtype=np.complex128, **kwargs):
-        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
-        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
-        Nbits = int(N * np.log2(M))
-        bits = bitclass(Nbits, nmodes=nmodes, **kwargs)
-        obj = cls._modulate(bits, encoding, M, dtype=dtype)
-        obj = obj.view(cls)
-        obj._bitmap_mtx = bitmap_mtx
-        obj._encoding = encoding
-        obj._coded_symbols = coded_symbols
-        obj._M = M
-        obj._fb = fb
-        obj._fs = fb
-        obj._code = _graycode
-        obj._bits = bits
-        obj._symbols = obj.copy()
-        return obj
 
     def quantize(self, signal=None):
         """
