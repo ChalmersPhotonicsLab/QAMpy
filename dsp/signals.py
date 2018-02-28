@@ -473,7 +473,7 @@ class SignalQAMGrayCoded(SignalBase):
     """
     # using Randombits as default class because they are slightly faster
     def __new__(cls, M, N, nmodes=1, fb=1, bitclass=RandomBits, dtype=np.complex128, **kwargs):
-        assert dtype is np.complex or dtype is np.complex64, "only np.complex128 and np.complex64 dtypes are supported"
+        assert dtype in [np.complex128, np.complex64], "only np.complex128 and np.complex64  or None dtypes are supported"
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))
         coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
         Nbits = int(N * np.log2(M))
@@ -572,7 +572,8 @@ class SignalQAMGrayCoded(SignalBase):
         output : SignalQAMGrayCoded
             output signal based on symbol array
         """
-        assert dtype is None or dtype is np.complex or dtype is np.complex64, "only np.complex128 and np.complex64  or None dtypes are supported"
+        if dtype is not None:
+            assert dtype in [np.complex128, np.complex64], "only np.complex128 and np.complex64  or None dtypes are supported"
         symbs = np.atleast_2d(symbs)
         if M is None:
             warnings.warn("no M given, estimating how mnay unique symbols are in array, this can cause errors")
@@ -617,7 +618,7 @@ class SignalQAMGrayCoded(SignalBase):
         output : SignalQAMGrayCoded
             output signal based on symbol array
         """
-        assert dtype is np.complex or dtype is np.complex64, "only np.complex128 and np.complex64  dtypes are supported"
+        assert dtype in [np.complex128, np.complex64], "only np.complex128 and np.complex64  or None dtypes are supported"
         arr = np.atleast_2d(bits)
         nbits = int(np.log2(M))
         if arr.shape[1] % nbits > 0:
@@ -975,6 +976,7 @@ class TDHQAMSymbols(SignalBase):
         N2 = frms * f_M2
         syms1 = M1class(M1, N1, **kwargs)
         syms2 = M2class(M2, N2, **kwargs)
+        nmodes = syms1.shape[0]
         fb = syms1.fb
         out = np.zeros((nmodes, N), dtype=syms1.dtype)
         scale = cls.calculate_power_ratio(syms1.coded_symbols, syms2.coded_symbols, power_method)
