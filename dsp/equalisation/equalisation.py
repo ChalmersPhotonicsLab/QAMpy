@@ -9,7 +9,7 @@ from ..segmentaxis import segment_axis
 #TODO: update documentation with all references
 
 """
-Equalisation functions the equaliser update functions provided are:
+    Equalisation functions the equaliser update functions provided are:
 
 No decision based:
 -----------------
@@ -258,7 +258,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
             wxy = np.asarray([wxy[0],wy])
     else:
         wxy = np.asarray(wxy)
-        if pols == 2:
+        if pols > 1:
             Ntaps = wxy[0].shape[1]
         else:
             try:
