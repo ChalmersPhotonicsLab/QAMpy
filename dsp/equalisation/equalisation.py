@@ -252,10 +252,15 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     # scale signal
     E = utils.normalise_and_center(E)
     if wxy is None:
-        wxy = np.asarray([_init_taps(Ntaps, pols),])
-        if pols == 2:
-            wy = _init_orthogonaltaps(wxy[0])
-            wxy = np.asarray([wxy[0],wy])
+        # Allocate matrix and set first taps
+        wxy = np.zeros((pols,pols,Ntaps), dtype=np.complex128)
+        wxy[0] = _init_taps(Ntaps, pols)
+        
+        # Add orthogonal taps to all other modes
+        if pols > 1:
+            for pol in range(1,pols):
+                wxy[pol] = np.roll(wxy[0],pol,axis=0)
+            
     else:
         wxy = np.asarray(wxy)
         if pols > 1:
