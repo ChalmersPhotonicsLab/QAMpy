@@ -11,7 +11,7 @@ class TestReturnObject(object):
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_viterbi(self, ndim):
         s = signals.SignalQAMGrayCoded(4, 2 ** 16, fb=20e9, nmodes=ndim)
-        s2, ph = phaserec.viterbiviterbi(s, 10, 4)
+        s2, ph = phaserec.viterbiviterbi(s, 10)
         assert type(s2) is type(s)
 
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
