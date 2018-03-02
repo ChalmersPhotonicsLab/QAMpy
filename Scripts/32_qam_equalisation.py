@@ -24,7 +24,7 @@ sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2)
 S  = sig.resample(fs, beta=0.1, renormalise=True)
 S = impairments.change_snr(S, snr)
 
-SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
+SS = impairments.apply_PMD(S, theta, t_pmd)
 
 E , wx, (err, err_rde) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, methods=("mcma", "sbd"),
                                                              adaptive=(True, True))

@@ -2,7 +2,7 @@ import numpy as np
 from . import core
 from .core.impairments import rotate_field, add_awgn
 
-def apply_PMD_to_field(field, theta, t_dgd):
+def apply_PMD(field, theta, t_dgd):
     """
     Apply PMD to a given input field
 
@@ -113,6 +113,6 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
     if snr is not None:
         sig = change_snr(sig, snr)
     if dgd is not None:
-        sig = apply_PMD_to_field(sig, theta, dgd)
+        sig = apply_PMD(sig, theta, dgd)
     return sig
 

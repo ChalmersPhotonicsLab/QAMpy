@@ -19,7 +19,7 @@ S = sig.resample(fs, renormalise=True, beta=0.1)
 S = impairments.apply_phase_noise(S, 100e3)
 S = impairments.change_snr(S, snr)
 
-SS = impairments.apply_PMD_to_field(S, theta, t_pmd)
+SS = impairments.apply_PMD(S, theta, t_pmd)
 wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, TrSyms=None, method="mcma", adaptive_step=True)
 wxy_m, err_m = equalisation.equalise_signal(SS, mu,  TrSyms=None,Ntaps=ntaps, method="mcma", adaptive_step=True)
 E = equalisation.apply_filter(SS,  wxy)

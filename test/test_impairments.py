@@ -13,7 +13,7 @@ class TestReturnDtype(object):
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
     def test_apply_PMD(self, dtype):
         s = signals.ResampledQAM(16, 2**14, fs=2, nmodes=2, dtype=dtype)
-        s2 = impairments.apply_PMD_to_field(s, np.pi / 3, 1e-3)
+        s2 = impairments.apply_PMD(s, np.pi / 3, 1e-3)
         assert np.dtype(dtype) is s2.dtype
 
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
@@ -43,7 +43,7 @@ class TestReturnObjects(object):
         assert type(self.s) is type(s2)
 
     def test_apply_PMD(self):
-        s2 = impairments.apply_PMD_to_field(self.s, np.pi / 3, 1e-3)
+        s2 = impairments.apply_PMD(self.s, np.pi / 3, 1e-3)
         assert type(self.s) is type(s2)
 
     def test_apply_phase_noise(self):
@@ -75,7 +75,7 @@ class TestReturnObjects(object):
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_apply_PMD_attr(self, attr):
-        s2 = impairments.apply_PMD_to_field(self.s, np.pi / 3, 1e-3)
+        s2 = impairments.apply_PMD(self.s, np.pi / 3, 1e-3)
         assert getattr(self.s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])

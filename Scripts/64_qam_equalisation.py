@@ -21,7 +21,7 @@ Nrde = None
 sig = signals.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.01, "renormalise":True})
 sig = impairments.change_snr(sig, snr)
 
-SS = impairments.apply_PMD_to_field(sig, theta, t_pmd)
+SS = impairments.apply_PMD(sig, theta, t_pmd)
 
 E_m, wxy_m, (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS.astype(np.complex64), (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
                                                                      methods=("mcma", "sbd"),
