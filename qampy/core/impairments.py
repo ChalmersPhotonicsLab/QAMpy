@@ -163,6 +163,7 @@ def add_awgn(sig, strgth):
     """
     return sig + (strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2)).astype(sig.dtype) # sqrt(2) because of var vs std
 
+#TODO: we should check that this is correct both when the signal is oversampled or not
 def change_snr(sig, snr, fb, fs):
     """
     Change the SNR of a signal assuming that the input signal is noiseless
