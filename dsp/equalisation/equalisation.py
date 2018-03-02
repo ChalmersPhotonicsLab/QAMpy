@@ -176,25 +176,6 @@ def _init_taps(Ntaps, pols):
     wx[0, Ntaps // 2] = 1
     return wx
 
-def _init_orthogonaltaps(wx):
-    Ntaps = wx.shape[1]
-    wy = np.zeros(wx.shape, dtype=np.complex128)
-    # initialising the taps to be opposite orthogonal to the x polarisation (note that we do not want fully orthogonal
-    # (wx.conj()[::-1,::-1] as this causes convergence onto the x-pol
-    wy = wx[::-1,::-1]
-    # centering the taps
-    wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
-    wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
-    delay = abs(wYmaxidx[1] - wXmaxidx[1])
-    pad = np.zeros((2, delay), dtype=np.complex128)
-    if delay > 0:
-        wy = wy[:, delay:]
-        wy = np.hstack([wy, pad])
-    elif delay < 0:
-        wy = wy[:, 0:Ntaps - delay - 1]
-        wy = np.hstack([pad, wy])
-    return wy
-
 def generate_partition_codes_complex(M):
     """
     Generate complex partitions and codes for M-QAM for MRDE based on the real and imaginary radii of the different symbols. The partitions define the boundaries between the different codes. This is used to determine on which real/imaginary radius a signal symbol should lie on. The real and imaginary parts should be used for parititioning the real and imaginary parts of the signal in MRDE.
