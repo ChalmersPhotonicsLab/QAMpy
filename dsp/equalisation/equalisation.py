@@ -389,77 +389,6 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
     return wxy, err
 
-#
-#def CDcomp(E, fs, N, L, D, wl):
-#    """
-#    Static chromatic dispersion compensation of a single polarisation signal using overlap-add.
-#    All units are assumed to be SI.
-#
-#    Parameters
-#    ----------
-#    E  : array_like
-#       single polarisation signal
-#
-#    fs   :  float
-#       sampling rate
-#
-#    N    :  int
-#       block size (N=0, assumes cyclic boundary conditions and uses a single FFT/IFFT)
-#
-#    L    :  float
-#       length of the compensated fibre
-#
-#    D    :  float
-#       dispersion
-#
-#    wl   : float
-#       center wavelength
-#
-#    Returns
-#    -------
-#
-#    sigEQ : array_like
-#       compensated signal
-#    """
-#    E = E.flatten()
-#    samp = len(E)
-#    #wl *= 1e-9
-#    #L = L*1.e3
-#    c = 2.99792458e8
-#    #D = D*1.e-6
-#    if N == 0:
-#        N = samp
-#
-##    H = np.zeros(N,dtype='complex')
-#    H = np.arange(0, N) + 1j * np.zeros(N, dtype='float')
-#    H -= N // 2
-#    H *= H
-#    H *= np.pi * D * wl**2 * L * fs**2 / (c * N**2)
-#    H = np.exp(-1j * H)
-#    #H1 = H
-#    H = np.fft.fftshift(H)
-#    if N == samp:
-#        sigEQ = np.fft.fft(E)
-#        sigEQ *= H
-#        sigEQ = np.fft.ifft(sigEQ)
-#    else:
-#        n = N // 2
-#        zp = N // 4
-#        B = samp // n
-#        sigB = np.zeros(N, dtype=np.complex128)
-#        sigEQ = np.zeros(n * (B + 1), dtype=np.complex128)
-#        sB = np.zeros((B, N), dtype=np.complex128)
-#        for i in range(0, B):
-#            sigB = np.zeros(N, dtype=np.complex128)
-#            sigB[zp:-zp] = E[i * n:i * n + n]
-#            sigB = np.fft.fft(sigB)
-#            sigB *= H
-#            sigB = np.fft.ifft(sigB)
-#            sB[i, :] = sigB
-#            sigEQ[i * n:i * n + n + 2 * zp] = sigEQ[i * n:i * n + n + 2 *
-#                                                    zp] + sigB
-#        sigEQ = sigEQ[zp:-zp]
-#    return sigEQ
 
 
 def CDcomp(E, fs, N, L, D, wl):
@@ -495,10 +424,8 @@ def CDcomp(E, fs, N, L, D, wl):
     """
     E = E.flatten()
     samp = len(E)
-    #wl *= 1e-9
-    #L = L*1.e3
+
     c = 2.99792458e8
-    #D = D*1.e-6
     if N == 0:
         N = samp
 
@@ -512,7 +439,6 @@ def CDcomp(E, fs, N, L, D, wl):
 
     omega = np.pi * fs * np.linspace(-1,1,N,dtype = complex)
     beta2 = D * wl**2 / (c * 2 * np.pi)
-
 
     H = np.exp(-.5j * omega**2 * beta2 * L )
     #H1 = H
