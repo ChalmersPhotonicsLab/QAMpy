@@ -7,12 +7,12 @@ os = 2
 fs = os*fb
 N = 5*10**5
 theta = 1* np.pi/4.5
-theta2 = np.pi/4
+theta2 = np.pi/4.2
 M = 64
 QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 0.09e-2
-muRDE = 0.09e-2
+muCMA = 0.19e-3
+muRDE = 0.19e-3
 ntaps = 11
 t_pmd = 100.e-12
 #Ncma = N//4//os -int(1.5*ntaps)
@@ -24,13 +24,14 @@ Nrde = None
 sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23), beta=0.01, ndim=2)
 #Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
 
-SS = impairments.apply_PMD_to_field(sig, theta, t_pmd, fs)
+SS = sig
+#SS = impairments.apply_PMD_to_field(sig, theta, t_pmd, fs)
 #SS = np.vstack([X,Y])
 SS = impairments.rotate_field(SS, theta2)
 
-E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
-E_s, (wx_s, wy_s), (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
-E, (wx, wy), (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
+E_m, wxy_m, (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
+E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
+E, wxy, (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
 evm = QAM.cal_evm(sig[:, ::2])
@@ -75,10 +76,10 @@ plt.legend()
 plt.figure()
 plt.subplot(331)
 plt.title('CMA/MDDMA Taps')
-plt.plot(wx[0,:], 'r')
-plt.plot(wx[1,:], '--r')
-plt.plot(wy[0,:], 'g')
-plt.plot(wy[1,:], '--g')
+plt.plot(wxy[0,0,:], 'r')
+plt.plot(wxy[0,1,:], '--r')
+plt.plot(wxy[1, 0,:], 'g')
+plt.plot(wxy[1, 1,:], '--g')
 plt.subplot(332)
 plt.title('CMA/MDDMA error cma')
 plt.plot(abs(err[0]), color='r')
@@ -89,10 +90,10 @@ plt.plot(abs(err_rde[0]), color='r')
 plt.plot(abs(err_rde[1])-10, color='g')
 plt.subplot(334)
 plt.title('MCMA/MRDE Taps')
-plt.plot(wx_m[0,:], 'r')
-plt.plot(wx_m[1,:], '--r')
-plt.plot(wy_m[0,:], 'g')
-plt.plot(wy_m[1,:], '--g')
+plt.plot(wxy_m[0, 0,:], 'r')
+plt.plot(wxy_m[0, 1,:], '--r')
+plt.plot(wxy_m[1, 0,:], 'g')
+plt.plot(wxy_m[1, 1,:], '--g')
 plt.subplot(335)
 plt.title('MCMA/MRDE error cma')
 plt.plot(abs(err_m[0]), color='r')
@@ -103,10 +104,10 @@ plt.plot(abs(err_rde_m[0]), color='r')
 plt.plot(abs(err_rde_m[1])-10, color='g')
 plt.subplot(337)
 plt.title('MCMA/SBD Taps')
-plt.plot(wx_s[0,:], 'r')
-plt.plot(wx_s[1,:], '--r')
-plt.plot(wy_s[0,:], 'g')
-plt.plot(wy_s[1,:], '--g')
+plt.plot(wxy_s[0, 0,:], 'r')
+plt.plot(wxy_s[0, 1,:], '--r')
+plt.plot(wxy_s[1, 0,:], 'g')
+plt.plot(wxy_s[1, 1,:], '--g')
 plt.subplot(338)
 plt.title('MCMA/SBD error cma')
 plt.plot(abs(err_s[0]), color='r')
