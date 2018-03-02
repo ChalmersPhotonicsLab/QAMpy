@@ -119,12 +119,8 @@ class TestCorrect(object):
     def test_bps(self, dtype, angle):
         s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
         s *= np.exp(1.j*angle)
-        s2, ph = phaserec.bps(s, 32, s.coded_symbols, 10, method="pyx")
+        s2, ph = phaserec.bps(s, 128 , s.coded_symbols, 11, method="pyx")
         o = ph[0][20:-20]+angle
-        #print(ph[0,12]+angle)
-        #print(o[10])
-        #plt.plot(ph[0], 'r')
-        #plt.plot(o, 'b')
-        #plt.show()
-        npt.assert_allclose(0, o, atol=2*np.pi/4/32)
+        ser = s2[:,20:-20].cal_ser()
+        npt.assert_allclose(0, ser)
 
