@@ -1,2 +1,2 @@
 from .equalisation import *
-from .cython_equalisation import quantize
+from .cython_equalisation import make_decision

@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from dsp.helpers import cabssquared
 from dsp.theory import  cal_symbols_qam, cal_scaling_factor_qam
-from .equalisation import quantize as _quantize_pyx
+from .equalisation import make_decision as _decision_pyx
 from . import ber_functions
 #from .. import modulation
 from .dsp_cython import soft_l_value_demapper
@@ -12,7 +12,7 @@ try:
 except ImportError:
     af = None
 
-def quantize(signal, symbols, method="pyx", **kwargs):
+def make_decision(signal, symbols, method="pyx", **kwargs):
     """
     Quantize signal array onto symbols.
 
@@ -34,32 +34,32 @@ def quantize(signal, symbols, method="pyx", **kwargs):
 
     """
     if method == "pyx":
-        return _quantize_pyx(signal, symbols, **kwargs)
+        return _decision_pyx(signal, symbols, **kwargs)
     elif method == "af":
         if af == None:
             raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
-        return _quantize_af(signal, symbols, **kwargs)
+        return _decision_af(signal, symbols, **kwargs)
     else:
         raise ValueError("method '%s' unknown has to be either 'pyx' or 'af'"%(method))
 
 
-def _quantize_af(signal, symbols, precision=16):
+def _decision_af(signal, symbols, precision=16):
     """
-    Quantize signal array  onto symbols. Arrayfire function.
+    Make symbol decisions on  signal array  onto symbols. Arrayfire function.
 
     Parameters
     ----------
     signal : array_like
         input signal array
     symbols : array_like
-        array of symbols to quantize onto
+        array of symbols to decide onto
     precision : int, optional
         bit precision either 16 for complex128 or 8 for complex 64
 
     Returns
     -------
     out : array_like
-        array of quantized symbols
+        array of decided symbols
 
     """
     global  NMAX
@@ -254,14 +254,14 @@ def cal_ser_qam(data_rx, symbol_tx, M, method="pyx"):
     M       : int
         QAM order
     method : string, option
-        method to use for quantization (either `af` for arrayfire or `pyx` for cython)
+        method to use for decision making (either `af` for arrayfire or `pyx` for cython)
 
     Returns
     -------
     SER : float
         Symbol error rate estimate
     """
-    data_demod = quantize(data_rx, M, method=method)
+    data_demod = make_decision(data_rx, M, method=method)
     return np.count_nonzero(data_demod - symbol_tx) / len(data_rx)
 
 def generate_bitmapping_mtx(coded_symbs, coded_bits, M, dtype=np.complex128):

@@ -10,7 +10,7 @@ from .core import resample, utils
 from dsp import theory
 from .core import ber_functions
 from .core.prbs import make_prbs_extXOR
-from .core.signal_quality import quantize, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
+from .core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
 
 
@@ -241,7 +241,7 @@ class SignalBase(np.ndarray):
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
-        data_demod = self.quantize(signal_rx)
+        data_demod = self.make_decision(signal_rx)
         symbols_tx, data_demod = self._sync_and_adjust(self.symbols, data_demod, synced)
         errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         return np.asarray(errs) / data_demod.shape[1]
@@ -274,7 +274,7 @@ class SignalBase(np.ndarray):
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
-        syms_demod = self.quantize(signal_rx)
+        syms_demod = self.make_decision(signal_rx)
         symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod, synced)
         # TODO: need to rename decode to demodulate
         bits_demod = self.demodulate(syms_demod)
@@ -294,7 +294,7 @@ class SignalBase(np.ndarray):
         signal_rx    : array_like
             input signal to measure the EVM offset
         blind : bool, optional
-            calculate the blind EVM (signal is quantized, without taking into account symbol errors). For low SNRs this
+            calculate the blind EVM (make symbol decisions without taking into account symbol errors). For low SNRs this
             will underestimate the real EVM, because detection errors are not counted.
         symbols_tx      : array_like, optional
             known symbol sequence. If this is None self.symbols_tx will be used unless blind is True.
@@ -376,7 +376,7 @@ class SignalBase(np.ndarray):
         signal_rx = signal_rx / mm[:, np.newaxis]
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = self.est_snr(rx, synced=True, symbols_tx=tx)
-        bits = self.demodulate(self.quantize(tx)).astype(np.int)
+        bits = self.demodulate(self.make_decision(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
             l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self._bitmap_mtx)
@@ -584,7 +584,7 @@ class SignalQAMGrayCoded(SignalBase):
         coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
         out = np.empty_like(symbs).astype(dtype)
         for i in range(symbs.shape[0]):
-            out[i] = quantize(symbs[i], coded_symbols)
+            out[i] = make_decision(symbs[i], coded_symbols)
         bits = cls._demodulate(out, encoding)
         obj = np.asarray(out).view(cls)
         obj._M = M
@@ -658,7 +658,7 @@ class SignalQAMGrayCoded(SignalBase):
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
-    def quantize(self, signal=None):
+    def make_decision(self, signal=None):
         """
         Make symbol decisions based on the input field. Decision is made based on difference from constellation points
 
@@ -675,7 +675,7 @@ class SignalQAMGrayCoded(SignalBase):
         signal = self._signal_present(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
-            outsyms[i] = quantize(signal[i], self.coded_symbols)
+            outsyms[i] = make_decision(signal[i], self.coded_symbols)
         return outsyms
 
     @property
@@ -730,7 +730,7 @@ class SignalQAMGrayCoded(SignalBase):
         -------
         outbits   : array_like
              for i in range(signal.shape[0]):
-            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.coded_symbols)       array of booleans representing bits with same number of dimensions as symbols
+            outsyms[i] = make_decision(utils.normalise_and_center(signal[i]), self.coded_symbols)       array of booleans representing bits with same number of dimensions as symbols
         """
         return self._demodulate(symbols, self._encoding)
 
@@ -791,7 +791,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         obj._symbols = obj.copy()
         return obj
 
-    def quantize(self, signal=None):
+    def make_decision(self, signal=None):
         """
         Make symbol decisions based on the input field. Decision is made based on difference from constellation points
 
@@ -808,7 +808,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         signal = self._signal_present(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
-            outsyms[i] = quantize(signal[i], self.coded_symbols)
+            outsyms[i] = make_decision(signal[i], self.coded_symbols)
         return outsyms
 
     @classmethod
@@ -836,7 +836,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         # not sure if this is really necessary, but avoids numerical error issues
         out = np.empty_like(symbs)
         for i in range(symbs.shape[0]):
-            out[i] = quantize(symbs[i], coded_symbols)
+            out[i] = make_decision(symbs[i], coded_symbols)
         obj = np.asarray(out).view(cls)
         M = coded_symbols.size
         obj._M = M

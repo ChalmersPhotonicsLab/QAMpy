@@ -45,7 +45,7 @@ cdef complexing det_symbol(complexing[:] syms, int M, complexing value, cython.f
     dists[0] = dist0
     return symbol
 
-def quantize(complexing[:] E, complexing[:] symbols):
+def make_decision(complexing[:] E, complexing[:] symbols):
     """
     Quantize signal to symbols, based on closest distance.
 

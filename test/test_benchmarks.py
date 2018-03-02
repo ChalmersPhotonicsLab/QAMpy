@@ -21,7 +21,7 @@ def test_resampling_benchmark(arr, taps, fconv, benchmark):
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 def test_quantize_precision(dtype, benchmark):
     s = signals.SignalQAMGrayCoded(128, 2**20, dtype=dtype)
-    o = benchmark(cython_equalisation.quantize, s[0], s.coded_symbols)
+    o = benchmark(cython_equalisation.make_decision, s[0], s.coded_symbols)
     npt.assert_array_almost_equal(s.symbols[0], o)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
