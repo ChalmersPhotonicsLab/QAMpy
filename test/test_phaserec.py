@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
-from dsp import signals, impairments, phaserec
-from dsp.core import phaserecovery as cphaserecovery
+from qampy import signals, impairments, phaserec
+from qampy.core import phaserecovery as cphaserecovery
 import matplotlib.pylab as plt
 
 

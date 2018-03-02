@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, signals
+from qampy import equalisation, signals
 
 fb = 40.e9
 os = 2

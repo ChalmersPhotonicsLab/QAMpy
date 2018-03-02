@@ -1,5 +1,5 @@
 import numpy as np
-from dsp.core.special_fcts import rrcos_freq, rrcos_time
+from qampy.core.special_fcts import rrcos_freq, rrcos_time
 import scipy.signal as scisig
 
 def pre_filter(signal, bw):

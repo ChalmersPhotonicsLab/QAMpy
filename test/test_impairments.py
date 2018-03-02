@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from dsp import signals, impairments
+from qampy import signals, impairments
 
 class TestReturnDtype(object):
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])

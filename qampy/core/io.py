@@ -245,7 +245,7 @@ def create_input_group(h5f, title="input data at transmitter", rolloff_dflt=np.n
         setattr(t_in.attrs, k, v)
     return h5f
 
-def create_recvd_data_group(h5f, title="data analysis and dsp results", description=None, oversampling_dflt=2,
+def create_recvd_data_group(h5f, title="data analysis and qampy results", description=None, oversampling_dflt=2,
                             attrs=DSP_UNITS, arrays=["data", "symbols", "taps", "bits"], nmodes=2, **kwargs):
     """
     Create the table for saving recovered data and parameters after DSP
@@ -278,7 +278,7 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
     except AttributeError:
         h5f = tb.open_file(h5f, "a")
         gr = h5f.create_group("/", "analysis", title=title)
-    gr_dsp = h5f.create_group(gr, "dsp", title="Signal from DSP")
+    gr_dsp = h5f.create_group(gr, "qampy", title="Signal from DSP")
     if description is None:
         dsp_params = { "freq_offset": tb.Float64Col(dflt=np.nan),
                        "freq_offset_N": tb.Int64Col(dflt=0), "phase_est": tb.StringCol(itemsize=20),
@@ -296,7 +296,7 @@ def create_recvd_data_group(h5f, title="data analysis and dsp results", descript
     setattr(t_rec.attrs, "arrays", arrays)
     data_arr = h5f.create_mdvlarray(gr_dsp, "data", tb.ComplexAtom(itemsize=16), "signal after DSP", **kwargs)
     syms_arr = h5f.create_mdvlarray(gr_dsp, "symbols", tb.ComplexAtom(itemsize=16, dflt=np.nan), "recovered symbols", **kwargs)
-    taps_arr = h5f.create_mdvlarray(gr_dsp, "taps", tb.ComplexAtom(itemsize=16, dflt=np.nan), "dsp taps", **kwargs)
+    taps_arr = h5f.create_mdvlarray(gr_dsp, "taps", tb.ComplexAtom(itemsize=16, dflt=np.nan), "qampy taps", **kwargs)
     bits_arr = h5f.create_mdvlarray(gr_dsp, "bits", tb.BoolAtom(dflt=False), "recovered bits", **kwargs)
     for k, v in attrs.items():
         setattr(t_rec.attrs, k, v)

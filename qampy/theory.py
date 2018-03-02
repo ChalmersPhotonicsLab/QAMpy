@@ -4,7 +4,7 @@ from scipy.special import erfc
 
 from .core.special_fcts import q_function
 from .core.utils import bin2gray
-from dsp.helpers import dB2lin
+from qampy.helpers import dB2lin
 
 
 # All the formulas below are taken from dsplog.com

@@ -1,6 +1,6 @@
 import numpy as np
-from dsp import equalisation, signals
-from dsp.core import impairments
+from qampy import equalisation, signals
+from qampy.core import impairments
 from timeit import default_timer as timer
 
 

@@ -1,7 +1,7 @@
 #import cProfile
 import numpy as np
-from dsp.core import processing, utils
-from dsp import signals
+from qampy.core import processing, utils
+from qampy import signals
 import multiprocessing
 import zmq
 

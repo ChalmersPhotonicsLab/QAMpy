@@ -1,9 +1,9 @@
 import pytest
 import numpy.testing as npt
 
-from dsp import signals, equalisation
-from dsp.core import impairments
-from dsp.core import equalisation as cequalisation
+from qampy import signals, equalisation
+from qampy.core import impairments
+from qampy.core import equalisation as cequalisation
 
 
 class TestReturnObject(object):

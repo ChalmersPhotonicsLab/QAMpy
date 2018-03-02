@@ -1,7 +1,7 @@
 #import cProfile
 import numpy as np
-from dsp.core import io
-from dsp import signals
+from qampy.core import io
+from qampy import signals
 import os as os_mod
 
 

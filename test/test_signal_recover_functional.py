@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import signals, helpers, phaserec, equalisation, impairments, core
+from qampy import signals, helpers, phaserec, equalisation, impairments, core
 
 import matplotlib.pylab as plt
 

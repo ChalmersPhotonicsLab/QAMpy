@@ -3,10 +3,10 @@ import numpy as np
 import numpy.testing as npt
 
 import matplotlib.pylab as plt
-from dsp import signals, impairments, equalisation, helpers, phaserec
-from dsp.core import resample
-from dsp.core.equalisation import cython_equalisation
-from dsp.core import equalisation as cequalisation
+from qampy import signals, impairments, equalisation, helpers, phaserec
+from qampy.core import resample
+from qampy.core.equalisation import cython_equalisation
+from qampy.core import equalisation as cequalisation
 
 
 

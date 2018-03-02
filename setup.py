@@ -8,21 +8,21 @@ import numpy as np
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
 LINK_ARGS = ["-fopenmp", "-lm"]
 
-cython_equalisation = Extension(name="dsp.core.equalisation.cython_equalisation",
-                     sources=["dsp/core/equalisation/cython_equalisation.pyx", "dsp/core/equalisation/equaliserC.c"],
-                             include_dirs=["dsp/core/equalisation", np.get_include()],
+cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
+                     sources=["qampy/core/equalisation/cython_equalisation.pyx", "qampy/core/equalisation/equaliserC.c"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
 
-cython_errorfcts = Extension(name="dsp.core.equalisation.cython_errorfcts",
-                     sources=["dsp/core/equalisation/cython_errorfcts.pyx"],
-                             include_dirs=["dsp/core/equalisation", np.get_include()],
+cython_errorfcts = Extension(name="qampy.core.equalisation.cython_errorfcts",
+                     sources=["qampy/core/equalisation/cython_errorfcts.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
 
-dsp_cython = Extension(name="dsp.core.dsp_cython",
-                       sources=["dsp/core/dsp_cython.pyx", "dsp/core/equalisation/equaliserC.c"],
-                             include_dirs=["dsp/core/equalisation", np.get_include(), "dsp/core/"],
+dsp_cython = Extension(name="qampy.core.dsp_cython",
+                       sources=["qampy/core/dsp_cython.pyx", "qampy/core/equalisation/equaliserC.c"],
+                             include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
                        extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
 
@@ -32,22 +32,22 @@ here = path.abspath(path.dirname(__file__))
 
 
 setup(
-    name='pycommdsp',
+    name='qampy',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.0.1',
+    version='0.1.1',
 
-    description='A python based package of communications dsp tools',
+    description='A python based package of communications qampy tools',
     long_description=None,
 
     # The project's main homepage.
     url=None,
 
     # Author details
-    author='Jochen Schröder',
-    author_email='jochen.schroeder@gmail.com',
+    author='Jochen Schröder and Mikael Mazur',
+    author_email='jochen.schroeder@chalmers.se',
 
     # Choose your license
     license='GPLv3',

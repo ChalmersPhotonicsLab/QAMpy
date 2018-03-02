@@ -1,7 +1,7 @@
 import pytest
 
-from dsp.core import analog_frontend as canalog
-from dsp import signals, analog_frontend
+from qampy.core import analog_frontend as canalog
+from qampy import signals, analog_frontend
 
 class TestMultiDim(object):
     @pytest.mark.parametrize("ndim", [1,2,3])

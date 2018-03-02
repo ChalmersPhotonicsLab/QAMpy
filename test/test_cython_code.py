@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
-from dsp import signals, impairments
-from dsp.core.equalisation import cython_equalisation
+from qampy import signals, impairments
+from qampy.core.equalisation import cython_equalisation
 
 
 class TestQuantize(object):

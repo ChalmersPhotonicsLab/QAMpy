@@ -1,4 +1,4 @@
-from dsp import signals
+from qampy import signals
 
 """
 Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]

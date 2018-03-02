@@ -2,7 +2,7 @@
 from __future__ import division
 import numpy as np
 
-import dsp.helpers
+import qampy.helpers
 from .. import utils
 from ...theory import cal_symbols_qam, cal_scaling_factor_qam
 from ..segmentaxis import segment_axis
@@ -34,7 +34,7 @@ References
 ----------
 ...[3] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
 ...[5] He, L., Amin, M. G., Reed, C., & Malkemes, R. C. (2004). A Hybrid Adaptive Blind Equalization Algorithm for QAM Signals in Wireless Communications, 52(7), 2058–2069.
-...[6] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.dsp.2007.09.001
+...[6] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.qampy.2007.09.001
 ...[7] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
 ...[8] Fernandes, C. A. R., Favier, G., & Mota, J. C. M. (2007). Decision directed adaptive blind equalization based on the constant modulus algorithm. Signal, Image and Video Processing, 1(4), 333–346. http://doi.org/10.1007/s11760-007-0027-2
 ...[9] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
@@ -290,7 +290,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     pols = E.shape[0]
     L = E.shape[1]
     # scale signal
-    E = dsp.helpers.normalise_and_center(E)
+    E = qampy.helpers.normalise_and_center(E)
     if wxy is None:
         wxy = np.asarray([_init_taps(Ntaps, pols),])
         if pols == 2:

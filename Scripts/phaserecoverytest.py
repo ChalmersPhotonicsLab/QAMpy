@@ -1,6 +1,6 @@
 import numpy as np
-from dsp import impairments, phaserec
-from dsp import signals, helpers
+from qampy import impairments, phaserec
+from qampy import signals, helpers
 
 
 

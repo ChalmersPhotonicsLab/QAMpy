@@ -1,7 +1,7 @@
 #import cProfile
 import numpy as np
-from dsp.core import impairments, phaserecovery
-from dsp import signals
+from qampy.core import impairments, phaserecovery
+from qampy import signals
 
 fb = 40.e9
 os = 1

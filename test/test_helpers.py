@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
-from dsp import signals, helpers
+from qampy import signals, helpers
 
 class TestReturnObject(object):
     def test_cabssquared(self):

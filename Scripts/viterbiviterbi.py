@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp.core import phaserecovery
-from dsp import signals
+from qampy.core import phaserecovery
+from qampy import signals
 
 fb = 40.e9
 os = 2

@@ -366,7 +366,7 @@ def ErrorFctSCA(R):
 
     References
     -----
-    ...[1] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.dsp.2007.09.001
+    ...[1] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.qampy.2007.09.001
     """
     @numba.jit(nopython=True)
     def sca_fct(Xest):

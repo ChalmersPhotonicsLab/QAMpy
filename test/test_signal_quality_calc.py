@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import signals, impairments, theory, helpers
-from dsp.core import signal_quality
+from qampy import signals, impairments, theory, helpers
+from qampy.core import signal_quality
 
 class TestDtypePreserve(object):
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])

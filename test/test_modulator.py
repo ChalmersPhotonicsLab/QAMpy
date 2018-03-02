@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import signals, theory, impairments
+from qampy import signals, theory, impairments
 
 
 def _flip_symbols(sig, idx, d, mode=0):

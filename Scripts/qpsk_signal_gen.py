@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp.core import signal_quality
-from dsp import signals, theory
+from qampy.core import signal_quality
+from qampy import signals, theory
 
 """ Check the symbol rate of a QPSK signal against the theoretical symbol rate"""
 

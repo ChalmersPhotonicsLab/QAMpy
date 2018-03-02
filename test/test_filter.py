@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp.core import filter as cfilter
-from dsp import signals, filtering
+from qampy.core import filter as cfilter
+from qampy import signals, filtering
 
 
 class TestMovingAvg(object):

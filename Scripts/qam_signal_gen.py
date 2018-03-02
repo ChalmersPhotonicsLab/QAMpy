@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import signals
+from qampy import signals
 
 """ Check the symbol rate of a QAM signal against the theoretical symbol rate"""
 

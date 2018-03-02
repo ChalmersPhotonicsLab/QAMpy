@@ -2,8 +2,8 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from dsp import signals
-from dsp.core import ber_functions, impairments
+from qampy import signals
+from qampy.core import ber_functions, impairments
 
 
 class TestFindSequenceOffset(object):

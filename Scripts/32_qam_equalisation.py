@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, signals, impairments, helpers
+from qampy import equalisation, signals, impairments, helpers
 
 
 

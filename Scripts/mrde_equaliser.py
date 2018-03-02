@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import equalisation, signals
-from dsp.core import impairments
+from qampy import equalisation, signals
+from qampy.core import impairments
 
 fb = 40.e9
 os = 2

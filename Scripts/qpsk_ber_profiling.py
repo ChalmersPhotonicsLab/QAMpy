@@ -1,8 +1,8 @@
 #import cProfile
 import numpy as np
 
-from dsp import equalisation, signals
-from dsp.core import impairments
+from qampy import equalisation, signals
+from qampy.core import impairments
 
 #pr = cProfile.Profile()
 fb = 40.e9
