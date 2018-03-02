@@ -255,7 +255,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
             wy = _init_orthogonaltaps(wxy[0])
             wxy = [wxy[0],wy]
     else:
-        if pols == 2:
+        if pols > 1:
             Ntaps = wxy[0].shape[1]
         else:
             try:
