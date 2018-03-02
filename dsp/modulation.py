@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import warnings
 from bitarray import bitarray
 
 from . import resample
@@ -117,7 +118,7 @@ class QAMModulator(object):
         return np.array(bits)
 
 
-    def quantize(self, signal):
+    def quantize(self, signal,normalize = True):
         """
         Make symbol decisions based on the input field. Decision is made based on difference from constellation points
 
@@ -125,6 +126,8 @@ class QAMModulator(object):
         ----------
         signal   : array_like
             2D array of the input signal
+        normalize : bool, optional
+            weather to normalize the input rx symbols usiing average energy. False for non-uniform.
 
         Returns
         -------
@@ -134,7 +137,10 @@ class QAMModulator(object):
         signal = np.atleast_2d(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
-            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.symbols)
+            if normalize:
+                outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.symbols)
+            else:
+                outsyms[i] = quantize(signal[i], self.symbols)
         return outsyms
 
     def generate_signal(self, N, snr, carrier_df=0, lw_LO=0, baudrate=1, samplingrate=1, PRBS=True, PRBSorder=(15, 23),
@@ -192,6 +198,23 @@ class QAMModulator(object):
         out = []
         syms = []
         bits = []
+        if PRBS:
+            if len(PRBSorder) < ndim:
+                warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
+                PRBSorder_n = []
+                PRBSseed_n = []
+                orders = [15, 23]
+                for i in range(ndim):
+                    try:
+                        PRBSorder_n.append(PRBSorder[i])
+                        PRBSseed_n.append(PRBSseed[i])
+                    except IndexError:
+                        o = np.random.choice(orders)
+                        PRBSorder_n.append(o)
+                        s = np.random.randint(0, 2**o)
+                        PRBSseed_n.append(s)
+                PRBSorder = PRBSorder_n
+                PRBSseed = PRBSseed_n
         for i in range(ndim):
             Nbits = N * self.Nbits
             if PRBS == True:
@@ -219,7 +242,7 @@ class QAMModulator(object):
         self.bits_tx = np.array(bits)
         return np.array(out), self.symbols_tx, self.bits_tx
 
-    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
+    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False,normalize=True):
         """
         Calculate the symbol error rate of the received signal.Currently does not check
         for correct polarization.
@@ -234,6 +257,8 @@ class QAMModulator(object):
             bitstream at the transmitter for comparison against signal.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+        normalize : bool, optional
+            weather to normalize the input rx symbols usiing average energy. False for non-uniform.
 
         Note
         ----
@@ -256,13 +281,13 @@ class QAMModulator(object):
                     symbols_tx[i] = self.modulate(bits_tx[i])
         else:
             symbols_tx = np.atleast_2d(symbols_tx)
-        data_demod = self.quantize(signal_rx)
+        data_demod = self.quantize(signal_rx,normalize=normalize)
         if not synced:
             symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
         errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         return errs/data_demod.shape[1]
 
-    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False,normalize=True):
         """
         Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits. Currently does not check
         for correct polarization.
@@ -277,6 +302,8 @@ class QAMModulator(object):
             transmitted bit sequence to compare against.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+        normalize : bool, optional
+            weather to normalize the input rx symbols usiing average energy. False for non-uniform.
 
         Note
         ----
@@ -290,7 +317,7 @@ class QAMModulator(object):
         """
         signal_rx = np.atleast_2d(signal_rx)
         ndim = signal_rx.shape[0]
-        syms_demod = self.quantize(signal_rx)
+        syms_demod = self.quantize(signal_rx,normalize=normalize)
         if symbols_tx is None:
             if bits_tx is None:
                 symbols_tx = self.symbols_tx

@@ -47,7 +47,7 @@ class TestModulatorAttr(object):
 
     @pytest.mark.parametrize("Nerrors", range(5))
     @pytest.mark.parametrize("shiftN", np.random.randint(0,2**10, size=10))
-    @pytest.mark.parametrize("ndims", range(1,3))
+    @pytest.mark.parametrize("ndims", range(1,4))
     def test_ser(self, Nerrors, shiftN, ndims):
         sig, sym, bits = self.Q.generate_signal(2 ** 10, None, beta=0.01, ndim=ndims)
         for i in range(ndims):
@@ -67,7 +67,7 @@ class TestModulatorAttr(object):
         for i in range(ndims):
             idx = random.sample(range(sig.shape[1]), Nerrors)
             _flip_symbols(sig[i], idx, self.d)
-        sig = np.roll(sig, shift=shiftN, axis=-1)
+            sig[i] = np.roll(sig[i], shift=(shiftN+i*np.random.randint(0, 100)))
         ber = self.Q.cal_ber(sig)
         npt.assert_almost_equal(ber, Nerrors/(sig.shape[1]*self.Q.Nbits))
 

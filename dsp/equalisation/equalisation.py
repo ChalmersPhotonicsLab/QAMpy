@@ -123,26 +123,31 @@ def apply_filter(E, os, wxy):
     E = np.atleast_2d(E)
     pols = E.shape[0]
     Ntaps = wxy[0].shape[1]
-    
     X1 = segment_axis(E[0], Ntaps, Ntaps-os)
     X = X1
     ww = wxy[0].flatten()
+
+    # Case for a butterfly-configured EQ
     if pols > 1:
         for pol in range(1,pols):
-            X_P = segment_axis(E[pol], Ntaps, Ntaps-os)
+            X_P = segment_axis(E[pol], Ntaps,Ntaps-os)
             X = np.hstack([X,X_P])
-            ww = np.vstack((ww,wxy[pol].flatten()))
-    
-    Eest = np.dot(X, ww.transpose())
-    if pols > 1:
+            ww = np.vstack([ww,wxy[pol].flatten()])
+
+        # Compute the output
+        Eest = np.dot(X,ww.transpose())
+
+        # Extract the error (per butterfly entry)
         Eest_tmp = Eest[:,0]
         for pol in range(1,pols):
             Eest_tmp = np.vstack([Eest_tmp,Eest[:,pol]])
         Eest = Eest_tmp
+
+    # Single mode EQ
     else:
+        Eest = np.dot(X, ww.transpose())
         Eest = np.atleast_2d(Eest)
-    
-    
+
     return Eest
 
 def _cal_Rdash(syms):
@@ -172,20 +177,20 @@ def _init_taps(Ntaps, pols):
     return wx
 
 def _init_orthogonaltaps(wx):
-    wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be ortthogonal to the x polarisation
-    wy = -np.conj(wx)[::-1,::-1]
+    wy = wx[::-1,::-1]
     # centering the taps
     wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
     wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
-    delay = abs(wYmaxidx[1] - wXmaxidx[1])
-    pad = np.zeros((2, delay), dtype=np.complex128)
-    if delay > 0:
-        wy = wy[:, delay:]
-        wy = np.hstack([wy, pad])
-    elif delay < 0:
-        wy = wy[:, 0:Ntaps - delay - 1]
-        wy = np.hstack([pad, wy])
+    delay = abs(wYmaxidx[0] - wXmaxidx[0])
+    if delay != 0:
+        pad = np.zeros((2, delay), dtype=np.complex128)
+        if delay > 0:
+            wy = wy[:, delay:]
+            wy = np.hstack([wy, pad])
+        elif delay < 0:
+            wy = wy[:, 0:Ntaps - delay - 1]
+            wy = np.hstack([pad, wy])
     return wy
 
 def generate_partition_codes_complex(M):
@@ -250,17 +255,15 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
             wy = _init_orthogonaltaps(wxy[0])
             wxy = [wxy[0],wy]
     else:
-        if pols > 1:
+        if pols == 2:
             Ntaps = wxy[0].shape[1]
         else:
             try:
-#               The following code makes no sense??? MIkael
                 wxy = wxy.flatten()
                 Ntaps = len(wxy)
                 wxy = [wxy.copy(),]
             except:
                 Ntaps = len(wxy[0])
-
     if not TrSyms:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)

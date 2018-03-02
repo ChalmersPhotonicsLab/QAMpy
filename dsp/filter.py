@@ -23,26 +23,36 @@ def pre_filter(signal, bw):
 
 def pre_filter_wdm(signal, bw, os,center_freq = 0):
     """
-    Low-pass pre-filter signal with square shape filter
+
+    Ideal LP filter for selecting part of the spectrum. Uses FFT
 
     Parameters
     ----------
+    signal : array-like
+        Input signal
+    bw : float
+        Filter bandwidth, normalized units
+    os : float
+        Oversampling factor
+    center_freq : float
+        center frequency, normalized units. Default is DC centered operation
 
-    signal : array_like
-        single polarization signal
+    Returns
+    -------
+    s : array-like
+        Output signal after filtering
 
-    bw     : float
-        bandwidth of the rejected part, given as fraction of overall length
     """
+    # Prepare signal
     N = len(signal)
+    h = np.zeros(N, dtype=np.float64)
     freq_axis = np.fft.fftfreq(N, 1 / os)
 
+    # Create filter window
     idx = np.where(abs(freq_axis-center_freq) < bw / 2)
-
-    h = np.zeros(N, dtype=np.float64)
-    # h[int(N/(bw/2)):-int(N/(bw/2))] = 1
     h[idx] = 1
-    #s = np.fft.ifftshift(np.fft.ifft(np.fft.fft(signal) * h))
+    
+    # Filter and output
     s = (np.fft.ifft(np.fft.fft(signal) * h))
     return s
 
