@@ -8,8 +8,6 @@ Created on Sat May 27 17:11:02 2017
 
 import numpy as np
 from dsp import equalisation, phaserecovery
-import matplotlib.pylab as plt
-import copy
 
 def pilot_based_foe(rec_symbs,pilot_symbs):
     """
@@ -352,8 +350,6 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
 
 def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),ch_sep=2):
     
-    rx_signal_2 = copy.deepcopy(rx_signal)
-    
     # Check for propper dim
     if not len(rx_signal) == 3:
         raise ValueError("Requires an input signal array with 3 neighboring channels")
@@ -373,7 +369,7 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         raise ValueError("Different number of modes in the signal and reference symbosl")
     
     # Inital settings
-    rx_signal_center = rx_signal_2[1]
+    rx_signal_center = rx_signal[1]
     pilot_seq_len = len(ref_symbs_center[0,:])    
     eq_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
     tmp_pilots = np.zeros([npols,pilot_seq_len],dtype = complex)
@@ -398,12 +394,12 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         foePerMode = np.ones(foePerMode.shape)*np.mean(foePerMode)
         
         # Apply FO-compensation, create final signal
-        sig_dc_left = phaserecovery.comp_freq_offset(rx_signal_2[0],foePerMode,os=os)       
+        sig_dc_left = phaserecovery.comp_freq_offset(rx_signal[0],foePerMode,os=os)
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal_center,foePerMode,os=os)        
-        sig_dc_right = phaserecovery.comp_freq_offset(rx_signal_2[2],foePerMode,os=os)
+        sig_dc_right = phaserecovery.comp_freq_offset(rx_signal[2],foePerMode,os=os)
 
-        sig_dc_left *= np.exp(-1j*2*np.pi*ch_sep*np.linspace(0,rx_signal_2[0].shape[1]/os,rx_signal_2[0].shape[1]))
-        sig_dc_right *= np.exp(1j*2*np.pi*ch_sep*np.linspace(0,rx_signal_2[2].shape[1]/os,rx_signal_2[2].shape[1]))
+        sig_dc_left *= np.exp(-1j*2*np.pi*ch_sep*np.linspace(0,rx_signal[0].shape[1]/os,rx_signal[0].shape[1]))
+        sig_dc_right *= np.exp(1j*2*np.pi*ch_sep*np.linspace(0,rx_signal[2].shape[1]/os,rx_signal[2].shape[1]))
 
         full_spec_combined = np.concatenate((sig_dc_left,sig_dc_center,sig_dc_right),axis=0)
         
