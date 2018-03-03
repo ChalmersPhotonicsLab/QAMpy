@@ -398,17 +398,20 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal_center,foePerMode,os=os)        
         sig_dc_right = phaserecovery.comp_freq_offset(rx_signal[2],foePerMode,os=os)
 
-        sig_dc_left *= np.exp(-1j*2*np.pi*ch_sep*np.linspace(0,rx_signal[0].shape[1]/os,rx_signal[0].shape[1]))
-        sig_dc_right *= np.exp(1j*2*np.pi*ch_sep*np.linspace(0,rx_signal[2].shape[1]/os,rx_signal[2].shape[1]))
-
-        full_spec_combined = np.concatenate((sig_dc_left,sig_dc_center,sig_dc_right),axis=0)
-        
-
     else:
-        # Signal should be DC-centered. Do nothing. 
+        # Signal should be DC-centered. Extract the strcutres and set the FOE matrix to zero-mtx
+        sig_dc_left = rx_signal[0]
         sig_dc_center = rx_signal_center
+        sig_dc_right = rx_signal[2]
         foePerMode = np.zeros([npols,1])
-        
+
+    # Shift the side channels out
+    sig_dc_left *= np.exp(-1j*2*np.pi*ch_sep*np.linspace(0,rx_signal[0].shape[1]/os,rx_signal[0].shape[1]))
+    sig_dc_right *= np.exp(1j*2*np.pi*ch_sep*np.linspace(0,rx_signal[2].shape[1]/os,rx_signal[2].shape[1]))
+
+    # Combine full spectral signal
+    full_spec_combined = np.concatenate((sig_dc_left,sig_dc_center,sig_dc_right),axis=0)
+
     # First step Eq
     data_out = []
     for l in range(npols):
@@ -432,8 +435,7 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
 
 
-        #wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
-        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
         out_taps.append(wx)
         symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,wx)
         eq_pilots[l,:] = symbs_out[2+l,:]
@@ -494,6 +496,4 @@ def correct_const_phase_offset(symbs, phase_offsets):
         symbs[l,:] = symbs[l,:] * np.exp(-1j*phase_offsets[l,0])
 
     return symbs
-
-
 
