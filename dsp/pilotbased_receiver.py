@@ -11,30 +11,6 @@ from dsp import equalisation, phaserecovery
 import matplotlib.pylab as plt
 import copy
 
-def pre_filter(signal, bw, os,center_freq = 0):
-    """
-    Low-pass pre-filter signal with square shape filter
-
-    Parameters
-    ----------
-
-    signal : array_like
-        single polarization signal
-
-    bw     : float
-        bandwidth of the rejected part, given as fraction of overall length
-    """
-    N = len(signal)
-    freq_axis = np.fft.fftfreq(N, 1 / os)
-
-    idx = np.where(abs(freq_axis-center_freq) < bw / 2)
-
-    h = np.zeros(N, dtype=np.float64)
-    # h[int(N/(bw/2)):-int(N/(bw/2))] = 1
-    h[idx] = 1
-    s = np.fft.ifftshift(np.fft.ifft(np.fft.fft(signal) * h))
-    return s
-
 def pilot_based_foe(rec_symbs,pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
