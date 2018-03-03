@@ -350,7 +350,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
     return eq_pilots, foePerMode, out_taps, shift_factor
 
 
-def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None,blind_foe_payload=False,ch_sep=2):
+def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),ch_sep=2):
     
     rx_signal_2 = copy.deepcopy(rx_signal)
     
@@ -444,8 +444,8 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
 
 
         rx_mode_sig = full_spec_combined[:,shift_factor[l] - tap_cor:shift_factor[l] - tap_cor + frame_length * os + ntaps[1] - 1]
-        symbs_out_tmp = equalisation.apply_filter(rx_mode_sig,os,wx)
-        data_out.append(symbs_out_tmp[l+2])
+        data_out_tmp = equalisation.apply_filter(rx_mode_sig,os,wx)
+        data_out.append(data_out_tmp[l+2])
 
 
     return eq_pilots, foePerMode, out_taps, shift_factor, full_spec_combined,data_out
