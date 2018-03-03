@@ -258,7 +258,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
 
-    return  shift_factor, foe_corse
+    return shift_factor, foe_corse
 
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None,blind_foe_payload=False):
@@ -419,21 +419,13 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
 
         pilot_seq_wdm = full_spec_combined[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-        wxy_init_wdm = []
-        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
-        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
-        wxy_init_wdm.append(np.vstack((np.zeros(ntaps[1],dtype=complex),
-                                       np.zeros(ntaps[1],dtype=complex),
-                                       wxy_init[0][0],wxy_init[0][1],
-                                       np.zeros(ntaps[1],dtype=complex),
-                                       np.zeros(ntaps[1],dtype=complex))))
-        
-        wxy_init_wdm.append(np.vstack((np.zeros(ntaps[1],dtype=complex),np.zeros(ntaps[1],dtype=complex),
-                                                     wxy_init[1][0],wxy_init[1][1],np.zeros(ntaps[1],dtype=complex),
-                                                     np.zeros(ntaps[1],dtype=complex))))          
-        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
-        wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
 
+        # Assemble MIMO structure for interference cancellation
+        wxy_init_wdm = np.zeros((6,6,ntaps[1]),dtype=complex)
+        wxy_init_wdm[2,2] = wxy_init[0][0]
+        wxy_init_wdm[2,3] = wxy_init[0][1]
+        wxy_init_wdm[3,2] = wxy_init[1][0]
+        wxy_init_wdm[3,3] = wxy_init[1][1]
 
         wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
         out_taps.append(wx)
