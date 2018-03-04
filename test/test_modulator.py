@@ -84,6 +84,65 @@ class TestModulatorAttr(object):
         e_snr = self.Q.est_snr(sig)
         npt.assert_almost_equal(10*np.log10(e_snr), snr, decimal=1)
 
+class TestPilotModulator(object):
+    Q = modulation.PilotModulator(128)
+
+    @pytest.mark.parametrize("N", [2**18, 2**12, 2**14])
+    @pytest.mark.parametrize("ndims", range(1, 4))
+    def testshape(self, N, ndims):
+        s, d, p = self.Q.generate_signal(N, 256, 32, ndims)
+        assert s.shape[1] == N and s.shape[0] == ndims
+
+    @pytest.mark.parametrize("N", [1, 123, 256, 534])
+    def testseqlen(self, N):
+        QPSK = modulation.QAMModulator(4)
+        s, d, p = self.Q.generate_signal(2**16, N, 0, 1)
+        dist = abs(s[0, :N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
+
+    @pytest.mark.parametrize("N", [1, 2, 32, 64, 128])
+    def testphpilots(self, N):
+        QPSK = modulation.QAMModulator(4)
+        s, d, p = self.Q.generate_signal(2**16, 0, N, 1)
+        dist = abs(s[0, ::N, np.newaxis] - QPSK.symbols)
+        npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
+
+
+class TestTDHybrid(object):
+    @pytest.mark.parametrize("M1", [4, 16, 32, 64, 128, 256])
+    @pytest.mark.parametrize("M2", [4, 16, 32, 64, 128, 256])
+    def test_dist(self, M1, M2):
+        hm = modulation.TDHQAMModulator(M1, M2, 0.5, power_method="dist")
+        d1_r = np.min(np.diff(np.unique(hm.mod_M1.symbols.real)))
+        d2_r = np.min(np.diff(np.unique(hm.mod_M2.symbols.real)))
+        d1_i = np.min(np.diff(np.unique(hm.mod_M1.symbols.imag)))
+        d2_i = np.min(np.diff(np.unique(hm.mod_M2.symbols.imag)))
+        npt.assert_approx_equal(d1_r, d2_r)
+        npt.assert_approx_equal(d1_i, d2_i)
+
+    @pytest.mark.parametrize("r1", np.arange(1, 10))
+    @pytest.mark.parametrize("r2", np.arange(1, 10))
+    def test_ratio(self, r1, r2):
+        import math
+        if math.gcd(r1, r2) > 1:
+            assert True
+            return
+        r = r1+r2
+        hm = modulation.TDHQAMModulator(16, 4, r2/r)
+        o = hm.generate_signal(1000)
+        for i in range(r):
+            s = o[0, i::r]
+            if i%r < r1:
+                d = np.min(abs(s[:, np.newaxis]-hm.mod_M1.symbols), axis=1)
+                npt.assert_array_almost_equal(d, 0)
+            else:
+                d = np.min(abs(s[:, np.newaxis]-hm.mod_M2.symbols), axis=1)
+                npt.assert_array_almost_equal(d, 0)
+
+
+
+
+
 @pytest.mark.parametrize("M", [16, 32, 64, 128, 256])
 @pytest.mark.parametrize("ndims", range(1,3))
 def test_gmi_cal(M, ndims):
