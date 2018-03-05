@@ -27,14 +27,14 @@ cdef class ErrorFctSBD_d(ErrorFctGenericDD_d):
     cpdef double complex calc_error(self, double complex Xest):
         cdef double complex R
         R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return (Xest.real - R.real)*abs(R.real) + 1.j*(Xest.imag - R.imag)*abs(R.imag)
+        return (R.real - Xest.real)*abs(R.real) + 1.j*(R.imag - Xest.imag)*abs(R.imag)
 
 cdef class ErrorFctSBD_f(ErrorFctGenericDD_f):
     cpdef float complex calc_errorf(self, float complex Xest):
         cdef float complex R
         R = det_symbol(self.symbols, self.N, Xest, &self.dist)
         #return (Xest.real - R.real)*cabsf(R.real) + 1.j*(Xest.imag - R.imag)*acbs(R.imag)
-        return (crealf(Xest) - crealf(R))*cabsf(R.real) + 1.j*(cimagf(Xest) - cimagf(R))*cabsf(R.imag)
+        return (crealf(R) - crealf(Xest))*cabsf(R.real) + 1.j*(cimagf(R) - cimagf(Xest))*cabsf(R.imag)
 
 cpdef ErrorFctSBD(complexing[:] symbols): # this is needed to work around bug with fused types and special functions in cython
     if complexing is complex64_t:
@@ -46,13 +46,13 @@ cdef class ErrorFctMDDMA_d(ErrorFctGenericDD_d):
     cpdef double complex calc_error(self, double complex Xest):
         cdef double complex R
         R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
+        return (R.real**2 - Xest.real**2)*Xest.real + 1.j*(R.imag**2 - Xest.imag**2)*Xest.imag
 
 cdef class ErrorFctMDDMA_f(ErrorFctGenericDD_f):
     cpdef float complex calc_errorf(self, float complex Xest):
         cdef float complex R
         R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return (Xest.real**2 - R.real**2)*Xest.real + 1.j*(Xest.imag**2 - R.imag**2)*Xest.imag
+        return (R.real**2 - Xest.real**2)*Xest.real + 1.j*(R.imag**2 - Xest.imag**2)*Xest.imag
 
 cpdef ErrorFctMDDMA(complexing[:] symbols): # this is needed to work around bug with fused types and special functions in cython
     if complexing is complex64_t:
@@ -64,13 +64,13 @@ cdef class ErrorFctDD_d(ErrorFctGenericDD_d):
     cpdef double complex calc_error(self, double complex Xest):
         cdef double complex R
         R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return Xest - R
+        return R - Xest
 
 cdef class ErrorFctDD_f(ErrorFctGenericDD_f):
     cpdef float complex calc_errorf(self, float complex Xest):
         cdef float complex R
         R = det_symbol(self.symbols, self.N, Xest, &self.dist)
-        return Xest - R
+        return R - Xest
 
 cpdef ErrorFctDD(complexing[:] symbols): # this is needed to work around bug with fused types and special functions in cython
     if complexing is complex64_t:
@@ -85,9 +85,9 @@ cdef class ErrorFctMCMA(ErrorFct):
         self.R_real = R.real
         self.R_imag = R.imag
     cpdef double complex calc_error(self, double complex Xest):
-        return (creal(Xest)**2 - self.R_real)*creal(Xest) + 1j*(cimag(Xest)**2 -self.R_imag)*cimag(Xest)
+        return (self.R_real - creal(Xest)**2)*creal(Xest) + 1j*(self.R_imag - cimag(Xest)**2)*cimag(Xest)
     cpdef float complex calc_errorf(self, float complex Xest):
-        return (crealf(Xest)**2 - self.R_real)*crealf(Xest) + 1j*(cimagf(Xest)**2 -self.R_imag)*cimagf(Xest)
+        return (self.R_real - crealf(Xest)**2)*crealf(Xest) + 1j*(self.R_imag - cimagf(Xest)**2)*cimagf(Xest)
 
 
 cdef class ErrorFctCMA(ErrorFct):
@@ -95,9 +95,9 @@ cdef class ErrorFctCMA(ErrorFct):
     def __init__(self, double R):
         self.R = R
     cpdef double complex calc_error(self, double complex Xest):
-        return (creal(Xest)**2 + cimag(Xest)**2 - self.R)*Xest
+        return (self.R - creal(Xest)**2 - cimag(Xest)**2)*Xest
     cpdef float complex calc_errorf(self, float complex Xest):
-        return (crealf(Xest)**2 + cimagf(Xest)**2 - self.R)*Xest
+        return (self.R - crealf(Xest)**2 - cimagf(Xest)**2)*Xest
 
 cdef class ErrorFctRDE(ErrorFct):
     cdef double[:] partition
@@ -110,7 +110,7 @@ cdef class ErrorFctRDE(ErrorFct):
         cdef double S_DD
         Ssq = Xest.real**2 + Xest.imag**2
         S_DD = partition_value(Ssq, self.partition, self.codebook)
-        return Xest*(Ssq - S_DD)
+        return Xest*(S_DD - Ssq)
 
 cdef class ErrorFctMRDE(ErrorFct):
     cdef double[:] partition_real
@@ -128,7 +128,7 @@ cdef class ErrorFctMRDE(ErrorFct):
         cdef double complex S_DD
         Ssq = creal(Xest)**2 + 1.j * cimag(Xest)**2
         S_DD = partition_value(Ssq.real, self.partition_real, self.codebook_real) + 1.j * partition_value(Ssq.imag, self.partition_imag, self.codebook_imag)
-        return (Ssq.real - S_DD.real)*Xest.real + 1.j*(Ssq.imag - S_DD.imag)*Xest.imag
+        return (S_DD.real - Ssq.real)*Xest.real + 1.j*(S_DD.imag - Ssq.imag)*Xest.imag
 
 
 cdef class ErrorFctSCA(ErrorFct):
@@ -147,7 +147,7 @@ cdef class ErrorFctSCA(ErrorFct):
         else:
             A = 0
             B = 1
-        return 4*Xest.real*(4*Xest.real**2 - 4*self.R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*self.R**2)*B
+        return 4*Xest.real*(4*self.R**2 - 4*Xest.real**2)*A + 1.j*4*Xest.imag*(4*self.R**2 - 4*Xest.imag**2)*B
 
     cpdef float complex calc_errorf(self, float complex Xest):
         cdef int A
@@ -161,7 +161,7 @@ cdef class ErrorFctSCA(ErrorFct):
         else:
             A = 0
             B = 1
-        return 4*Xest.real*(4*Xest.real**2 - 4*self.R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*self.R**2)*B
+        return 4*Xest.real*(4*self.R**2 - 4*Xest.real**2)*A + 1.j*4*Xest.imag*(4*self.R**2 - 4*Xest.imag**2)*B
 
 cdef class ErrorFctCME(ErrorFct):
     cdef double beta
@@ -172,7 +172,7 @@ cdef class ErrorFctCME(ErrorFct):
         self.d = d
         self.R = R
     cpdef double complex calc_error(self, double complex Xest):
-        return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
+        return (self.R - abs(Xest)**2)*Xest + self.beta * np.pi/(2*self.d) * (sin(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
 
     cpdef float complex calc_errorf(self, float complex Xest):
-        return (abs(Xest)**2 - self.R)*Xest + self.beta * np.pi/(2*self.d) * (sinf(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))
+        return (self.R - abs(Xest)**2)*Xest + self.beta * np.pi/(2*self.d) * (sinf(Xest.real*np.pi/self.d) + 1.j * sin(Xest.imag*np.pi/self.d))

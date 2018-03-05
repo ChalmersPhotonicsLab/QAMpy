@@ -106,9 +106,9 @@ cdef complexing apply_filter(complexing[:,:] E, int Ntaps, complexing[:,:] wx, u
     j = 1
     for k in range(0,pols):
         if complexing is complex64_t:
-            Xest += scblas.cdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
+            Xest += scblas.cdotc(<int *> &Ntaps, &wx[k,0], &j, &E[k,0], &j)
         else:
-            Xest += scblas.zdotu(<int *> &Ntaps, &E[k,0], &j, &wx[k,0], &j)
+            Xest += scblas.zdotc(<int *> &Ntaps, &wx[k,0], &j, &E[k,0], &j)
     return Xest
 
 def apply_filter_to_signal(complexing[:,:] E, int os, complexing[:,:,:] wx):
@@ -151,7 +151,7 @@ cdef void update_filter(complexing[:,:] E, int Ntaps, cython.floating mu, comple
     cdef int i,j
     for k in range(modes):
         for j in range(Ntaps):
-                wx[k, j] -= mu * err * cconj(E[k, j])
+                wx[k, j] += mu * cconj(err) * E[k, j]
 
 def train_eq(complexing[:,:] E,
                     int TrSyms,
