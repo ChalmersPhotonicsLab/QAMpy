@@ -1,2 +1,1 @@
-from .equalisation import *
-from .cython_equalisation import make_decision
+from .equalisation import equalise_signal, dual_mode_equalisation, apply_filter

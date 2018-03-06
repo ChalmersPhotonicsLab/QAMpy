@@ -2,9 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 from qampy.helpers import cabssquared
 from qampy.theory import  cal_symbols_qam, cal_scaling_factor_qam
-from .equalisation import make_decision as _decision_pyx
-from . import ber_functions
-#from .. import modulation
+from .equalisation.cython_equalisation import make_decision as _decision_pyx
 from .dsp_cython import soft_l_value_demapper
 
 try:

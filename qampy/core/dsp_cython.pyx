@@ -90,6 +90,25 @@ cpdef ssize_t[:] select_angle_index(cython.floating[:,:] x, int N):
                     dmin = dtmp
     return idx
 
+
+cpdef double[:] soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
+    cdef int num_bits = int(np.log2(M))
+    cdef double[:] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
+    cdef int mode, bit, symb, l
+    cdef int N = rx_symbs.shape[0]
+    cdef int k = bits_map.shape[1]
+    cdef double tmp = 0
+    cdef double tmp2 = 0
+    for bit in range(num_bits):
+        for symb in prange(N, schedule='static', nogil=True):
+            tmp = 0
+            tmp2 = 0
+            for l in range(k):
+                tmp = tmp + exp(-snr*cabssq(bits_map[bit,l,1] - rx_symbs[symb]))
+                tmp2 = tmp2 + exp(-snr*cabssq(bits_map[bit,l,0] - rx_symbs[symb]))
+            L_values[symb*num_bits + bit] = log(tmp) - log(tmp2)
+    return L_values
+
 cpdef prbs_ext(np.int64_t seed, taps, int nbits, int N):
     cdef int t
     cdef np.int64_t xor, sr
@@ -155,22 +174,4 @@ def lfsr_int(np.int64_t seed, np.int64_t mask):
         if xor != 0:
             state ^= mask #this performs the modulus operation
         yield xor, state
-
-cpdef double[:] soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
-    cdef int num_bits = int(np.log2(M))
-    cdef double[:] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
-    cdef int mode, bit, symb, l
-    cdef int N = rx_symbs.shape[0]
-    cdef int k = bits_map.shape[1]
-    cdef double tmp = 0
-    cdef double tmp2 = 0
-    for bit in range(num_bits):
-        for symb in prange(N, schedule='static', nogil=True):
-            tmp = 0
-            tmp2 = 0
-            for l in range(k):
-                tmp = tmp + exp(-snr*cabssq(bits_map[bit,l,1] - rx_symbs[symb]))
-                tmp2 = tmp2 + exp(-snr*cabssq(bits_map[bit,l,0] - rx_symbs[symb]))
-            L_values[symb*num_bits + bit] = log(tmp) - log(tmp2)
-    return L_values
 
