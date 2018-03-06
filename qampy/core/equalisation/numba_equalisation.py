@@ -105,7 +105,7 @@ def train_eq(E, TrSyms, os, mu, wx, errfct,  adaptive=False):
     err = np.zeros(TrSyms, dtype=np.complex128)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
-        Xest = sum(wx * X)
+        Xest = sum(np.conj(wx) * X)
         err[i] = errfct(Xest)
         wx += mu * np.conj(err[i]) * X
         if adaptive and i > 0:
