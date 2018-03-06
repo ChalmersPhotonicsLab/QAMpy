@@ -105,7 +105,7 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
 
     for l in range(npols):
 
-        curr_frame = np.tile(frame[l, :],5)
+        curr_frame = np.tile(frame[l, :],num_frames)
 
         # Add modal delays, this can be used to emulate things like fake-pol. mux. when the frames are not aligned.
         if modal_delay is not None:

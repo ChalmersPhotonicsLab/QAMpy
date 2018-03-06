@@ -25,6 +25,41 @@ def pre_filter(signal, bw):
     else:
         return s
 
+def pre_filter_wdm(signal, bw, os,center_freq = 0):
+    """
+
+    Ideal LP filter for selecting part of the spectrum. Uses FFT
+
+    Parameters
+    ----------
+    signal : array-like
+        Input signal
+    bw : float
+        Filter bandwidth, normalized units
+    os : float
+        Oversampling factor
+    center_freq : float
+        center frequency, normalized units. Default is DC centered operation
+
+    Returns
+    -------
+    s : array-like
+        Output signal after filtering
+
+    """
+    # Prepare signal
+    N = len(signal)
+    h = np.zeros(N, dtype=np.float64)
+    freq_axis = np.fft.fftfreq(N, 1 / os)
+
+    # Create filter window
+    idx = np.where(abs(freq_axis-center_freq) < bw / 2)
+    h[idx] = 1
+    
+    # Filter and output
+    s = (np.fft.ifft(np.fft.fft(signal) * h))
+    return s
+
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
     nyq = 0.5*fs
     cutoff_norm = cutoff/nyq

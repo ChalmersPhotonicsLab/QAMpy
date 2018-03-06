@@ -10,7 +10,7 @@ from ..segmentaxis import segment_axis
 #TODO: update documentation with all references
 
 """
-Equalisation functions the equaliser update functions provided are:
+    Equalisation functions the equaliser update functions provided are:
 
 No decision based:
 -----------------
@@ -34,7 +34,7 @@ References
 ----------
 ...[3] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
 ...[5] He, L., Amin, M. G., Reed, C., & Malkemes, R. C. (2004). A Hybrid Adaptive Blind Equalization Algorithm for QAM Signals in Wireless Communications, 52(7), 2058–2069.
-...[6] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.qampy.2007.09.001
+...[6] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.dsp.2007.09.001
 ...[7] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
 ...[8] Fernandes, C. A. R., Favier, G., & Mota, J. C. M. (2007). Decision directed adaptive blind equalization based on the constant modulus algorithm. Signal, Image and Video Processing, 1(4), 333–346. http://doi.org/10.1007/s11760-007-0027-2
 ...[9] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
@@ -292,13 +292,18 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     # scale signal
     E = qampy.helpers.normalise_and_center(E)
     if wxy is None:
-        wxy = np.asarray([_init_taps(Ntaps, pols),])
-        if pols == 2:
-            wy = _init_orthogonaltaps(wxy[0])
-            wxy = np.asarray([wxy[0],wy])
+        # Allocate matrix and set first taps
+        wxy = np.zeros((pols,pols,Ntaps), dtype=np.complex128)
+        wxy[0] = _init_taps(Ntaps, pols)
+
+        # Add orthogonal taps to all other modes
+        if pols > 1:
+            for pol in range(1,pols):
+                wxy[pol] = np.roll(wxy[0],pol,axis=0)
+
     else:
         wxy = np.asarray(wxy)
-        if pols == 2:
+        if pols > 1:
             Ntaps = wxy[0].shape[1]
         else:
             try:
@@ -435,77 +440,6 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     return wxy, err
 
-#
-#def CDcomp(E, fs, N, L, D, wl):
-#    """
-#    Static chromatic dispersion compensation of a single polarisation signal using overlap-add.
-#    All units are assumed to be SI.
-#
-#    Parameters
-#    ----------
-#    E  : array_like
-#       single polarisation signal
-#
-#    fs   :  float
-#       sampling rate
-#
-#    N    :  int
-#       block size (N=0, assumes cyclic boundary conditions and uses a single FFT/IFFT)
-#
-#    L    :  float
-#       length of the compensated fibre
-#
-#    D    :  float
-#       dispersion
-#
-#    wl   : float
-#       center wavelength
-#
-#    Returns
-#    -------
-#
-#    sigEQ : array_like
-#       compensated signal
-#    """
-#    E = E.flatten()
-#    samp = len(E)
-#    #wl *= 1e-9
-#    #L = L*1.e3
-#    c = 2.99792458e8
-#    #D = D*1.e-6
-#    if N == 0:
-#        N = samp
-#
-##    H = np.zeros(N,dtype='complex')
-#    H = np.arange(0, N) + 1j * np.zeros(N, dtype='float')
-#    H -= N // 2
-#    H *= H
-#    H *= np.pi * D * wl**2 * L * fs**2 / (c * N**2)
-#    H = np.exp(-1j * H)
-#    #H1 = H
-#    H = np.fft.fftshift(H)
-#    if N == samp:
-#        sigEQ = np.fft.fft(E)
-#        sigEQ *= H
-#        sigEQ = np.fft.ifft(sigEQ)
-#    else:
-#        n = N // 2
-#        zp = N // 4
-#        B = samp // n
-#        sigB = np.zeros(N, dtype=np.complex128)
-#        sigEQ = np.zeros(n * (B + 1), dtype=np.complex128)
-#        sB = np.zeros((B, N), dtype=np.complex128)
-#        for i in range(0, B):
-#            sigB = np.zeros(N, dtype=np.complex128)
-#            sigB[zp:-zp] = E[i * n:i * n + n]
-#            sigB = np.fft.fft(sigB)
-#            sigB *= H
-#            sigB = np.fft.ifft(sigB)
-#            sB[i, :] = sigB
-#            sigEQ[i * n:i * n + n + 2 * zp] = sigEQ[i * n:i * n + n + 2 *
-#                                                    zp] + sigB
-#        sigEQ = sigEQ[zp:-zp]
-#    return sigEQ
 
 
 def CDcomp(E, fs, N, L, D, wl):
@@ -541,10 +475,8 @@ def CDcomp(E, fs, N, L, D, wl):
     """
     E = E.flatten()
     samp = len(E)
-    #wl *= 1e-9
-    #L = L*1.e3
+
     c = 2.99792458e8
-    #D = D*1.e-6
     if N == 0:
         N = samp
 
@@ -558,7 +490,6 @@ def CDcomp(E, fs, N, L, D, wl):
 
     omega = np.pi * fs * np.linspace(-1,1,N,dtype = complex)
     beta2 = D * wl**2 / (c * 2 * np.pi)
-
 
     H = np.exp(-.5j * omega**2 * beta2 * L )
     #H1 = H
