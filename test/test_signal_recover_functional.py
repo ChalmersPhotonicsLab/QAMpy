@@ -232,8 +232,6 @@ class TestCMA(object):
         ser = sout.cal_ser()
         npt.assert_allclose(ser, 0)
 
-    #TODO: figure out the failures for small angles
-    @pytest.mark.xfail
     @pytest.mark.parametrize("method", ["cma", "mcma"])
     @pytest.mark.parametrize("phi", np.linspace(7.5, 8.5, 2))
     @pytest.mark.parametrize("dgd", np.linspace(200, 300, 2)*1e-12)
@@ -245,7 +243,7 @@ class TestCMA(object):
         N = 2**16
         snr = 15
         beta = 0.6
-        mu = 1e-4
+        mu = 0.2e-4
         M = 4
         ntaps = 21
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
