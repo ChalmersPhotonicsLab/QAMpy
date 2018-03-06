@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
+import warnings
 import numpy as np
 
 import qampy.helpers
@@ -49,7 +50,7 @@ try:
     from .cython_equalisation import apply_filter_to_signal as apply_filter_pyx
 except:
     ##use python code if cython code is not available
-    raise Warning("can not use cython training functions")
+    warnings.warn("can not use cython training functions")
     from .equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, train_eq
 
