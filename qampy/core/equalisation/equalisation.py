@@ -230,6 +230,12 @@ def orthogonalizetaps(wx):
     -------
     wy : array_like
         Y-pol taps orthogonal to X-pol
+
+    References
+    ----------
+    ..[1] L. Liu, et al. “Initial Tap Setup of Constant Modulus Algorithm for Polarization De-Multiplexing in
+    Optical Coherent Receivers,” in Optical Fiber Communication Conference and National Fiber Optic Engineers Conference
+    (2009), paper OMT2, 2009, p. OMT2.
     """
     Ntaps = wx.shape[1]
     wy = np.zeros(wx.shape, dtype=np.complex128)
