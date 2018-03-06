@@ -1,5 +1,5 @@
-from . import core
-from .core.phaserecovery import bps, bps_twostage, phase_partition_16qam
+from qampy import core
+from qampy.core.phaserecovery import bps, bps_twostage, phase_partition_16qam
 
 
 def find_freq_offset(sig, average_over_modes = False, fft_size = 4096):

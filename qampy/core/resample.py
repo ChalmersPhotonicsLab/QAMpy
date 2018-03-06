@@ -4,7 +4,7 @@ from scipy import signal as scisig
 
 from qampy.helpers import normalise_and_center
 from qampy.core.special_fcts import rrcos_freq, rrcos_time
-from .filter import rrcos_pulseshaping
+from qampy.core.filter import rrcos_pulseshaping
 
 
 def _resamplingfactors(fold, fnew):

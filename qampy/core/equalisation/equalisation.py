@@ -4,9 +4,8 @@ import warnings
 import numpy as np
 
 import qampy.helpers
-from .. import utils
-from ...theory import cal_symbols_qam, cal_scaling_factor_qam
-from ..segmentaxis import segment_axis
+from qampy.theory import cal_symbols_qam, cal_scaling_factor_qam
+from qampy.core.segmentaxis import segment_axis
 
 #TODO: update documentation with all references
 
@@ -44,14 +43,14 @@ References
 
 #TODO: include selection for either numba or cython code
 try:
-    from .cython_errorfcts import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from qampy.core.equalisation.cython_errorfcts import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
-    from .cython_equalisation import train_eq, ErrorFct
-    from .cython_equalisation import apply_filter_to_signal as apply_filter_pyx
+    from qampy.core.equalisation.cython_equalisation import train_eq, ErrorFct
+    from qampy.core.equalisation.cython_equalisation import apply_filter_to_signal as apply_filter_pyx
 except:
     ##use python code if cython code is not available
     warnings.warn("can not use cython training functions")
-    from .equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from qampy.core.equalisation.equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, train_eq
 
 TRAINING_FCTS = ["cma", "mcma",

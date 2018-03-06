@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from . import utils
+from qampy.core import utils
 
 try:
     pass

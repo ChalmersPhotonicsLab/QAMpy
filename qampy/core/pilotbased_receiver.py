@@ -7,7 +7,10 @@ Created on Sat May 27 17:11:02 2017
 """
 
 import numpy as np
-from dsp import equalisation, phaserecovery
+from qampy.core import equalisation
+from qampy.core import phaserecovery
+
+
 def pilot_based_foe(rec_symbs,pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
@@ -127,7 +130,7 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         # Fix! Need moving average in numpy
         pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
         pilot_phase = np.hstack([pilot_phase[:int((num_average-1)/2)], pilot_phase_average,np.ones(pilot_phase[:int((num_average-1)/2)].shape)*pilot_phase_average[-1]])
-
+           
         # Pilot positions in the received data set
         pilot_pos = np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
 #        pilot_pos_int = np.arange(0,(len(pilot_phase)+1)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
@@ -169,6 +172,7 @@ def moving_average(sig, n=3):
 Locate pilot sequence
 
 """
+
 def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10, adap_step = True, method='cma' ,search_overlap = 2):
     """
     Locate and extract the pilot starting frame.
@@ -224,46 +228,44 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
             err_out = equalisation.equalise_signal(rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size], os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)[1]
             sub_var[i] = np.var(err_out[l,int(-symb_step_size/os+ntaps):])
-
+                       
         # Lowest variance of the CMA error
         minPart = np.argmin(sub_var)
-
-        # Corresponding short search sequence
+        
+        # Corresponding sequence
         shortSeq = rx_signal[:,(minPart)*symb_step_size:(minPart+1+(search_overlap-1))*symb_step_size]
         
         # Extract a longer sequence to ensure that the complete pilot sequence is found
         longSeq = rx_signal[:,(minPart-2-search_overlap)*symb_step_size:(minPart+3+search_overlap)*symb_step_size]
 
         # Use the first estimate to get rid of any large FO and simplify alignment
-        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)
-
-        # Apply filter taps to the long sequence and remove coarse FO
-        symbs_out = equalisation.apply_filter(longSeq,os,wx1)
-        foe_corse = phaserecovery.find_freq_offset(symbs_out)
-        symbs_out = phaserecovery.comp_freq_offset(symbs_out, foe_corse)
-
+        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)    
+        seq_foe = equalisation.apply_filter(longSeq,os,wx1)
+        foe_corse = phaserecovery.find_freq_offset(seq_foe)        
+         
+        # Apply filter taps to the long sequence
+        symbs_out= equalisation.apply_filter(longSeq,os,wx1)     
+        symbs_out[l,:] = phaserecovery.comp_freq_offset(symbs_out[l, :], foe_corse[l, :])
         # Check for pi/2 ambiguties
         max_phase_rot = np.zeros([4])
         found_delay = np.zeros([4])
         for k in range(4):
             # Find correlation for all 4 possible pi/2 rotations
             xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[l,:]))
-            max_phase_rot[k] = np.max(np.abs(xcov)**2)
+            max_phase_rot[k] = np.max(xcov)
             found_delay[k] = np.argmax(xcov)
-
-        # Select the best one
-        symb_delay = int(found_delay[np.argmax(max_phase_rot)])
-
+    
+        # Select the best one    
+        symb_delay = int(found_delay[np.argmax(max_phase_rot)]) 
+        
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
 
     return  shift_factor, foe_corse
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),foe_symbs = None):
-    """
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma'),avg_foe_modes = True, do_pilot_based_foe=True,foe_symbs = None,blind_foe_payload=False):
     
-    """
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
@@ -284,15 +286,42 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
         for l in range(npols):
             pilot_seq = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
             wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
-            symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
+            # wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], M_pilot, wxy = wx, Ntaps=ntaps[1], Niter=Niter[1],
+            #                                        method=method[0], adaptive_stepsize=adap_step[1])
+            symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
             tmp_pilots[l,:] = symbs_out[l,:]
             
-        # Pilot-based FOE
-        foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
-        foePerMode = np.ones(foePerMode.shape)*foe
-        
+        # FOE Estimation, several options available. Default is pilot aided
+        if do_pilot_based_foe:
+            # Use the pilot-based FOE. Requires a pilot sequence of sufficient length    
+            if foe_symbs is None:
+                foe, foePerMode, cond = pilot_based_foe(tmp_pilots, ref_symbs)
+            else:
+                num_symbs = int(foe_symbs)
+                if num_symbs > pilot_seq_len:
+                    raise ValueError("Required number of symbols for FOE is larger than availabe sequence length. Maximum length available is %d"%pilot_seq_len)
+                foe, foePerMode, cond = pilot_based_foe(tmp_pilots[:,:num_symbs], ref_symbs[:,:num_symbs])
+        # Equalize 1 frame and do blind 4:th power FFT-based estimation
+        else:
+            foe_est_symbs = np.zeros([npols, frame_length],dtype=complex)
+            for l in range(npols):
+                # If blind_foe_payload is true, use the payload for FOE estimation and not the pilot sequence. Aims at comparing blind power of 4 FOE to pilot-based
+                if blind_foe_payload:
+                    est_sig = rx_signal[:,
+                              shift_factor[l] - tap_cor + pilot_seq_len*os:shift_factor[l] - tap_cor + frame_length * os + ntaps[1] - 1 + pilot_seq_len*os]
+                else:
+                    est_sig = rx_signal[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+frame_length*os+ntaps[1]-1]
+                est_frame = equalisation.apply_filter(est_sig,os,wx)
+                foe_est_symbs[l,:] = est_frame[l,:]
+            if foe_symbs is None:
+                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs)
+            else:
+                foePerMode = phaserecovery.find_freq_offset(foe_est_symbs[:, :foe_symbs], fft_size=foe_symbs)
+        if avg_foe_modes:
+            foe = np.mean(foePerMode)
+            foePerMode = np.ones(foePerMode.shape)*foe
         # Apply FO-compensation
-        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal,foePerMode,os=os)
+        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal, foePerMode, os=os)
     else:
         # Signal should be DC-centered. Do nothing. 
         sig_dc_center = rx_signal

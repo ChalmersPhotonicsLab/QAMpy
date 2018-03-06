@@ -2,8 +2,8 @@ from __future__ import division
 import numpy as np
 from scipy.special import erfc
 
-from .core.special_fcts import q_function
-from .core.utils import bin2gray
+from qampy.core.special_fcts import q_function
+from qampy.core.utils import bin2gray
 from qampy.helpers import dB2lin
 
 
