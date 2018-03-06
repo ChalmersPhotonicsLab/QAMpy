@@ -216,12 +216,25 @@ def _init_taps(Ntaps, pols):
     wx[0, Ntaps // 2] = 1
     return wx
 
-def _init_orthogonaltaps(wx):
+def orthogonalizetaps(wx):
+    """
+    Return taps orthogonal to the input taps. This only works for dual-polarization signals
+    and follows the technique described in _[1] to avoid the CMA pol-demux singularity.
+
+    Parameters
+    ----------
+    wx : array_like
+        X-pol taps
+
+    Returns
+    -------
+    wy : array_like
+        Y-pol taps orthogonal to X-pol
+    """
     Ntaps = wx.shape[1]
     wy = np.zeros(wx.shape, dtype=np.complex128)
     # initialising the taps to be opposite orthogonal to the x polarisation (note that we do not want fully orthogonal
     wy = np.conj(wx[::-1,::-1])
-    #wy = wx[::-1,::-1]
     return wy
 
 def generate_partition_codes_complex(M):
@@ -425,7 +438,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             #err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
             err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
-            wxy[l+1] = _init_orthogonaltaps(wxy[l])
+            wxy[l+1] = orthogonalizetaps(wxy[l])
 
     return wxy, err
 
