@@ -5,12 +5,12 @@ import fractions
 import warnings
 from bitarray import bitarray
 
-import qampy.helpers
-from .core import resample, utils
+from qampy import helpers
+from qampy.core import resample
 from qampy import theory
-from .core import ber_functions
-from .core.prbs import make_prbs_extXOR
-from .core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
+from qampy.core import ber_functions
+from qampy.core.prbs import make_prbs_extXOR
+from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
 
 
@@ -319,7 +319,7 @@ class SignalBase(np.ndarray):
         nmodes = signal_rx.shape[0]
         symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx, synced)
         return np.asarray(
-            np.sqrt(np.mean(qampy.helpers.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
+            np.sqrt(np.mean(helpers.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
 
     def est_snr(self, signal_rx=None, synced=False, symbols_tx=None):
         """

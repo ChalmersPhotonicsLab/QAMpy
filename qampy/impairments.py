@@ -1,6 +1,6 @@
 import numpy as np
-from . import core
-from .core.impairments import rotate_field, add_awgn
+from qampy import core
+from qampy.core.impairments import rotate_field, add_awgn
 
 def apply_PMD(field, theta, t_dgd):
     """

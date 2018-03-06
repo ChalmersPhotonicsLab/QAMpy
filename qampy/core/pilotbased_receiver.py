@@ -7,8 +7,8 @@ Created on Sat May 27 17:11:02 2017
 """
 
 import numpy as np
-from . import equalisation
-from . import phaserecovery
+from qampy.core import equalisation
+from qampy.core import phaserecovery
 
 
 def pilot_based_foe(rec_symbs,pilot_symbs):

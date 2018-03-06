@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
 from scipy.signal import fftconvolve
-from . import utils
+from qampy.core import utils
 
 
 #TODO: refactor to use remove all unneeded functions

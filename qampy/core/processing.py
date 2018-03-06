@@ -2,7 +2,7 @@ import zmq
 import numpy as np
 import msgpack
 import msgpack_numpy as msgp_npy
-from .phaserecovery import blindphasesearch
+from qampy.core.phaserecovery import blindphasesearch
 
 # careful we cannot use the unpatched msgpack because it messes up dictionary keys to bytes
 msgp_npy.patch()

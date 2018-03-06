@@ -9,7 +9,7 @@ Pilot-Based DSP Transmitter for MQAM with M>4
 """
 import numpy as np
 from  import impairments, resample, utils
-from .. import signals
+from qampy import signals
 
 
 def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1),npols=2, frame_length = 2**18, pilot_seq_len = 256, pilot_ins_ratio = 32):

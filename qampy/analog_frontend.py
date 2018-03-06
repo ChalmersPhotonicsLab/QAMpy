@@ -1,5 +1,5 @@
 from . import core
-from .core.analog_frontend import comp_IQ_inbalance
+from qampy.core.analog_frontend import comp_IQ_inbalance
 
 
 def comp_rf_delay(signal, delay):

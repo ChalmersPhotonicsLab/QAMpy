@@ -1,9 +1,9 @@
 #vim:fileencoding=utf-8
 from __future__ import division, print_function
 import numpy as np
-from .segmentaxis import segment_axis
-from .signal_quality import cal_s0
-from .dsp_cython import bps as _bps_idx_pyx
+from qampy.core.segmentaxis import segment_axis
+from qampy.core.signal_quality import cal_s0
+from qampy.core.dsp_cython import bps as _bps_idx_pyx
 import numba
 try:
     import arrayfire as af

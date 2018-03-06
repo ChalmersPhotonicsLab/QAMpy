@@ -1,5 +1,5 @@
-from . import core
-from .core.filter import moving_average
+from qampy import core
+from qampy.core.filter import moving_average
 
 def filter_signal_analog(signal, cutoff, ftype="bessel", order=2):
     """

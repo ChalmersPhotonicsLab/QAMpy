@@ -5,8 +5,8 @@ from cython.parallel import prange
 cimport cython
 cimport numpy as np
 from ccomplex cimport *
-from .equalisation cimport cython_equalisation
-from cmath cimport exp, log, pow
+from qampy.core.equalisation cimport cython_equalisation
+from qampy.core.equalisation cimport cmath cimport exp, log, pow
 
 
 cdef double cabssq(cython_equalisation.complexing x) nogil:

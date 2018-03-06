@@ -1,4 +1,4 @@
-from . import core
+from qampy import core
 
 def apply_filter(sig, wxy, method="pyx"):
     """
