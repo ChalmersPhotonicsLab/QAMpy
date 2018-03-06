@@ -57,6 +57,10 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     adaptive_stepsize : bool, optional
         whether to use an adaptive stepsize or a fixed
 
+    avoid_cma_sing : bool, optional
+        for dual pol signals make y taps orthogonal to x taps after first convergence. Helps to avoid
+        singularity problems when demulitplexing dual pol
+
     Returns
     -------
 
@@ -101,8 +105,14 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
     method  : tuple(string,string), optional
         equaliser method for the first and second mode has to be one of cma, rde, mrde, mcma, sbd, mddma, sca, dd_adaptive, sbd_adaptive, mcma_adaptive
 
-    adaptive_stepsize : tuple(bool, bool)
+    adaptive_stepsize : tuple(bool, bool), optional
         whether to adapt the step size upon training for each of the equaliser modes
+
+    avoid_cma_sing : bool, optional
+        for dual pol signals make y taps orthogonal to x taps after first convergence. Helps to avoid
+        singularity problems when demulitplexing dual pol
+
+
 
     Returns
     -------
