@@ -19,5 +19,5 @@ class TestQuantize(object):
         s = impairments.change_snr(s, 22).astype(dtype)
         o = cython_equalisation.make_decision(s[0], s.coded_symbols)
         xx = abs(s.symbols[0] - o)
-        npt.assert_allclose(xx, 0)
+        npt.assert_array_almost_equal(xx, 0)
 
