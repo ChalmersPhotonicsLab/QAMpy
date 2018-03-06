@@ -34,11 +34,9 @@ def partition_signal(signal, partitions, codebook):
 @numba.jit(nopython=True)
 def adapt_step(mu, err_p, err):
     if err.real*err_p.real > 0 and err.imag*err_p.imag >  0:
-        lm = 0
+        return mu
     else:
-        lm = 1
-    mu = mu/(1+lm*mu*(err.real*err.real + err.imag*err.imag))
-    return mu
+        return mu/(1+mu*(err.real*err.real + err.imag*err.imag))
 
 @numba.jit(nopython=True)
 def partition_value(signal, partitions, codebook):
@@ -77,7 +75,7 @@ def sum(x):
 
 
 @numba.jit(nopython=True)
-def train_eq(E, TrSyms, os, mu, wx, errfct  adaptive=False):
+def train_eq(E, TrSyms, os, mu, wx, errfct,  adaptive=False):
     """
     Training of the equaliser
 
@@ -109,7 +107,7 @@ def train_eq(E, TrSyms, os, mu, wx, errfct  adaptive=False):
         X = E[:, i * os:i * os + Ntaps]
         Xest = sum(wx * X)
         err[i] = errfct(Xest)
-        wx -= mu * err[i] * np.conj(X)
+        wx += mu * np.conj(err[i]) * X
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i], err[i-1])
     return err, wx
@@ -131,7 +129,7 @@ def ErrorFctCMA(R):
     """
     @numba.jit(nopython=True)
     def cma_fct(Xest):
-        return (abs(Xest)**2 - R)*Xest
+        return (R - abs(Xest)**2)*Xest
     return cma_fct
 
 def ErrorFctMCMA(R):
@@ -154,7 +152,7 @@ def ErrorFctMCMA(R):
     """
     @numba.jit(nopython=True)
     def mcma_fct(Xest):
-        return (Xest.real**2 - R.real) * Xest.real + (Xest.imag**2 - R.imag)*Xest.imag*1.j
+        return (R.real - Xest.real**2) * Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j
     return mcma_fct
 
 def ErrorFctRDE(partition, codebook):
@@ -181,7 +179,7 @@ def ErrorFctRDE(partition, codebook):
     def rde_fct(Xest):
         Ssq = abs(Xest)**2
         S_DD = partition_value(Ssq, part, code)
-        return (Ssq - S_DD)*Xest
+        return (S_DD - Ssq)*Xest
     return rde_fct
 
 def ErrorFctMRDE(partition, codebook):
@@ -208,7 +206,7 @@ def ErrorFctMRDE(partition, codebook):
     def mrde_fct(Xest):
         Ssq = Xest.real**2 + 1.j * Xest.imag**2
         R = partition_value(Ssq.real, partion.real, codebook.real) + partition_value(Ssq.imag, partition.imag, codebook.imag)*1.j
-        return (Ssq.real - R.real)*Xest.real + (Ssq.imag - R.imag)*1.j*Xest.imag
+        return (R.real - Ssq.real)*Xest.real + (R.imag - Ssq.imag)*1.j*Xest.imag
     return mrde_fct
 
 def ErrorFctSBD(symbols):
@@ -232,7 +230,7 @@ def ErrorFctSBD(symbols):
     @numba.jit(nopython=True)
     def sbd_fct(Xest):
         R = symbols[np.argmin(np.abs(Xest-symbols))]
-        return (Xest.real - R.real)*abs(R.real) + (Xest.imag - R.imag)*1.j*abs(R.imag)
+        return (R.real - Xest.real)*abs(R.real) + (R.imag - Xest.imag)*1.j*abs(R.imag)
     return sbd_fct
 
 def ErrorFctMDDMA(symbols):
@@ -257,7 +255,7 @@ def ErrorFctMDDMA(symbols):
     @numba.jit(nopython=True)
     def mddma_fct(Xest):
         R = symbols[np.argmin(np.abs(Xest-symbols))]
-        return (Xest.real**2 - R.real**2)*Xest.real + (Xest.imag**2 - R.imag**2)*1.j*Xest.imag
+        return (R.real**2 -  Xest.real**2)*Xest.real + 1.j*(R.imag**2 - Xest.imag**2)*Xest.imag
     return mddma_fct
 
 def ErrorFctDD(symbols):
@@ -280,7 +278,7 @@ def ErrorFctDD(symbols):
     @numba.jit(nopython=True)
     def dd_fct(Xest):
         R = symbols[np.argmin(np.abs(Xest-symbols))]
-        return Xest - R
+        return R - Xest
     return dd_fct
 
 def ErrorFctCME(R, d, beta):
@@ -307,7 +305,7 @@ def ErrorFctCME(R, d, beta):
     """
     @numba.jit(nopython=True)
     def cme_fct(Xest):
-        err = (abs(Xest)**2 - R)*Xest
+        err = (R - abs(Xest)**2)*Xest
         err +=  beta * np.pi/(2*d) * (np.sin(Xest.real*np.pi/d) + 1.j * np.sin(Xest.imag*np.pi/d))
         return err
     return cme_fct
@@ -341,5 +339,5 @@ def ErrorFctSCA(R):
         else:
             A = 0
             B = 1
-        return 4*Xest.real*(4*Xest.real**2 - 4*R**2)*A + 1.j*4*Xest.imag*(4*Xest.imag**2 - 4*R**2)*B
+        return 16*Xest.real*(R**2 - Xest.real**2)*A + 1.j*16*Xest.imag*(R**2 - Xest.imag**2)*B
     return sca_fct
