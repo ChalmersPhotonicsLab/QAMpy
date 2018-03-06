@@ -27,7 +27,7 @@ def apply_filter(sig, wxy, method="pyx"):
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
-                    **kwargs):
+                    avoid_cma_sing=True, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary.
 
@@ -72,10 +72,11 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     except AttributeError:
         syms = None
     return core.equalisation.equalise_signal(sig, os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
-                                adaptive_stepsize=adaptive_stepsize,  symbols=syms, **kwargs)
+                                adaptive_stepsize=adaptive_stepsize,  symbols=syms,
+                                             avoid_cma_sing=avoid_cma_sing, **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
-                           adaptive_stepsize=(False, False), **kwargs):
+                           adaptive_stepsize=(False, False), avoid_cma_sing=(True, False), **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE.
 
@@ -121,7 +122,8 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
     except AttributeError:
         syms = None
     sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
-                                                       adaptive_stepsize=adaptive_stepsize, symbols=syms, **kwargs)
+                                                       adaptive_stepsize=adaptive_stepsize, symbols=syms,
+                                                                avoid_cma_sing=avoid_cma_sing, **kwargs)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
 
 

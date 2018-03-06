@@ -195,12 +195,14 @@ class TestCMA(object):
         fs = os*fb
         N = 2**16
         beta = 0.1
-        mu = 0.1e-1
+        mu = 0.1e-2
         M = 4
+        ntaps = 3
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.rotate_field(s, phi)
-        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=3, method=method, adaptive_stepsize=True)
+        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=ntaps, method=method,
+                                                adaptive_stepsize=True , avoid_cma_sing=False)
         sout = equalisation.apply_filter(s, wxy)
         #plt.plot(sout[0].real, sout[0].imag, '.r')
         #plt.show()
@@ -210,7 +212,7 @@ class TestCMA(object):
         npt.assert_allclose(ser, 0)
 
     @pytest.mark.parametrize("method", ["cma", "mcma"])
-    @pytest.mark.parametrize("phi", np.linspace(4.3, 6.5, 3))
+    @pytest.mark.parametrize("phi", np.linspace(4.3, 5.8, 3))
     @pytest.mark.parametrize("dgd", np.linspace(10, 300, 4)*1e-12)
     def test_pmd(self, method, phi, dgd):
         theta = np.pi/phi
@@ -220,13 +222,38 @@ class TestCMA(object):
         N = 2**16
         snr = 15
         beta = 0.1
-        mu = 4e-5
+        mu = 0.8e-3
         M = 4
-        ntaps = 21
+        ntaps = 11
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.apply_PMD(s, theta, dgd)
-        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=ntaps, method=method, adaptive_stepsize=False)
+        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=ntaps, method=method,
+                                                adaptive_stepsize=True, avoid_cma_sing=False)
+        sout = equalisation.apply_filter(s, wxy)
+        sout = helpers.normalise_and_center(sout)
+        ser = sout.cal_ser()
+        npt.assert_allclose(ser, 0)
+
+    @pytest.mark.parametrize("method", ["cma", "mcma"])
+    @pytest.mark.parametrize("dgd", [100e-12, 200e-12])
+    def test_pmd_2(self, method, dgd):
+        phi = 6.5
+        theta = np.pi/phi
+        fb = 40.e9
+        os = 2
+        fs = os*fb
+        N = 2**16
+        snr = 15
+        beta = 0.1
+        mu = 0.9e-3
+        M = 4
+        ntaps = 7
+        s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
+        s = s.resample(fs, beta=beta, renormalise=True)
+        s = impairments.apply_PMD(s, theta, dgd)
+        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=ntaps, method=method,
+                                                adaptive_stepsize=True, avoid_cma_sing=True)
         sout = equalisation.apply_filter(s, wxy)
         sout = helpers.normalise_and_center(sout)
         ser = sout.cal_ser()
@@ -235,7 +262,7 @@ class TestCMA(object):
     @pytest.mark.parametrize("method", ["cma", "mcma"])
     @pytest.mark.parametrize("phi", np.linspace(7.5, 8.5, 2))
     @pytest.mark.parametrize("dgd", np.linspace(200, 300, 2)*1e-12)
-    def test_pmd_fails(self, method, phi, dgd):
+    def test_pmd_2(self, method, phi, dgd):
         theta = np.pi/phi
         fb = 40.e9
         os = 2
@@ -243,7 +270,7 @@ class TestCMA(object):
         N = 2**16
         snr = 15
         beta = 0.6
-        mu = 0.2e-4
+        mu = 0.1e-4
         M = 4
         ntaps = 21
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
@@ -295,7 +322,7 @@ class TestCMA(object):
         N = 2**16
         snr = 15
         beta = 0.3
-        mu = 4e-5
+        mu = 2e-4
         M = 4
         ntaps = 21
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
