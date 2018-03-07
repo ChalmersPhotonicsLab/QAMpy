@@ -3,24 +3,46 @@ from setuptools import setup, find_packages, Extension
 # To use a consistent encoding
 from codecs import open
 from os import path
+import sys
 import numpy as np
 
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
 LINK_ARGS = ["-fopenmp", "-lm"]
 
-cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
+WIN_COMPILER_ARGS = ["/O2", "/openmp"]
+WIN_LINK_ARGS = ["/openmp"]
+
+if sys.platform.startswith("win"):
+    cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
+                     sources=["qampy/core/equalisation/cython_equalisation.pyx", "qampy/core/equalisation/equaliserC.c"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
+                             language="c++",
+                             extra_compile_args=WIN_COMPILER_ARGS,
+                             extra_link_args=WIN_LINK_ARGS)
+    cython_errorfcts = Extension(name="qampy.core.equalisation.cython_errorfcts",
+                     sources=["qampy/core/equalisation/cython_errorfcts.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
+                             language="c++",
+                             extra_compile_args=WIN_COMPILER_ARGS,
+                             extra_link_args=WIN_LINK_ARGS)
+    dsp_cython = Extension(name="qampy.core.dsp_cython",
+                       sources=["qampy/core/dsp_cython.pyx", "qampy/core/equalisation/equaliserC.c"],
+                             include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
+                           language="c++",
+                       extra_compile_args=WIN_COMPILER_ARGS,
+                             extra_link_args=WIN_LINK_ARGS)
+else:
+    cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
                      sources=["qampy/core/equalisation/cython_equalisation.pyx", "qampy/core/equalisation/equaliserC.c"],
                              include_dirs=["qampy/core/equalisation", np.get_include()],
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
-
-cython_errorfcts = Extension(name="qampy.core.equalisation.cython_errorfcts",
+    cython_errorfcts = Extension(name="qampy.core.equalisation.cython_errorfcts",
                      sources=["qampy/core/equalisation/cython_errorfcts.pyx"],
                              include_dirs=["qampy/core/equalisation", np.get_include()],
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
-
-dsp_cython = Extension(name="qampy.core.dsp_cython",
+    dsp_cython = Extension(name="qampy.core.dsp_cython",
                        sources=["qampy/core/dsp_cython.pyx", "qampy/core/equalisation/equaliserC.c"],
                              include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
                        extra_compile_args=COMPILER_ARGS,
