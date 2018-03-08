@@ -380,7 +380,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
        estimation error for x and y polarisation for each equaliser mode
 
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0] **kwargs)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0], **kwargs)
     wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols, avoid_cma_sing=avoid_cma_sing[1], **kwargs)
     Eest = apply_filter(E, os, wxy2)
     return Eest, wxy2, (err1, err2)
