@@ -1,4 +1,6 @@
 from qampy import core
+from qampy.core import equalisation
+__doc__= equalisation.equalisation.__doc__
 
 def apply_filter(sig, wxy, method="pyx"):
     """

@@ -1,12 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
-import warnings
-import numpy as np
-
-import qampy.helpers
-from qampy.theory import cal_symbols_qam, cal_scaling_factor_qam
-from qampy.core.segmentaxis import segment_axis
-
 #TODO: update documentation with all references
 
 """
@@ -40,6 +32,15 @@ References
 ...[9] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
 
 """
+
+from __future__ import division
+import warnings
+import numpy as np
+
+import qampy.helpers
+from qampy.theory import cal_symbols_qam, cal_scaling_factor_qam
+from qampy.core.segmentaxis import segment_axis
+
 
 #TODO: include selection for either numba or cython code
 try:
