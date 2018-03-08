@@ -124,4 +124,5 @@ class TestCorrect(object):
         o = ph[0][20:-20]+angle
         ser = s2[:,20:-20].cal_ser()
         npt.assert_allclose(0, ser)
+        npt.assert_allclose(o, 0)
 

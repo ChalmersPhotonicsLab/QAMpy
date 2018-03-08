@@ -25,6 +25,16 @@ def test_quantize_precision(dtype, benchmark):
     npt.assert_array_almost_equal(s.symbols[0], o)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+@pytest.mark.parametrize("method", ["pyx", "py", "af"])
+def test_bps(dtype, method, benchmark):
+        angle = np.pi/5.1
+        s = signals.SignalQAMGrayCoded(64, 2**12, dtype=dtype)
+        s3 = s*np.exp(1.j*angle)
+        s2, ph = benchmark(phaserec.bps, s, 64 , s.coded_symbols, 11, method=method)
+        ser = s2[:,20:-20].cal_ser()
+        npt.assert_allclose(0, ser)
+
+@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 def test_equalisation_prec(dtype, benchmark):
     fb = 40.e9
     os = 2

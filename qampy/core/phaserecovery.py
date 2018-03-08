@@ -60,7 +60,6 @@ def _bps_idx_py(E, angles, symbols, N):
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
     idx = np.zeros(E.shape[0], dtype=np.int)
     dist = (abs(EE[:, :, np.newaxis]-symbols)**2).min(axis=2)
-    idx2 = symbols[(abs(EE[:, :, np.newaxis]-symbols)**2).argmin(axis=2)]
     csum = np.cumsum(dist, axis=0)
     mvg = csum[2*N:]-csum[:-2*N]
     idx[N:-N] = mvg.argmin(1)
