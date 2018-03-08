@@ -56,7 +56,10 @@ def bps(cython_equalisation.complexing[:] E, cython.floating[:,:] testangles, cy
     comp_angles[:,:] = np.exp(1.j*np.array(testangles[:,:]))
     dists = np.zeros((L, Ntestangles), dtype=fdtype)+100.
     for i in prange(L, schedule='static', nogil=True):
-        if testangles.shape[0] > 1:
+        dtmp = 100. # it is important to assign to the variable, othewise it will not
+                    # be discovered as private by the compiler (passing the pointer  only does
+                    # not work)
+        if p > 1:
             ph_idx = i
         else:
             ph_idx = 0
@@ -76,11 +79,11 @@ cpdef ssize_t[:] select_angle_index(cython.floating[:,:] x, int N):
     M = x.shape[1]
     csum = np.zeros((L,M), dtype="f%d"%x.itemsize)
     idx = np.zeros(L, dtype=np.intp)
-    for i in range(1, L-1):
+    for i in range(1, L):
         dmin = 1000.
         if i < N:
             for k in range(M):
-                csum[i,k] = csum[i,k]+x[i,k]
+                csum[i,k] = csum[i-1,k]+x[i,k]
         else:
             for k in range(M):
                 csum[i,k] = csum[i-1,k]+x[i,k]
