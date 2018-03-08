@@ -4,6 +4,7 @@ import numpy as np
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.signal_quality import cal_s0
 from qampy.core.dsp_cython import bps as _bps_idx_pyx
+from qampy.core.filter import moving_average
 import numba
 try:
     import arrayfire as af
@@ -52,22 +53,18 @@ def viterbiviterbi(E, N, M):
     else:
         return E2d, phase_est
 
-def _bps_py(E, Mtestangles, symbols, N):
+def _bps_idx_py(E, angles, symbols, N):
     """
     Blind phase search using Python. This is slow compared to the cython and arrayfire methods and should not be used.
     """
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False)
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
-    idx = np.zeros(len(E)-2*N, dtype=np.int)
-    dist = (abs(EE[:2*N, :, np.newaxis]-symbols)**2).min(axis=2)
-    idx[0] = dist.sum(axis=0).argmin(axis=0)
-    for i in range(1,len(idx)):
-        tmp = (abs(EE[N+i:i+3*N,:,np.newaxis]-symbols)**2).min(axis=1).reshape(1,Mtestangles)
-        dist = np.concatenate([dist[1:], tmp])#(abs(EE[N+i,:,np.newaxis]-symbols)**2).min(axis=1)])
-        idx[i] = dist.sum(axis=0).argmin(axis=0)
-    ph = np.unwrap(angles[idx]*4)/4
-    En = E[N:-N]*np.exp(1.j*ph)
-    return En, ph
+    idx = np.zeros(E.shape[0], dtype=np.int)
+    dist = (abs(EE[:, :, np.newaxis]-symbols)**2).min(axis=2)
+    idx2 = symbols[(abs(EE[:, :, np.newaxis]-symbols)**2).argmin(axis=2)]
+    csum = np.cumsum(dist, axis=0)
+    mvg = csum[2*N:]-csum[:-2*N]
+    idx[N:-N] = mvg.argmin(1)
+    return idx
 
 def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     """
@@ -89,7 +86,7 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
         block length to use for averaging
 
     method      : string, optional
-        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "pyx" for a cython-OpenMP based parallel search.
+        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "pyx" for a cython-OpenMP based parallel search or "py" for slow python search
 
     **kwargs    :
         arguments to be passed to the search function
@@ -111,8 +108,10 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
         if af == None:
             raise RuntimeError("Arrayfire was not imported so cannot use it")
         bps_fct = _bps_idx_af
+    elif method.lower() == "py":
+        bps_fct = _bps_idx_py
     else:
-        raise("Method needs to be 'pyx' or 'af'")
+        raise ValueError("Method needs to be 'pyx', 'py' or 'af'")
     if E.dtype is np.dtype(np.complex64):
         dtype = np.float32
     else:
@@ -233,7 +232,8 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
         number of second stage test angles
 
     method      : string, optional
-        implementation method to use has to be "af" for arrayfire (uses OpenCL) or "pyx" for a Cython-OpenMP based parallel search.
+        implementation method to use has to be "af" for arrayfire (uses OpenCL) or
+        "pyx" for a Cython-OpenMP based parallel search or "py" for a slower python based search
 
     **kwargs    :
         arguments to be passed to the search function
@@ -253,17 +253,20 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
         bps_fct = _bps_idx_pyx
     elif method.lower() == "af":
         bps_fct = _bps_idx_af
+    elif method.lower() == "py":
+        bps_fct = _bps_idx_py
     else:
-        raise("Method needs to be 'pyx' or 'af'")
+        raise ValueError("Method needs to be 'pyx', 'py' or 'af'")
     angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
     Ew = np.atleast_2d(E)
     ph_out = []
     for i in range(Ew.shape[0]):
-        idx =  bps_fct(Ew[i], angles, symbols, N, **kwargs)
+        idx =  bps_fct(Ew[i], angles, symbols, N, **kwargs)[0]
         ph = select_angles(angles, idx)
         b = np.linspace(-B/2, B/2, B)
         phn = ph[:,np.newaxis] + b[np.newaxis,:]/(B*Mtestangles)*np.pi/2
-        idx2 = bps_fct(Ew[i], phn, symbols, N, **kwargs)
+        print(phn.shape)
+        idx2 = bps_fct(Ew[i], phn, symbols, N, **kwargs)[0]
         phf = select_angles(phn, idx2)
         ph_out.append(np.unwrap(phf*4, discont=np.pi*4/4)/4)
     ph_out = np.asarray(ph_out)
