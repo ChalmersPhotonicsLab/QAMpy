@@ -19,7 +19,7 @@
 #TODO: update documentation with all references
 
 """
-    Equalisation functions the equaliser update functions provided are:
+    Equalisa tion functions the equaliser update functions provided are:
 
 No decision based:
 -----------------
