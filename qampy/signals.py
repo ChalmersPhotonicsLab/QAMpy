@@ -129,6 +129,23 @@ class SignalBase(np.ndarray):
     _inheritattr_ = []  # list of attributes names that should be inherited
     __array_priority__ = 1
 
+    def __reduce__(self):
+        pickle_obj = super().__reduce__()
+        new_state = pickle_obj[2]
+        for att in self._inheritbase_ + self._inheritattr_:
+            new_state += (getattr(self, att),)
+        return pickle_obj[0], pickle_obj[1], new_state
+
+    def __setstate__(self, state):
+        attrs = self._inheritbase_ + self._inheritattr_
+        l = len(attrs)
+        ls = len(state)-l
+        super().__setstate__(state[:-l])
+        i = 0
+        for att in attrs:
+            setattr(self, att, state[ls+i])
+            i += 1
+
     @property
     def M(self):
         return self._M
