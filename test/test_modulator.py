@@ -293,6 +293,27 @@ class TestQAMSymbolsGray(object):
         assert type(s) is type(s2)
         assert s2.dtype is np.dtype(dtype)
 
+    def test_pickle(self):
+        import tempfile
+        import pickle
+        dr = tempfile.TemporaryDirectory()
+        fp = open(dr.name+"/data.pic", "wb")
+        s = signals.SignalQAMGrayCoded(128, 2**12, fb=10e9, nmodes=2)
+        pickle.dump(s, fp)
+        fp.close()
+        fp2 = open(dr.name+"/data.pic", "rb")
+        s2 = pickle.load(fp2)
+        fp2.close()
+        dr.cleanup()
+        npt.assert_array_almost_equal(s,s2)
+        npt.assert_array_almost_equal(s.symbols,s2.symbols)
+        npt.assert_array_almost_equal(s.bits, s2.bits)
+        npt.assert_array_almost_equal(s.coded_symbols, s2.coded_symbols)
+        assert s.fb == s2.fb
+        assert s.fs == s2.fs
+        assert s.M == s2.M
+
+
 class TestResampledQAM(object):
     @pytest.mark.parametrize("attr", ["M", "fs", "fb", "bits", "coded_symbols", "_encoding",
                                       "_bitmap_mtx", "_code", "Nbits"])
@@ -446,6 +467,31 @@ class TestPilotSignal(object):
         ph = N//32
         NN = N-ph
         assert sp.symbols.shape[1] == NN
+
+    def test_pickle(self):
+        import tempfile
+        import pickle
+        dr = tempfile.TemporaryDirectory()
+        fp = open(dr.name+"/data.pic", "wb")
+        s = signals.SignalWithPilots(128, 2**16, 256, 32)
+        pickle.dump(s, fp)
+        fp.close()
+        fp2 = open(dr.name+"/data.pic", "rb")
+        s2 = pickle.load(fp2)
+        fp2.close()
+        dr.cleanup()
+        npt.assert_array_almost_equal(s,s2)
+        npt.assert_array_almost_equal(s.symbols,s2.symbols)
+        npt.assert_array_almost_equal(s.pilots, s2.pilots)
+        npt.assert_array_almost_equal(s.coded_symbols, s2.coded_symbols)
+        npt.assert_array_almost_equal(s.pilot_seq, s2.pilot_seq)
+        npt.assert_array_almost_equal(s.ph_pilots, s2.ph_pilots)
+        npt.assert_array_almost_equal(s.get_data(), s2.get_data())
+        assert s.fb == s2.fb
+        assert s.fs == s2.fs
+        assert s.M == s2.M
+        assert s.pilot_scale == s2.pilot_scale
+        assert s.nframes == s2.nframes
 
 class TestTDHybridsSymbols(object):
     @pytest.mark.parametrize("attr", ["M", "fs", "fb", "symbols_M1", "symbols_M2",
