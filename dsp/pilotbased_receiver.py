@@ -311,7 +311,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, 
     # Equalize using additional frames if selected
     for frame_id in range(0,process_frame_id+1):
         for l in range(npols):
-            pilot_seq = sig_dc_center[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
+            pilot_seq = sig_dc_center[:,frame_length*os*frame_id+shift_factor[l]-tap_cor:frame_length*os*frame_id+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
             wx_1, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=out_taps[l],Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
             wx, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wx_1,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
             out_taps[l] = wx
@@ -362,7 +362,8 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         # First Eq, extract pilot sequence to do FOE
         for l in range(npols):
             pilot_seq = rx_signal_center[:,shift_factor[l]-tap_cor:shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
-            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
+            wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot, Ntaps=ntaps[1], Niter=Niter[1],
+                                                   method=method[0], adaptive_stepsize=adap_step[1])
             symbs_out= equalisation.apply_filter(pilot_seq,os,wx)       
             tmp_pilots[l,:] = symbs_out[l,:]
 
@@ -391,8 +392,9 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
     # First step Eq
     data_out = []
     for l in range(npols):
-        pilot_seq = sig_dc_center[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]    
-        wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
+        pilot_seq = sig_dc_center[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
+        wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[0], 4, Ntaps=ntaps[1], Niter=Niter[1],
+                                                     method=method[0], adaptive_stepsize=adap_step[1])
 
         pilot_seq_wdm = full_spec_combined[:,shift_factor[l]-tap_cor:+shift_factor[l]-tap_cor+pilot_seq_len*os+ntaps[1]-1]
 
@@ -403,7 +405,10 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         wxy_init_wdm[3,2] = wxy_init[1][0]
         wxy_init_wdm[3,3] = wxy_init[1][1]
 
-        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[0], 4, wxy=wxy_init_wdm, Ntaps=ntaps[1],
+                                               Niter=Niter[0], method=method[0], adaptive_stepsize=adap_step[1])
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4, wxy=wx, Ntaps=ntaps[1],
+                                               Niter=Niter[1], method=method[1], adaptive_stepsize=adap_step[1])
         out_taps.append(wx)
         symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,wx)
         eq_pilots[l,:] = symbs_out[2+l,:]
