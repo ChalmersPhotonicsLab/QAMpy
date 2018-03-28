@@ -145,13 +145,16 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
             tx = np.roll(data_tx, -offset)
             return adjust_data_length(tx, rx, method="truncate")
         elif adjust is "rx":
-            tx, rx = adjust_data_length(data_tx, rx, method="extend")
-            return tx, np.roll(rx, offset)
+            tx, rx = adjust_data_length(data_tx, rx, method="extend", offset=offset)
+            return tx, rx
+            #return tx, np.roll(rx, offset)
     elif N_tx < N_rx:
         offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
         if adjust is "tx":
-            tx, rx = adjust_data_length(tx, data_rx, method="extend")
-            return np.roll(tx, offset), rx
+            # this is still buggy, I if the length of data_rx is not a multiple of length of tx
+            tx, rx = adjust_data_length(tx, data_rx, method="extend", offset=offset)
+            return tx, rx
+            #return np.roll(tx, offset), rx
         elif adjust is "rx":
             rx = np.roll(data_rx, -offset)
             return adjust_data_length(tx, rx, method="truncate")
@@ -242,7 +245,7 @@ def sync_tx2rx(data_tx, data_rx, Lsync, imax=200):
             pass
     raise DataSyncError("maximum iterations exceeded")
 
-def adjust_data_length(data_tx, data_rx, method=None):
+def adjust_data_length(data_tx, data_rx, method=None, offset=0):
     """Adjust the length of data_tx to match data_rx, either by truncation
     or repeating the data.
 
@@ -256,7 +259,11 @@ def adjust_data_length(data_tx, data_rx, method=None):
         Description:
             "extend"   - pad the short array with its data from the beginning. This assumes that the data is periodic
             "truncate" - cut the shorter array to the length of the longer one
-            None       - (default) either truncate or extend data_tx 
+            None       - (default) either truncate or extend data_tx
+
+    offset : int, optional
+       offset where the start of the to extended array sits in the reference array
+
 
     Returns
     -------
@@ -267,7 +274,12 @@ def adjust_data_length(data_tx, data_rx, method=None):
         if len(data_tx) > len(data_rx):
             return data_tx[:len(data_rx)], data_rx
         elif len(data_tx) < len(data_rx):
-            data_tx = _extend_by(data_tx, data_rx.shape[0]-data_tx.shape[0])
+            if offset is 0:
+                data_tx = _adjust_to(data_tx, data_rx.shape[0])
+            else:
+                data_tx1 = _adjust_to(data_tx, offset, back=False)
+                data_tx2 = _adjust_to(data_tx, data_rx.shape[0]-offset)
+                data_tx = np.hstack([data_tx1, data_tx2])
             return data_tx, data_rx
         else:
             return data_tx, data_rx
@@ -280,20 +292,36 @@ def adjust_data_length(data_tx, data_rx, method=None):
             return data_tx, data_rx
     elif method is "extend":
         if len(data_tx) > len(data_rx):
-            data_rx = _extend_by(data_rx, data_tx.shape[0]-data_rx.shape[0])
+            if offset == 0:
+                data_rx = _adjust_to(data_rx, data_tx.shape[0])
+            else:
+                data_rx1 = _adjust_to(data_rx, offset, back=False)
+                data_rx2 = _adjust_to(data_rx, data_tx.shape[0]-offset)
+                data_rx = np.hstack([data_rx1, data_rx2])
             return data_tx, data_rx
         elif len(data_tx) < len(data_rx):
-            data_tx = _extend_by(data_tx, data_rx.shape[0]-data_tx.shape[0])
+            if offset == 0:
+                data_tx = _adjust_to(data_tx, data_rx.shape[0])
+            else:
+                data_tx1 = _adjust_to(data_tx, offset, back=False)
+                data_tx2 = _adjust_to(data_tx, data_rx.shape[0]-offset)
+                data_tx = np.hstack([data_tx1, data_tx2])
             return data_tx, data_rx
         else:
             return data_tx, data_rx
 
-def _extend_by(data, N):
+def _adjust_to(data, N, back=True):
     L = data.shape[0]
     K = N//L
     rem = N%L
-    data = np.hstack([data for i in range(K+1)])
-    data = np.hstack([data, data[:rem]])
+    try:
+        tmp = np.hstack([data for i in range(K)])
+    except ValueError:
+        tmp = np.array([], dtype=data.dtype)
+    if back:
+        data = np.hstack([tmp, data[:rem]])
+    else:
+        data = np.hstack([data[-rem:], tmp])
     return data
 
 def cal_ber_syncd(data_rx, data_tx, threshold=0.2):
