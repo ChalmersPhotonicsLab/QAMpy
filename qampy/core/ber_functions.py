@@ -97,11 +97,8 @@ def find_sequence_offset_complex(data_tx, data_rx):
         power for complex rotation angle 1.j**ii
     """
     acm = 0.
-    try:
-        data_tx.imag
-        data_rx.imag
-    except:
-        return find_sequence_offset(data_tx, data_rx), data_tx
+    if not np.iscomplexobj(data_tx) and not np.iscomplexobj(data_rx):
+        return find_sequence_offset(data_tx, data_rx), data_tx, 0
     for i in range(4):
         tx = data_tx*1.j**i
         idx, ac = find_sequence_offset(tx, data_rx, show_cc=True)
@@ -364,10 +361,10 @@ def cal_ber_nosyncd(data_rx, data_tx):
         length of data
     """
     try:
-        idx, data_tx_sync = find_sequence_offset(data_tx, data_rx)
+        idx = find_sequence_offset(data_tx, data_rx)
     except DataSyncError:
         # if we cannot sync try to use inverted data
-        idx, data_tx_sync = find_sequence_offset(-data_tx, data_rx)
+        idx = find_sequence_offset(~data_tx, data_rx)
     data_tx_sync = adjust_data_length(data_tx_sync, data_rx)
     #TODO this still returns a slightly smaller value, as if there would be
     # one less error, maybe this happens in the adjust_data_length
