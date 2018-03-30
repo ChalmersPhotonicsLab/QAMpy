@@ -770,6 +770,38 @@ class SignalQAMGrayCoded(SignalBase):
         """
         return self._demodulate(symbols, self._encoding)
 
+class QPSKfromBERT(SignalQAMGrayCoded):
+    """
+    """
+    def __new__(cls, N, nmodes=1, fb=1, prbsorders=((15,),(15,)), prbsshifts=(0,0), prbsinvert=(False, False), dtype=np.complex128, **kwargs):
+        assert dtype in [np.complex128, np.complex64], "only np.complex128 and np.complex64  or None dtypes are supported"
+        M = 4
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
+        Nbits = int(N * np.log2(M))
+        bitsI = PRBSBits(N, nmodes=nmodes, order=prbsorders[0])
+        bitsQ = PRBSBits(N, nmodes=nmodes, order=prbsorders[1])
+        bitsI = np.roll(bitsI, prbsshifts[0], axis=1)
+        bitsQ = np.roll(bitsQ, prbsshifts[1], axis=1)
+        if prbsinvert[0]:
+            bitsI = ~bitsI
+        if prbsinvert[1]:
+            bitsQ = ~bitsQ
+        bits = np.zeros((nmodes,Nbits), dtype=bool)
+        bits[:,::2] = bitsI
+        bits[:,1::2] = bitsQ
+        obj = cls._modulate(bits, encoding, M, dtype=dtype)
+        obj = obj.view(cls)
+        obj._bitmap_mtx = bitmap_mtx
+        obj._encoding = encoding
+        obj._coded_symbols = coded_symbols
+        obj._M = M
+        obj._fb = fb
+        obj._fs = fb
+        obj._code = _graycode
+        obj._bits = bits
+        obj._symbols = obj.copy()
+        return obj
 
 class SymbolOnlySignal(SignalQAMGrayCoded):
     """
