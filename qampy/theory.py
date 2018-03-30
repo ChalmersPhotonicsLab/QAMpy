@@ -169,6 +169,61 @@ def gray_code_qam(M):
     gidx = bin2gray(idx)
     return ((gidx[0] << N) | gidx[1]).flatten()
 
+def cal_ps_probablts(symbols, nu):
+    """
+    Calculate probabilities for probabilistic constellation shaping
+    of symbols
+
+    Parameters
+    ----------
+    symbols : array_like
+        coded input symbols
+    nu : float
+        shaping factor
+
+    Returns
+    -------
+    symbs : array_like
+        real part of the coded symbols
+    px  : array_like
+        corresponding probabilities
+    """
+
+    symbs = np.unique(symbols.real)
+    px = np.zeros(symbs.shape[0])
+    div_factor = 0
+    for ind in range(px.shape[0]):
+        div_factor += np.exp(-nu * np.abs(symbs[ind]) ** 2)
+    for ind in range(px.shape[0]):
+        px[ind] = np.exp(-nu * np.abs(symbs[ind]) ** 2) / div_factor
+    return symbs, px
+
+def generate_ps_symbols(N, symbs, px, normalize=True):
+    """
+    Generate a set of probabilistically shaped symbols
+
+    Parameters
+    ----------
+    N : int
+        length of the symbol array
+    symbs : array_like
+        the real part of the symbols to pick
+    px : array_like
+        the corresponding probabilities
+    normalize : bool,optional
+        whether to normalise the output
+
+    Returns
+    -------
+    mod_symbols: array_like
+        set of probabilistically shaped symbols
+    """
+    mod_symbs = np.random.choice(symbs, N, p=px) + \
+                1j * np.random.choice(symbs, N, p=px)
+    if normalize:
+        mod_symbs = utils.normalise_and_center(mod_symbs)
+    return mod_symbs
+
 def hybrid_qam_ber_vs_esn0(snr, pr, fr, M1, M2):
     """
     Calculate  bit error rate as function of SNR for time-domain hybrid QAM (according to _[1]).
