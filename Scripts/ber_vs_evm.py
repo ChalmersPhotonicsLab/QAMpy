@@ -15,7 +15,7 @@ References
 """
 
 snr = np.linspace(5, 30, 8)
-snrf = np.linspace(5, 30, 500)
+snrf = np.linspace(0, 30, 500)
 evmf = np.linspace(-30, 0, 500)
 N = 2**16
 Mqams = [ 4, 16, 64, 128]
