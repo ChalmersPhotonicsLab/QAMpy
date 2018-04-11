@@ -462,8 +462,8 @@ def equalize_pilot_sequence_joint(rx_signal, ref_symbs, shift_factor, os, sh = F
         wxy_init_wdm.append(np.zeros((6,ntaps[1]),dtype=complex))
 
 
-        #wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
-        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[0], 4,wxy=wxy_init_wdm,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1]) 
+        wx, err = equalisation.equalise_signal(pilot_seq_wdm, os, mu[1], 4,wxy=wx,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1]) 
         out_taps.append(wx)
         symbs_out = equalisation.apply_filter(pilot_seq_wdm,os,wx)
         eq_pilots[l,:] = symbs_out[2+l,:]
