@@ -1,5 +1,7 @@
 from __future__ import division
 import numpy as np
+import fractions
+import warnings
 from bitarray import bitarray
 
 from . import resample
@@ -117,7 +119,7 @@ class QAMModulator(object):
         return np.array(bits)
 
 
-    def quantize(self, signal):
+    def quantize(self, signal,normalize = True):
         """
         Make symbol decisions based on the input field. Decision is made based on difference from constellation points
 
@@ -125,6 +127,8 @@ class QAMModulator(object):
         ----------
         signal   : array_like
             2D array of the input signal
+        normalize : bool, optional
+            weather to normalize the input rx symbols usiing average energy. False for non-uniform.
 
         Returns
         -------
@@ -134,7 +138,10 @@ class QAMModulator(object):
         signal = np.atleast_2d(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
-            outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.symbols)
+            if normalize:
+                outsyms[i] = quantize(utils.normalise_and_center(signal[i]), self.symbols)
+            else:
+                outsyms[i] = quantize(signal[i], self.symbols)
         return outsyms
 
     def generate_signal(self, N, snr, carrier_df=0, lw_LO=0, baudrate=1, samplingrate=1, PRBS=True, PRBSorder=(15, 23),
@@ -192,6 +199,23 @@ class QAMModulator(object):
         out = []
         syms = []
         bits = []
+        if PRBS:
+            if len(PRBSorder) < ndim:
+                warnings.warn("PRBSorder is not given for all dimensions, picking random orders and seeds")
+                PRBSorder_n = []
+                PRBSseed_n = []
+                orders = [15, 23]
+                for i in range(ndim):
+                    try:
+                        PRBSorder_n.append(PRBSorder[i])
+                        PRBSseed_n.append(PRBSseed[i])
+                    except IndexError:
+                        o = np.random.choice(orders)
+                        PRBSorder_n.append(o)
+                        s = np.random.randint(0, 2**o)
+                        PRBSseed_n.append(s)
+                PRBSorder = PRBSorder_n
+                PRBSseed = PRBSseed_n
         for i in range(ndim):
             Nbits = N * self.Nbits
             if PRBS == True:
@@ -205,7 +229,7 @@ class QAMModulator(object):
                 outdata = resample.resample_poly(baudrate, samplingrate, outdata)
             else:
                 os = samplingrate/baudrate
-                outdata = resample.rrcos_resample_zeroins(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
+                outdata = resample.rrcos_resample(symbols, baudrate, samplingrate, beta=beta, Ts=1 / baudrate, renormalise=True)
                 if snr is not None:
                     outdata = impairments.add_awgn(outdata, 10**(-snr/20)*np.sqrt(os))
             outdata *= np.exp(2.j * np.pi * np.arange(len(outdata)) * carrier_df / samplingrate)
@@ -219,7 +243,7 @@ class QAMModulator(object):
         self.bits_tx = np.array(bits)
         return np.array(out), self.symbols_tx, self.bits_tx
 
-    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
+    def cal_ser(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False,normalize=True):
         """
         Calculate the symbol error rate of the received signal.Currently does not check
         for correct polarization.
@@ -234,6 +258,8 @@ class QAMModulator(object):
             bitstream at the transmitter for comparison against signal.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+        normalize : bool, optional
+            weather to normalize the input rx symbols usiing average energy. False for non-uniform.
 
         Note
         ----
@@ -256,13 +282,13 @@ class QAMModulator(object):
                     symbols_tx[i] = self.modulate(bits_tx[i])
         else:
             symbols_tx = np.atleast_2d(symbols_tx)
-        data_demod = self.quantize(signal_rx)
+        data_demod = self.quantize(signal_rx,normalize=normalize)
         if not synced:
             symbols_tx, data_demod = self._sync_and_adjust(symbols_tx, data_demod)
         errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         return errs/data_demod.shape[1]
 
-    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False):
+    def cal_ber(self, signal_rx, symbols_tx=None, bits_tx=None, synced=False,normalize=True):
         """
         Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits. Currently does not check
         for correct polarization.
@@ -277,6 +303,8 @@ class QAMModulator(object):
             transmitted bit sequence to compare against.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+        normalize : bool, optional
+            weather to normalize the input rx symbols usiing average energy. False for non-uniform.
 
         Note
         ----
@@ -290,7 +318,7 @@ class QAMModulator(object):
         """
         signal_rx = np.atleast_2d(signal_rx)
         ndim = signal_rx.shape[0]
-        syms_demod = self.quantize(signal_rx)
+        syms_demod = self.quantize(signal_rx,normalize=normalize)
         if symbols_tx is None:
             if bits_tx is None:
                 symbols_tx = self.symbols_tx
@@ -422,5 +450,157 @@ class QAMModulator(object):
                 GMI_per_bit[mode, bit] = 1 - np.mean(np.log2(1+np.exp(((-1)**bits[mode, bit::self.Nbits])*l_values[bit::self.Nbits])))
             GMI[mode] = np.sum(GMI_per_bit[mode])
         return GMI, GMI_per_bit
+
+
+class PilotModulator(object):
+    def __init__(self, M):
+        self.mod_data = QAMModulator(M)
+        self.mod_pilot = QAMModulator(4)
+
+    def generate_signal(self, frame_len, pilot_seq_len, pilot_ins_rat, ndim, **kwargs):
+        """
+        Generate a pilot based symbol sequence
+
+        Parameters
+        ----------
+        frame_len : integer
+            length of the data frame without pilot sequence
+        pilot_seq_len : integer
+            length of the pilot sequence at the beginning of the frame
+        pilot_ins_rat : integer
+            phase pilot insertion ratio, if 0 or None do not insert phase pilots
+        ndim : integer
+            number of dimensions of the signal
+        kwargs
+            keyword arguments to pass to QAMmodulator.generate_signal
+
+        Returns
+        -------
+        symbols : array_like
+            data frame with pilots
+        data : array_like
+            data symbols
+        pilots : array_like
+            pilot sequence
+        """
+        if pilot_ins_rat is 0 or pilot_ins_rat is None:
+            N_ph_frames = 0
+        else:
+            if (frame_len - pilot_seq_len)%pilot_ins_rat != 0:
+                raise ValueError("Frame without pilot sequence divided by pilot rate needs to be an integer")
+            N_ph_frames = (frame_len - pilot_seq_len)//pilot_ins_rat
+        N_pilots = pilot_seq_len + N_ph_frames
+        out_symbs = np.zeros([ndim, frame_len], dtype=complex)
+        self.mod_pilot.generate_signal(N_pilots, None, ndim=ndim, **kwargs)
+        out_symbs[:, :pilot_seq_len] = self.mod_pilot.symbols_tx[:, :pilot_seq_len]
+        if N_ph_frames:
+            if not pilot_ins_rat == 1:
+                self.mod_data.generate_signal(N_ph_frames * (pilot_ins_rat -1), None, ndim=ndim, **kwargs)
+                # Note that currently the phase pilots start one symbol after the sequence
+                # TODO: we should probably fix this
+                out_symbs[:, pilot_seq_len::pilot_ins_rat] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
+                for j in range(N_pilots):
+                    out_symbs[:, pilot_seq_len + j * pilot_ins_rat + 1:
+                          pilot_seq_len + (j + 1) * pilot_ins_rat] = \
+                        self.mod_data.symbols_tx[:, j * (pilot_ins_rat - 1):(j + 1) * (pilot_ins_rat - 1)]
+            else:
+                out_symbs[:, pilot_seq_len:] = self.mod_pilot.symbols_tx[:, pilot_seq_len:]
+        else:
+            self.mod_data.generate_signal(frame_len-pilot_seq_len, None, ndim=ndim, **kwargs)
+            out_symbs[:, pilot_seq_len:] = self.mod_data.symbols_tx[:,:]
+        self.symbols_tx = out_symbs
+        self.pilot_ins_rat = pilot_ins_rat
+        self.pilot_seq_len = pilot_seq_len
+        if pilot_ins_rat == 1:
+            return out_symbs, np.array([], dtype=complex), self.mod_pilot.symbols_tx
+        return out_symbs, self.mod_data.symbols_tx, self.mod_pilot.symbols_tx
+
+    @property
+    def pilot_seq(self):
+        return self.mod_pilot.symbols_tx[:, :self.pilot_seq_len]
+
+    @property
+    def ph_pilots(self):
+        return self.mod_pilot.symbols_tx[:, self.pilot_seq_len::self.pilot_ins_rat]
+
+
+class TDHQAMModulator(object):
+    def __init__(self, M1, M2, fr, power_method="dist", snr=None):
+        """
+        Time-domain hybrid QAM (TDHQAM) modulator with two QAM-orders.
+
+        Parameters
+        ----------
+        M1 : integer
+            QAM order of the first part.
+        M2 : integer
+            QAM order of the second part
+        fr : float
+            fraction of the second format of the overall frame length
+        power_method : string, optional
+            method to calculate the power ratio of the different orders, currently on "dist" is implemented
+        snr : float
+            Design signal-to-noise ratio needed when using BER for calculation of the power ratio, currently does nothing
+        """
+        if power_method is "ber":
+            assert snr is not None, "snr needs to be given to calculate the power ratio based on ber"
+        self.M1 = M1
+        self.M2 = M2
+        self.fr = fr
+        self.mod_M1 = QAMModulator(M1)
+        if power_method is "dist":
+            d1 = np.min(abs(np.diff(np.unique(self.mod_M1.symbols))))
+            M2symbols = theory.cal_symbols_qam(M2)
+            d2 = np.min(abs(np.diff(np.unique(M2symbols))))
+            scf = (d2/d1)**2
+            self.mod_M2 = QAMModulator(M2, scaling_factor=scf)
+        else:
+            raise NotImplementedError("no other methods are implemented yet")
+
+    def generate_signal(self, N, ndim=1, **kwargs):
+        """
+        Generate a hybrid qam signal
+
+        Parameters
+        ----------
+        N : integer
+            length of the signal
+        ndim : integer, optional
+            number of dimensions (modes, polarizations)
+        kwargs
+            arguments to pass to the modulator signal generations
+
+        Returns
+        -------
+        out : array_like
+            hybrid qam signal
+        """
+        ratn = fractions.Fraction(self.fr).limit_denominator()
+        f_M2 = ratn.numerator
+        f_M = ratn.denominator
+        f_M1 = f_M - f_M2
+        frms = N//f_M
+        frms_rem = N%f_M
+        N1 = frms * f_M1
+        N2 = frms * f_M2
+        out = np.zeros((ndim, N), dtype=np.complex128)
+        if frms_rem:
+            mi1 = min(f_M1, frms_rem)
+            N1 += mi1
+            frms_rem -= mi1
+            if frms_rem > 0:
+                assert frms_rem < f_M2, "remaining symbols should be less than symbol 2 frames"
+                N2 += frms_rem
+        sig1, sym1, bits1, = self.mod_M1.generate_signal(N1, None, ndim=ndim, **kwargs)
+        sig2, sym2, bits2, = self.mod_M2.generate_signal(N2, None, ndim=ndim, **kwargs)
+        idx = np.arange(N)
+        idx1 = idx%f_M < f_M1
+        idx2 = idx%f_M >= f_M1
+        out[:,idx1] = sym1
+        out[:,idx2] = sym2
+        self.symbols_tx = out
+        return out
+
+
 
 

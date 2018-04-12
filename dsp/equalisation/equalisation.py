@@ -9,7 +9,7 @@ from ..segmentaxis import segment_axis
 #TODO: update documentation with all references
 
 """
-Equalisation functions the equaliser update functions provided are:
+    Equalisation functions the equaliser update functions provided are:
 
 No decision based:
 -----------------
@@ -42,12 +42,12 @@ References
 
 #TODO: include selection for either numba or cython code
 try:
-    from .equaliser_cython import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from .equaliser_cython import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, ErrorFct
 except:
     #use python code if cython code is not available
     #raise Warning("can not use cython training functions")
-    from .equaliser_numba import train_eq, ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from .equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
 
 TRAINING_FCTS = ["cma", "mcma",
@@ -64,12 +64,12 @@ def _select_errorfct(method, M, **kwargs):
         return ErrorFctCMA(_cal_Rconstant(M))
     elif method in ["rde"]:
         p, c = generate_partition_codes_radius(M)
-        return RDEErr(p, c)
+        return ErrorFctRDE(p, c)
     elif method in ["mrde"]:
         p, c = generate_partition_codes_complex(M)
         return ErrorFctMRDE(p, c)
     elif method in ["sca"]:
-        return SCAErr(_cal_Rsca(M))
+        return ErrorFctSCA(_cal_Rsca(M))
     elif method in ["cme"]:
         syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
         d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
@@ -85,7 +85,7 @@ def _select_errorfct(method, M, **kwargs):
             r4 = np.mean(abs(syms)**4)
             A = r4/r2
             beta = np.max(abs(syms*abs(syms)**2-A))/2
-        return CMEErr(R, d, beta)
+        return ErrorFctCME(R, d, beta)
     elif method in ['sbd']:
         return ErrorFctSBD(cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M)))
     elif method in ['mddma']:
@@ -123,26 +123,31 @@ def apply_filter(E, os, wxy):
     E = np.atleast_2d(E)
     pols = E.shape[0]
     Ntaps = wxy[0].shape[1]
-    
     X1 = segment_axis(E[0], Ntaps, Ntaps-os)
     X = X1
     ww = wxy[0].flatten()
+
+    # Case for a butterfly-configured EQ
     if pols > 1:
         for pol in range(1,pols):
-            X_P = segment_axis(E[pol], Ntaps, Ntaps-os)
+            X_P = segment_axis(E[pol], Ntaps,Ntaps-os)
             X = np.hstack([X,X_P])
-            ww = np.vstack((ww,wxy[pol].flatten()))
-    
-    Eest = np.dot(X, ww.transpose())
-    if pols > 1:
+            ww = np.vstack([ww,wxy[pol].flatten()])
+
+        # Compute the output
+        Eest = np.dot(X,ww.transpose())
+
+        # Extract the error (per butterfly entry)
         Eest_tmp = Eest[:,0]
         for pol in range(1,pols):
             Eest_tmp = np.vstack([Eest_tmp,Eest[:,pol]])
         Eest = Eest_tmp
+
+    # Single mode EQ
     else:
+        Eest = np.dot(X, ww.transpose())
         Eest = np.atleast_2d(Eest)
-    
-    
+
     return Eest
 
 def _cal_Rdash(syms):
@@ -170,23 +175,6 @@ def _init_taps(Ntaps, pols):
     wx = np.zeros((pols, Ntaps), dtype=np.complex128)
     wx[0, Ntaps // 2] = 1
     return wx
-
-def _init_orthogonaltaps(wx):
-    wy = np.zeros(wx.shape, dtype=np.complex128)
-    # initialising the taps to be ortthogonal to the x polarisation
-    wy = -np.conj(wx)[::-1,::-1]
-    # centering the taps
-    wXmaxidx = np.unravel_index(np.argmax(abs(wx)), wx.shape)
-    wYmaxidx = np.unravel_index(np.argmax(abs(wy)), wy.shape)
-    delay = abs(wYmaxidx[1] - wXmaxidx[1])
-    pad = np.zeros((2, delay), dtype=np.complex128)
-    if delay > 0:
-        wy = wy[:, delay:]
-        wy = np.hstack([wy, pad])
-    elif delay < 0:
-        wy = wy[:, 0:Ntaps - delay - 1]
-        wy = np.hstack([pad, wy])
-    return wy
 
 def generate_partition_codes_complex(M):
     """
@@ -245,22 +233,26 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     # scale signal
     E = utils.normalise_and_center(E)
     if wxy is None:
-        wxy = [_init_taps(Ntaps, pols),]
-        if pols == 2:
-            wy = _init_orthogonaltaps(wxy[0])
-            wxy = [wxy[0],wy]
+        # Allocate matrix and set first taps
+        wxy = np.zeros((pols,pols,Ntaps), dtype=np.complex128)
+        wxy[0] = _init_taps(Ntaps, pols)
+        
+        # Add orthogonal taps to all other modes
+        if pols > 1:
+            for pol in range(1,pols):
+                wxy[pol] = np.roll(wxy[0],pol,axis=0)
+            
     else:
+        wxy = np.asarray(wxy)
         if pols > 1:
             Ntaps = wxy[0].shape[1]
         else:
             try:
-#               The following code makes no sense??? MIkael
                 wxy = wxy.flatten()
                 Ntaps = len(wxy)
-                wxy = [wxy.copy(),]
+                wxy = np.asarray([wxy.copy(),])
             except:
                 Ntaps = len(wxy[0])
-
     if not TrSyms:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
@@ -339,8 +331,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     M       : integer
         QAM order
 
-    wxy     : tuple(array_like, array_like), optional
-        tuple of the wx and wy filter taps. Either this or Ntaps has to be given.
+    wxy     : array_like optional
+        the wx and wy filter taps. Either this or Ntaps has to be given.
 
     Ntaps   : int
         number of filter taps. Either this or wxy need to be given. If given taps are initialised as [00100]
@@ -376,82 +368,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             if print_itt:
                 print("Pol-%d - LMS iteration %d"%(l,i))
             err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
-        #TODO: adjust for more than two polarizations
-        if l < 1:
-            wxy[1] = _init_orthogonaltaps(wxy[0])
     return wxy, err
 
-#
-#def CDcomp(E, fs, N, L, D, wl):
-#    """
-#    Static chromatic dispersion compensation of a single polarisation signal using overlap-add.
-#    All units are assumed to be SI.
-#
-#    Parameters
-#    ----------
-#    E  : array_like
-#       single polarisation signal
-#
-#    fs   :  float
-#       sampling rate
-#
-#    N    :  int
-#       block size (N=0, assumes cyclic boundary conditions and uses a single FFT/IFFT)
-#
-#    L    :  float
-#       length of the compensated fibre
-#
-#    D    :  float
-#       dispersion
-#
-#    wl   : float
-#       center wavelength
-#
-#    Returns
-#    -------
-#
-#    sigEQ : array_like
-#       compensated signal
-#    """
-#    E = E.flatten()
-#    samp = len(E)
-#    #wl *= 1e-9
-#    #L = L*1.e3
-#    c = 2.99792458e8
-#    #D = D*1.e-6
-#    if N == 0:
-#        N = samp
-#
-##    H = np.zeros(N,dtype='complex')
-#    H = np.arange(0, N) + 1j * np.zeros(N, dtype='float')
-#    H -= N // 2
-#    H *= H
-#    H *= np.pi * D * wl**2 * L * fs**2 / (c * N**2)
-#    H = np.exp(-1j * H)
-#    #H1 = H
-#    H = np.fft.fftshift(H)
-#    if N == samp:
-#        sigEQ = np.fft.fft(E)
-#        sigEQ *= H
-#        sigEQ = np.fft.ifft(sigEQ)
-#    else:
-#        n = N // 2
-#        zp = N // 4
-#        B = samp // n
-#        sigB = np.zeros(N, dtype=np.complex128)
-#        sigEQ = np.zeros(n * (B + 1), dtype=np.complex128)
-#        sB = np.zeros((B, N), dtype=np.complex128)
-#        for i in range(0, B):
-#            sigB = np.zeros(N, dtype=np.complex128)
-#            sigB[zp:-zp] = E[i * n:i * n + n]
-#            sigB = np.fft.fft(sigB)
-#            sigB *= H
-#            sigB = np.fft.ifft(sigB)
-#            sB[i, :] = sigB
-#            sigEQ[i * n:i * n + n + 2 * zp] = sigEQ[i * n:i * n + n + 2 *
-#                                                    zp] + sigB
-#        sigEQ = sigEQ[zp:-zp]
-#    return sigEQ
 
 
 def CDcomp(E, fs, N, L, D, wl):
@@ -487,10 +405,8 @@ def CDcomp(E, fs, N, L, D, wl):
     """
     E = E.flatten()
     samp = len(E)
-    #wl *= 1e-9
-    #L = L*1.e3
+
     c = 2.99792458e8
-    #D = D*1.e-6
     if N == 0:
         N = samp
 
@@ -504,7 +420,6 @@ def CDcomp(E, fs, N, L, D, wl):
 
     omega = np.pi * fs * np.linspace(-1,1,N,dtype = complex)
     beta2 = D * wl**2 / (c * 2 * np.pi)
-
 
     H = np.exp(-.5j * omega**2 * beta2 * L )
     #H1 = H

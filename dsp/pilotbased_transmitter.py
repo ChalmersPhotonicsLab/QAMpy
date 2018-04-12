@@ -101,6 +101,7 @@ def gen_dataframe_without_phasepilots(M,npols, frame_length = 2**18, pilot_seq_l
     
     return symbol_seq, data_symbs, pilot_symbs
 
+
 def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1),npols=2, frame_length = 2**18, pilot_seq_len = 256, pilot_ins_ratio = 32):
 
 
@@ -183,7 +184,7 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
     return symbol_seq, data_symbs, pilot_symbs
 
 
-def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, symb_rate=24e9, freqoff=None, linewidth=None, rot_angle=None,taps=None):
+def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, symb_rate=24e9, freqoff=None, linewidth=None, rot_angle=None):
     """
     Function to simulate transmission distortions to pilot frame
 
@@ -194,7 +195,7 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
 
     for l in range(npols):
 
-        curr_frame = np.tile(frame[l, :],5)
+        curr_frame = np.tile(frame[l, :],num_frames)
 
         # Add modal delays, this can be used to emulate things like fake-pol. mux. when the frames are not aligned.
         if modal_delay is not None:
@@ -204,10 +205,7 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
 
         # Upsample and pulse shaping
         if os > 1:
-            if taps is None:
-                sig[l, :] = resample.rrcos_resample_zeroins(curr_frame, 1, os, beta=beta, renormalise=True)
-            else:
-                sig[l, :] = resample.rrcos_resample_poly(curr_frame,1,os,beta=beta,renormalise=True,taps=taps)
+            sig[l, :] = resample.rrcos_resample(curr_frame, 1, os, beta=beta, renormalise=True)
 
         # Add AWGN
         if snr is not None:
@@ -219,7 +217,7 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
 
         # Add Phase Noise
         if linewidth is not None:
-            sig[l, :] = sig[l, :] * np.exp(1j * impairments.phase_noise(sig[l, :].shape, linewidth, symb_rate * os))
+            sig[l, :] = impairments.apply_phase_noise(sig[l, :], linewidth, symb_rate * os)
 
         # Verfy normalization
         sig = utils.normalise_and_center(sig)
