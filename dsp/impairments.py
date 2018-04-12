@@ -112,8 +112,11 @@ def phase_noise(sz, df, fs):
     """
     var = 2*np.pi*df/fs
     f = np.random.normal(scale=np.sqrt(var), size=sz)
-    return np.cumsum(f, axis=1)
-
+    if len(f.shape) > 1:
+        return np.cumsum(f, axis=1)
+    else:
+        return np.cumsum(f)
+    
 def apply_phase_noise(signal, df, fs):
     """
     Add phase noise from local oscillators, based on a Wiener noise process.
@@ -136,8 +139,9 @@ def apply_phase_noise(signal, df, fs):
        output signal with phase noise
 
     """
-    N = signal.shape
+    N = signal.shape[0]
     ph = phase_noise(N, df, fs)
+
     return signal*np.exp(1.j*ph)
 
 def add_awgn(sig, strgth):
