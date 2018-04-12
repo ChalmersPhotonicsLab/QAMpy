@@ -8,8 +8,7 @@ from scipy import signal
 def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, os=2, M=128, Numtaps=(17, 45),
                        frame_length=2 ** 16, method=('cma', 'cma'), pilot_seq_len=512, pilot_ins_ratio=32,
                        Niter=(10, 30), mu=(1e-3, 1e-3), adap_step=(True, True), cpe_average=5, use_cpe_pilot_ratio=1,
-                       remove_inital_cpe_output=True, remove_phase_pilots=True, do_pilot_based_foe=True,
-                       foe_symbs=None, blind_foe_payload=False):
+                       remove_inital_cpe_output=True, remove_phase_pilots=True):
 
     rec_signal = np.atleast_2d(rec_signal)
     tap_cor = int((Numtaps[1] - Numtaps[0]) / 2)
@@ -29,10 +28,7 @@ def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, os
                                                                                             frame_length=frame_length,
                                                                                             mu=mu, method=method,
                                                                                             ntaps=Numtaps, Niter=Niter,
-                                                                                            adap_step=adap_step,
-                                                                                            do_pilot_based_foe=do_pilot_based_foe,
-                                                                                            foe_symbs=foe_symbs,
-                                                                                            blind_foe_payload=blind_foe_payload)
+                                                                                            adap_step=adap_step)
 
     # DSP for the payload: Equalization, FOE, CPE. All pilot-aided
     dsp_sig_out = []
@@ -68,8 +64,7 @@ def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, os
 def run_joint_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, os=2, M=128, Numtaps=(17, 45),
                        frame_length=2**16, method=('cma', 'cma'), pilot_seq_len=512, pilot_ins_ratio=32,
                        Niter=(10, 30), mu=(1e-3, 1e-3), adap_step=(True, True), cpe_average=5, use_cpe_pilot_ratio=1,
-                       remove_inital_cpe_output=True, remove_phase_pilots=True, do_pilot_based_foe=True,
-                       foe_symbs=None, blind_foe_payload=False,ch_sep=2):
+                       remove_inital_cpe_output=True, remove_phase_pilots=True,ch_sep=2):
 
     # Check for propper dim
     if not len(rec_signal) == 3:
@@ -102,9 +97,7 @@ def run_joint_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=Fal
                                                                                             mu=mu, method=method,
                                                                                             ntaps=Numtaps, Niter=Niter,
                                                                                             adap_step=adap_step,
-                                                                                            do_pilot_based_foe=do_pilot_based_foe,
-                                                                                            foe_symbs=foe_symbs,
-                                                                                            blind_foe_payload=blind_foe_payload,ch_sep=ch_sep)
+                                                                                            ch_sep=ch_sep)
 
 
 
@@ -180,7 +173,7 @@ def pre_filter(signal, bw, os,center_freq = 0):
 
 
 
-def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
+def sim_sep(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
 
     # Select Rx channel
     sel_wdm_ch = np.array([-1,0,1])
@@ -188,7 +181,7 @@ def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
     # If wanted, plot the output results. 
     plot_results = False
 
-
+    ch_sep = 25/Rs
     
     
     # Over sampling settings and WDM configuration
@@ -202,6 +195,7 @@ def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
     npols = 2
 #    beta = 0.1
     laser_lw = 10e3*0
+    # laser_lw = None
     #sig_snr = 35
     freq_off = 200e6*0
     # Pilot DSP configuration
@@ -234,7 +228,7 @@ def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
         # Simulate tyransmission
     
         sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
-                                                        linewidth=laser_lw,beta=beta,taps=taps)
+                                                        linewidth=laser_lw,beta=beta)
            
         # Add signal to Rx structure. 
         sig_wdm_ch.append(sig_tmp)
@@ -265,7 +259,7 @@ def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
         for l in range(npols):
             #rx_sig_ch[l] = pre_filter(rx_sig_ch[l],rx_filter_bw,os_tx,center_freq=sel_ch*ch_sep)
             if (sel_ch) != 0:               
-               rx_sig_ch[l] *= np.exp(-1j*2*np.pi*(sel_ch+8e-6)*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
+               rx_sig_ch[l] *= np.exp(-1j*2*np.pi*sel_ch*ch_sep*np.linspace(0,rx_sig.shape[1]/os_tx,rx_sig.shape[1]))
                rx_sig_ch[l] = pre_filter(rx_sig_ch[l],rx_filter_bw/2,os_tx,center_freq=sel_ch*ch_sep/2)
             else:
                rx_sig_ch[l] = pre_filter(rx_sig_ch[l],rx_filter_bw,os_tx,center_freq=sel_ch*ch_sep)
@@ -284,8 +278,8 @@ def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
         rx_sig = utils.orthonormalize_signal(rx_wdm_sigs[wdm_ch])
 
         # Resample for DSP
-        rx_x = resample.rrcos_resample_zeroins(rx_sig[0].flatten(), os_tx, os_rx, Ts=1/os_rx, beta=beta, renormalise = True)
-        rx_y = resample.rrcos_resample_zeroins(rx_sig[1].flatten(), os_tx, os_rx, Ts=1/os_rx, beta=beta, renormalise = True)
+        rx_x = resample.rrcos_resample(rx_sig[0].flatten(), os_tx, os_rx, Ts=1/os_rx, beta=beta, renormalise = True)
+        rx_y = resample.rrcos_resample(rx_sig[1].flatten(), os_tx, os_rx, Ts=1/os_rx, beta=beta, renormalise = True)
         rx_wdm_sigs_resample.append(np.vstack((rx_x,rx_y)))
     
 #        rx_x = resample.resample_poly(rx_sig[0].flatten(), os_tx, os_rx, renormalise = True)
@@ -300,11 +294,11 @@ def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
     # Run DSP
     dsp_out_single = run_pilot_receiver(rx_wdm_sigs_resample[sel_ref_ch],pilot_symbs[sel_ref_ch], 
                                  frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, 
-                                 pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx)
+                                 pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx,Numtaps=(17,Ntaps), mu = (1e-3, 1e-3), method=("cma","sbd"))
     
     dsp_out = run_joint_pilot_receiver(rx_wdm_sigs_resample,pilot_symbs, 
-                                 frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, 
-                                 pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx,ch_sep=ch_sep,mu=(1e-3,1e-3),method=("cma","cma"))
+                                 frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, Numtaps=(17,Ntaps),
+                                 pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= os_rx,ch_sep=ch_sep,mu=(1e-3,1e-3),method=("cma","sbd"))
     
     # Calculate GMI
     mod = modulation.QAMModulator(M)
@@ -345,37 +339,46 @@ def sim_sep(ch_sep,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,taps=None):
 ch_sep_array = np.arange(1.3,0.8,-.02)
 num_avg = 3
 
-
+Ntaps=15
 snr_test = np.arange(40,15,-2)
 beta_test =  np.arange(0.0,.2,.01)
+Rs = np.arange(24.5,25.5,.1)
+
+
+snr_test = np.arange(40,15,-5)
+beta_test =  np.arange(0.0,.2,.02)
+Rs = np.arange(24.4,25.7,.2)
+
 #beta_test = np.array([0.01,0.03,0.05,0.1,0.2,0.5])
-gmi_res_joint = np.zeros([snr_test.shape[0],beta_test.shape[0]])
-gmi_res_single= np.zeros([snr_test.shape[0],beta_test.shape[0]])
-ber_res_joint = np.zeros([snr_test.shape[0],beta_test.shape[0]])
-ber_res_single= np.zeros([snr_test.shape[0],beta_test.shape[0]])
+gmi_res_joint = np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
+gmi_res_single= np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
+ber_res_joint = np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
+ber_res_single= np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
 
-M=64
+M=256
+for r in range(Rs.shape[0]):
+    for s in range(snr_test.shape[0]):
+        for b in range(beta_test.shape[0]):
+            gmi_joint_tmp = np.zeros(num_avg)
+            gmi_single_tmp = np.zeros(num_avg)
+            ber_joint_tmp = np.zeros(num_avg)
+            ber_single_tmp = np.zeros(num_avg)
+            for n in range(num_avg):
+                print("SNR: %d, Beta: %1.2f, Avg. Ind: %d"%(snr_test[s],beta_test[b],n))
+                gmi1,gmi2,ber1,ber2 = sim_sep(Rs[r], beta=beta_test[b],sig_snr=snr_test[s],M=M,Ntaps=Ntaps)
+                gmi_joint_tmp[n] = np.sum(gmi1)
+                gmi_single_tmp[n] = np.sum(gmi2)
+                ber_joint_tmp[n] = np.mean(ber1)
+                ber_single_tmp[n] = np.mean(ber2)
+            gmi_res_joint[r,s,b] = np.mean(gmi_joint_tmp)
+            gmi_res_single[r,s,b] = np.mean(gmi_single_tmp)
+            ber_res_joint[r,s,b] = np.mean(ber_joint_tmp)
+            ber_res_single[r,s,b] = np.mean(ber_single_tmp)
+            print("Rs: %2.1f, SNR: %d, Beta: %1.2f, GMI-Joint: %2.2f, GMI-Ind. %2.2f"%
+                  (Rs[r], snr_test[s],beta_test[b],gmi_res_joint[r,s,b],gmi_res_single[r,s,b]))
 
-for s in range(snr_test.shape[0]):
-    for b in range(beta_test.shape[0]):
-        gmi_joint_tmp = np.zeros(num_avg)
-        gmi_single_tmp = np.zeros(num_avg)
-        for n in range(num_avg):
-            print("SNR: %d, Beta: %1.2f, Avg. Ind: %d"%(snr_test[s],beta_test[b],n))
-            gmi1,gmi2,ber1,ber2 = sim_sep(0.988, beta=beta_test[b],sig_snr=snr_test[s],M=M)
-            gmi_joint_tmp[n] = np.sum(gmi1)
-            gmi_single_tmp[n] = np.sum(gmi2)
-            ber_res_joint[n] = np.mean(ber1)
-            ber_res_single[n] = np.mean(ber2)
-        gmi_res_joint[s,b] = np.mean(gmi_joint_tmp)
-        gmi_res_single[s,b] = np.mean(gmi_single_tmp)
-        ber_res_joint[s,b] = np.mean(ber_res_joint)
-        ber_res_single[s,b] = np.mean(ber_res_single)
-        print("SNR: %d, Beta: %1.2f, GMI-Joint: %2.2f, GMI-Ind. %2.2f"%
-              (snr_test[s],beta_test[b],gmi_res_joint[s,b],gmi_res_single[s,b]))
-
-np.savez("SNR_Beta_25.2Gbaud0MHzGuardband_SimTest_%dQAM"%M,snr_test=snr_test,beta_test=beta_test,gmi_res_joint=gmi_res_joint,
-         gmi_res_single=gmi_res_single,ber_res_joint=ber_res_joint,ber_res_single=ber_res_single)
+np.savez("Sim_JointEq_%dQAM_NumTaps_%d"%(M,Ntaps),Rs=Rs,snr_test=snr_test,beta_test=beta_test,gmi_res_joint=gmi_res_joint,
+         gmi_res_single=gmi_res_single,ber_res_joint=ber_res_joint,ber_res_single=ber_res_single,Ntaps=Ntaps)
 
 
 #gmi_joint_0p8 = np.zeros([ch_sep_array.shape[0],num_avg])
