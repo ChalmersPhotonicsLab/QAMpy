@@ -155,7 +155,7 @@ def apply_filter_to_signal(complexing[:,:] E, int os, complexing[:,:,:] wx):
     cdef int modes = E.shape[0]
     cdef int L = E.shape[1]//os
     cdef int Ntaps = wx.shape[2]
-    cdef ssize_t i, j
+    cdef int i,j
     cdef complexing Xest = 0
     output = np.zeros((modes, L-Ntaps), dtype="c%d"%E.itemsize)
     for j in range(modes):
