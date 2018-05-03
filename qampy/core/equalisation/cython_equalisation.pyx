@@ -78,8 +78,8 @@ def make_decision(complexing[:] E, complexing[:] symbols):
     sigsyms : array_like
         array of detected symbols
     """
-    cdef unsigned int L = E.shape[0]
-    cdef unsigned int M = symbols.shape[0]
+    cdef int L = E.shape[0]
+    cdef int M = symbols.shape[0]
     cdef int i, j, k
     cdef double distd
     cdef float distf
