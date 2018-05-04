@@ -169,9 +169,34 @@ def pre_filter(signal, bw, os,center_freq = 0):
 
 
 
+def quantize_signal(sig, nbits=6, rescale=True, re_normalize=True):
+    """
+    Function so simulate limited resultion using DACs and ADCs
+    """
+    # Create a 2D signal
+    sig = np.atleast_2d(sig)
+    npols=sig.shape[0]
+    
+    # Rescale to 
+    if rescale:
+        for pol in range(npols):
+            sig[pol] /= np.abs(sig[pol]).max()
+    
+    levels = np.linspace(-1,1,2**(nbits))
 
+    sig_out = np.zeros(sig.shape,dtype="complex")
+    for pol in range(npols):
+        sig_quant_re = levels[np.digitize(sig[pol].real,levels[:-1],right=False)]
+        sig_quant_im = levels[np.digitize(sig[pol].imag,levels[:-1],right=False)]
+        sig_out[pol] = sig_quant_re + 1j*sig_quant_im
 
-
+    if not np.iscomplexobj(sig):
+        sig_out = sig_out.real
+    
+    if re_normalize:
+        sig_out = utils.normalise_and_center(sig_out)    
+    
+    return sig_out
 
 def sim_sep(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
 
@@ -228,7 +253,7 @@ def sim_sep(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
         # Simulate tyransmission
     
         sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
-                                                        linewidth=laser_lw,beta=beta)
+                                                        linewidth=laser_lw,beta=beta,num_frames=3)
            
         # Add signal to Rx structure. 
         sig_wdm_ch.append(sig_tmp)
@@ -339,15 +364,15 @@ def sim_sep(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
 ch_sep_array = np.arange(1.3,0.8,-.02)
 num_avg = 3
 
-Ntaps=15
-snr_test = np.arange(40,15,-2)
-beta_test =  np.arange(0.0,.2,.01)
-Rs = np.arange(24.5,25.5,.1)
-
-
-snr_test = np.arange(40,15,-5)
+Ntaps=45
+snr_test = np.arange(45,40,-5)
 beta_test =  np.arange(0.0,.2,.02)
-Rs = np.arange(24.4,25.7,.2)
+Rs = np.arange(24.5,25.5,.1)
+rx_filter_bw = 1.4
+
+snr_test = np.arange(45,15,-2)
+beta_test =  np.arange(0.0,.3,.01)
+Rs = np.arange(24.0,26.6,.2)
 
 #beta_test = np.array([0.01,0.03,0.05,0.1,0.2,0.5])
 gmi_res_joint = np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
@@ -355,7 +380,7 @@ gmi_res_single= np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
 ber_res_joint = np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
 ber_res_single= np.zeros([Rs.shape[0],snr_test.shape[0],beta_test.shape[0]])
 
-M=256
+M=32
 for r in range(Rs.shape[0]):
     for s in range(snr_test.shape[0]):
         for b in range(beta_test.shape[0]):
@@ -365,7 +390,7 @@ for r in range(Rs.shape[0]):
             ber_single_tmp = np.zeros(num_avg)
             for n in range(num_avg):
                 print("SNR: %d, Beta: %1.2f, Avg. Ind: %d"%(snr_test[s],beta_test[b],n))
-                gmi1,gmi2,ber1,ber2 = sim_sep(Rs[r], beta=beta_test[b],sig_snr=snr_test[s],M=M,Ntaps=Ntaps)
+                gmi1,gmi2,ber1,ber2 = sim_sep(Rs[r], beta=beta_test[b],sig_snr=snr_test[s],M=M,Ntaps=Ntaps,rx_filter_bw=rx_filter_bw)
                 gmi_joint_tmp[n] = np.sum(gmi1)
                 gmi_single_tmp[n] = np.sum(gmi2)
                 ber_joint_tmp[n] = np.mean(ber1)
@@ -377,7 +402,7 @@ for r in range(Rs.shape[0]):
             print("Rs: %2.1f, SNR: %d, Beta: %1.2f, GMI-Joint: %2.2f, GMI-Ind. %2.2f"%
                   (Rs[r], snr_test[s],beta_test[b],gmi_res_joint[r,s,b],gmi_res_single[r,s,b]))
 
-np.savez("Sim_JointEq_%dQAM_NumTaps_%d"%(M,Ntaps),Rs=Rs,snr_test=snr_test,beta_test=beta_test,gmi_res_joint=gmi_res_joint,
+np.savez("Sim_JointEq_%dQAM_NumTaps_%d_RxBW_%1.1f_DetailedSweeps"%(M,Ntaps,rx_filter_bw),Rs=Rs,snr_test=snr_test,beta_test=beta_test,gmi_res_joint=gmi_res_joint,
          gmi_res_single=gmi_res_single,ber_res_joint=ber_res_joint,ber_res_single=ber_res_single,Ntaps=Ntaps)
 
 
