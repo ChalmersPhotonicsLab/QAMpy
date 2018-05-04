@@ -1,4 +1,5 @@
 import pytest
+import sys
 import numpy as np
 import numpy.testing as npt
 
@@ -513,6 +514,7 @@ class TestTDHybridsSymbols(object):
 
     @pytest.mark.parametrize("r1", np.arange(1, 10))
     @pytest.mark.parametrize("r2", np.arange(1, 10))
+    @pytest.mark.skipif(sys.version_info < (3,5),reason="requires python3.5 or above")
     def test_ratio(self, r1, r2):
         import math
         if math.gcd(r1, r2) > 1:
@@ -536,6 +538,7 @@ class TestTDHybridsSymbols(object):
 
     @pytest.mark.parametrize("r1", np.arange(1, 3))
     @pytest.mark.parametrize("r2", np.arange(1, 3))
+    @pytest.mark.skipif(sys.version_info < (3,5),reason="requires python3.5 or above")
     def test_from_arrays_shape(self, r1, r2):
         import math
         if math.gcd(r1, r2) > 1:
@@ -549,6 +552,7 @@ class TestTDHybridsSymbols(object):
 
     @pytest.mark.parametrize("r1", np.arange(1, 3))
     @pytest.mark.parametrize("r2", np.arange(1, 3))
+    @pytest.mark.skipif(sys.version_info < (3,5),reason="requires python3.5 or above")
     def test_from_arrays_ratio(self, r1, r2):
         import math
         if math.gcd(r1, r2) > 1:
