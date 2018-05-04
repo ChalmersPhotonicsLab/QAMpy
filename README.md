@@ -77,6 +77,6 @@ and is licenced under GPLv3 or later.
 ## Citing
 
 If you use QAMpy in your work please cite us as `Jochen Schröder and Mikael Mazur, "QAMPy a DSP chain for optical 
-communications, DOI: 10.5281/zenodo.1195720"` We will update this with a DOI as soon as possible.
+communications, DOI: 10.5281/zenodo.1195720"`.
 
 
