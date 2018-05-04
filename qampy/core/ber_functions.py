@@ -138,19 +138,19 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
     """
     N_tx = data_tx.shape[0]
     N_rx = data_rx.shape[0]
-    assert adjust is "tx" or adjust is "rx", "adjust need to be either 'tx' or 'rx'"
+    assert adjust == "tx" or adjust == "rx", "adjust need to be either 'tx' or 'rx'"
     if N_tx > N_rx:
         offset, rx, ii = find_sequence_offset_complex(data_rx, data_tx)
-        if adjust is "tx":
+        if adjust == "tx":
             tx = np.roll(data_tx, -offset)
             return adjust_data_length(tx, rx, method="truncate")
-        elif adjust is "rx":
+        elif adjust == "rx":
             tx, rx = adjust_data_length(data_tx, rx, method="extend", offset=offset)
             return tx, rx
             #return tx, np.roll(rx, offset)
     elif N_tx < N_rx:
         offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
-        if adjust is "tx":
+        if adjust == "tx":
             # this is still buggy, I if the length of data_rx is not a multiple of length of tx
             tx, rx = adjust_data_length(tx, data_rx, method="extend", offset=offset)
             return tx, rx
@@ -160,9 +160,9 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
             return adjust_data_length(tx, rx, method="truncate")
     else:
         offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
-        if adjust is "tx":
+        if adjust == "tx":
             return np.roll(tx, offset), data_rx
-        elif adjust is "rx":
+        elif adjust == "rx":
             return tx, np.roll(data_rx, -offset)
 
 def sync_rx2tx(data_tx, data_rx, Lsync, imax=200):
@@ -283,14 +283,14 @@ def adjust_data_length(data_tx, data_rx, method=None, offset=0):
             return data_tx, data_rx
         else:
             return data_tx, data_rx
-    elif method is "truncate":
+    elif method == "truncate":
         if len(data_tx) > len(data_rx):
             return data_tx[:len(data_rx)], data_rx
         elif len(data_tx) < len(data_rx):
             return data_tx, data_rx[:len(data_tx)]
         else:
             return data_tx, data_rx
-    elif method is "extend":
+    elif method == "extend":
         if len(data_tx) > len(data_rx):
             if offset == 0:
                 data_rx = _adjust_to(data_rx, data_tx.shape[0])

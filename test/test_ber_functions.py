@@ -86,9 +86,9 @@ class TestSyncAndAdjust(object):
         N = self.s.shape[1]
         syms = self.s.symbols[0]
         tx, rx = ber_functions.sync_and_adjust(sig[:N1], sig[:N2], adjust=adjust)
-        if N1 is None and adjust is "tx":
+        if N1 is None and adjust == "tx":
             assert (tx.shape[0] == N2) and (rx.shape[0] == N2)
-        elif N2 is None and adjust is "rx":
+        elif N2 is None and adjust == "rx":
             assert (tx.shape[0] == N1) and (rx.shape[0] == N1)
         else:
             assert (tx.shape[0] == N) and (rx.shape[0] == N)
