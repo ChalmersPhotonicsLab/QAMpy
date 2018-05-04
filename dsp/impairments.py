@@ -1,5 +1,5 @@
 import numpy as np
-
+from utils import normalise_and_center
 
 def H_PMD(theta, t_dgd, omega):
     """
@@ -250,3 +250,41 @@ def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=
         sig = apply_PMD_to_field(sig, theta, dgd, fs)
     return sig
 
+def quantize_signal(sig, nbits=6, rescale=True, re_normalize=True):
+    """
+    Function so simulate limited resultion using DACs and ADCs
+    
+    Parameters:
+        sig:            Input signal, numpy array
+        nbits:          Quantization resultion
+        rescale:        Rescale to range p/m 1, default True
+        re_normalize:   Renormalize signal after quantization
+        
+    Returns:
+        sig_out:        Output quantized waveform
+    
+    """
+    # Create a 2D signal
+    sig = np.atleast_2d(sig)
+    npols=sig.shape[0]
+    
+    # Rescale to 
+    if rescale:
+        for pol in range(npols):
+            sig[pol] /= np.abs(sig[pol]).max()
+    
+    levels = np.linspace(-1,1,2**(nbits))
+
+    sig_out = np.zeros(sig.shape,dtype="complex")
+    for pol in range(npols):
+        sig_quant_re = levels[np.digitize(sig[pol].real,levels[:-1],right=False)]
+        sig_quant_im = levels[np.digitize(sig[pol].imag,levels[:-1],right=False)]
+        sig_out[pol] = sig_quant_re + 1j*sig_quant_im
+
+    if not np.iscomplexobj(sig):
+        sig_out = sig_out.real
+    
+    if re_normalize:
+        sig_out = normalise_and_center(sig_out)    
+    
+    return sig_out
