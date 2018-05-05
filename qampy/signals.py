@@ -228,12 +228,12 @@ class SignalBase(np.ndarray):
         if tx.shape == rx.shape:
             return tx, rx
         nm = tx.shape[0]
-        if which is "tx":
+        if which == "tx":
             if tx.shape[1] > rx.shape[1]:
                 method = "truncate"
             else:
                 method = "extend"
-        elif which is "rx":
+        elif which == "rx":
             if tx.shape[1] > rx.shape[1]:
                 method = "extend"
             else:
@@ -1155,7 +1155,7 @@ class TDHQAMSymbols(SignalBase):
         ratio : float
             the ratio of M2 power over M1
         """
-        if method is "dist":
+        if method == "dist":
             d1 = np.min(abs(np.diff(np.unique(M1symbols))))
             d2 = np.min(abs(np.diff(np.unique(M2symbols))))
             scf = (d2 / d1) ** 2

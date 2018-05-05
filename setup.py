@@ -123,6 +123,8 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        'arrayfire': ["arrayfire"],
+        'numba': ["numba>=0.37.0"],
     },
 
     # If there are data files included in your packages that need to be
