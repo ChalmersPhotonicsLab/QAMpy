@@ -87,7 +87,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -115,7 +115,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'scipy', 'bitarray', 'tables'],
+    install_requires=['numpy', 'scipy', 'bitarray', 'tables', 'msgpack', 'msgpack-numpy', 'pyzmq'],
 
     ext_modules = [cython_errorfcts, cython_equalisation, dsp_cython],
     # List additional groups of dependencies here (e.g. development
@@ -123,6 +123,8 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        'arrayfire': ["arrayfire"],
+        'numba': ["numba>=0.37.0"],
     },
 
     # If there are data files included in your packages that need to be
