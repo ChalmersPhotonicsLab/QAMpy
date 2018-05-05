@@ -772,8 +772,27 @@ class SignalQAMGrayCoded(SignalBase):
 
 class QPSKfromBERT(SignalQAMGrayCoded):
     """
+    QPSKfromBERT(N, nmodes=1, fb=1, prbsorders=((15,),(15,)), prbsshifts=(0,0), prbsinvert=(False, False), dtype=np.complex128)
+
+    A QPSK signal where I and Q are generated from either delayed data and data_bar ports or two independent ports of
+    a bit error rate tester.
+
+    Parameters
+    ----------
+    N  : int
+        number of symbols in signal
+    fb : float, optional
+        symbol rate
+    prbsorders : tuple(tuple(int),tuple(int)), optional
+        orders of the PRBS patterns,
+    prbsshifts : tuple(int, int), optional
+        optional delay of the I and Q PRBS patterns
+    prbsinvert : tuple(bool, bool), optional
+        wether one of the two patterns is inverted, this is needed if a data_bar port is used
+    dtype : np.dtype, optional
+            dtype of the signal, must be one of np.complex128 or np.complex64
     """
-    def __new__(cls, N, nmodes=1, fb=1, prbsorders=((15,),(15,)), prbsshifts=(0,0), prbsinvert=(False, False), dtype=np.complex128, **kwargs):
+    def __new__(cls, N, nmodes=1, fb=1, prbsorders=((15,),(15,)), prbsshifts=(0,0), prbsinvert=(False, False), dtype=np.complex128):
         assert dtype in [np.complex128, np.complex64], "only np.complex128 and np.complex64  or None dtypes are supported"
         M = 4
         scale = np.sqrt(theory.cal_scaling_factor_qam(M))
