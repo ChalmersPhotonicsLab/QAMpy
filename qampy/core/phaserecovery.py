@@ -413,7 +413,7 @@ def find_freq_offset(sig, os=1, average_over_modes = True, fft_size = 2**16):
 
     """
     if not((np.log2(fft_size)%2 == 0) | (np.log2(fft_size)%2 == 1)):
-        fft_size = 2**(np.ceil(np.log2(fft_size)))
+        fft_size = 2**(int(np.ceil(np.log2(fft_size))))
 
     # Fix number of stuff
     sig = np.atleast_2d(sig)
