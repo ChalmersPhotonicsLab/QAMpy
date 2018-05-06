@@ -17,7 +17,7 @@ def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, os
     ref_symbs = (pilot_symbs[:, :pilot_seq_len])
 
     # Frame sync, locate first frame
-    shift_factor, corse_foe = pilotbased_receiver.frame_sync(rec_signal, ref_symbs, os, frame_length=frame_length,
+    shift_factor, corse_foe, mode_alignemnt = pilotbased_receiver.frame_sync(rec_signal, ref_symbs, os, frame_length=frame_length,
                                                              mu=mu[0], method=method[0], ntaps=Numtaps[0],
                                                              Niter=Niter[0], adap_step=adap_step[0])
 
@@ -83,7 +83,7 @@ def run_joint_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=Fal
     ref_symbs_wdm = [pilot_symbs[0][:, :pilot_seq_len],pilot_symbs[1][:, :pilot_seq_len],pilot_symbs[2][:, :pilot_seq_len]]
     
     # Frame sync, locate first frame
-    shift_factor, corse_foe = pilotbased_receiver.frame_sync(rec_signal[1], ref_symbs, os, frame_length=frame_length,
+    shift_factor, corse_foe, mode_alignemnt = pilotbased_receiver.frame_sync(rec_signal[1], ref_symbs, os, frame_length=frame_length,
                                                              mu=mu[0], method=method[0], ntaps=Numtaps[0],
                                                              Niter=Niter[0], adap_step=adap_step[0])  
     

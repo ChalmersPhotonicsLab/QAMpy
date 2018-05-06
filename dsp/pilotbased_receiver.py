@@ -196,12 +196,15 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         shift_factor: New starting point for initial equalization
         out_taps: Taps for equalization of the whole signal
         foe_course: Result of blind FOE used to sync the pilot sequence. 
+        mode_sync_order: Synced descrambled reference pattern order
     
     """
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]
+    
+    mode_sync_order = np.zeros(npols) 
     
     # Find the length of the pilot frame
     pilot_seq_len = len(ref_symbs[0,:])
@@ -242,23 +245,28 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         symbs_out = equalisation.apply_filter(longSeq,os,wx1)
         foe_corse = phaserecovery.find_freq_offset(symbs_out)
         symbs_out = phaserecovery.comp_freq_offset(symbs_out, foe_corse)
-
+        
+        
         # Check for pi/2 ambiguties
-        max_phase_rot = np.zeros([4])
-        found_delay = np.zeros([4])
-        for k in range(4):
-            # Find correlation for all 4 possible pi/2 rotations
-            xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[l,:]))
-            max_phase_rot[k] = np.max(np.abs(xcov)**2)
-            found_delay[k] = np.argmax(xcov)
-
-        # Select the best one
-        symb_delay = int(found_delay[np.argmax(max_phase_rot)])
+        max_phase_rot = np.zeros([4,npols])
+        found_delay = np.zeros([4,npols])
+        for ref_pol in range(npols):
+            for k in range(4):
+                # Find correlation for all 4 possible pi/2 rotations
+                xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[ref_pol,:]))
+                max_phase_rot[k,ref_pol] = np.max(np.abs(xcov)**2)
+                found_delay[k,ref_pol] = np.argmax(xcov)
+        
+        
+        max_sync_val = np.argmax(np.max(max_phase_rot,axis=0))
+        mode_sync_order[l] = max_sync_val
+        symb_delay = int(found_delay[np.argmax(max_phase_rot[:,max_sync_val]),max_sync_val])
+               
 
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
 
-    return shift_factor, foe_corse
+    return shift_factor, foe_corse, mode_sync_order
 
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, shift_factor, os, sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma')):
