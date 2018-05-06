@@ -273,6 +273,7 @@ def quantize_signal(sig, nbits=6, rescale=True, re_normalize=True):
         for pol in range(npols):
             sig[pol] /= np.abs(sig[pol]).max()
     
+    
     levels = np.linspace(-1,1,2**(nbits))
 
     sig_out = np.zeros(sig.shape,dtype="complex")

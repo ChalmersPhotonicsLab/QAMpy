@@ -184,7 +184,7 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
     return symbol_seq, data_symbs, pilot_symbs
 
 
-def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, symb_rate=24e9, freqoff=None, linewidth=None, rot_angle=None):
+def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, symb_rate=24e9, freqoff=None, linewidth=None, rot_angle=None,resBits_tx=None,resBits_rx=None):
     """
     Function to simulate transmission distortions to pilot frame
 
@@ -207,6 +207,10 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
         if os > 1:
             sig[l, :] = resample.rrcos_resample(curr_frame, 1, os, beta=beta, renormalise=True)
 
+        # DAC
+        if resBits_tx is not None:
+            sig[l,:] = impairments.quantize_signal(sig[l,:],nbits=resBits_tx)
+
         # Add AWGN
         if snr is not None:
             sig[l, :] = impairments.add_awgn(sig[l, :], 10 ** (-snr / 20) * np.sqrt(os))
@@ -225,5 +229,8 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
     # Currently only implemented for DP signals.
     if (npols == 2) and (rot_angle is not None):
         sig = utils.rotate_field(sig, rot_angle)
-
+        
+    if resBits_rx is not None:
+        for l in range(npols):
+            sig[l,:] = impairments.quantize_signal(sig[l,:],nbits = resBits_rx)
     return sig
