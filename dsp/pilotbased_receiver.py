@@ -204,7 +204,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]
     
-    mode_sync_order = np.zeros(npols)
+    mode_sync_order = np.zeros(npols,dtype=int)
     not_found_modes = np.arange(0,npols)
     
     # Find the length of the pilot frame
