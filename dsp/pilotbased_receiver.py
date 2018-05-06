@@ -204,7 +204,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]
     
-    mode_sync_order = np.zeros(npols) 
+    mode_sync_order = np.zeros(npols)
+    not_found_modes = np.arange(0,npols)
     
     # Find the length of the pilot frame
     pilot_seq_len = len(ref_symbs[0,:])
@@ -247,22 +248,24 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         symbs_out = phaserecovery.comp_freq_offset(symbs_out, foe_corse)
         
         
-        # Check for pi/2 ambiguties
+        # Check for pi/2 ambiguties and verify all 
         max_phase_rot = np.zeros([4,npols])
         found_delay = np.zeros([4,npols])
-        for ref_pol in range(npols):
+        for ref_pol in not_found_modes:
             for k in range(4):
                 # Find correlation for all 4 possible pi/2 rotations
                 xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[ref_pol,:]))
                 max_phase_rot[k,ref_pol] = np.max(np.abs(xcov)**2)
                 found_delay[k,ref_pol] = np.argmax(xcov)
         
-        
+        # Check for which mode found and extract the reference delay
         max_sync_val = np.argmax(np.max(max_phase_rot,axis=0))
         mode_sync_order[l] = max_sync_val
         symb_delay = int(found_delay[np.argmax(max_phase_rot[:,max_sync_val]),max_sync_val])
-               
-
+        
+        # Remove the found reference mode
+        not_found_modes = not_found_modes[not_found_modes != max_sync_val]
+        
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
 
