@@ -1,5 +1,5 @@
 import numpy as np
-from utils import normalise_and_center
+from dsp.utils import normalise_and_center
 
 def H_PMD(theta, t_dgd, omega):
     """
