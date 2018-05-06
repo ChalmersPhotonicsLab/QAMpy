@@ -22,8 +22,6 @@ def run_pilot_receiver(rec_signal, pilot_symbs, process_frame_id=0, sh=False, os
                                                              Niter=Niter[0], adap_step=adap_step[0])
     
     # Redistribute pilots according to found modes
-    print(mode_alignemnt)
-    print(mode_alignemnt.shape)
     pilot_symbs = pilot_symbs[mode_alignemnt,:]
     ref_symbs = ref_symbs[mode_alignemnt,:]
     
@@ -176,7 +174,8 @@ def pre_filter(signal, bw, os,center_freq = 0):
 # Standard function to test DSP
 def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=64, freq_off = None,cpe_avg=8,
                    frame_length = 2**14, pilot_seq_len = 8192, pilot_ins_rat=32,
-                   num_frames=3,modal_delay=None, laser_lw = None):
+                   num_frames=3,modal_delay=None, laser_lw = None, 
+                   resBits_tx=None, resBits_rx=None):
     
     npols=2
     
@@ -187,7 +186,8 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=64, freq_off = None,cpe_avg=8,
     
     # Simulate transmission
     sig_tx = pilotbased_transmitter.sim_tx(frame, 2, snr=sig_snr, modal_delay=None, freqoff=freq_off,
-                                                    linewidth=laser_lw,beta=beta,num_frames=3)
+                                                    linewidth=laser_lw,beta=beta,num_frames=3, resBits_tx=resBits_tx,
+                                                    resBits_rx=resBits_rx)
     
     
     # Run DSP
