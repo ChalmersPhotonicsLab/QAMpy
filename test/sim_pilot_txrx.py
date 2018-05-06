@@ -200,7 +200,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=64, freq_off = None,cpe_avg=8,
         
     return gmi_res, ber_res
 
-def sim_sep(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
+def sim_joint_eq(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
 
     # Select Rx channel
     sel_wdm_ch = np.array([-1,0,1])

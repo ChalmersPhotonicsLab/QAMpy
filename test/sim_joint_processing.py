@@ -42,7 +42,7 @@ for r in range(Rs.shape[0]):
             ber_single_tmp = np.zeros(num_avg)
             for n in range(num_avg):
                 print("SNR: %d, Beta: %1.2f, Avg. Ind: %d"%(snr_test[s],beta_test[b],n))
-                gmi1,gmi2,ber1,ber2 = sim_pilot_txrx.sim_sep(Rs[r], beta=beta_test[b],sig_snr=snr_test[s],M=M,Ntaps=Ntaps,rx_filter_bw=rx_filter_bw)
+                gmi1,gmi2,ber1,ber2 = sim_pilot_txrx.sim_joint_eq(Rs[r], beta=beta_test[b],sig_snr=snr_test[s],M=M,Ntaps=Ntaps,rx_filter_bw=rx_filter_bw)
                 gmi_joint_tmp[n] = np.sum(gmi1)
                 gmi_single_tmp[n] = np.sum(gmi2)
                 ber_joint_tmp[n] = np.mean(ber1)
