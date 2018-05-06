@@ -167,9 +167,38 @@ def pre_filter(signal, bw, os,center_freq = 0):
     s = np.fft.ifftshift(np.fft.ifft(np.fft.fft(signal) * h))
     return s
 
+# Standard function to test DSP
+def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=64, freq_off = None,cpe_avg=8,
+                   frame_length = 2**14, pilot_seq_len = 8192, pilot_ins_rat=32,
+                   num_frames=3,modal_delay=None, laser_lw = None):
+    
+    npols=2
+    
+    # Create frame
+    frame, data_symbs, pilot_symbs = pilotbased_transmitter.gen_dataframe_with_phasepilots(M,npols,frame_length=frame_length,
+                                                                                  pilot_seq_len=pilot_seq_len,
+                                                                                  pilot_ins_ratio=pilot_ins_rat)
+    
+    # Simulate transmission
+    sig_tx = pilotbased_transmitter.sim_tx(frame, 2, snr=sig_snr, modal_delay=None, freqoff=freq_off,
+                                                    linewidth=laser_lw,beta=beta,num_frames=3)
+    
+    
+    # Run DSP
+    dsp_out= run_pilot_receiver(sig_tx,pilot_symbs, 
+                                 frame_length=frame_length, M=M, pilot_seq_len=pilot_seq_len, 
+                                 pilot_ins_ratio=pilot_ins_rat,cpe_average=cpe_avg,os= 2,
+                                 Numtaps=(17,Ntaps), mu = (1e-3, 1e-3), method=("cma","sbd"))
 
-
-
+    # Calculate GMI and BER
+    mod = modulation.QAMModulator(M)
+    gmi_res = np.zeros(npols)
+    ber_res = np.zeros(npols)
+    for l in range(npols):
+        gmi_res[l] = mod.cal_gmi(dsp_out[1][l].flatten(),data_symbs[l])[0][0]
+        ber_res[l] = mod.cal_ber(dsp_out[1][l].flatten(),symbols_tx = data_symbs[l])
+        
+    return gmi_res, ber_res
 
 def sim_sep(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
 
