@@ -326,18 +326,9 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
         if pols > 1:
             for pol in range(1,pols):
                 wxy[pol] = np.roll(wxy[0],pol,axis=0)
-
     else:
         wxy = np.asarray(wxy)
-        if pols > 1:
-            Ntaps = wxy[0].shape[1]
-        else:
-            try:
-                wxy = wxy.flatten()
-                Ntaps = len(wxy)
-                wxy = np.asarray([wxy.copy(),])
-            except:
-                Ntaps = len(wxy[0])
+        Ntaps = wxy[0].shape[1]
     if TrSyms is None:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
