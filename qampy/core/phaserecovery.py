@@ -50,6 +50,7 @@ def viterbiviterbi(E, N, M):
         Field with compensated phases
     """
     E2d = np.atleast_2d(E)
+    Eout = np.zeros_like(E2d)
     L = E2d.shape[1]
     for i in range(E2d.shape[0]):
         Et = E2d[i]
@@ -61,15 +62,15 @@ def viterbiviterbi(E, N, M):
         phase_est = np.unwrap(np.angle(phase_est))
         phase_est = (phase_est - np.pi)/M
         if N % 2:
-            E2d[i, (N - 1) // 2:L - (N - 1) // 2] *= np.exp(-1.j*phase_est)
+            Eout[i, (N - 1) // 2:L - (N - 1) // 2] = E2d[i, (N - 1) // 2:L - (N - 1) // 2] * np.exp(-1.j*phase_est)
         else:
-            E2d[i, N // 2 - 1:L - (N // 2)] *= np.exp(-1.j*phase_est)
+            Eout[i, N // 2 - 1:L - (N // 2)] = E2d[i, N // 2 - 1:L - (N // 2)] * np.exp(-1.j*phase_est)
     #if M == 4: # QPSK needs pi/4 shift
     # need a shift by pi/M for constellation points to not be on the axis
     if E.ndim == 1:
-        return  E2d.flatten(), phase_est.flatten()
+        return  Eout.flatten(), phase_est.flatten()
     else:
-        return E2d, phase_est
+        return Eout, phase_est
 
 def _bps_idx_py(E, angles, symbols, N):
     """
@@ -382,7 +383,7 @@ def phase_partition_16qam(E, Nblock):
         ph_out.append(np.unwrap(phi_est) / 4 - np.pi / 4)
     phi_out = np.asarray(ph_out)
     if E.ndim == 1:
-        return (E2d * np.exp(-1.j * phi_est)).flatten(), phi_out.flatten
+        return (E2d * np.exp(-1.j * phi_est)).flatten(), phi_out.flatten()
     else:
         return E2d * np.exp(-1.j * phi_est), phi_out
 

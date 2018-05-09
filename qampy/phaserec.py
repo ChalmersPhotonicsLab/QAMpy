@@ -62,7 +62,8 @@ def comp_freq_offset(sig, freq_offset):
             input signal with removed frequency offset
 
     """
-    arr = core.phaserecovery.comp_freq_offset(sig, freq_offset, sig.fs)
+    os = int(sig.fs/sig.fb)
+    arr = core.phaserecovery.comp_freq_offset(sig, freq_offset, os)
     return sig.recreate_from_np_array(arr)
 
 def viterbiviterbi(E, N):
