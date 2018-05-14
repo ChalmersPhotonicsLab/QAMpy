@@ -5,6 +5,22 @@ import numpy.testing as npt
 from qampy import signals, impairments, theory, helpers
 from qampy.core import signal_quality
 
+
+def _flip_symbols(sig, idx, d, mode=0):
+    for i in idx:
+        if np.random.randint(0, 2):
+            if sig[mode,i].real > 0:
+                sig[mode,i] -= d
+            else:
+                sig[mode,i] += d
+        else:
+            if sig[mode,i].imag > 0:
+                sig[mode,i] -= 1.j * d
+            else:
+                sig[mode,i] += 1.j * d
+    return sig
+
+
 class TestDtypePreserve(object):
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
     def test_generate_bitmap_mtx(self, dtype):
@@ -86,3 +102,16 @@ class TestWithResampling(object):
         ss = ss.resample(1, beta=0.1, renormalise=True)
         evm = helpers.lin2dB(ss.cal_evm() ** 2)
         npt.assert_allclose(snr, -evm, rtol=0.1)
+
+class TestVerboseReturn(object):
+    @pytest.mark.parametrize("M", [32, 64])
+    def test_verbose_ser(self, M):
+        s = signals.SignalQAMGrayCoded(M, 2**12)
+        snr = 30
+        s = impairments.change_snr(s, snr)
+        d = np.unique(np.diff(s.coded_symbols.real)).min()
+        s2 = _flip_symbols(s, [100], 2*d)
+        ser, errs = s2.cal_ser(synced=True, verbose=True)
+        assert errs[0,100] != 0
+        assert np.count_nonzero(errs) == 1
+
