@@ -228,12 +228,12 @@ class SignalBase(np.ndarray):
         if tx.shape == rx.shape:
             return tx, rx
         nm = tx.shape[0]
-        if which is "tx":
+        if which == "tx":
             if tx.shape[1] > rx.shape[1]:
                 method = "truncate"
             else:
                 method = "extend"
-        elif which is "rx":
+        elif which == "rx":
             if tx.shape[1] > rx.shape[1]:
                 method = "extend"
             else:
@@ -249,7 +249,7 @@ class SignalBase(np.ndarray):
         return np.array(tx_out), np.array(rx_out)
 
 
-    def cal_ser(self, signal_rx=None, synced=False):
+    def cal_ser(self, signal_rx=None, synced=False, verbose=False):
         """
         Calculate the symbol error rate of the received signal.Currently does not check
         for correct polarization.
@@ -264,7 +264,8 @@ class SignalBase(np.ndarray):
             bitstream at the transmitter for comparison against signal.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
-
+        verbose   : bool, optional
+            return the vector of symbol errors
         Note
         ----
         If neither symbols_tx or bits_tx are given use self.symbols_tx
@@ -273,15 +274,22 @@ class SignalBase(np.ndarray):
         -------
         SER   : array_like
             symbol error rate per dimension
+        if verbose is True:
+        errs  : array_like
+            symbol errors
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
         data_demod = self.make_decision(signal_rx)
         symbols_tx, data_demod = self._sync_and_adjust(self.symbols, data_demod, synced)
-        errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
-        return np.asarray(errs) / data_demod.shape[1]
+        #errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
+        errs = data_demod - symbols_tx
+        if verbose:
+            return np.count_nonzero(errs, axis=-1) / data_demod.shape[1], errs
+        else:
+            return np.count_nonzero(errs, axis=-1) / data_demod.shape[1]
 
-    def cal_ber(self, signal_rx=None, synced=False):
+    def cal_ber(self, signal_rx=None, synced=False, verbose=False):
         """
         Calculate the bit-error-rate for the received signal compared to transmitted symbols or bits. Currently does not check
         for correct polarization.
@@ -296,6 +304,8 @@ class SignalBase(np.ndarray):
             transmitted bit sequence to compare against.
         synced    : bool, optional
             whether signal_tx and symbol_tx are synchronised.
+        verbose   : bool, optional
+            return the vector of symbol errors
 
         Note
         ----
@@ -306,6 +316,9 @@ class SignalBase(np.ndarray):
         -------
         ber          :  array_like
             bit-error-rate in linear units per dimension
+        if verbose is True:
+        errs  : array_like
+            bit errors
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
@@ -314,8 +327,11 @@ class SignalBase(np.ndarray):
         # TODO: need to rename decode to demodulate
         bits_demod = self.demodulate(syms_demod)
         tx_synced = self.demodulate(symbols_tx)
-        errs = np.count_nonzero(tx_synced ^ bits_demod, axis=-1)
-        return np.asarray(errs) / bits_demod.shape[1]
+        errs = tx_synced ^ bits_demod
+        if verbose:
+            return np.count_nonzero(errs, axis=-1) / bits_demod.shape[1], errs
+        else:
+            return np.count_nonzero(errs, axis=-1) / bits_demod.shape[1]
 
     def cal_evm(self, signal_rx=None, synced=False, blind=False):
         """
@@ -1206,7 +1222,7 @@ class TDHQAMSymbols(SignalBase):
         ratio : float
             the ratio of M2 power over M1
         """
-        if method is "dist":
+        if method == "dist":
             d1 = np.min(abs(np.diff(np.unique(M1symbols))))
             d2 = np.min(abs(np.diff(np.unique(M2symbols))))
             scf = (d2 / d1) ** 2
@@ -1454,7 +1470,7 @@ class SignalWithPilots(SignalBase):
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
 
-    def cal_ser(self, signal_rx=None, shift_factors=None):
+    def cal_ser(self, signal_rx=None, shift_factors=None, verbose=False):
         """
         Calculate Symbol Error Rate on the data payload.
 
@@ -1464,6 +1480,8 @@ class SignalWithPilots(SignalBase):
             signal on which to measure SER. Default: None -> calculate SER on self
         shift_factors : array_like, optional
             integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
+        verbose   : bool, optional
+            return the vector of symbol errors
 
         Returns
         -------
@@ -1472,9 +1490,9 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_ser(signal_rx, synced=False)
+        return super().cal_ser(signal_rx, synced=False, verbose=verbose)
 
-    def cal_ber(self, signal_rx=None, shift_factors=None):
+    def cal_ber(self, signal_rx=None, shift_factors=None, verbose=False):
         """
         Calculate Bit Error Rate on the data payload.
 
@@ -1484,6 +1502,8 @@ class SignalWithPilots(SignalBase):
             signal on which to measure SER. Default: None -> calculate SER on self
         shift_factors : array_like, optional
             integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
+        verbose   : bool, optional
+            return the vector of symbol errors
 
         Returns
         -------
@@ -1492,7 +1512,7 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_ber(signal_rx, synced=False)
+        return super().cal_ber(signal_rx, synced=False, verbose=verbose)
 
     def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
         """

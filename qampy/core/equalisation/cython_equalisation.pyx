@@ -78,8 +78,8 @@ def make_decision(complexing[:] E, complexing[:] symbols):
     sigsyms : array_like
         array of detected symbols
     """
-    cdef unsigned int L = E.shape[0]
-    cdef unsigned int M = symbols.shape[0]
+    cdef int L = E.shape[0]
+    cdef int M = symbols.shape[0]
     cdef int i, j, k
     cdef double distd
     cdef float distf
@@ -153,13 +153,14 @@ def apply_filter_to_signal(complexing[:,:] E, int os, complexing[:,:,:] wx):
     """
     cdef complexing[:, :] output
     cdef int modes = E.shape[0]
-    cdef int L = E.shape[1]//os
+    cdef int L = E.shape[1]
     cdef int Ntaps = wx.shape[2]
-    cdef ssize_t i, j
+    cdef int i,j, N
     cdef complexing Xest = 0
-    output = np.zeros((modes, L-Ntaps), dtype="c%d"%E.itemsize)
+    N = (L - Ntaps + 1 + os)//os
+    output = np.zeros((modes, N), dtype="c%d"%E.itemsize)
     for j in range(modes):
-        for i in prange(L-Ntaps, nogil=True, schedule='static'):
+        for i in prange(N, nogil=True, schedule='static'):
             Xest = apply_filter(E[:, i*os:i*os+Ntaps], Ntaps, wx[j], modes)
             output[j, i] = Xest
     return np.array(output)

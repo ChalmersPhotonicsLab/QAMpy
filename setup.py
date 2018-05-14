@@ -14,7 +14,7 @@ WIN_LINK_ARGS = ["/openmp"]
 
 if sys.platform.startswith("win"):
     cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
-                     sources=["qampy/core/equalisation/cython_equalisation.pyx", "qampy/core/equalisation/equaliserC.c"],
+                     sources=["qampy/core/equalisation/cython_equalisation.pyx"],
                              include_dirs=["qampy/core/equalisation", np.get_include()],
                              language="c++",
                              extra_compile_args=WIN_COMPILER_ARGS,
@@ -26,14 +26,14 @@ if sys.platform.startswith("win"):
                              extra_compile_args=WIN_COMPILER_ARGS,
                              extra_link_args=WIN_LINK_ARGS)
     dsp_cython = Extension(name="qampy.core.dsp_cython",
-                       sources=["qampy/core/dsp_cython.pyx", "qampy/core/equalisation/equaliserC.c"],
+                       sources=["qampy/core/dsp_cython.pyx"],
                              include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
                            language="c++",
                        extra_compile_args=WIN_COMPILER_ARGS,
                              extra_link_args=WIN_LINK_ARGS)
 else:
     cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
-                     sources=["qampy/core/equalisation/cython_equalisation.pyx", "qampy/core/equalisation/equaliserC.c"],
+                     sources=["qampy/core/equalisation/cython_equalisation.pyx"],
                              include_dirs=["qampy/core/equalisation", np.get_include()],
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
@@ -43,7 +43,7 @@ else:
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
     dsp_cython = Extension(name="qampy.core.dsp_cython",
-                       sources=["qampy/core/dsp_cython.pyx", "qampy/core/equalisation/equaliserC.c"],
+                       sources=["qampy/core/dsp_cython.pyx"],
                              include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
                        extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
@@ -87,7 +87,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -123,6 +123,8 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        'arrayfire': ["arrayfire"],
+        'numba': ["numba>=0.37.0"],
     },
 
     # If there are data files included in your packages that need to be

@@ -326,18 +326,9 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
         if pols > 1:
             for pol in range(1,pols):
                 wxy[pol] = np.roll(wxy[0],pol,axis=0)
-
     else:
         wxy = np.asarray(wxy)
-        if pols > 1:
-            Ntaps = wxy[0].shape[1]
-        else:
-            try:
-                wxy = wxy.flatten()
-                Ntaps = len(wxy)
-                wxy = np.asarray([wxy.copy(),])
-            except:
-                Ntaps = len(wxy[0])
+        Ntaps = wxy[0].shape[1]
     if TrSyms is None:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
@@ -346,7 +337,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
     return Eout, wxy, TrSyms, Ntaps, err, pols
 
-def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(True, False), **kwargs):
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -402,7 +393,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     Eest = apply_filter(E, os, wxy2)
     return Eest, wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=True, **kwargs):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
