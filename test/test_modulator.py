@@ -657,9 +657,10 @@ class TestSignalQualityCorrectnes(object):
     def test_ser_calculation(self, err_syms):
         N = 1000
         s = signals.SignalQAMGrayCoded(64, N, nmodes=1)
-        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        d = np.diff(np.unique(s.coded_symbols.real))
+        dmin = d[np.where(d>0)].min()
         ii = np.arange(1,err_syms+1)
-        s2 = _flip_symbols(s, ii, d)
+        s2 = _flip_symbols(s, ii, dmin)
         ser = s.cal_ser()
         npt.assert_almost_equal(ser.flatten(), err_syms/N)
 
@@ -667,9 +668,10 @@ class TestSignalQualityCorrectnes(object):
     def test_ser_calculation2(self, err_syms):
         N = 1000
         s = signals.SignalQAMGrayCoded(64, N, nmodes=1)
-        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        d = np.diff(np.unique(s.coded_symbols.real))
+        dmin = d[np.where(d>0)].min()
         ii = np.arange(1,err_syms+1)
-        s2 = _flip_symbols(s, ii, 2*d)
+        s2 = _flip_symbols(s, ii, 2*dmin)
         ser = s.cal_ser()
         npt.assert_almost_equal(ser.flatten(), err_syms/N)
 
@@ -678,9 +680,10 @@ class TestSignalQualityCorrectnes(object):
         N = 1000
         M = 64
         s = signals.SignalQAMGrayCoded(M, N, nmodes=1)
-        d = np.diff(np.unique(s.coded_symbols.real)).min()
+        d = np.diff(np.unique(s.coded_symbols.real))
+        dmin = d[np.where(d>0)].min()
         ii = np.arange(1,err_syms+1)
-        s2 = _flip_symbols(s, ii, d)
+        s2 = _flip_symbols(s, ii, dmin)
         ber = s.cal_ber()
         npt.assert_almost_equal(ber.flatten(), err_syms/(N*np.log2(M)))
 
