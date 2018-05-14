@@ -109,9 +109,23 @@ class TestVerboseReturn(object):
         s = signals.SignalQAMGrayCoded(M, 2**12)
         snr = 30
         s = impairments.change_snr(s, snr)
-        d = np.unique(np.diff(s.coded_symbols.real)).min()
-        s2 = _flip_symbols(s, [100], 2*d)
+        d = abs(np.unique(np.diff(s.coded_symbols.real)))
+        dmin = d[np.where(d>0)].min()
+        s2 = _flip_symbols(s, [100], dmin)
         ser, errs = s2.cal_ser(synced=True, verbose=True)
         assert errs[0,100] != 0
+        assert np.count_nonzero(errs) == 1
+
+    @pytest.mark.parametrize("M", [32, 64])
+    def test_verbose_ber(self, M):
+        s = signals.SignalQAMGrayCoded(M, 2**12)
+        snr = 30
+        #s = impairments.change_snr(s, snr)
+        d = abs(np.unique(np.diff(s.coded_symbols.real)))
+        dmin = d[np.where(d>0)].min()
+        s2 = _flip_symbols(s, [100], dmin)
+        ber, errs = s2.cal_ber(synced=True, verbose=True)
+        assert abs(np.argmax(errs) - 100*np.log2(M)) < np.log2(M)
+        assert ber[0] != 0
         assert np.count_nonzero(errs) == 1
 
