@@ -206,7 +206,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=64, freq_off = None,cpe_avg=8,
         
     return gmi_res, ber_res
 
-def sim_joint_eq(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
+def sim_joint_eq(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45, resBits_tx = None, resBits_rx=None):
 
     # Select Rx channel
     sel_wdm_ch = np.array([-1,0,1])
@@ -259,9 +259,8 @@ def sim_joint_eq(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
         pilot_symbs.append(pilots)
     
         # Simulate tyransmission
-    
         sig_tmp = pilotbased_transmitter.sim_tx(frame_symbs[ch], os_tx, snr=sig_snr, modal_delay=None, freqoff=freq_off,
-                                                        linewidth=laser_lw,beta=beta,num_frames=3)
+                                                        linewidth=laser_lw,beta=beta,num_frames=3, resBits_tx=resBits_tx)
            
         # Add signal to Rx structure. 
         sig_wdm_ch.append(sig_tmp)
@@ -280,6 +279,8 @@ def sim_joint_eq(Rs,rx_filter_bw = 1.2,beta=0.1,sig_snr=35,M=64,Ntaps = 45):
 
     rx_sig = copy.deepcopy(tx_sig)
     
+    if resBits_rx is not None:
+        rx_sig = impairments.quantize_signal(rx_sig,nbits=resBits_rx)
     #==============================================================================
     # Filter a bit, select propper channel
     #==============================================================================
