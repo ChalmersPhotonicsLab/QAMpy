@@ -112,7 +112,7 @@ class TestVerboseReturn(object):
         d = abs(np.unique(np.diff(s.coded_symbols.real)))
         dmin = d[np.where(d>0)].min()
         s2 = _flip_symbols(s, [100], dmin)
-        ser, errs = s2.cal_ser(synced=True, verbose=True)
+        ser, errs, syms = s2.cal_ser(synced=True, verbose=True)
         assert errs[0,100] != 0
         assert np.count_nonzero(errs) == 1
 
@@ -124,8 +124,34 @@ class TestVerboseReturn(object):
         d = abs(np.unique(np.diff(s.coded_symbols.real)))
         dmin = d[np.where(d>0)].min()
         s2 = _flip_symbols(s, [100], dmin)
-        ber, errs = s2.cal_ber(synced=True, verbose=True)
+        ber, errs, bits = s2.cal_ber(synced=True, verbose=True)
         assert abs(np.argmax(errs) - 100*np.log2(M)) < np.log2(M)
         assert ber[0] != 0
         assert np.count_nonzero(errs) == 1
+
+    @pytest.mark.parametrize("M", [32, 64])
+    def test_verbose_ser_syms(self, M):
+        s = signals.SignalQAMGrayCoded(M, 2**12)
+        snr = 30
+        s = impairments.change_snr(s, snr)
+        d = abs(np.unique(np.diff(s.coded_symbols.real)))
+        dmin = d[np.where(d>0)].min()
+        s2 = _flip_symbols(s, [100], dmin)
+        ser, errs, syms = s2.cal_ser(synced=True, verbose=True)
+        assert syms.shape == s2.shape
+
+    @pytest.mark.parametrize("M", [32, 64])
+    def test_verbose_ber_syms(self, M):
+        s = signals.SignalQAMGrayCoded(M, 2**12)
+        snr = 30
+        s = impairments.change_snr(s, snr)
+        d = abs(np.unique(np.diff(s.coded_symbols.real)))
+        dmin = d[np.where(d>0)].min()
+        s2 = _flip_symbols(s, [100], dmin)
+        ser, errs, syms = s2.cal_ber(synced=True, verbose=True)
+        assert syms.shape == s2.bits.shape
+
+
+
+
 
