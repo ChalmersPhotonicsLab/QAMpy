@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import  theory, modulation
-
+from qampy import signals
 
 """ Check the symbol rate of a QAM signal against the theoretical symbol rate"""
 
@@ -11,7 +10,7 @@ N = 10**5
 ser = []
 ser2 = []
 
-modl = modulation.QAMModulator(M)
+modl = signals.QAMModulator(M)
 for sr in snr:
     data_rx, symbols, bits = modl.generate_signal(N, sr)
     ser.append(modl.cal_ser(data_rx, symbol_tx=symbols))

@@ -1,48 +1,49 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, impairments, signal_quality
+from qampy import equalisation, signals, impairments, helpers
+#from dsp.core import impairments
 
 fb = 40.e9
 os = 2
 fs = os*fb
-N = 5*10**5
+N = 2**17
 theta = 1* np.pi/4.5
-theta2 = np.pi/4.2
+theta2 = np.pi/4.3
 M = 64
-QAM = modulation.QAMModulator(M)
 snr = 25
-muCMA = 0.19e-3
-muRDE = 0.19e-3
-ntaps = 11
+muCMA = 0.19e-2
+muRDE = 0.19e-2
+ntaps = 15
 t_pmd = 100.e-12
-#Ncma = N//4//os -int(1.5*ntaps)
-#Ncma = 60000
-#Nrde = 4*N//5//os -int(1.5*ntaps)
 Ncma = None
 Nrde = None
 
-sig, symbols, bits = QAM.generate_signal(N, snr,  baudrate=fb, samplingrate=fs, PRBSorder=(15,23), beta=0.01, ndim=2)
-#Y, Ysymbols, Ybits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=23)
+sig = signals.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":0.01, "renormalise":True})
+sig = impairments.change_snr(sig, snr)
 
-SS = sig
-#SS = impairments.apply_PMD_to_field(sig, theta, t_pmd, fs)
-#SS = np.vstack([X,Y])
-SS = impairments.rotate_field(SS, theta2)
+SS = impairments.apply_PMD(sig, theta, t_pmd)
 
-E_m, wxy_m, (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mrde"), adaptive_stepsize=(True, True))
-E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "sbd"), adaptive_stepsize=(True, True))
-E, wxy, (err, err_rde) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
+E_m, wxy_m, (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS.astype(np.complex64), (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
+                                                                     methods=("mcma", "sbd"),
+                                                                     adaptive_stepsize=(True, True))
+E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
+                                                                     methods=("mcma", "sbd"),
+                                                                     adaptive_stepsize=(True, True))
+E, wxy, (err, err_rde) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
+                                                             methods=("mcma", "mddma"), adaptive_stepsize=(True, True))
 
 
-evm = QAM.cal_evm(sig[:, ::2])
-evmE = QAM.cal_evm(E)
-evmE_m = QAM.cal_evm(E_m)
-evmE_s = QAM.cal_evm(E_s)
-gmiE = QAM.cal_gmi(E)
+E = helpers.normalise_and_center(E)
+E_s = helpers.normalise_and_center(E_s)
+E_m = helpers.normalise_and_center(E_m)
+evm = sig[:, ::2].cal_evm()
+evmE = E.cal_evm()
+evmE_m = E_m.cal_evm()
+evmE_s = E_s.cal_evm()
+gmiE = E.cal_gmi()
 print(gmiE)
 
 
-#sys.exit()
 plt.figure()
 plt.subplot(241)
 plt.title('Recovered MCMA/MDDMA')
@@ -78,7 +79,7 @@ plt.subplot(331)
 plt.title('CMA/MDDMA Taps')
 plt.plot(wxy[0,0,:], 'r')
 plt.plot(wxy[0,1,:], '--r')
-plt.plot(wxy[1, 0,:], 'g')
+plt.plot(wxy[1,0,:], 'g')
 plt.plot(wxy[1, 1,:], '--g')
 plt.subplot(332)
 plt.title('CMA/MDDMA error cma')
@@ -90,10 +91,10 @@ plt.plot(abs(err_rde[0]), color='r')
 plt.plot(abs(err_rde[1])-10, color='g')
 plt.subplot(334)
 plt.title('MCMA/MRDE Taps')
-plt.plot(wxy_m[0, 0,:], 'r')
-plt.plot(wxy_m[0, 1,:], '--r')
-plt.plot(wxy_m[1, 0,:], 'g')
-plt.plot(wxy_m[1, 1,:], '--g')
+plt.plot(wxy_m[0,0,:], 'r')
+plt.plot(wxy_m[0,1,:], '--r')
+plt.plot(wxy_m[1,0,:], 'g')
+plt.plot(wxy_m[1,1,:], '--g')
 plt.subplot(335)
 plt.title('MCMA/MRDE error cma')
 plt.plot(abs(err_m[0]), color='r')

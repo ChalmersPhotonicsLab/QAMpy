@@ -1,10 +1,8 @@
 #import cProfile
 import numpy as np
 
-import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, impairments
-
-
+from qampy import equalisation, signals
+from qampy.core import impairments
 
 #pr = cProfile.Profile()
 fb = 40.e9
@@ -14,7 +12,7 @@ N = 10**6
 theta = np.pi/2.45
 theta2 = np.pi/4
 M = 4
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 snr = 12
 mu = 1e-3
 ntaps = 30
@@ -25,7 +23,7 @@ t_pmd = 75e-12
 
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 #pr.enable()
-wx, err = equalisation.equalise_signal(SS, os, mu, M, Ntaps=ntaps, method="mcma", adaptive_stepsize=True)
+wx, err = equalisation.equalise_signal(SS, os, M, Ntaps=ntaps, method="mcma", adaptive_stepsize=True)
 E = equalisation.apply_filter(SS, os, wx)
 #E, wx, wy, err = equalisation.FS_MCMA(SS, N-40, ntaps, os, mu, M)
 

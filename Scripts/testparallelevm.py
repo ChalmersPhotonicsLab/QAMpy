@@ -1,9 +1,4 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from dsp import theory, ber_functions, signal_quality, modulation, utils
-import sys
-
-
+from qampy import signals
 
 """
 Check the calculation of EVM, BER, Q vs theoretical symbol error rate compare against _[1]
@@ -17,7 +12,7 @@ References
 M = 128
 N = 10**6
 snr = 30
-modulator = modulation.QAMModulator(M)
+modulator = signals.QAMModulator(M)
 signal, syms, bits = modulator.generate_signal(N, snr, dual_pol=False)
 evm = modulator.cal_evm(signal)
 print(evm)

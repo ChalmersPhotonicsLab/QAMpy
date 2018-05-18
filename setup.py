@@ -3,20 +3,48 @@ from setuptools import setup, find_packages, Extension
 # To use a consistent encoding
 from codecs import open
 from os import path
+import sys
 import numpy as np
 
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
 LINK_ARGS = ["-fopenmp", "-lm"]
 
-equaliser_cython = Extension(name="dsp.equalisation.equaliser_cython",
-                     sources=["dsp/equalisation/equaliser_cython.pyx", "dsp/equalisation/equaliserC.c"],
-                             include_dirs=["dsp/equalisation", np.get_include()],
+WIN_COMPILER_ARGS = ["/O2", "/openmp"]
+WIN_LINK_ARGS = ["/openmp"]
+
+if sys.platform.startswith("win"):
+    cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
+                     sources=["qampy/core/equalisation/cython_equalisation.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
+                             language="c++",
+                             extra_compile_args=WIN_COMPILER_ARGS,
+                             extra_link_args=WIN_LINK_ARGS)
+    cython_errorfcts = Extension(name="qampy.core.equalisation.cython_errorfcts",
+                     sources=["qampy/core/equalisation/cython_errorfcts.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
+                             language="c++",
+                             extra_compile_args=WIN_COMPILER_ARGS,
+                             extra_link_args=WIN_LINK_ARGS)
+    dsp_cython = Extension(name="qampy.core.dsp_cython",
+                       sources=["qampy/core/dsp_cython.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
+                           language="c++",
+                       extra_compile_args=WIN_COMPILER_ARGS,
+                             extra_link_args=WIN_LINK_ARGS)
+else:
+    cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
+                     sources=["qampy/core/equalisation/cython_equalisation.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
                              extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
-
-dsp_cython = Extension(name="dsp.dsp_cython",
-                       sources=["dsp/dsp_cython.pyx", "dsp/equalisation/equaliserC.c"],
-                             include_dirs=["dsp/equalisation", np.get_include()],
+    cython_errorfcts = Extension(name="qampy.core.equalisation.cython_errorfcts",
+                     sources=["qampy/core/equalisation/cython_errorfcts.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include()],
+                             extra_compile_args=COMPILER_ARGS,
+                             extra_link_args=LINK_ARGS)
+    dsp_cython = Extension(name="qampy.core.dsp_cython",
+                       sources=["qampy/core/dsp_cython.pyx"],
+                             include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
                        extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
 
@@ -26,22 +54,22 @@ here = path.abspath(path.dirname(__file__))
 
 
 setup(
-    name='pycommdsp',
+    name='qampy',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.0.1',
+    version='0.1.1',
 
-    description='A python based package of communications dsp tools',
+    description='A python based package of communications qampy tools',
     long_description=None,
 
     # The project's main homepage.
     url=None,
 
     # Author details
-    author='Jochen Schröder',
-    author_email='jochen.schroeder@gmail.com',
+    author='Jochen Schröder and Mikael Mazur',
+    author_email='jochen.schroeder@chalmers.se',
 
     # Choose your license
     license='GPLv3',
@@ -59,7 +87,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -89,12 +117,14 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy', 'bitarray', 'tables'],
 
-    ext_modules = [equaliser_cython, dsp_cython],
+    ext_modules = [cython_errorfcts, cython_equalisation, dsp_cython],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        'arrayfire': ["arrayfire"],
+        'numba': ["numba>=0.37.0"],
     },
 
     # If there are data files included in your packages that need to be

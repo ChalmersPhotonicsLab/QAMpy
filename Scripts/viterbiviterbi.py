@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  phaserecovery, modulation, utils
-
+from qampy.core import phaserecovery
+from qampy import signals
 
 fb = 40.e9
 os = 2
@@ -11,7 +11,7 @@ theta = np.pi/2.45
 M = 4
 snr = 14
 carrier_f = 1e6
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 X, Sx, Bx = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs , carrier_df=carrier_f, dual_pol=False)
 
 

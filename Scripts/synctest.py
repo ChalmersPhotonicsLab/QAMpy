@@ -1,16 +1,14 @@
 #import cProfile
 import numpy as np
-import matplotlib.pylab as plt
-from dsp import equalisation, modulation, utils, phaserecovery, impairments
-
-
+from qampy.core import impairments, phaserecovery
+from qampy import signals
 
 fb = 40.e9
 os = 1
 fs = os*fb
 N = 10**5
 M = 64
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 snr = 40
 lw_LO = np.linspace(10e1, 1000e1, 10)
 #lw_LO = [100e3]

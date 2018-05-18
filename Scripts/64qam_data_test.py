@@ -1,14 +1,15 @@
 import numpy as np
 import matplotlib.pylab as plt
 
-import dsp.resample
-from dsp import  equalisation, modulation, utils, phaserecovery, signal_quality, analog_frontend
+import qampy.core.resample
+from qampy import equalisation, analog_frontend, signals
+from qampy.core import phaserecovery, signal_quality
 from scipy.io import loadmat
 
 
 os = 2
 M = 64
-QAM = modulation.QAMModulator(M)
+QAM = signals.QAMModulator(M)
 snr = 35
 muCMA = 1e-5
 muRDE = 5e-5
@@ -23,6 +24,7 @@ X = Dat['CH1'] + 1.j * Dat['CH2']
 Y = Dat['CH3'] + 1.j * Dat['CH4']
 X = X.flatten()
 Y = Y.flatten()
+
 #X = X[len(X)//2:]
 #Y = Y[len(Y)//2:]
 
@@ -30,8 +32,8 @@ Y = Y.flatten()
 #Y = utils.pre_filter(Y, 2*3.9)
 #X = utils.resample(X, 2.5, 2)
 #Y = utils.resample(Y, 2.5, 2)
-X = dsp.resample.rrcos_resample(X, 2.5, 2, beta=0.05, Ts=1)
-Y = dsp.resample.rrcos_resample(Y, 2.5, 2, beta=0.05, Ts=1)
+X = qampy.resample.rrcos_resample(X, 2.5, 2, beta=0.05, Ts=1)
+Y = qampy.resample.rrcos_resample(Y, 2.5, 2, beta=0.05, Ts=1)
 X = analog_frontend.comp_IQ_inbalance(X)
 Y = analog_frontend.comp_IQbalance(Y)
 print(X.shape)
@@ -40,19 +42,20 @@ SS = np.vstack([X[5000:-5000],Y[5000:-5000]])
 
 SS = SS[:,:int(2e5)]
 
-E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, Niter=(5,5), methods=("mcma", "sbd"), adaptive_stepsize=(True,True) )
+E, wxy, err_both = equalisation.dual_mode_equalisation(SS, os, M, ntaps, Niter=(5, 5), methods=("mcma", "sbd"),
+                                                       adaptive_stepsize=(True, True))
 
 X = signal_quality.norm_to_s0(E[0, :], M)
 Y = signal_quality.norm_to_s0(E[1, :], M)
 E = np.vstack([X,Y])
 
-foe = phaserecovery.find_freq_offset(E,fft_size = 2**10)
+foe = phaserecovery.find_freq_offset(E, fft_size =2 ** 10)
 
 
-E = phaserecovery.comp_freq_offset(E,foe)
+E = phaserecovery.comp_freq_offset(E, foe)
 
 #Ec = E[:,2e4:-2e4]
-wx, err_both = equalisation.equalise_signal(E, 1, muRDE, M,Niter=4, Ntaps=ntaps, method="sbd" , adaptive_stepsize=False)
+wx, err_both = equalisation.equalise_signal(E, 1, M, Ntaps=ntaps, Niter=4, method="sbd", adaptive_stepsize=False)
 Ec = equalisation.apply_filter(E, 1, wx)
 E = Ec
 

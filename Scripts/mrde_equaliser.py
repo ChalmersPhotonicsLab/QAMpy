@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
-from dsp import  equalisation, modulation, utils, impairments
+from qampy import equalisation, signals
+from qampy.core import impairments
 
 fb = 40.e9
 os = 2
@@ -8,7 +9,7 @@ fs = os*fb
 N = 2**18
 theta = np.pi/2.35
 M = 16
-QAM = modulation.QAMModulator(16)
+QAM = signals.QAMModulator(16)
 snr = 24
 muCMA = 1e-3
 muRDE = 0.5e-3
@@ -20,7 +21,8 @@ Nrde = 5*N//6//os -int(1.5*ntaps)
 S, symbols, bits = QAM.generate_signal(N, snr, baudrate=fb, samplingrate=fs, PRBSorder=(15,23))
 SS = impairments.apply_PMD_to_field(S, theta, t_pmd, fs)
 
-E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, (muCMA, muRDE), M, ntaps, TrSyms=(Ncma, Nrde), methods=("mcma","mrde" ))
+E_m, (wx_m, wy_m), (err_m, err_rde_m) = equalisation.dual_mode_equalisation(SS, os, M, ntaps, methods=("mcma", "mrde"),
+                                                                            TrSyms=(Ncma, Nrde))
 
 
 evmX = QAM.cal_evm(S[0, ::2])

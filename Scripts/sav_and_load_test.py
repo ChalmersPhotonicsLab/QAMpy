@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dsp import theory, ber_functions, modulation, utils, equalisation, io
-from scipy.signal import fftconvolve
-import sys
+from qampy import equalisation, signals, theory
+from qampy.core import io
 import os as os_mod
 
 
@@ -37,7 +36,7 @@ dsp_dict = {"stepsize":(mu, 0), "trsyms":(None, None), "iterations":(1,1), "ntap
 
 for wl in wls:
     for sr in snr:
-        modulator = modulation.QAMModulator(M)
+        modulator = signals.QAMModulator(M)
         signalX, symsX, bitsX = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
         signalY, symsY, bitsY = modulator.generateSignal(N, sr, samplingrate=fs, baudrate=fb, beta=beta)
         signal = np.vstack([signalX, signalY])
@@ -57,7 +56,7 @@ syms = list(io.get_from_table(inp_table, ids, "symbols"))
 bits = list(io.get_from_table(inp_table, ids, "bits"))
 i = 0
 for d_array in m_arrays:
-    wx, er =  equalisation.equalise_signal(d_array, os, mu, M, Ntaps=ntaps, adaptive_step=astep, method=method[0])
+    wx, er = equalisation.equalise_signal(d_array, os, M, Ntaps=ntaps, method=method[0], adaptive_step=astep)
     signalafter = equalisation.apply_filter(d_array, os, wx )
     evm_x = modulator.cal_EVM(signalafter[0], syms[ids[i]][0])
     evm_y = modulator.cal_EVM(signalafter[1], syms[ids[i]][1])
@@ -75,7 +74,7 @@ osnr = pms['osnr']
 ber = io.query_table_for_references(hf.root.parameters.experiment, hf.root.analysis.dsp.signal, 'ber', "wl==1550")
 snrf = np.linspace(osnr[0], osnr[-1], 100)
 plt.plot(osnr, ber, 'o')
-plt.plot(snrf, theory.MQAM_BERvsEsN0(10**(snrf/10), M))
+plt.plot(snrf, theory.MQAM_BERvsEsN0(10 ** (snrf / 10), M))
 plt.show()
 hf.close()
 
