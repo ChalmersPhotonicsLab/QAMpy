@@ -16,7 +16,7 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 import numpy as np
-from .utils import normalise_and_center
+from ..helpers import normalise_and_center
 
 def H_PMD(theta, t_dgd, omega):
     """
