@@ -224,4 +224,4 @@ def train_eq(complexing[:,:] E,
             update_filter(E[:, i*os:], Ntaps, mu, err[i], wx, pols)
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i-1], err[i])
-    return err, wx
+    return err, wx, mu

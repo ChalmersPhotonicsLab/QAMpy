@@ -274,9 +274,11 @@ class SignalBase(np.ndarray):
         -------
         SER   : array_like
             symbol error rate per dimension
-        if verbose is True:
+        if verbose is True also return:
         errs  : array_like
             symbol errors
+        symbols_tx : array_like
+            synchronized transmitted symbols
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
@@ -285,7 +287,7 @@ class SignalBase(np.ndarray):
         #errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         errs = data_demod - symbols_tx
         if verbose:
-            return np.count_nonzero(errs, axis=-1) / data_demod.shape[1], errs
+            return np.count_nonzero(errs, axis=-1) / data_demod.shape[1], errs, symbols_tx
         else:
             return np.count_nonzero(errs, axis=-1) / data_demod.shape[1]
 
@@ -316,20 +318,21 @@ class SignalBase(np.ndarray):
         -------
         ber          :  array_like
             bit-error-rate in linear units per dimension
-        if verbose is True:
+        if verbose is True also return:
         errs  : array_like
             bit errors
+        tx_synced : array_like
+            synchronized transmitter bits
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
         syms_demod = self.make_decision(signal_rx)
         symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod, synced)
-        # TODO: need to rename decode to demodulate
         bits_demod = self.demodulate(syms_demod)
         tx_synced = self.demodulate(symbols_tx)
         errs = tx_synced ^ bits_demod
         if verbose:
-            return np.count_nonzero(errs, axis=-1) / bits_demod.shape[1], errs
+            return np.count_nonzero(errs, axis=-1) / bits_demod.shape[1], errs, tx_synced
         else:
             return np.count_nonzero(errs, axis=-1) / bits_demod.shape[1]
 
