@@ -1426,7 +1426,7 @@ class SignalWithPilots(SignalBase):
 
     @property
     def pilot_seq(self):
-        return self._pilots[:, self._pilot_seq_len]
+        return self._pilots[:, :self._pilot_seq_len]
 
     @property
     def ph_pilots(self):
