@@ -459,14 +459,11 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     wxy = wxy.astype(E.dtype)
     for l in range(pols):
         for i in range(Niter):
-            #err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = eqfct(E, TrSyms, Ntaps, os, mu, wxy[l],  adaptive=adaptive_stepsize)
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l] = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
             wxy[l+1] = orthogonalizetaps(wxy[l])
 
     return wxy, err
-
-
 
 def CDcomp(E, fs, N, L, D, wl):
     """
