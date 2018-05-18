@@ -800,6 +800,8 @@ class QPSKfromBERT(SignalQAMGrayCoded):
     ----------
     N  : int
         number of symbols in signal
+    nmodes : int
+        number of modes/polarizations
     fb : float, optional
         symbol rate
     prbsorders : tuple(tuple(int),tuple(int)), optional
