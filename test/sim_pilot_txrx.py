@@ -50,10 +50,10 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     dsp_sig_out = []
     phase_trace = []
     #sig_out = apply_filter
-    #if not sh:
-        #out_sig = phaserecovery.comp_freq_offset(rec_signal, foePerMode, os=os)
-    #else:
-        #out_sig = rec_signal
+    if not sh:
+        out_sig = phaserecovery.comp_freq_offset(rec_signal, foePerMode, os=os)
+    else:
+        out_sig = rec_signal
     #dsp_out = []
     #phase_trace = []
     #for l in range(out_sig.shape[0]):
@@ -65,7 +65,7 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
         #dsp_out.append(out)
         #phase_trace.append(ph)
 
-    mode_sig = pilotbased_receiver.shift_signal(rec_signal, shift_factor)
+    mode_sig = pilotbased_receiver.shift_signal(out_sig, shift_factor)
     #mode_sig = rec_signal
     #if not sh:
     #    mode_sig = phaserecovery.comp_freq_offset(mode_sig, foePerMode, os=os)
@@ -81,13 +81,6 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
                                                            use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
                                                        remove_phase_pilots=True)
 
-
-        #if remove_inital_cpe_output:8
-            #symbs = symbs[:, int(use_cpe_pilot_ratio * pilot_ins_ratio * cpe_average / 2):-int(
-                #use_cpe_pilot_ratio * pilot_ins_ratio * cpe_average / 2)]
-            # symbs = symbs[:, int(use_cpe_pilot_ratio * pilot_ins_ratio * cpe_average):]
-        #dsp_sig_out.append(symbs)
-        #phase_trace.append(trace)
 
     return symbs, trace, eq_mode_sig
 
@@ -124,10 +117,6 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
     
     npols=2
     
-    # Create frame
-    #frame, data_symbs, pilot_symbs = pilotbased_transmitter.gen_dataframe_with_phasepilots(M,npols,frame_length=frame_length,
-                                                                                  #pilot_seq_len=pilot_seq_len,
-                                                                                  #pilot_ins_ratio=pilot_ins_rat)
     signal = signals.SignalWithPilots(M, frame_length, pilot_seq_len, pilot_ins_rat, nframes=num_frames, nmodes=npols)
 
     signal2 = signal.resample(signal.fb*2, beta=beta, renormalise=True)
@@ -136,10 +125,9 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
                                                     linewidth=laser_lw,beta=beta, num_frames=3, resBits_tx=resBits_tx,
                                                     resBits_rx=resBits_rx)
     sig_tx = signal2.recreate_from_np_array(sig_tx)
-    #sig_tx = np.roll(sig_tx, 100, axis=-1)
 
 
-    
+
     # Run DSP
     dsp_out, phase, dsp_out2 = run_pilot_receiver(sig_tx,
                                  frame_length=sig_tx.frame_len, M=M, pilot_seq_len=sig_tx.pilot_seq.shape[-1],
@@ -161,11 +149,6 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
 
 if __name__ == "__main__":
     #gmi, ber = sim_pilot_txrx(20)
-    dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40)#, laser_lw=None, freq_off=None, beta=1,
-                                              #Ntaps=45)
-    #plt.hexbin(dsp[0].real, dsp[0].imag)
+    dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40)
     sigo = sign.symbols.recreate_from_np_array(dsp)
     print(sigo.cal_gmi())
-    #plt.show(0)
-    #print(gmi)
-    #print(ber)
