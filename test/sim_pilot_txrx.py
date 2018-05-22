@@ -79,7 +79,7 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, pilot_seq_len:frame_length],
                                                            pilot_symbs[:, pilot_seq_len:], pilot_ins_ratio,
                                                            use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
-                                                       remove_phase_pilots=False)
+                                                       remove_phase_pilots=True)
 
 
         #if remove_inital_cpe_output:8
@@ -164,8 +164,8 @@ if __name__ == "__main__":
     dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40)#, laser_lw=None, freq_off=None, beta=1,
                                               #Ntaps=45)
     #plt.hexbin(dsp[0].real, dsp[0].imag)
-    sigo = sign.recreate_from_np_array(dsp, nframes=1)
-    sigo.cal_gmi()
+    sigo = sign.symbols.recreate_from_np_array(dsp)
+    print(sigo.cal_gmi())
     #plt.show(0)
     #print(gmi)
     #print(ber)
