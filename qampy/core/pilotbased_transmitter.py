@@ -203,7 +203,7 @@ def sim_tx(frame, os, num_frames = 5, modal_delay = None, beta=0.1, snr=None, sy
         if modal_delay is not None:
             if np.array(modal_delay).shape[0] != npols:
                 raise ValueError("Number of rolls has to match number of modes!")
-            curr_frame = np.roll(curr_frame,modal_delay[l])
+            sig = np.roll(sig,modal_delay[l])
 
         # Upsample and pulse shaping
         #if os > 1:

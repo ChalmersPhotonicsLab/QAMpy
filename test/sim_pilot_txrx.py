@@ -54,28 +54,8 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
         out_sig = phaserecovery.comp_freq_offset(rec_signal, foePerMode, os=os)
     else:
         out_sig = rec_signal
-    #dsp_out = []
-    #phase_trace = []
-    #for l in range(out_sig.shape[0]):
-        #out_sig = equalisation.apply_filter(out_sig, os, taps[l])
-        #out, ph = pilotbased_receiver.pilot_based_cpe(out_sig[l, pilot_seq_len:],
-        #                                                   pilot_symbs[l, pilot_seq_len:], pilot_ins_ratio,
-        #                                                   use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
-        #                                                   remove_phase_pilots=remove_phase_pilots)
-        #dsp_out.append(out)
-        #phase_trace.append(ph)
-
-    mode_sig = pilotbased_receiver.shift_signal(out_sig, shift_factor)
-    #mode_sig = rec_signal
-    #if not sh:
-    #    mode_sig = phaserecovery.comp_freq_offset(mode_sig, foePerMode, os=os)
-
-    eq_mode_sig = equalisation.apply_filter(mode_sig, os, taps, method="pyx")
-    symbs = eq_mode_sig
-    trace = None
-
-
-    # Pilot-aided CPE
+    eq_mode_sig = equalisation.apply_filter(out_sig, os, taps, method="pyx")
+    eq_mode_sig = pilotbased_receiver.shift_signal(eq_mode_sig, shift_factor)
     symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, pilot_seq_len:frame_length],
                                                            pilot_symbs[:, pilot_seq_len:], pilot_ins_ratio,
                                                            use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
@@ -121,7 +101,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
 
     signal2 = signal.resample(signal.fb*2, beta=beta, renormalise=True)
     # Simulate transmission
-    sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=None, freqoff=freq_off,
+    sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=[100, 200], freqoff=freq_off,
                                                     linewidth=laser_lw,beta=beta, num_frames=3, resBits_tx=resBits_tx,
                                                     resBits_rx=resBits_rx)
     sig_tx = signal2.recreate_from_np_array(sig_tx)

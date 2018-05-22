@@ -1430,7 +1430,7 @@ class SignalWithPilots(SignalBase):
 
     @property
     def ph_pilots(self):
-        return self._pilots[:, self._pilot_seq_len::self._pilot_ins_rat]
+        return self._pilots[:, self._pilot_seq_len:]
 
     @property
     def pilots(self):
@@ -1462,12 +1462,15 @@ class SignalWithPilots(SignalBase):
             the recovered data symbols
         """
         if shift_factors is None:
-            idx = np.tile(self._idx_dat, self.nframes)
+            idx = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
             return self.symbols.recreate_from_np_array(self[:, idx])
         shift_factors = np.asarray(shift_factors)
         assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
-        idxn = np.tile(self._idx_dat, self.nframes)
+        return self.shift_seq2start(shift_factors)
+
+    def shift_seq2start(self, shift_factors):
         out = []
+        idxn = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
         for i in range(shift_factors.shape[0]):
             out.append(np.roll(self[i], -shift_factors[i])[idxn])
         return self.symbols.recreate_from_np_array(np.array(out))
@@ -1495,7 +1498,7 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_ser(signal_rx, synced=False, verbose=verbose)
+        return super().cal_ser(signal_rx, synced=True, verbose=verbose)
 
     def cal_ber(self, signal_rx=None, shift_factors=None, verbose=False):
         """
@@ -1517,7 +1520,7 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_ber(signal_rx, synced=False, verbose=verbose)
+        return super().cal_ber(signal_rx, synced=True, verbose=verbose)
 
     def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
         """
@@ -1562,7 +1565,7 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_gmi(signal_rx)
+        return super().cal_gmi(signal_rx, synced=True)
 
     def est_snr(self, signal_rx=None, synced=True, shift_factors=None, symbols_tx=None):
         """
