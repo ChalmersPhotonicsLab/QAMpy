@@ -324,16 +324,22 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     # Search based on equalizer error. Avoid certain part in the beginning and
     # end to ensure that sufficient symbols can be used for the search
     sub_vars = np.ones((npols, num_steps))*1e2
+    wxys = np.zeros((num_steps, npols, npols, ntaps), dtype=complex)
     for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
         tmp = rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size]
-        err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=ntaps,
+        wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=ntaps,
                                                    Niter=Niter, method=method,
-                                                   adaptive_stepsize=adap_step)[1]
+                                                   adaptive_stepsize=adap_step)
+        wxys[i] = wxy
         sub_vars[:,i] = np.var(err_out[:,int(-symb_step_size/os+ntaps):])
+    min_parts = np.argmin(sub_vars, axis=-1)
+    wxy = wxys[min_parts]
+
 
     for l in range(npols):
         # Lowest variance of the CMA error
-        minPart = np.argmin(sub_vars[l])
+        #minPart = np.argmin(sub_vars[l])
+        minPart = min_parts[l]
 
         # Corresponding sequence
         shortSeq = rx_signal[:,(minPart)*symb_step_size:(minPart+1+(search_overlap-1))*symb_step_size]
@@ -341,10 +347,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         # Extract a longer sequence to ensure that the complete pilot sequence is found
         longSeq = rx_signal[:,(minPart-2-search_overlap)*symb_step_size:(minPart+3+search_overlap)*symb_step_size]
 
-        # Use the first estimate to get rid of any large FO and simplify alignment
-        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps= ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)
-
         # Apply filter taps to the long sequence and remove coarse FO
+        wx1 = wxy[l]
         symbs_out = equalisation.apply_filter(longSeq,os,wx1)
         foe_corse = phaserecovery.find_freq_offset(symbs_out)
         symbs_out = phaserecovery.comp_freq_offset(symbs_out, foe_corse)
