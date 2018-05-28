@@ -309,29 +309,31 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     # Find the length of the pilot frame
     pilot_seq_len = ref_symbs.shape[-1]
     
-    symb_step_size = int(np.floor(pilot_seq_len * os / search_overlap))
+    symb_step_size = (pilot_seq_len * os) // search_overlap
     
     # Adapt signal length
-    sig_len = (np.shape(rx_signal)[1])
+    sig_len = rx_signal.shape[-1]
     if (sig_len > (frame_length + (search_overlap*2 + 5)*pilot_seq_len)*os):
         num_steps = int(np.ceil(((frame_length + (search_overlap*2 + 5) *pilot_seq_len)*os)/symb_step_size))
     else:
-        num_steps = int(np.ceil(np.shape(rx_signal)[1] / symb_step_size))
+        num_steps = int(np.ceil(rx_signal.shape[-1] / symb_step_size))
     
     # Now search for every mode independent
     shift_factor = np.zeros(npols,dtype = int)
+
+    # Search based on equalizer error. Avoid certain part in the beginning and
+    # end to ensure that sufficient symbols can be used for the search
+    sub_vars = np.ones((npols, num_steps))*1e2
+    for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
+        tmp = rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size]
+        err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=ntaps,
+                                                   Niter=Niter, method=method,
+                                                   adaptive_stepsize=adap_step)[1]
+        sub_vars[:,i] = np.var(err_out[:,int(-symb_step_size/os+ntaps):])
+
     for l in range(npols):
-
-        # Search based on equalizer error. Avoid certain part in the beginning and
-        # end to ensure that sufficient symbols can be used for the search
-        sub_var = np.ones(num_steps)*1e2
-        for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
-            tmp = rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size]
-            err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)[1]
-            sub_var[i] = np.var(err_out[l,int(-symb_step_size/os+ntaps):])
-
         # Lowest variance of the CMA error
-        minPart = np.argmin(sub_var)
+        minPart = np.argmin(sub_vars[l])
 
         # Corresponding sequence
         shortSeq = rx_signal[:,(minPart)*symb_step_size:(minPart+1+(search_overlap-1))*symb_step_size]
@@ -340,7 +342,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         longSeq = rx_signal[:,(minPart-2-search_overlap)*symb_step_size:(minPart+3+search_overlap)*symb_step_size]
 
         # Use the first estimate to get rid of any large FO and simplify alignment
-        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps = ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)
+        wx1, err = equalisation.equalise_signal(shortSeq, os, mu, M_pilot,Ntaps= ntaps, Niter = Niter, method = method,adaptive_stepsize = adap_step)
 
         # Apply filter taps to the long sequence and remove coarse FO
         symbs_out = equalisation.apply_filter(longSeq,os,wx1)
