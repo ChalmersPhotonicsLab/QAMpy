@@ -18,8 +18,10 @@
 
 
 import numpy as np
+from scipy.interpolate import interp1d
 from qampy.core import equalisation
-from qampy.core import phaserecovery
+from qampy.core import phaserecovery, filter
+from qampy.core import ber_functions
 
 
 def pilot_based_foe(rec_symbs,pilot_symbs):
@@ -64,6 +66,98 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     foe = np.mean(foePerMode)
     
     return foe, foePerMode, condNum
+
+def pilot_based_cpe2(rec_symbs, pilot_symbs,  num_average = 1, use_pilot_ratio = 1):
+    """
+    Carrier phase recovery using periodically inserted symbols.
+
+    Performs a linear interpolation with averaging over n symbols to estimate
+    the phase drift from laser phase noise to compensate for this.
+
+    Input:
+        rec_symbs: Received symbols in block (first of each block is the pilot)
+        pilot_symbs: Corresponding pilot symbols.
+            Index N is the first symbol in transmitted block N.
+        pilot_ins_ratio: Length of each block. Ex. 16 -> 1 pilot symbol followed
+            by 15 data symbols
+        num_average: Number of pilot symbols to average over to avoid noise.
+        use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
+        max_num_blocks: Maximum number of blocks to process
+        remove_phase_pilots: Remove phase pilots after CPE. Default: True
+
+    Output:
+        data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
+        phase_trace: Resulting phase trace of the CPE
+    """
+
+    #rec_symbs = np.atleast_2d(rec_symbs)
+    #pilot_symbs = np.atleast_2d(pilot_symbs)
+    pilots_symbs = rec_symbs.extract_pilots()
+    npols = rec_symbs.shape[0]
+
+    # Extract the pilot symbols
+    #numBlocks = np.floor(np.shape(rec_symbs)[1]/pilot_ins_ratio)
+    # If selected, only process a limited number of blocks.
+    #if (max_num_blocks is not None) and numBlocks > max_num_blocks:
+    #    numBlocks = max_num_blocks
+
+    # Make sure that a given number of pilots can be used
+    if (numBlocks % use_pilot_ratio):
+        numBlocks -= (numBlocks % use_pilot_ratio)
+
+    # Adapt for number of blocks
+    #rec_pilots = rec_symbs[:,::int(pilot_ins_ratio)]
+    #rec_pilots = rec_pilots[:,:int(numBlocks)]
+    #rec_symbs = rec_symbs[:,:int(pilot_ins_ratio*numBlocks)]
+
+    # Check that the number of blocks are equal and is valid
+    numRefPilots = np.shape(pilot_symbs)[1]
+    if numBlocks > numRefPilots:
+        numBlocks = numRefPilots
+        rec_symbs = rec_symbs[:,:int(numBlocks*pilot_ins_ratio)]
+        rec_pilots = rec_pilots[:,:int(numBlocks)]
+    elif numRefPilots > numBlocks:
+        pilot_symbs = pilot_symbs[:,:int(numBlocks)]
+
+    # Remove every X pilot symbol if selected
+    if use_pilot_ratio >= pilot_symbs.shape[1]:
+        raise ValueError("Can not use every %d pilots since only %d pilot symbols are present"%(use_pilot_ratio,pilot_symbs.shape[1]))
+    rec_pilots = rec_pilots[:,::int(use_pilot_ratio)]
+    pilot_symbs = pilot_symbs[:,::int(use_pilot_ratio)]
+
+    # Check for a out of bounch error
+    if pilot_symbs.shape[1] <= num_average:
+        raise ValueError("Inpropper pilot symbol configuration. Larger averaging block size than total number of pilot symbols")
+
+    # Should be an odd number to keey symmetry in averaging
+    if not(num_average % 2):
+        num_average += 1
+
+    # Allocate output memory and process modes
+    data_symbs = np.zeros([npols,np.shape(rec_symbs)[1]], dtype = complex)
+    phase_trace = np.zeros([npols,np.shape(rec_symbs)[1]])
+    res_phase = pilot_symbs.conjugate()*rec_pilots
+    pilot_phase_base = np.unwrap(np.angle(res_phase), axis=-1)
+    pilot_phase_average = filter.moving_average(pilot_phase_base,num_average)
+    pp1 = pilot_phase_base[:, :int((num_average-1)/2)]
+    pp2 = pilot_phase_average[:]
+    t = pilot_phase_base[:,:int((num_average-1)/2)]
+    t2 = pp2[:, -1].reshape(2,1)
+    pp3 = np.ones(t.shape)*t2
+    pilot_phase = np.hstack([pp1, pp2, pp3])
+    pilot_pos = np.arange(0,pilot_phase.shape[-1]*pilot_ins_ratio*use_pilot_ratio, pilot_ins_ratio*use_pilot_ratio)
+    pilot_pos_new = np.arange(0,pilot_phase.shape[-1]*pilot_ins_ratio*use_pilot_ratio)
+
+    for l in range(npols):
+        phase_trace[l,:] = np.interp(pilot_pos_new, pilot_pos, pilot_phaseN[l])
+    data_symbs = rec_symbs*np.exp(-1j*phase_trace)
+
+    # Remove the phase pilots after compensation. This is an option since they can be used for SNR estimation e.g.
+    if remove_phase_pilots:
+        pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
+        data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
+
+    return data_symbs, phase_trace
 
 def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
     """
@@ -133,26 +227,22 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     # Allocate output memory and process modes
     data_symbs = np.zeros([npols,np.shape(rec_symbs)[1]], dtype = complex)
     phase_trace = np.zeros([npols,np.shape(rec_symbs)[1]])
+    res_phase = pilot_symbs.conjugate()*rec_pilots
+    pilot_phase_base = np.unwrap(np.angle(res_phase), axis=-1)
+    pilot_phase_average = filter.moving_average(pilot_phase_base,num_average)
+    pp1 = pilot_phase_base[:, :int((num_average-1)/2)]
+    pp2 = pilot_phase_average[:]
+    t = pilot_phase_base[:,:int((num_average-1)/2)]
+    t2 = pp2[:, -1].reshape(2,1)
+    pp3 = np.ones(t.shape)*t2
+    pilot_phase = np.hstack([pp1, pp2, pp3])
+    pilot_pos = np.arange(0,pilot_phase.shape[-1]*pilot_ins_ratio*use_pilot_ratio, pilot_ins_ratio*use_pilot_ratio)
+    pilot_pos_new = np.arange(0,pilot_phase.shape[-1]*pilot_ins_ratio*use_pilot_ratio)
+
     for l in range(npols):
-        # Calculate phase respons
-        res_phase = pilot_symbs[l,:].conjugate()*rec_pilots[l,:]
-        pilot_phase = np.unwrap(np.angle(res_phase))
+        phase_trace[l,:] = np.interp(pilot_pos_new, pilot_pos, pilot_phase[l])
+    data_symbs = rec_symbs*np.exp(-1j*phase_trace)
 
-        # Fix! Need moving average in numpy
-        pilot_phase_average = np.transpose(moving_average(pilot_phase,num_average))
-        pilot_phase = np.hstack([pilot_phase[:int((num_average-1)/2)], pilot_phase_average,np.ones(pilot_phase[:int((num_average-1)/2)].shape)*pilot_phase_average[-1]])
-
-        # Pilot positions in the received data set
-        pilot_pos = np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
-#        pilot_pos_int = np.arange(0,(len(pilot_phase)+1)*pilot_ins_ratio*use_pilot_ratio,pilot_ins_ratio*use_pilot_ratio)
-        
-        # Lineary interpolate the phase evolution
-        phase_trace[l,:] = np.interp(np.arange(0,len(pilot_phase)*pilot_ins_ratio*use_pilot_ratio),\
-                               pilot_pos,pilot_phase)
-
-        # Compensate phase
-        data_symbs[l,:] = rec_symbs[l,:]*np.exp(-1j*phase_trace[l,:])
-        
     # Remove the phase pilots after compensation. This is an option since they can be used for SNR estimation e.g.
     if remove_phase_pilots:
         pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
@@ -178,13 +268,8 @@ def moving_average(sig, n=3):
     
     return ret[n-1:]/n
 
-"""
- 
-Locate pilot sequence
-
-"""
-
-def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10, adap_step = True, method='cma' ,search_overlap = 2):
+def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10,
+                adap_step = True, method='cma', search_overlap = 2):
     """
     Locate and extract the pilot starting frame.
     
@@ -222,7 +307,6 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     not_found_modes = np.arange(0,npols)
 
     # Find the length of the pilot frame
-    #pilot_seq_len = len(ref_symbs[0,:])
     pilot_seq_len = ref_symbs.shape[-1]
     
     symb_step_size = int(np.floor(pilot_seq_len * os / search_overlap))
@@ -265,22 +349,20 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
 
 
         # Check for pi/2 ambiguties and verify all
-        max_phase_rot = np.zeros([4,npols])
-        found_delay = np.zeros([4,npols])
+        max_phase_rot = np.zeros([npols], dtype=np.float64)
+        found_delay = np.zeros([npols], dtype=np.int)
         for ref_pol in not_found_modes:
-            for k in range(4):
-                # Find correlation for all 4 possible pi/2 rotations
-                xcov = np.correlate(np.angle(symbs_out[l,:]*1j**k),np.angle(ref_symbs[ref_pol,:]))
-                max_phase_rot[k,ref_pol] = np.max(np.abs(xcov)**2)
-                found_delay[k,ref_pol] = np.argmax(xcov)
+            ix, dat, ii, ac = ber_functions.find_sequence_offset_complex(ref_symbs[ref_pol], symbs_out[l], show_cc=True)
+            found_delay[ref_pol] = ix
+            max_phase_rot[ref_pol] = ac
 
         # Check for which mode found and extract the reference delay
-        max_sync_val = np.argmax(np.max(max_phase_rot,axis=0))
-        mode_sync_order[l] = max_sync_val
-        symb_delay = int(found_delay[np.argmax(max_phase_rot[:,max_sync_val]),max_sync_val])
+        max_sync_pol = np.argmax(max_phase_rot)
+        mode_sync_order[l] = max_sync_pol
+        symb_delay = found_delay[max_sync_pol]
 
         # Remove the found reference mode
-        not_found_modes = not_found_modes[not_found_modes != max_sync_val]
+        not_found_modes = not_found_modes[not_found_modes != max_sync_pol]
 
         # New starting sample
         shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)

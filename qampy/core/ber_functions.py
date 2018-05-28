@@ -76,7 +76,7 @@ def find_sequence_offset(data_tx, data_rx, show_cc=False):
     else:
         return idx
 
-def find_sequence_offset_complex(data_tx, data_rx):
+def find_sequence_offset_complex(data_tx, data_rx, show_cc=False):
     """
     Find the offset of one sequence in the other even if both sequences are complex.
 
@@ -107,7 +107,10 @@ def find_sequence_offset_complex(data_tx, data_rx):
             ii = i
             ix = idx
             acm = act
-    return ix, data_tx*1.j**ii, ii
+    if show_cc:
+        return ix, data_tx*1.j**ii, ii, acm
+    else:
+        return ix, data_tx*1.j**ii, ii
 
 
 def sync_and_adjust(data_tx, data_rx, adjust="tx"):
