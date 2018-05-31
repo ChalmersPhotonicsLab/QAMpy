@@ -251,7 +251,7 @@ def add_modal_delay(sig, delay):
     assert delay.shape[0] == sig.shape[0], "Delay array must have the same length as number of modes of signal "
     sig_out = sig.copy()
     for i in range(nmodes):
-        sig_out[l] = np.roll(sig_out[l], delay[i], axis=-1)
+        sig_out[i] = np.roll(sig_out[i], delay[i], axis=-1)
     return sig_out
 
 
