@@ -99,7 +99,7 @@ def add_carrier_offset(sig, fo):
     """
     return core.impairments.add_carrier_offset(sig, fo, sig.fs)
 
-def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731):
+def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None):
     """
     Convenience function to simulate impairments on signal at once
 
@@ -117,7 +117,8 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         first-order PMD (differential group delay) (default: None, do not apply PMD)
     theta : float
         rotation angle to principle states of polarization
-
+    modal_delay : array_like, optional
+        add a delay given in N samples to the signal (default: None, do not add delay)
     Returns
     -------
     signal : array_like
@@ -129,6 +130,8 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         sig = add_carrier_offset(sig, freq_off)
     if snr is not None:
         sig = change_snr(sig, snr)
+    if modal_delay is not None:
+        sig = add_modal_delay(sig, modal_delay)
     if dgd is not None:
         sig = apply_PMD(sig, theta, dgd)
     return sig
