@@ -157,7 +157,7 @@ def apply_filter_to_signal(complexing[:,:] E, int os, complexing[:,:,:] wx):
     cdef int Ntaps = wx.shape[2]
     cdef int i,j, N
     cdef complexing Xest = 0
-    N = (L - Ntaps + 1 + os)//os
+    N = (L - Ntaps + os)//os
     output = np.zeros((modes, N), dtype="c%d"%E.itemsize)
     for j in range(modes):
         for i in prange(N, nogil=True, schedule='static'):

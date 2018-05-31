@@ -232,7 +232,32 @@ def add_carrier_offset(sig, fo, fs):
     else:
         return  sign * np.exp(2.j * np.pi * np.arange(sign.shape[1], dtype=sign.dtype)) * fo / fs
 
-def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731):
+def add_modal_delay(sig, delay):
+    """
+    Add a modal delay of n-symbols to modes of signal, e.g. to simulate a fake-pol mux system.
+
+    Parameters
+    ----------
+    sig : array_like
+        input signal
+    delay : array_like
+        array of delays given in number of samples
+
+    Returns
+    -------
+    sig_out : array_like
+        output signal where each mode has been shifted by the appropriate delay
+    """
+    nmodes = sig.shape[0]
+    delay = np.asarray(delay)
+    assert delay.shape[0] == sig.shape[0], "Delay array must have the same length as number of modes of signal "
+    sig_out = sig.copy()
+    for i in range(nmodes):
+        sig_out[l] = np.roll(sig_out[l], delay[i], axis=-1)
+    return sig_out
+
+
+def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None):
     """
     Convenience function to simulate impairments on signal at once
 
@@ -248,13 +273,14 @@ def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=
         desired signal-to-noise ratio of the signal. (default: None, don't change SNR)
     freq_off : float, optional
         apply a carrier offset to signal (default: None, don't apply offset)
-    lwdth : float
+    lwdth : float, optional
         linewidth of the transmitter and LO lasers (default: None, infinite linewidth)
-    dgd : float
+    dgd : float, optional
         first-order PMD (differential group delay) (default: None, do not apply PMD)
-    theta : float
+    theta : float, optional
         rotation angle to principle states of polarization
-
+    modal_delay : array_like, optional
+        add a delay given in N samples to the signal (default: None, do not add delay)
     Returns
     -------
     signal : array_like
@@ -266,6 +292,8 @@ def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=
         sig = add_carrier_offset(sig, freq_off, fs)
     if snr is not None:
         sig = change_snr(sig, snr, fb, fs)
+    if modal_delay is not None:
+        sig = add_modal_delay(sig, delay)
     if dgd is not None:
         sig = apply_PMD_to_field(sig, theta, dgd, fs)
     return sig
