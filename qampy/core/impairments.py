@@ -230,6 +230,31 @@ def add_carrier_offset(sig, fo, fs):
     else:
         return  sign * np.exp(2.j * np.pi * np.arange(sign.shape[1], dtype=sign.dtype)) * fo / fs
 
+def add_modal_delay(sig, delay):
+    """
+    Add a modal delay of n-symbols to modes of signal, e.g. to simulate a fake-pol mux system.
+
+    Parameters
+    ----------
+    sig : array_like
+        input signal
+    delay : array_like
+        array of delays given in number of samples
+
+    Returns
+    -------
+    sig_out : array_like
+        output signal where each mode has been shifted by the appropriate delay
+    """
+    nmodes = sig.shape[0]
+    delay = np.asarray(delay)
+    assert delay.shape[0] == sig.shape[0], "Delay array must have the same length as number of modes of signal "
+    sig_out = sig.copy()
+    for i in range(nmodes):
+        sig_out[l] = np.roll(sig_out[l], delay[i], axis=-1)
+    return sig_out
+
+
 def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731):
     """
     Convenience function to simulate impairments on signal at once

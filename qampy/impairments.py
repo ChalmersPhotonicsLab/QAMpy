@@ -17,7 +17,7 @@
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 import numpy as np
 from qampy import core
-from qampy.core.impairments import rotate_field, add_awgn
+from qampy.core.impairments import rotate_field, add_awgn, add_modal_delay
 
 def apply_PMD(field, theta, t_dgd):
     """
