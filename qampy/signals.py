@@ -426,7 +426,6 @@ class SignalBase(np.ndarray):
         nmodes = signal_rx.shape[0]
         GMI = np.zeros(nmodes, dtype=np.float64)
         GMI_per_bit = np.zeros((nmodes, self.Nbits), dtype=np.float64)
-        mm = np.sqrt(np.mean(np.abs(signal_rx) ** 2, axis=-1))
         signal_rx = signal_rx / mm[:, np.newaxis]
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = self.est_snr(rx, synced=True, symbols_tx=tx)
