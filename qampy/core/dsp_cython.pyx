@@ -24,7 +24,7 @@ cimport cython
 cimport numpy as np
 from ccomplex cimport *
 from qampy.core.equalisation cimport cython_equalisation
-from qampy.core.equalisation.cmath cimport exp, log, pow
+from qampy.core.equalisation.cmath cimport exp, log, pow, log2
 
 
 cdef double cabssq(cython_equalisation.complexing x) nogil:
@@ -195,4 +195,29 @@ def lfsr_int(np.int64_t seed, np.int64_t mask):
         if xor != 0:
             state ^= mask #this performs the modulus operation
         yield xor, state
+
+cpdef cal_gmi_mc(double complex[:] symbols, double snr, int ns, double complex[:,:,:] bit_map):
+    cdef int M = symbols.size
+    cdef int nbits = int(np.log2(M))
+    cdef double complex[:] z
+    cdef double gmi = 0
+    cdef int i, j, b, l
+    cdef double complex sym
+    z = np.sqrt(1/snr)*(np.random.randn(ns) + 1j*np.random.randn(ns))/np.sqrt(2)
+    for k in range(nbits):
+        for b in range(2):
+            for sym in bit_map[k,:,b]:
+                for l in range(ns):
+                    nom = cal_exp_sum(sym, symbols, z[l], snr)
+                    denom = cal_exp_sum(sym, bit_map[k,:,b], z[l], snr)
+                    gmi += log2(nom/denom)/ns
+    return nbits - gmi/M
+
+cdef double cal_exp_sum(double complex sym, double complex[:] syms, double complex z, double sigma):
+    cdef int i
+    cdef double out = 0
+    cdef N = syms.size
+    for i in range(N):
+        out += exp(-sigma*(2*creal(z*(sym-syms[i])) + cabs(sym-syms[i])**2))
+    return out
 
