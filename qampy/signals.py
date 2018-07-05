@@ -1468,6 +1468,18 @@ class SignalWithPilots(SignalBase):
         assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
         return self.shift_seq2start(shift_factors)
 
+    def extract_pilots(self, shift_factors=None):
+        if shift_factors is None:
+            idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
+            return self.pilots.recreate_from_np_array(self[:, idx])
+        shift_factors = np.asarray(shift_factors)
+        assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
+        out = []
+        idxn = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
+        for i in range(shift_factors.shape[0]):
+            out.append(np.roll(self[i], -shift_factors[i])[idxn])
+        return self.pilots.recreate_from_np_array(np.array(out))
+
     def shift_seq2start(self, shift_factors):
         out = []
         idxn = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]

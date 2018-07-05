@@ -1,21 +1,14 @@
 import numpy as np
 from qampy.core import equalisation,  phaserecovery, pilotbased_receiver,pilotbased_transmitter,filter,\
-    resample,impairments
-from qampy import signals
+    resample
+from qampy import signals, impairments
 import matplotlib.pylab as plt
-import copy
-from scipy import signal
 
 def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Numtaps=(17, 45),
                        frame_length=2 ** 16, method=('cma', 'cma'), pilot_seq_len=512, pilot_ins_ratio=32,
                        Niter=(10, 30), mu=(1e-3, 1e-3), adap_step=(True, True), cpe_average=5, use_cpe_pilot_ratio=1,
                        remove_inital_cpe_output=True, remove_phase_pilots=True):
 
-    #rec_signal = np.atleast_2d(rec_signal)
-    tap_cor = int((Numtaps[1] - Numtaps[0]) / 2)
-    #npols = rec_signal.shape[0]
-    # Extract pilot sequence
-    #ref_symbs = (pilot_symbs[:, :pilot_seq_len])
     ref_symbs = rec_signal.pilot_seq
 
     # Frame sync, locate first frame
@@ -23,14 +16,12 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
                                                               mu=mu[0], method=method[0], ntaps=Numtaps[0],
                                                               Niter=Niter[0], adap_step=adap_step[0])
 
-    #shift_factor = [0,0]
     # Redistribute pilots according to found modes
-    #pilot_symbs = rec_signal.pilots
     pilot_symbs = rec_signal.pilots[mode_alignment,:]
     ref_symbs = ref_symbs[mode_alignment,:]
     # taps cause offset on shift factors
     shift_factor = pilotbased_receiver.correct_shifts(shift_factor, Numtaps, os)
-    # shift so that other modes are offset from minimum mode
+    # shift so that modes are offset from minimum mode minimum mode is align with the frame
     rec_signal = np.roll(rec_signal, -shift_factor.min(), axis=-1)
     shift_factor -= shift_factor.min()
 
@@ -46,20 +37,21 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
 
 
 
-    # DSP for the payload: Equalization, FOE, CPE. All pilot-aided
-    dsp_sig_out = []
-    phase_trace = []
-    #sig_out = apply_filter
     if not sh:
         out_sig = phaserecovery.comp_freq_offset(rec_signal, foePerMode, os=os)
+        out_sig = rec_signal.recreate_from_np_array(out_sig)
     else:
         out_sig = rec_signal
-    eq_mode_sig = equalisation.apply_filter(out_sig, os, taps, method="pyx")
+    eq_mode_sig = equalisation.apply_filter(out_sig, os, taps)
+    # after equalisation we align all modes to front
     eq_mode_sig = pilotbased_receiver.shift_signal(eq_mode_sig, shift_factor)
+    eq_mode_sig = rec_signal.recreate_from_np_array(eq_mode_sig)
     symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, pilot_seq_len:frame_length],
                                                            pilot_symbs[:, pilot_seq_len:], pilot_ins_ratio,
                                                            use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
                                                        remove_phase_pilots=True)
+    #trace = pilotbased_receiver.pilot_based_cpe2(eq_mode_sig, eq_mode_sig.pilots,
+                                                       #use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average)
 
 
     return symbs, trace, eq_mode_sig
@@ -91,7 +83,7 @@ def pre_filter(signal, bw, os,center_freq = 0):
 
 # Standard function to test DSP
 def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2,
-                   frame_length = 2**14, pilot_seq_len = 8192, pilot_ins_rat=32,
+                   frame_length = 2**14, pilot_seq_len = 512, pilot_ins_rat=32,
                    num_frames=3,modal_delay=None, laser_lw = None,
                    resBits_tx=None, resBits_rx=None):
     
@@ -101,10 +93,11 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
 
     signal2 = signal.resample(signal.fb*2, beta=beta, renormalise=True)
     # Simulate transmission
-    sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=[100, 200], freqoff=freq_off,
-                                                    linewidth=laser_lw,beta=beta, num_frames=3, resBits_tx=resBits_tx,
-                                                    resBits_rx=resBits_rx)
-    sig_tx = signal2.recreate_from_np_array(sig_tx)
+    #sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=[800, 200], freqoff=freq_off,
+                                                    #linewidth=laser_lw,beta=beta, num_frames=3, resBits_tx=resBits_tx,
+                                                    #resBits_rx=resBits_rx)
+    sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[300,300], lwdth=laser_lw, freq_off=freq_off)
+    #sig_tx = signal2.recreate_from_np_array(sig_tx)
 
 
 
