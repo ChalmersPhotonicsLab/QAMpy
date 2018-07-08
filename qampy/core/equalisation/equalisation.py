@@ -379,7 +379,6 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
 
     Returns
     -------
-    if apply2signal:
     E         : array_like
         equalised signal X and Y polarisation
 
@@ -389,12 +388,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     (err1, err2)       : tuple(array_like, array_like)
        estimation error for x and y polarisation for each equaliser mode
 
-    else:
-    (wx, wy)  : tuple(array_like, array_like)
-       equaliser taps for the x and y polarisation
-
-    (err1, err2)       : tuple(array_like, array_like)
-       estimation error for x and y polarisation for each equaliser mode
+    if apply2signal is False do not return E
     """
     wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0], **kwargs)
     wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols, avoid_cma_sing=avoid_cma_sing[1], **kwargs)
