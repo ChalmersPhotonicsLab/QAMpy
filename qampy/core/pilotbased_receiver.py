@@ -268,8 +268,8 @@ def moving_average(sig, n=3):
     
     return ret[n-1:]/n
 
-def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10,
-                adap_step = True, method='cma', search_overlap = 2):
+def frame_sync(rx_signal, ref_symbs, os, frame_len = 2**16, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10,
+                adap_step = True, method='cma'):
     """
     Locate and extract the pilot starting frame.
     
@@ -287,8 +287,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         Niter: Number of iterations for the equalizer.Tuple(Search, Convergence)
         adap_step: Use adaptive step size (bool). Tuple(Search, Convergence)
         method: Equalizer mehtods to be used. Tuple(Search, Convergence)
-        search_overlap: Overlap of subsequences in the test 
-        
+
         
     Output:
         eq_pilots: Found pilot sequence after equalization
@@ -301,51 +300,49 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
-    npols = rx_signal.shape[0]
-    
-    mode_sync_order = np.zeros(npols,dtype=int)
-    not_found_modes = np.arange(0,npols)
-
-    # Find the length of the pilot frame
     pilot_seq_len = ref_symbs.shape[-1]
-    
-    symb_step_size = (pilot_seq_len * os) // search_overlap
-    
-    # Adapt signal length
-    sig_len = rx_signal.shape[-1]
-    if (sig_len > (frame_length + (search_overlap*2 + 5)*pilot_seq_len)*os):
-        num_steps = int(np.ceil(((frame_length + (search_overlap*2 + 5) *pilot_seq_len)*os)/symb_step_size))
-    else:
-        num_steps = int(np.ceil(rx_signal.shape[-1] / symb_step_size))
-    
-    # Now search for every mode independent
-    shift_factor = np.zeros(npols,dtype = int)
+    nmodes = rx_signal.shape[0]
+    assert rx_signal.shape[-1] >= (frame_len + 2*pilot_seq_len)*os, "Signal must be at least as long as frame"
 
-    # Search based on equalizer error. Avoid certain part in the beginning and
+    mode_sync_order = np.zeros(nmodes, dtype=int)
+    not_found_modes = np.arange(0, nmodes)
+
+    search_overlap = 2 # fraction of pilot_sequence to overlap
+
+    step_width = pilot_seq_len * os
+    step = step_width // search_overlap
+
+    sig_len = rx_signal.shape[-1]
+    # we only need to search the length of one frame*os plus some buffer
+    num_steps = (frame_len*os)//step + search_overlap + 1
+
+    # Now search for every mode independent
+    shift_factor = np.zeros(nmodes, dtype=int)
+
+    # Search based on equalizer error. Avoid one pilot_seq_len part in the beginning and
     # end to ensure that sufficient symbols can be used for the search
-    sub_vars = np.ones((npols, num_steps))*1e2
-    wxys = np.zeros((num_steps, npols, npols, ntaps), dtype=complex)
-    for i in np.arange(2+(search_overlap),num_steps-3-(search_overlap)):
-        tmp = rx_signal[:,(i)*symb_step_size:(i+1+(search_overlap-1))*symb_step_size]
+    sub_vars = np.ones((nmodes, num_steps)) * 1e2
+    wxys = np.zeros((num_steps, nmodes, nmodes, ntaps), dtype=complex)
+
+    for i in np.arange(search_overlap, num_steps): # we avoid one step at the beginning
+        tmp = rx_signal[:, i*step:i*step+step_width]
         wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=ntaps,
                                                    Niter=Niter, method=method,
                                                    adaptive_stepsize=adap_step)
         wxys[i] = wxy
-        sub_vars[:,i] = np.var(err_out[:,int(-symb_step_size/os+ntaps):])
-    min_parts = np.argmin(sub_vars, axis=-1)
-    wxy = wxys[min_parts]
+        sub_vars[:,i] = np.var(err_out[:,int(-step/os+ntaps):])
+    # Lowest variance of the CMA error for each pol
+    min_range = np.argmin(sub_vars, axis=-1)
+    wxy = wxys[min_range]
 
 
-    for l in range(npols):
-        # Lowest variance of the CMA error
-        #minPart = np.argmin(sub_vars[l])
-        minPart = min_parts[l]
-
+    for l in range(nmodes):
+        idx_min = min_range[l]
         # Corresponding sequence
-        shortSeq = rx_signal[:,(minPart)*symb_step_size:(minPart+1+(search_overlap-1))*symb_step_size]
+        #shortSeq = rx_signal[:, idx_min*step:(minPart+1+(search_overlap-1))*symb_step_size]
         
         # Extract a longer sequence to ensure that the complete pilot sequence is found
-        longSeq = rx_signal[:,(minPart-2-search_overlap)*symb_step_size:(minPart+3+search_overlap)*symb_step_size]
+        longSeq = rx_signal[:, (idx_min+search_overlap)*step-step_width: (idx_min + search_overlap)*step+step_width]
 
         # Apply filter taps to the long sequence and remove coarse FO
         wx1 = wxy[l]
@@ -355,8 +352,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
 
 
         # Check for pi/2 ambiguties and verify all
-        max_phase_rot = np.zeros([npols], dtype=np.float64)
-        found_delay = np.zeros([npols], dtype=np.int)
+        max_phase_rot = np.zeros(nmodes, dtype=np.float64)
+        found_delay = np.zeros(nmodes, dtype=np.int)
         for ref_pol in not_found_modes:
             ix, dat, ii, ac = ber_functions.find_sequence_offset_complex(ref_symbs[ref_pol], symbs_out[l], show_cc=True)
             found_delay[ref_pol] = ix
@@ -371,7 +368,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_length = 2**16, mu = 1e-3, M_pilo
         not_found_modes = not_found_modes[not_found_modes != max_sync_pol]
 
         # New starting sample
-        shift_factor[l] = int((minPart-4)*symb_step_size + os*symb_delay)
+        shift_factor[l] = (idx_min + search_overlap)*step + os*symb_delay - step_width
 
     return shift_factor, foe_corse, mode_sync_order
 
