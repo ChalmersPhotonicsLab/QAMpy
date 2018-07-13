@@ -268,8 +268,8 @@ def moving_average(sig, n=3):
     
     return ret[n-1:]/n
 
-def frame_sync(rx_signal, ref_symbs, os, frame_len = 2**16, mu = 1e-3, M_pilot = 4, ntaps = 25, Niter = 10,
-                adap_step = True, method='cma'):
+def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
+               mu=1e-3, Ntaps=17, **eqargs):
     """
     Locate and extract the pilot starting frame.
     
@@ -281,12 +281,9 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len = 2**16, mu = 1e-3, M_pilot =
         ref_symbs: Pilot sequence
         os: Oversampling
         frame_length: Total frame length including pilots and payload
-        mu: CMA step size. Tuple(Search, Convergence)
         M_pilot: Order for pilot symbols. Should normally be QPSK and M=4
-        ntaps: Number of T/2-spaced taps for equalization
-        Niter: Number of iterations for the equalizer.Tuple(Search, Convergence)
-        adap_step: Use adaptive step size (bool). Tuple(Search, Convergence)
-        method: Equalizer mehtods to be used. Tuple(Search, Convergence)
+        mu: CMA step size. Tuple(Search, Convergence)
+        eqargs: arguments to be passed to equaliser
 
         
     Output:
@@ -295,6 +292,10 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len = 2**16, mu = 1e-3, M_pilot =
         out_taps: Taps for equalization of the whole signal
         foe_course: Result of blind FOE used to sync the pilot sequence. 
         mode_sync_order: Synced descrambled reference pattern order
+
+    Parameters
+    ----------
+    eqargs
 
     """
     # Inital settings
@@ -322,15 +323,13 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len = 2**16, mu = 1e-3, M_pilot =
     # Search based on equalizer error. Avoid one pilot_seq_len part in the beginning and
     # end to ensure that sufficient symbols can be used for the search
     sub_vars = np.ones((nmodes, num_steps)) * 1e2
-    wxys = np.zeros((num_steps, nmodes, nmodes, ntaps), dtype=complex)
+    wxys = np.zeros((num_steps, nmodes, nmodes, Ntaps), dtype=complex)
 
     for i in np.arange(search_overlap, num_steps): # we avoid one step at the beginning
         tmp = rx_signal[:, i*step:i*step+step_width]
-        wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=ntaps,
-                                                   Niter=Niter, method=method,
-                                                   adaptive_stepsize=adap_step)
+        wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=Ntaps, **eqargs)
         wxys[i] = wxy
-        sub_vars[:,i] = np.var(err_out[:,int(-step/os+ntaps):])
+        sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])
     # Lowest variance of the CMA error for each pol
     min_range = np.argmin(sub_vars, axis=-1)
     wxy = wxys[min_range]

@@ -12,9 +12,9 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     ref_symbs = rec_signal.pilot_seq
 
     # Frame sync, locate first frame
-    shift_factor, corse_foe, mode_alignment = pilotbased_receiver.frame_sync(rec_signal, ref_symbs, os, frame_length=frame_length,
-                                                              mu=mu[0], method=method[0], ntaps=Numtaps[0],
-                                                              Niter=Niter[0], adap_step=adap_step[0])
+    shift_factor, corse_foe, mode_alignment = pilotbased_receiver.frame_sync(rec_signal, ref_symbs, os, frame_len=frame_length,
+                                                                             mu=mu[0], method=method[0], Ntaps=Numtaps[0],
+                                                                                                                adaptive_stepsize=adap_step[0])
 
     # Redistribute pilots according to found modes
     pilot_symbs = rec_signal.pilots[mode_alignment,:]
