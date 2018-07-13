@@ -271,60 +271,59 @@ def moving_average(sig, n=3):
 def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
                mu=1e-3, Ntaps=17, **eqargs):
     """
-    Locate and extract the pilot starting frame.
+    Locate the pilot sequence frame
     
     Uses a CMA-based search scheme to located the initiial pilot sequence in
     the long data frame. 
-    
-    Input:
-        rx_signal: Received Rx signal
-        ref_symbs: Pilot sequence
-        os: Oversampling
-        frame_length: Total frame length including pilots and payload
-        M_pilot: Order for pilot symbols. Should normally be QPSK and M=4
-        mu: CMA step size. Tuple(Search, Convergence)
-        eqargs: arguments to be passed to equaliser
-
-        
-    Output:
-        eq_pilots: Found pilot sequence after equalization
-        shift_factor: New starting point for initial equalization
-        out_taps: Taps for equalization of the whole signal
-        foe_course: Result of blind FOE used to sync the pilot sequence. 
-        mode_sync_order: Synced descrambled reference pattern order
 
     Parameters
     ----------
-    eqargs
+    rx_signal: array_like
+        Received Rx signal
+    ref_symbs: array_like
+        Pilot sequence
+    os: int
+        Oversampling factor
+    frame_len: int
+        Total frame length including pilots and payload
+    M_pilot: int, optional
+        QAM-order for pilot symbols
+    mu: float, optional
+        CMA step size
+    Ntaps: int, optional
+        number of taps to use in the equaliser
+    **eqargs:
+        arguments to be passed to equaliser
 
+        
+    Returns
+    -------
+    shift_factor: array_like
+        location of frame start index per polarization
+    foe_corse:  array_like
+        corse frequency offset
+    mode_sync_order: array_like
+        Synced descrambled reference pattern order
     """
-    # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
     pilot_seq_len = ref_symbs.shape[-1]
     nmodes = rx_signal.shape[0]
     assert rx_signal.shape[-1] >= (frame_len + 2*pilot_seq_len)*os, "Signal must be at least as long as frame"
-
     mode_sync_order = np.zeros(nmodes, dtype=int)
     not_found_modes = np.arange(0, nmodes)
-
     search_overlap = 2 # fraction of pilot_sequence to overlap
-
     step_width = pilot_seq_len * os
     step = step_width // search_overlap
-
     sig_len = rx_signal.shape[-1]
     # we only need to search the length of one frame*os plus some buffer
     num_steps = (frame_len*os)//step + search_overlap + 1
-
     # Now search for every mode independent
     shift_factor = np.zeros(nmodes, dtype=int)
-
     # Search based on equalizer error. Avoid one pilot_seq_len part in the beginning and
     # end to ensure that sufficient symbols can be used for the search
     sub_vars = np.ones((nmodes, num_steps)) * 1e2
     wxys = np.zeros((num_steps, nmodes, nmodes, Ntaps), dtype=complex)
-
     for i in np.arange(search_overlap, num_steps): # we avoid one step at the beginning
         tmp = rx_signal[:, i*step:i*step+step_width]
         wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=Ntaps, **eqargs)
@@ -333,23 +332,15 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     # Lowest variance of the CMA error for each pol
     min_range = np.argmin(sub_vars, axis=-1)
     wxy = wxys[min_range]
-
-
     for l in range(nmodes):
         idx_min = min_range[l]
-        # Corresponding sequence
-        #shortSeq = rx_signal[:, idx_min*step:(minPart+1+(search_overlap-1))*symb_step_size]
-        
         # Extract a longer sequence to ensure that the complete pilot sequence is found
         longSeq = rx_signal[:, (idx_min+search_overlap)*step-step_width: (idx_min + search_overlap)*step+step_width]
-
         # Apply filter taps to the long sequence and remove coarse FO
         wx1 = wxy[l]
         symbs_out = equalisation.apply_filter(longSeq,os,wx1)
         foe_corse = phaserecovery.find_freq_offset(symbs_out)
         symbs_out = phaserecovery.comp_freq_offset(symbs_out, foe_corse)
-
-
         # Check for pi/2 ambiguties and verify all
         max_phase_rot = np.zeros(nmodes, dtype=np.float64)
         found_delay = np.zeros(nmodes, dtype=np.int)
@@ -357,18 +348,14 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
             ix, dat, ii, ac = ber_functions.find_sequence_offset_complex(ref_symbs[ref_pol], symbs_out[l], show_cc=True)
             found_delay[ref_pol] = ix
             max_phase_rot[ref_pol] = ac
-
         # Check for which mode found and extract the reference delay
         max_sync_pol = np.argmax(max_phase_rot)
         mode_sync_order[l] = max_sync_pol
         symb_delay = found_delay[max_sync_pol]
-
         # Remove the found reference mode
         not_found_modes = not_found_modes[not_found_modes != max_sync_pol]
-
         # New starting sample
         shift_factor[l] = (idx_min + search_overlap)*step + os*symb_delay - step_width
-
     return shift_factor, foe_corse, mode_sync_order
 
 def correct_shifts(shift_factors, ntaps, os):
