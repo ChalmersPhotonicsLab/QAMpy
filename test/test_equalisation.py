@@ -21,6 +21,11 @@ class TestReturnObject(object):
         s3, wx, err = equalisation.equalise_signal(s2, 1e-3, Ntaps=11, apply=True)
         assert type(s3) is type(self.s)
 
+    def test_eq_applykw_dual(self):
+        s2 = impairments.simulate_transmission(self.s, self.s.fb, self.s.fs, snr=20, dgd=100e-12)
+        s3, wx, err = equalisation.dual_mode_equalisation(s2, (1e-3, 1e-3), 11, apply=True)
+        assert type(s3) is type(self.s)
+
     @pytest.mark.xfail(reason="The core equalisation functions are not expected to preserve subclasses")
     def test_apply_filter_adv(self):
         s2 = impairments.simulate_transmission(self.s, self.s.fb, self.s.fs, snr=20, dgd=100e-12)
