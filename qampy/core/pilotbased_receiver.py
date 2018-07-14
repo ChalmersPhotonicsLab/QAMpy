@@ -392,7 +392,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0,  sh = Fals
     # Run FOE and shift spectrum
     pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps[1]-1]
     if sh:
-       foePerMode = np.zeros([npols,1])
+        foePerMode = np.zeros([npols,1])
     else:
         # First Eq, extract pilot sequence to do FOE
         foe, foePerMode, cond = pilot_based_foe(pilot_seq, ref_symbs, equalise=True,
@@ -400,7 +400,6 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0,  sh = Fals
                                                 Ntaps=ntaps[1], Niter=Niter[1], method=method[0],
                                                 adaptive_stepsize=adap_step[1])
         pilot_seq = phaserecovery.comp_freq_offset(pilot_seq, foePerMode, os=os)
-
     out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=ntaps[1], Niter=(Niter[1], Niter[1]), methods=method, adaptive_stepsize=(adap_step[1], adap_step[1]), apply=False)
     return out_taps, foePerMode
 
