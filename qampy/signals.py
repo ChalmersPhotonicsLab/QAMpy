@@ -26,7 +26,7 @@ from bitarray import bitarray
 from qampy import helpers
 from qampy.core import resample
 from qampy import theory
-from qampy.core import ber_functions
+from qampy.core import ber_functions, pilotbased_receiver
 from qampy.core.prbs import make_prbs_extXOR
 from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
 
@@ -1358,7 +1358,7 @@ class SignalWithPilots(SignalBase):
         the scaling factor for the pilot amplitude
     """
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
-                     "_idx_dat", "_pilot_scale", "_pilot_ins_rat"]
+                     "_idx_dat", "_pilot_scale", "_pilot_ins_rat", "_shiftfctrs", "_synctaps"]
     _inheritbase_ = ["_fs"]
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
@@ -1382,6 +1382,8 @@ class SignalWithPilots(SignalBase):
         obj._pilots = pilots
         obj._idx_dat = idx_dat
         obj._pilot_scale = pilot_scale
+        obj._shiftfctrs = None
+        obj._synctaps = None
         return obj
 
     @staticmethod
@@ -1450,7 +1452,13 @@ class SignalWithPilots(SignalBase):
         obj._symbols = data[:, :Ndat].copy()
         obj._pilots = pilots
         obj._idx_dat = idx_dat
+        obj._shiftfctrs = None
+        obj._synctaps = None
         return obj
+
+    @property
+    def Mpilots(self):
+        return self.pilots.M
 
     @property
     def pilot_scale(self):
@@ -1479,6 +1487,32 @@ class SignalWithPilots(SignalBase):
     @property
     def frame_len(self):
         return self._frame_len
+
+    @property
+    def synctaps(self):
+        return self._synctaps
+
+    @synctaps.setter
+    def synctaps(self, value):
+        self._synctaps = value
+
+    @property
+    def shiftfctrs(self):
+        return self._shiftfctrs
+
+    @shiftfctrs.setter
+    def shiftfctrs(self, value):
+        self._shiftfctrs = value
+
+    def frame_sync(self, Ntaps=17, **eqkwargs):
+        shift_factors, corse_foe, mode_alignment = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
+                                                                              Ntaps=Ntaps,
+                                                                              frame_len=self.frame_len,
+                                                                              M_pilot=self.Mpilots, **eqkwargs)
+        self[:,:] = self[mode_alignment,:]
+        #self.pilots = self.pilots[mode_alignment, :]
+        self.shiftfctrs = shift_factors
+        self.synctaps = Ntaps
 
     def get_data(self, shift_factors=None):
         """

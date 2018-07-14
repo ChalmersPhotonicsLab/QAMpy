@@ -17,7 +17,7 @@
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
 from qampy import core
-from qampy.core import equalisation
+from qampy.core import equalisation, pilotbased_receiver
 __doc__= equalisation.equalisation.__doc__
 
 def apply_filter(sig, wxy, method="pyx"):
@@ -42,6 +42,12 @@ def apply_filter(sig, wxy, method="pyx"):
     sig_out   : SignalObject
         equalised signal
     """
+    if hasattr(synctaps, sig) and sig.synctaps is not None:
+        shift_factors = pilotbased_receiver.correct_shifts(sig.shiftfctrs, (sig.synctaps, wxy.shape[-1]), sig.os)
+        shf_min = shift_factors.min()
+        shift_factors -= shf_min
+        sig = np.roll(sig, -shf_min, axis=-1)
+        sig.shiftfctrs = shift_factors
     sig_out = core.equalisation.apply_filter(sig, sig.os, wxy, method=method)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
@@ -103,7 +109,7 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     if apply:
         sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                                  adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                                 avoid_cma_sing=avoid_cma_sing, apply=apply,
+                                                 avoid_cma_sing=avoid_cma_sing, apply=False,
                                                            **kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wxy, err
     else:
@@ -155,7 +161,7 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
 
     if apply:
         sig_out   : SignalObject
-            equalised signal X and Y polarisation
+            equalised signal X and Y polarisation5920855
 
     (wx, wy)  : tuple(array_like, array_like)
        equaliser taps for the x and y polarisation
@@ -181,7 +187,4 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
                                                                 apply=apply,**kwargs)
-
-
-
 
