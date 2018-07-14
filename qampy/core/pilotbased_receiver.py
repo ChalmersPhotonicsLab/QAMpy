@@ -401,10 +401,11 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0,  sh = Fals
         # Pilot-based FOE
         foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
         # Apply FO-compensation
-        sig_dc_center = phaserecovery.comp_freq_offset(rx_signal, foePerMode, os=os)
+        #sig_dc_center = phaserecovery.comp_freq_offset(rx_signal, foePerMode, os=os)
+        pilot_seq = phaserecovery.comp_freq_offset(pilot_seq, foePerMode, os=os)
 
     # First step Eq
-    pilot_seq = sig_dc_center[:,shift_factor:+shift_factor+pilot_seq_len*os+ntaps[1]-1]
+    #pilot_seq = sig_dc_center[:,shift_factor:+shift_factor+pilot_seq_len*os+ntaps[1]-1]
     #wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
     #out_taps, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wxy_init,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
     out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=ntaps[1], Niter=(Niter[1], Niter[1]), methods=method, adaptive_stepsize=(adap_step[1], adap_step[1]), apply=False)
