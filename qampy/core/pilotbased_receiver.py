@@ -24,7 +24,7 @@ from qampy.core import phaserecovery, filter
 from qampy.core import ber_functions
 
 
-def pilot_based_foe(rec_syms, pilot_syms, equalise=True, M_pilot=4, os=2, mu=1e-3, **eqargs):
+def pilot_based_foe(rec_symbs, pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
     sequence to find the frequency offset from the corresponding aligned symbols.
@@ -34,8 +34,8 @@ def pilot_based_foe(rec_syms, pilot_syms, equalise=True, M_pilot=4, os=2, mu=1e-
     to find the corresponding frequency offset. 
     
     Input:
-        rec_syms:  Complex symbols after initial Rx DSP
-        pilot_syms: Complex pilot symbols transmitted
+        rec_symbs:  Complex symbols after initial Rx DSP
+        pilot_symbs: Complex pilot symbols transmitted
         
     
     Output:
@@ -45,19 +45,16 @@ def pilot_based_foe(rec_syms, pilot_syms, equalise=True, M_pilot=4, os=2, mu=1e-
     
     """
 
-    rec_syms = np.atleast_2d(rec_syms)
-    pilot_syms = np.atleast_2d(pilot_syms)
-    npols = rec_syms.shape[0]
-    if equalise:
-        rec_syms, wx, err = equalisation.equalise_signal(rec_syms, os, mu, M_pilot,
-                                                         apply=True, **eqargs)
+    rec_symbs = np.atleast_2d(rec_symbs)
+    pilot_symbs = np.atleast_2d(pilot_symbs)
+    npols = rec_symbs.shape[0]
 
     condNum = np.zeros([npols,1])
     foePerMode = np.zeros([npols,1])
 
     # Search over all polarization
     for l in range(npols):
-        phaseEvolution = np.unwrap(np.angle(pilot_syms[l,:].conj()*rec_syms[l,:]))
+        phaseEvolution = np.unwrap(np.angle(pilot_symbs[l,:].conj()*rec_symbs[l,:]))
 
         # fit a first order polynomial to the unwrapped phase evolution
         freqFit = np.polyfit(np.arange(0,len(phaseEvolution)),phaseEvolution,1)
@@ -392,15 +389,16 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0, sh=False,
     pilot_seq_len = ref_symbs.shape[-1]
     pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps[1]-1]
     # Run FOE and shift spectrum
-    pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps[1]-1]
     if sh:
         foePerMode = np.zeros([npols,1])
     else:
-        # First Eq, extract pilot sequence to do FOE
-        foe, foePerMode, cond = pilot_based_foe(pilot_seq, ref_symbs, equalise=True,
-                                                os=os, mu=mu[0], M_pilot=M_pilot,
-                                                Ntaps=ntaps[1], Niter=Niter[1], method=method[0],
-                                                adaptive_stepsize=adap_step[1])
+        syms_out, wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,
+                                               Ntaps=ntaps[1],
+                                               Niter=Niter[1], method=method[0],
+                                               adaptive_stepsize=adap_step[1],
+                                                         apply=True)
+
+        foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
         pilot_seq = phaserecovery.comp_freq_offset(pilot_seq, foePerMode, os=os)
     out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=ntaps[1], Niter=(Niter[1], Niter[1]), methods=method, adaptive_stepsize=(adap_step[1], adap_step[1]), apply=False)
     return out_taps, foePerMode
