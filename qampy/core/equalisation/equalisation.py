@@ -337,7 +337,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
     return Eout, wxy, TrSyms, Ntaps, err, pols
 
-def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), apply2signal=True, **kwargs):
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), apply=True, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -374,7 +374,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     symbols : array_like
         array of coded symbols to decide on for dd-based equalisation functions
 
-    apply2signal: Bool, optional
+    apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
 
     Returns
@@ -388,17 +388,17 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     (err1, err2)       : tuple(array_like, array_like)
        estimation error for x and y polarisation for each equaliser mode
 
-    if apply2signal is False do not return E
+    if apply is False do not return E
     """
     wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0], **kwargs)
     wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols, avoid_cma_sing=avoid_cma_sing[1], **kwargs)
-    if apply2signal:
+    if apply:
         Eest = apply_filter(E, os, wxy2)
         return Eest, wxy2, (err1, err2)
     else:
         return wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, **kwargs):
+def equalise_signal(E, os, mu, M, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, apply=False, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -437,9 +437,14 @@ def equalise_signal(E, os, mu, M, Ntaps=None, TrSyms=None, Niter=1, method="mcma
         array of coded symbols to decide on for dd-based equalisation functions
     avoid_cma_sing : bool
         avoid the CMA polarization demux singularity by orthogonallizing taps after first pol convergence
+    apply: Bool, optional
+        whether to apply the filter taps and return the equalised signal
 
     Returns
     -------
+    if apply:
+        E : array_like
+        equalised signal
 
     (wx, wy)    : tuple(array_like, array_like)
        equaliser taps for the x and y polarisation
@@ -459,7 +464,11 @@ def equalise_signal(E, os, mu, M, Ntaps=None, TrSyms=None, Niter=1, method="mcma
         if (l < 1) and avoid_cma_sing:
             wxy[l+1] = orthogonalizetaps(wxy[l])
 
-    return wxy, err
+    if apply:
+        Eest = apply_filter(E, os, wxy)
+        return Eest, wxy, err
+    else:
+        return wxy, err
 
 def CDcomp(E, fs, N, L, D, wl):
     """
