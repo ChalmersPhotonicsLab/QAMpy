@@ -315,7 +315,6 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     search_overlap = 2 # fraction of pilot_sequence to overlap
     step_width = pilot_seq_len * os
     step = step_width // search_overlap
-    sig_len = rx_signal.shape[-1]
     # we only need to search the length of one frame*os plus some buffer
     num_steps = (frame_len*os)//step + search_overlap + 1
     # Now search for every mode independent
