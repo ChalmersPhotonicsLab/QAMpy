@@ -24,7 +24,7 @@ from qampy.core import phaserecovery, filter
 from qampy.core import ber_functions
 
 
-def pilot_based_foe(rec_symbs,pilot_symbs):
+def pilot_based_foe(rec_symbs, pilot_symbs):
     """
     Frequency offset estimation for pilot-based DSP. Uses a transmitted pilot
     sequence to find the frequency offset from the corresponding aligned symbols.
@@ -48,20 +48,20 @@ def pilot_based_foe(rec_symbs,pilot_symbs):
     rec_symbs = np.atleast_2d(rec_symbs)
     pilot_symbs = np.atleast_2d(pilot_symbs)
     npols = rec_symbs.shape[0]
-    
+
     condNum = np.zeros([npols,1])
     foePerMode = np.zeros([npols,1])
-    
+
     # Search over all polarization
-    for l in range(npols):    
+    for l in range(npols):
         phaseEvolution = np.unwrap(np.angle(pilot_symbs[l,:].conj()*rec_symbs[l,:]))
-        
+
         # fit a first order polynomial to the unwrapped phase evolution
         freqFit = np.polyfit(np.arange(0,len(phaseEvolution)),phaseEvolution,1)
-    
+
         foePerMode[l,0] = freqFit[0]/(2*np.pi)
-        condNum[l,0] = freqFit[1]                 
-    
+        condNum[l,0] = freqFit[1]
+
     # Average over all modes used
     foe = np.mean(foePerMode)
     
@@ -385,9 +385,6 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0,  sh = Fals
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]    
     pilot_seq_len = ref_symbs.shape[-1]
-
-    # Tap update and extract the propper pilot sequuence    
-
     # Run FOE and shift spectrum
     if sh:
        # Signal should be DC-centered. Do nothing.
@@ -396,20 +393,22 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0,  sh = Fals
     else:
         # First Eq, extract pilot sequence to do FOE
         pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps[1]-1]
-        wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
-        symbs_out= equalisation.apply_filter(pilot_seq,os,wx)
+        syms_out, wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,
+                                               Ntaps = ntaps[1],
+                                               Niter=Niter[1], method=method[0],
+                                               adaptive_stepsize=adap_step[1], apply=True)
 
         # Pilot-based FOE
-        foe, foePerMode, cond = pilot_based_foe(symbs_out, ref_symbs)
-        foePerMode = np.ones(foePerMode.shape)*foe
+        foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
         # Apply FO-compensation
         sig_dc_center = phaserecovery.comp_freq_offset(rx_signal, foePerMode, os=os)
 
     # First step Eq
     pilot_seq = sig_dc_center[:,shift_factor:+shift_factor+pilot_seq_len*os+ntaps[1]-1]
-    wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
-    out_taps, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wxy_init,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
-    symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps)
+    #wxy_init, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4, Ntaps = ntaps[1], Niter = Niter[1], method = method[0],adaptive_stepsize = adap_step[1])
+    #out_taps, err = equalisation.equalise_signal(pilot_seq, os, mu[1], 4,wxy=wxy_init,Ntaps = ntaps[1], Niter = Niter[1], method = method[1],adaptive_stepsize = adap_step[1])
+    out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=ntaps[1], Niter=(Niter[1], Niter[1]), methods=method, adaptive_stepsize=(adap_step[1], adap_step[1]), apply=False)
+    #symbs_out = equalisation.apply_filter(pilot_seq,os,out_taps)
 
     # Equalize using additional frames if selected
 
