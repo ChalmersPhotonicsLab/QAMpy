@@ -28,8 +28,7 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     
     # Converge equalizer using the pilot sequence
     taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal, ref_symbs,
-                                                                    os, sh=sh, process_frame_id=process_frame_id,
-                                                                    frame_length=frame_length,
+                                                                    os, sh=sh,
                                                                     mu=mu, method=method,
                                                                     ntaps=Numtaps, Niter=Niter,
                                                                     adap_step=adap_step)
@@ -88,7 +87,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
                    resBits_tx=None, resBits_rx=None):
     
     npols=2
-    
+
     signal = signals.SignalWithPilots(M, frame_length, pilot_seq_len, pilot_ins_rat, nframes=num_frames, nmodes=npols)
 
     signal2 = signal.resample(signal.fb*2, beta=beta, renormalise=True)
