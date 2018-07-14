@@ -379,7 +379,9 @@ def shift_signal(sig, shift_factors):
     return sig
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0,  sh = False, process_frame_id = 0, frame_length = 2**16, mu = (1e-4,1e-4), M_pilot = 4, ntaps = (25,45), Niter = (10,30), adap_step = (True,True), method=('cma','cma')):
+def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0, sh=False, process_frame_id=0, frame_length=2**16,
+                            mu=(1e-4,1e-4), M_pilot=4, ntaps=(25,45), Niter=(10,30),
+                            adap_step=(True,True), method=('cma','cma')):
     """
     
     """
