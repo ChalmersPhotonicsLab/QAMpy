@@ -87,7 +87,7 @@ class TestWithResampling(object):
         ss = ss.resample(1, beta=0.1, renormalise=True)
         ber = ss.cal_ber()
         ber_t = theory.ber_vs_es_over_n0_qam(10**((snr+off[M])/10), M)
-        npt.assert_allclose(ber, ber_t, rtol=0.15)
+        npt.assert_allclose(ber, ber_t, rtol=0.18)
 
     # error is significantly higher for M=4 so ommitting
     @pytest.mark.parametrize("M", [16, 64, 128])

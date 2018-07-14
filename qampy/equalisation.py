@@ -42,8 +42,7 @@ def apply_filter(sig, wxy, method="pyx"):
     sig_out   : SignalObject
         equalised signal
     """
-    os = int(sig.fs/sig.fb)
-    sig_out = core.equalisation.apply_filter(sig, os, wxy, method=method)
+    sig_out = core.equalisation.apply_filter(sig, sig.os, wxy, method=method)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
@@ -97,19 +96,18 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     err       : array_like
        estimation error for x and y polarisation
     """
-    os = int(sig.fs/sig.fb)
     try:
         syms = sig.coded_symbols
     except AttributeError:
         syms = None
     if apply:
-        sig_out, wxy, err = core.equalisation.equalise_signal(sig, os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
+        sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                                  adaptive_stepsize=adaptive_stepsize,  symbols=syms,
                                                  avoid_cma_sing=avoid_cma_sing, apply=apply,
                                                            **kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wxy, err
     else:
-        return core.equalisation.equalise_signal(sig, os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
+        return core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize,  symbols=syms,
                                              avoid_cma_sing=avoid_cma_sing, apply=apply,
                                                  **kwargs)
@@ -168,19 +166,18 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
     if apply is False do not return sig_out
 
     """
-    os = int(sig.fs/sig.fb)
     try:
         syms = sig.coded_symbols
     except AttributeError:
         syms = None
     if apply:
-        sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
+        sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
                                                                 apply=apply,**kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
     else:
-        return core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
+        return core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
                                                                 apply=apply,**kwargs)

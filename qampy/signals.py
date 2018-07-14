@@ -158,6 +158,10 @@ class SignalBase(np.ndarray):
     def fs(self):
         return self._fs
 
+    @property
+    def os(self):
+        return int(self.fs/self.fb)
+
     @staticmethod
     def _copy_inherits(objold, objnew):
         for attr in objold._inheritbase_:
