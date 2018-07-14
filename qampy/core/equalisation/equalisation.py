@@ -456,11 +456,11 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     method = method.lower()
     eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
     # scale signal
-    E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
+    Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     wxy = wxy.astype(E.dtype)
     for l in range(pols):
         for i in range(Niter):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
+            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(Et, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
             wxy[l+1] = orthogonalizetaps(wxy[l])
 
