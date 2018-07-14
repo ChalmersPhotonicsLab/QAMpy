@@ -388,6 +388,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0,  sh = Fals
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]    
     pilot_seq_len = ref_symbs.shape[-1]
+    pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps[1]-1]
     # Run FOE and shift spectrum
     pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps[1]-1]
     if sh:
