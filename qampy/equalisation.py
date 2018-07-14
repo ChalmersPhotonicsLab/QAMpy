@@ -157,11 +157,17 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
         syms = sig.coded_symbols
     except AttributeError:
         syms = None
-    sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
+    if apply2signal:
+        sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
                                                                 apply2signal=apply2signal,**kwargs)
-    return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
+        return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
+    else:
+         sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
+                                                       adaptive_stepsize=adaptive_stepsize, symbols=syms,
+                                                                avoid_cma_sing=avoid_cma_sing,
+                                                                apply2signal=apply2signal,**kwargs)
 
 
 
