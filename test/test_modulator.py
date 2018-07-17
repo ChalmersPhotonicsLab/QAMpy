@@ -687,6 +687,17 @@ class TestSignalQualityCorrectnes(object):
         ber = s.cal_ber()
         npt.assert_almost_equal(ber.flatten(), err_syms/(N*np.log2(M)))
 
+class TestPilotCalcs(object):
+    @pytest.mark.parametrize("ntaps", range(17, 20))
+    @pytest.mark.parametrize("shift", np.arange(0, 2)+3000)
+    def test_sync_frame(self, ntaps, shift):
+        s = signals.SignalWithPilots(128, 2**16, 512, 32, nframes=3)
+        s = s.resample(2*s.fs, beta=0.1)
+        s = impairments.change_snr(s, 30)
+        s = np.roll(s, shift, axis=-1)
+        s.sync2frame(Ntaps=ntaps, adaptive_stepsize=True, mu=1e-3, method="cma")
+        #npt.assert_equal(s.shiftfctrs[0], shift-int(np.round(ntaps/2)))
+        npt.assert_equal(s.shiftfctrs[0], shift-int(ntaps/2))
 
 class TestSignalQualityOnSignal(object):
 
@@ -701,7 +712,7 @@ class TestSignalQualityOnSignal(object):
         ser = s.cal_ser()
         assert ser[0] == 0
 
-    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    @pytest.mark.p        #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
     def test_evm_shape(self, nmodes):
         s = signals.ResampledQAM(16, 2 ** 16, nmodes=nmodes)
         evm = s.cal_evm()
