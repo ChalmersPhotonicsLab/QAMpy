@@ -313,10 +313,10 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     mode_sync_order = np.zeros(nmodes, dtype=int)
     not_found_modes = np.arange(0, nmodes)
     search_overlap = 2 # fraction of pilot_sequence to overlap
-    step_width = pilot_seq_len * os
-    step = step_width // search_overlap
+    search_window = pilot_seq_len * os
+    step = search_window // search_overlap
     # we only need to search the length of one frame*os plus some buffer
-    num_steps = (frame_len*os)//step + search_overlap + 1
+    num_steps = (frame_len*os)//step - search_overlap + 1
     # Now search for every mode independent
     shift_factor = np.zeros(nmodes, dtype=int)
     # Search based on equalizer error. Avoid one pilot_seq_len part in the beginning and
@@ -324,17 +324,17 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     sub_vars = np.ones((nmodes, num_steps)) * 1e2
     wxys = np.zeros((num_steps, nmodes, nmodes, Ntaps), dtype=complex)
     for i in np.arange(search_overlap, num_steps): # we avoid one step at the beginning
-        tmp = rx_signal[:, i*step:i*step+step_width]
+        tmp = rx_signal[:, i*step:i*step+search_window]
         wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=Ntaps, **eqargs)
         wxys[i] = wxy
-        sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])
+        sub_vars[:,i] = np.var(err_out, axis=-1)
     # Lowest variance of the CMA error for each pol
     min_range = np.argmin(sub_vars, axis=-1)
     wxy = wxys[min_range]
     for l in range(nmodes):
         idx_min = min_range[l]
         # Extract a longer sequence to ensure that the complete pilot sequence is found
-        longSeq = rx_signal[:, (idx_min+search_overlap)*step-step_width: (idx_min + search_overlap)*step+step_width]
+        longSeq = rx_signal[:, (idx_min)*step-search_window: (idx_min )*step+search_window]
         # Apply filter taps to the long sequence and remove coarse FO
         wx1 = wxy[l]
         symbs_out = equalisation.apply_filter(longSeq,os,wx1)
@@ -354,8 +354,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
         # Remove the found reference mode
         not_found_modes = not_found_modes[not_found_modes != max_sync_pol]
         # New starting sample
-        shift_factor[l] = (idx_min + search_overlap)*step + os*symb_delay - step_width
-    return shift_factor, foe_corse, mode_sync_order
+        shift_factor[l] = (idx_min)*step + os*symb_delay - search_window
+    return shift_factor, foe_corse, mode_sync_order, wx1
 
 def correct_shifts(shift_factors, ntaps, os):
     # taps cause offset on shift factors

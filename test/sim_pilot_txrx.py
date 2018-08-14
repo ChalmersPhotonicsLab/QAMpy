@@ -24,8 +24,9 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     # shift so that modes are offset from minimum mode minimum mode is align with the frame
     rec_signal = np.roll(rec_signal, -shift_factor.min(), axis=-1)
     shift_factor -= shift_factor.min()
+    print(shift_factor)
 
-    
+
     # Converge equalizer using the pilot sequence
     taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal, ref_symbs,
                                                                     os, sh=sh,
@@ -82,7 +83,7 @@ def pre_filter(signal, bw, os,center_freq = 0):
 
 # Standard function to test DSP
 def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2,
-                   frame_length = 2**14, pilot_seq_len = 512, pilot_ins_rat=32,
+                   frame_length = 2**16, pilot_seq_len = 512, pilot_ins_rat=32,
                    num_frames=3,modal_delay=None, laser_lw = None,
                    resBits_tx=None, resBits_rx=None):
     
@@ -95,7 +96,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
     #sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=[800, 200], freqoff=freq_off,
                                                     #linewidth=laser_lw,beta=beta, num_frames=3, resBits_tx=resBits_tx,
                                                     #resBits_rx=resBits_rx)
-    sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[300,300], lwdth=laser_lw, freq_off=freq_off)
+    sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[5000,3000], lwdth=laser_lw, freq_off=freq_off)
     #sig_tx = signal2.recreate_from_np_array(sig_tx)
 
 
