@@ -1504,15 +1504,16 @@ class SignalWithPilots(SignalBase):
     def shiftfctrs(self, value):
         self._shiftfctrs = value
 
-    def sync2frame(self, Ntaps=17, **eqkwargs):
-        shift_factors, corse_foe, mode_alignment = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
+    def sync2frame(self, Ntaps=17, returntaps=False, **eqkwargs):
+        shift_factors, corse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
                                                                               M_pilot=self.Mpilots, **eqkwargs)
         self[:,:] = self[mode_alignment,:]
-        #self.pilots = self.pilots[mode_alignment, :]
         self.shiftfctrs = shift_factors
         self.synctaps = Ntaps
+        if returntaps:
+            return wx1
 
     def get_data(self, shift_factors=None):
         """
