@@ -358,7 +358,7 @@ def shift_signal(sig, shift_factors):
     return sig
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0, sh=False,
+def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False,
                             mu=(1e-4,1e-4), M_pilot=4, ntaps=,45, Niter=30,
                             adapt_step=True, methodd=('cma','cma')):
     """
@@ -369,7 +369,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0, sh=False,
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]    
     pilot_seq_len = ref_symbs.shape[-1]
-    pilot_seq = rx_signal[:,shift_factor:shift_factor+pilot_seq_len*os+ntaps[1]-1]
+    pilot_seq = rx_signal[:, :pilot_seq_len*os+ntaps[1]-1]
     # Run FOE and shift spectrum
     if sh:
         foePerMode = np.zeros([npols,1])
