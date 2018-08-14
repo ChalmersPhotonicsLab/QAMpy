@@ -250,24 +250,6 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         
     return data_symbs, phase_trace
     
-    
-def moving_average(sig, n=3):
-    """
-    Moving average of signal
-    
-    Input:
-        sig: Signal for moving average
-        n: number of averaging samples
-        
-    Output:
-        ret: Returned average signal of length len(sig)-n+1
-    """
-    
-    ret = np.cumsum(sig,dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    
-    return ret[n-1:]/n
-
 def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
                mu=1e-3, Ntaps=17, **eqargs):
     """
