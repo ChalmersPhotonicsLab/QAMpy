@@ -359,8 +359,8 @@ def shift_signal(sig, shift_factors):
 
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False,
-                            mu=(1e-4,1e-4), M_pilot=4, ntaps=,45, Niter=30,
-                            adapt_step=True, methodd=('cma','cma')):
+                            mu=(1e-4,1e-4), M_pilot=4, ntaps=45, Niter=30,
+                            adapt_step=True, methods=('cma','cma')):
     """
     
     """
@@ -369,7 +369,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False,
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]    
     pilot_seq_len = ref_symbs.shape[-1]
-    pilot_seq = rx_signal[:, :pilot_seq_len*os+ntaps[1]-1]
+    pilot_seq = rx_signal[:, :pilot_seq_len*os+ntaps-1]
     # Run FOE and shift spectrum
     if sh:
         foePerMode = np.zeros([npols,1])
@@ -383,7 +383,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False,
         foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
         pilot_seq = phaserecovery.comp_freq_offset(pilot_seq, foePerMode, os=os)
     out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=ntaps, Niter=(Niter, Niter),
-                                                        methods=method, adaptive_stepsize=(adapt_step, adapt_step), apply=False)
+                                                        methods=methods, adaptive_stepsize=(adapt_step, adapt_step), apply=False)
     return out_taps, foePerMode
 
 
