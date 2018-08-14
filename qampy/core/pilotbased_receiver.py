@@ -359,8 +359,8 @@ def shift_signal(sig, shift_factors):
 
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0, sh=False,
-                            mu=(1e-4,1e-4), M_pilot=4, ntaps=(25,45), Niter=(10,30),
-                            adap_step=(True,True), method=('cma','cma')):
+                            mu=(1e-4,1e-4), M_pilot=4, ntaps=,45, Niter=30,
+                            adapt_step=True, methodd=('cma','cma')):
     """
     
     """
@@ -375,14 +375,15 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, shift_factor=0, sh=False,
         foePerMode = np.zeros([npols,1])
     else:
         syms_out, wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,
-                                               Ntaps=ntaps[1],
-                                               Niter=Niter[1], method=method[0],
-                                               adaptive_stepsize=adap_step[1],
+                                               Ntaps=ntaps,
+                                               Niter=Niter, method=methods[0],
+                                               adaptive_stepsize=adap_step,
                                                          apply=True)
 
         foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
         pilot_seq = phaserecovery.comp_freq_offset(pilot_seq, foePerMode, os=os)
-    out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=ntaps[1], Niter=(Niter[1], Niter[1]), methods=method, adaptive_stepsize=(adap_step[1], adap_step[1]), apply=False)
+    out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=ntaps, Niter=(Niter, Niter),
+                                                        methods=method, adaptive_stepsize=(adapt_step, adapt_step), apply=False)
     return out_taps, foePerMode
 
 
