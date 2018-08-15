@@ -23,8 +23,8 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     # taps cause offset on shift factors
     shift_factor = pilotbased_receiver.correct_shifts(shift_factor, Numtaps, os)
     # shift so that modes are offset from minimum mode minimum mode is align with the frame
-    rec_signal = np.roll(rec_signal, -shift_factor.min(), axis=-1)
-    shift_factor -= shift_factor.min()
+    rec_signal = np.roll(rec_signal, -shift_factor[shift_factor>=0].min(), axis=-1)
+    shift_factor -= shift_factor[shift_factor>=0].min()
 
 
     # Converge equalizer using the pilot sequence
@@ -104,7 +104,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
     # Simulate transmission
     #sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=[800, 200], freqoff=freq_off,
                                                     #resBits_rx=resBits_rx)
-    sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[3000,3000], lwdth=laser_lw, freq_off=freq_off)
+    sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[5000,3000], lwdth=laser_lw, freq_off=freq_off, dgd=70e-12, theta=np.pi/6)
     #sig_tx = signal2.recreate_from_np_array(sig_tx)
 
 
