@@ -1,7 +1,7 @@
 import numpy as np
 from qampy.core import equalisation,  phaserecovery, pilotbased_receiver,pilotbased_transmitter,filter,\
     resample
-from qampy import signals, impairments
+from qampy import signals, impairments, helpers
 import matplotlib.pylab as plt
 
 def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Numtaps=(17, 45),
@@ -32,7 +32,7 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     foe_all = []
     if np.all(shift_factor == 0):
         taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(rec_signal, ref_symbs,
-                                                                    os, sh=~sh,
+                                                                    os, sh=sh,
                                                                     mu=mu, methods=method,
                                                                     ntaps=Numtaps[1], Niter=Niter[1],
                                                                     adapt_step=adap_step[1])
@@ -40,7 +40,7 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
         for i in range(nmodes):
             rec_signal2 = np.roll(rec_signal, -shift_factor[i], axis=-1)
             taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal2, ref_symbs,
-                                                                    os, sh=~sh,
+                                                                    os, sh=sh,
                                                                     mu=mu, methods=method,
                                                                     ntaps=Numtaps[1], Niter=Niter[1],
                                                                     adapt_step=adap_step[1])
@@ -130,7 +130,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
 
 if __name__ == "__main__":
     #gmi, ber = sim_pilot_txrx(20)
-    dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40, laser_lw=100e3)
+    dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40, laser_lw=100e3, freq_off=50e6)
     sigo = sign.symbols.recreate_from_np_array(dsp)
-
+    sigo = helpers.normalise_and_center(sigo)
     print(sigo.cal_gmi())
