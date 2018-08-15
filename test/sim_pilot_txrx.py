@@ -30,16 +30,22 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     # Converge equalizer using the pilot sequence
     taps_all = []
     foe_all = []
-
-    for i in range(nmodes):
-        rec_signal2 = np.roll(rec_signal, -shift_factor[i], axis=-1)
-        taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal2, ref_symbs,
+    if np.all(shift_factor == 0):
+        taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(rec_signal, ref_symbs,
                                                                     os, sh=~sh,
                                                                     mu=mu, methods=method,
                                                                     ntaps=Numtaps[1], Niter=Niter[1],
                                                                     adapt_step=adap_step[1])
-        taps_all.append(taps[i])
-        foe_all.append(foePerMode[i])
+    else:
+        for i in range(nmodes):
+            rec_signal2 = np.roll(rec_signal, -shift_factor[i], axis=-1)
+            taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal2, ref_symbs,
+                                                                    os, sh=~sh,
+                                                                    mu=mu, methods=method,
+                                                                    ntaps=Numtaps[1], Niter=Niter[1],
+                                                                    adapt_step=adap_step[1])
+            taps_all.append(taps[i])
+            foe_all.append(foePerMode[i])
 
     if not sh:
         out_sig = phaserecovery.comp_freq_offset(rec_signal, np.array(foe_all), os=os)
@@ -98,7 +104,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
     # Simulate transmission
     #sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=[800, 200], freqoff=freq_off,
                                                     #resBits_rx=resBits_rx)
-    sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[5000,3000], lwdth=laser_lw, freq_off=freq_off)
+    sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[3000,3000], lwdth=laser_lw, freq_off=freq_off)
     #sig_tx = signal2.recreate_from_np_array(sig_tx)
 
 
