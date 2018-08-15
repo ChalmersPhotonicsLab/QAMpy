@@ -352,7 +352,7 @@ def shift_signal(sig, shift_factors):
     k = len(shift_factors)
     if k > 1:
         for i in range(k):
-            sig[i] = np.roll(sig[i], shift_factors[i])
+            sig[i] = np.roll(sig[i], -shift_factors[i])
     else:
         sig = np.roll(sig, shift_factors, axis=-1)
     return sig
