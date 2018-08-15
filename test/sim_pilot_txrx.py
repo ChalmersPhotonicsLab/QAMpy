@@ -10,9 +10,10 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
                        remove_inital_cpe_output=True, remove_phase_pilots=True):
 
     ref_symbs = rec_signal.pilot_seq
+    nmodes = rec_signal.shape[0]
 
     # Frame sync, locate first frame
-    shift_factor, corse_foe, mode_alignment = pilotbased_receiver.frame_sync(rec_signal, ref_symbs, os, frame_len=frame_length,
+    shift_factor, corse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(rec_signal, ref_symbs, os, frame_len=frame_length,
                                                                              mu=mu[0], method=method[0], Ntaps=Numtaps[0],
                                                                                                                 adaptive_stepsize=adap_step[0])
 
@@ -24,37 +25,39 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     # shift so that modes are offset from minimum mode minimum mode is align with the frame
     rec_signal = np.roll(rec_signal, -shift_factor.min(), axis=-1)
     shift_factor -= shift_factor.min()
-    print(shift_factor)
 
 
     # Converge equalizer using the pilot sequence
-    taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal, ref_symbs,
-                                                                    os, sh=sh,
-                                                                    mu=mu, method=method,
-                                                                    ntaps=Numtaps, Niter=Niter,
-                                                                    adap_step=adap_step)
+    taps_all = []
+    foe_all = []
 
-
-
+    for i in range(nmodes):
+        rec_signal2 = np.roll(rec_signal, -shift_factor[i], axis=-1)
+        taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal2, ref_symbs,
+                                                                    os, sh=~sh,
+                                                                    mu=mu, methods=method,
+                                                                    ntaps=Numtaps[1], Niter=Niter[1],
+                                                                    adapt_step=adap_step[1])
+        taps_all.append(taps[i])
+        foe_all.append(foePerMode[i])
 
     if not sh:
-        out_sig = phaserecovery.comp_freq_offset(rec_signal, foePerMode, os=os)
+        out_sig = phaserecovery.comp_freq_offset(rec_signal, np.array(foe_all), os=os)
         out_sig = rec_signal.recreate_from_np_array(out_sig)
     else:
         out_sig = rec_signal
-    eq_mode_sig = equalisation.apply_filter(out_sig, os, taps)
-    # after equalisation we align all modes to front
-    eq_mode_sig = pilotbased_receiver.shift_signal(eq_mode_sig, shift_factor)
+    eq_mode_sig = pilotbased_receiver.shift_signal(out_sig, shift_factor)
+    eq_mode_sig = equalisation.apply_filter(eq_mode_sig, os, np.array(taps_all))
     eq_mode_sig = rec_signal.recreate_from_np_array(eq_mode_sig)
     symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, pilot_seq_len:frame_length],
                                                            pilot_symbs[:, pilot_seq_len:], pilot_ins_ratio,
-                                                           use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
+                                                              use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
                                                        remove_phase_pilots=True)
     #trace = pilotbased_receiver.pilot_based_cpe2(eq_mode_sig, eq_mode_sig.pilots,
                                                        #use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average)
 
 
-    return symbs, trace, eq_mode_sig
+    return np.array(symbs), trace, eq_mode_sig
 
 
 def pre_filter(signal, bw, os,center_freq = 0):
@@ -84,17 +87,16 @@ def pre_filter(signal, bw, os,center_freq = 0):
 # Standard function to test DSP
 def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2,
                    frame_length = 2**16, pilot_seq_len = 512, pilot_ins_rat=32,
-                   num_frames=3,modal_delay=None, laser_lw = None,
+                   num_frames=3,modal_delay=None, laser_lw = None, fb=20e9,
                    resBits_tx=None, resBits_rx=None):
     
     npols=2
 
-    signal = signals.SignalWithPilots(M, frame_length, pilot_seq_len, pilot_ins_rat, nframes=num_frames, nmodes=npols)
+    signal = signals.SignalWithPilots(M, frame_length, pilot_seq_len, pilot_ins_rat, nframes=num_frames, nmodes=npols, fb=fb)
 
     signal2 = signal.resample(signal.fb*2, beta=beta, renormalise=True)
     # Simulate transmission
     #sig_tx = pilotbased_transmitter.sim_tx(signal2, 2, snr=sig_snr, modal_delay=[800, 200], freqoff=freq_off,
-                                                    #linewidth=laser_lw,beta=beta, num_frames=3, resBits_tx=resBits_tx,
                                                     #resBits_rx=resBits_rx)
     sig_tx = impairments.simulate_transmission(signal2, snr=sig_snr, modal_delay=[5000,3000], lwdth=laser_lw, freq_off=freq_off)
     #sig_tx = signal2.recreate_from_np_array(sig_tx)
@@ -122,6 +124,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
 
 if __name__ == "__main__":
     #gmi, ber = sim_pilot_txrx(20)
-    dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40)
+    dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40, laser_lw=100e3)
     sigo = sign.symbols.recreate_from_np_array(dsp)
+
     print(sigo.cal_gmi())
