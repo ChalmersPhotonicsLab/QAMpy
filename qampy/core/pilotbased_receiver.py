@@ -377,7 +377,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False,
         syms_out, wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,
                                                Ntaps=ntaps,
                                                Niter=Niter, method=methods[0],
-                                               adaptive_stepsize=adap_step,
+                                               adaptive_stepsize=adapt_step,
                                                          apply=True)
 
         foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
