@@ -42,12 +42,12 @@ def apply_filter(sig, wxy, method="pyx"):
     sig_out   : SignalObject
         equalised signal
     """
-    os = int(sig.fs/sig.fb)
-    sig_out = core.equalisation.apply_filter(sig, os, wxy, method=method)
+    sig_out = core.equalisation.apply_filter(sig, sig.os, wxy, method=method)
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
-                    avoid_cma_sing=False, **kwargs):
+                    avoid_cma_sing=False, apply=False,
+                    **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary.
 
@@ -81,8 +81,14 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
         for dual pol signals make y taps orthogonal to x taps after first convergence. Helps to avoid
         singularity problems when demulitplexing dual pol
 
+    apply: Bool, optional
+        whether to apply the filter taps and return the equalised signal
+
     Returns
     -------
+    if apply:
+        sig_out   : SignalObject
+            equalised signal X and Y polarisation
 
     (wx, wy)    : tuple(array_like, array_like)
        equaliser taps for the x and y polarisation
@@ -90,17 +96,25 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     err       : array_like
        estimation error for x and y polarisation
     """
-    os = int(sig.fs/sig.fb)
     try:
         syms = sig.coded_symbols
     except AttributeError:
         syms = None
-    return core.equalisation.equalise_signal(sig, os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
+    if apply:
+        sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
+                                                 adaptive_stepsize=adaptive_stepsize,  symbols=syms,
+                                                 avoid_cma_sing=avoid_cma_sing, apply=apply,
+                                                           **kwargs)
+        return sig.recreate_from_np_array(sig_out, fs=sig.fb), wxy, err
+    else:
+        return core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                             avoid_cma_sing=avoid_cma_sing, **kwargs)
+                                             avoid_cma_sing=avoid_cma_sing, apply=apply,
+                                                 **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
-                           adaptive_stepsize=(False, False), avoid_cma_sing=(False, False), **kwargs):
+                           adaptive_stepsize=(False, False), avoid_cma_sing=(False, False), apply=True,
+                           **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE.
 
@@ -132,29 +146,41 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
         for dual pol signals make y taps orthogonal to x taps after first convergence. Helps to avoid
         singularity problems when demulitplexing dual pol
 
+    apply: Bool, optional
+        whether to apply the filter taps and return the equalised signal
 
 
     Returns
     -------
 
-    sig_out   : SignalObject
-        equalised signal X and Y polarisation
+    if apply:
+        sig_out   : SignalObject
+            equalised signal X and Y polarisation
 
     (wx, wy)  : tuple(array_like, array_like)
        equaliser taps for the x and y polarisation
 
     (err1, err2)       : tuple(array_like, array_like)
        estimation error for x and y polarisation for each equaliser mode
+
+    if apply is False do not return sig_out
+
     """
-    os = int(sig.fs/sig.fb)
     try:
         syms = sig.coded_symbols
     except AttributeError:
         syms = None
-    sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
+    if apply:
+        sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
-                                                                avoid_cma_sing=avoid_cma_sing, **kwargs)
-    return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
+                                                                avoid_cma_sing=avoid_cma_sing,
+                                                                apply=apply,**kwargs)
+        return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
+    else:
+        return core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
+                                                       adaptive_stepsize=adaptive_stepsize, symbols=syms,
+                                                                avoid_cma_sing=avoid_cma_sing,
+                                                                apply=apply,**kwargs)
 
 
 

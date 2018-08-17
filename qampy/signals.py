@@ -158,6 +158,10 @@ class SignalBase(np.ndarray):
     def fs(self):
         return self._fs
 
+    @property
+    def os(self):
+        return int(self.fs/self.fb)
+
     @staticmethod
     def _copy_inherits(objold, objnew):
         for attr in objold._inheritbase_:
@@ -375,7 +379,7 @@ class SignalBase(np.ndarray):
         return np.asarray(
             np.sqrt(np.mean(helpers.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
 
-    def est_snr(self, signal_rx=None, synced=False, symbols_tx=None):
+    def est_snr(self, signal_rx=None, synced=False, symbols_tx=None, verbose=False):
         """
         Estimate the SNR of a given input signal, using known symbols.
 
@@ -387,6 +391,8 @@ class SignalBase(np.ndarray):
             known transmitted symbols (default: None means that self.symbols_tx are used)
         synced : bool, optional
             whether the signal and symbols are synchronized already
+        verbose : bool, optional
+            return estimate noise and signal powers
 
         Returns
         -------
@@ -399,9 +405,16 @@ class SignalBase(np.ndarray):
             symbols_tx = self.symbols
         symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = np.zeros(nmodes, dtype=np.float64)
-        for i in range(nmodes):
-            snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols)
-        return np.asarray(snr)
+        if verbose:
+            s0 = np.zeros(nmodes, dtype=np.float64)
+            n0 = np.zeros(nmodes, dtype=np.float64)
+            for i in range(nmodes):
+                snr[i], s0[i], n0[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
+            return snr, s0, n0
+        else:
+            for i in range(nmodes):
+                snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
+            return snr
 
     def cal_gmi(self, signal_rx=None, synced=False):
         """
@@ -426,8 +439,6 @@ class SignalBase(np.ndarray):
         nmodes = signal_rx.shape[0]
         GMI = np.zeros(nmodes, dtype=np.float64)
         GMI_per_bit = np.zeros((nmodes, self.Nbits), dtype=np.float64)
-        mm = np.sqrt(np.mean(np.abs(signal_rx) ** 2, axis=-1))
-        signal_rx = signal_rx / mm[:, np.newaxis]
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = self.est_snr(rx, synced=True, symbols_tx=tx)
         bits = self.demodulate(self.make_decision(tx)).astype(np.int)
@@ -440,6 +451,27 @@ class SignalBase(np.ndarray):
                     np.log2(1 + np.exp(((-1) ** bits[mode, bit::self.Nbits]) * l_values[bit::self.Nbits])))
             GMI[mode] = np.sum(GMI_per_bit[mode])
         return GMI, GMI_per_bit
+
+    def normalize_and_center(self, symbol_based=False, synced=False):
+        """
+        Normalize and center the signal
+
+        Parameters
+        ----------
+        symbol_based : bool, optional
+            Estimate signal power based on symbols instead of overall average power. This is necessary at low SNRs <0,
+            because otherwise we normalise to noise power. (default: use the fast mean power normalisation)
+
+        synced : bool, optional
+            wether the signal is synchronized only has an effect for symbol based estimation
+        """
+        if not symbol_based:
+            self[:] = helpers.normalise_and_center(self)
+        else:
+            self -= self.mean(axis=-1)[:, None]
+            p = self.est_snr(synced=synced, verbose=True)[1]
+            for i in range(self.shape[0]):
+                self[i] /= np.sqrt(p[i])
 
     @classmethod
     @abc.abstractmethod

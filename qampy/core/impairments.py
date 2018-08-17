@@ -228,7 +228,7 @@ def add_carrier_offset(sig, fo, fs):
     if sig.ndim == 1:
         return  (sign * np.exp(2.j * np.pi * np.arange(sign.shape[1], dtype=sign.dtype) * fo / fs)).flatten()
     else:
-        return  sign * np.exp(2.j * np.pi * np.arange(sign.shape[1], dtype=sign.dtype)) * fo / fs
+        return  sign * np.exp(2.j * np.pi * np.arange(sign.shape[1], dtype=sign.dtype) * fo / fs)
 
 def add_modal_delay(sig, delay):
     """
