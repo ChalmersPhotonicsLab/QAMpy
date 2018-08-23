@@ -889,7 +889,7 @@ class TestDtype(object):
     def testquantize(self, dt):
         s = signals.SignalQAMGrayCoded(32, 2**10, dtype=dt)
         s2 = impairments.change_snr(s, 30)
-        sn = s2.quantize()
+        sn = s2.make_decision()
         assert  np.dtype(dt) is sn.dtype
         assert np.dtype(dt) is sn.symbols.dtype
         assert np.dtype(dt) is s.coded_symbols.dtype

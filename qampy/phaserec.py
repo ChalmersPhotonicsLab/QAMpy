@@ -41,8 +41,7 @@ def find_freq_offset(sig, average_over_modes = False, fft_size = 4096):
         freq_offset : int
             found frequency offset
     """
-    os = int(sig.fs/sig.fb)
-    return core.phaserecovery.find_freq_offset(sig, os, average_over_modes=average_over_modes,
+    return core.phaserecovery.find_freq_offset(sig, sig.os, average_over_modes=average_over_modes,
                                                fft_size=fft_size)
 
 def comp_freq_offset(sig, freq_offset):
@@ -62,8 +61,7 @@ def comp_freq_offset(sig, freq_offset):
             input signal with removed frequency offset
 
     """
-    os = int(sig.fs/sig.fb)
-    arr = core.phaserecovery.comp_freq_offset(sig, freq_offset, os)
+    arr = core.phaserecovery.comp_freq_offset(sig, freq_offset, sig.os)
     return sig.recreate_from_np_array(arr)
 
 def viterbiviterbi(E, N):
