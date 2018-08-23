@@ -306,16 +306,20 @@ def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
 
     Note
     ----
-    signal_rx and symbols_tx need to be synchronized and have the same length
+    signal_rx and symbols_tx need to be synchronized and have the same length.
     
     Returns
     -------
     snr : float
         estimated linear signal-to-noise ratio
+    if verbose is True also return:
+    S0 : float
+        estimated linear signal power
+    N0 : float
+        estimated linear noise power
     """
 
     N = gray_symbols.shape[0]
-    signal_rx = signal_rx/np.sqrt(np.mean(np.abs(signal_rx) ** 2))
     Px = np.zeros(N, dtype=np.float64)
     N0 = 0.
     mus = np.zeros(N, dtype=np.complex128)
@@ -330,6 +334,6 @@ def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
         in_pow += np.abs(mus[ind])**2*Px[ind]
     snr = in_pow/N0
     if verbose:
-        return snr, Px, mus, in_pow, N0
+        return snr, in_pow, N0
     else:
         return snr

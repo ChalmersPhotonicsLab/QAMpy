@@ -60,7 +60,6 @@ def orthonormalize_signal(signal):
     .. [1] https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process for more
        detailed description.
     """
-    os = int(signal.fs/signal.fb)
-    return core.analog_frontend.orthonormalize_signal(signal, os)
+    return core.analog_frontend.orthonormalize_signal(signal, signal.os)
 
 
