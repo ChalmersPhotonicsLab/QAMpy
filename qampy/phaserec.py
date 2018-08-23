@@ -19,7 +19,45 @@
 from qampy import core
 from qampy.core.phaserecovery import bps_twostage, phase_partition_16qam
 
-def bps(sig, Mtestangles, N, **kwargs):
+def bps_twostage(E, Mtestangles, N, B=4, **kwargs):
+    """
+    Perform a blind phase search phase recovery using two stages after _[1]
+
+    Parameters
+    ----------
+
+    E           : SignalObject
+        input signal 
+
+    Mtestangles : int
+        number of initial test angles to try
+
+    symbols     : array_like
+        the symbols of the modulation format
+
+    N           : int
+        block length to use for averaging
+
+    B           : int, optional
+        number of second stage test angles
+
+    **kwargs    :
+        keyword arguments to be passed to the core function
+
+    Returns
+    -------
+    Eout    : SignalObject
+        phase compensated field
+    ph      : array_like
+        unwrapped angle from phase recovery
+
+    References
+    ----------
+    ..[1] Qunbi Zhuge and Chen Chen and David V. Plant, Low Computation Complexity Two-Stage Feedforward Carrier Recovery Algorithm for M-QAM, Optical Fiber Communication Conference (OFC, 2011)
+    """
+    return core.phaserecovery.bps_twostage(E, Mtestangles, E.coded_symbols, N, B=B, **kwargs)
+
+def bps(E, Mtestangles, N, **kwargs):
     """
     Perform a blind phase search after _[1]
 
@@ -27,7 +65,7 @@ def bps(sig, Mtestangles, N, **kwargs):
     ----------
 
     E           : SignalObject
-        input signal (single polarisation)
+        input signal
 
     Mtestangles : int
         number of test angles to try
@@ -49,7 +87,7 @@ def bps(sig, Mtestangles, N, **kwargs):
     ----------
     ..[1] Timo Pfau et al, Hardware-Efficient Coherent Digital Receiver Concept With Feedforward Carrier Recovery for M-QAM Constellations, Journal of Lightwave Technology 27, pp 989-999 (2009)
     """
-    return core.phaserecovery.bps(sig, Mtestangles, sig.coded_symbols, N, **kwargs)
+    return core.phaserecovery.bps(E, Mtestangles, E.coded_symbols, N, **kwargs)
 
 def find_freq_offset(sig, average_over_modes = False, fft_size = 4096):
     """
