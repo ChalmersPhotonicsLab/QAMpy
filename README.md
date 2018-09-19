@@ -79,4 +79,5 @@ and is licenced under GPLv3 or later.
 If you use QAMpy in your work please cite us as `Jochen Schröder and Mikael Mazur, "QAMPy a DSP chain for optical 
 communications, DOI: 10.5281/zenodo.1195720"`.
 
-
+## Acknowledgements
+The GPU graphics card used for part of this work was donated by NVIDIA Corporation
