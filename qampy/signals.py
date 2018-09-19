@@ -158,6 +158,10 @@ class SignalBase(np.ndarray):
     def fs(self):
         return self._fs
 
+    @property
+    def os(self):
+        return int(self.fs/self.fb)
+
     @staticmethod
     def _copy_inherits(objold, objnew):
         for attr in objold._inheritbase_:
@@ -375,7 +379,7 @@ class SignalBase(np.ndarray):
         return np.asarray(
             np.sqrt(np.mean(helpers.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
 
-    def est_snr(self, signal_rx=None, synced=False, symbols_tx=None):
+    def est_snr(self, signal_rx=None, synced=False, symbols_tx=None, verbose=False):
         """
         Estimate the SNR of a given input signal, using known symbols.
 
@@ -387,6 +391,8 @@ class SignalBase(np.ndarray):
             known transmitted symbols (default: None means that self.symbols_tx are used)
         synced : bool, optional
             whether the signal and symbols are synchronized already
+        verbose : bool, optional
+            return estimate noise and signal powers
 
         Returns
         -------
@@ -399,9 +405,16 @@ class SignalBase(np.ndarray):
             symbols_tx = self.symbols
         symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = np.zeros(nmodes, dtype=np.float64)
-        for i in range(nmodes):
-            snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols)
-        return np.asarray(snr)
+        if verbose:
+            s0 = np.zeros(nmodes, dtype=np.float64)
+            n0 = np.zeros(nmodes, dtype=np.float64)
+            for i in range(nmodes):
+                snr[i], s0[i], n0[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
+            return snr, s0, n0
+        else:
+            for i in range(nmodes):
+                snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
+            return snr
 
     def cal_gmi(self, signal_rx=None, synced=False):
         """
@@ -426,8 +439,6 @@ class SignalBase(np.ndarray):
         nmodes = signal_rx.shape[0]
         GMI = np.zeros(nmodes, dtype=np.float64)
         GMI_per_bit = np.zeros((nmodes, self.Nbits), dtype=np.float64)
-        mm = np.sqrt(np.mean(np.abs(signal_rx) ** 2, axis=-1))
-        signal_rx = signal_rx / mm[:, np.newaxis]
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = self.est_snr(rx, synced=True, symbols_tx=tx)
         bits = self.demodulate(self.make_decision(tx)).astype(np.int)
@@ -440,6 +451,27 @@ class SignalBase(np.ndarray):
                     np.log2(1 + np.exp(((-1) ** bits[mode, bit::self.Nbits]) * l_values[bit::self.Nbits])))
             GMI[mode] = np.sum(GMI_per_bit[mode])
         return GMI, GMI_per_bit
+
+    def normalize_and_center(self, symbol_based=False, synced=False):
+        """
+        Normalize and center the signal
+
+        Parameters
+        ----------
+        symbol_based : bool, optional
+            Estimate signal power based on symbols instead of overall average power. This is necessary at low SNRs <0,
+            because otherwise we normalise to noise power. (default: use the fast mean power normalisation)
+
+        synced : bool, optional
+            wether the signal is synchronized only has an effect for symbol based estimation
+        """
+        if not symbol_based:
+            self[:] = helpers.normalise_and_center(self)
+        else:
+            self -= self.mean(axis=-1)[:, None]
+            p = self.est_snr(synced=synced, verbose=True)[1]
+            for i in range(self.shape[0]):
+                self[i] /= np.sqrt(p[i])
 
     @classmethod
     @abc.abstractmethod
@@ -789,6 +821,59 @@ class SignalQAMGrayCoded(SignalBase):
         """
         return self._demodulate(symbols, self._encoding)
 
+class QPSKfromBERT(SignalQAMGrayCoded):
+    """
+    QPSKfromBERT(N, nmodes=1, fb=1, prbsorders=((15,),(15,)), prbsshifts=(0,0), prbsinvert=(False, False), dtype=np.complex128)
+
+    A QPSK signal where I and Q are generated from either delayed data and data_bar ports or two independent ports of
+    a bit error rate tester.
+
+    Parameters
+    ----------
+    N  : int
+        number of symbols in signal
+    nmodes : int
+        number of modes/polarizations
+    fb : float, optional
+        symbol rate
+    prbsorders : tuple(tuple(int),tuple(int)), optional
+        orders of the PRBS patterns,
+    prbsshifts : tuple(int, int), optional
+        optional delay of the I and Q PRBS patterns
+    prbsinvert : tuple(bool, bool), optional
+        wether one of the two patterns is inverted, this is needed if a data_bar port is used
+    dtype : np.dtype, optional
+            dtype of the signal, must be one of np.complex128 or np.complex64
+    """
+    def __new__(cls, N, nmodes=1, fb=1, prbsorders=((15,),(15,)), prbsshifts=(0,0), prbsinvert=(False, False), dtype=np.complex128):
+        assert dtype in [np.complex128, np.complex64], "only np.complex128 and np.complex64  or None dtypes are supported"
+        M = 4
+        scale = np.sqrt(theory.cal_scaling_factor_qam(M))
+        coded_symbols, _graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
+        Nbits = int(N * np.log2(M))
+        bitsI = PRBSBits(N, nmodes=nmodes, order=prbsorders[0])
+        bitsQ = PRBSBits(N, nmodes=nmodes, order=prbsorders[1])
+        bitsI = np.roll(bitsI, prbsshifts[0], axis=1)
+        bitsQ = np.roll(bitsQ, prbsshifts[1], axis=1)
+        if prbsinvert[0]:
+            bitsI = ~bitsI
+        if prbsinvert[1]:
+            bitsQ = ~bitsQ
+        bits = np.zeros((nmodes,Nbits), dtype=bool)
+        bits[:,::2] = bitsI
+        bits[:,1::2] = bitsQ
+        obj = cls._modulate(bits, encoding, M, dtype=dtype)
+        obj = obj.view(cls)
+        obj._bitmap_mtx = bitmap_mtx
+        obj._encoding = encoding
+        obj._coded_symbols = coded_symbols
+        obj._M = M
+        obj._fb = fb
+        obj._fs = fb
+        obj._code = _graycode
+        obj._bits = bits
+        obj._symbols = obj.copy()
+        return obj
 
 class SymbolOnlySignal(SignalQAMGrayCoded):
     """

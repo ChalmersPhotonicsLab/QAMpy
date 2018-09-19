@@ -150,7 +150,7 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
             #return tx, np.roll(rx, offset)
     elif N_tx < N_rx:
         offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
-        if adjust is "tx":
+        if adjust == "tx":
             # this is still buggy, I if the length of data_rx is not a multiple of length of tx
             tx, rx = adjust_data_length(tx, data_rx, method="extend", offset=offset)
             return tx, rx

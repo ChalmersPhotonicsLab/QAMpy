@@ -71,7 +71,7 @@ for M in Mqams:
         signal = signal.resample(fnew=fs, beta=beta, renormalise=True)
         signal_s = impairments.change_snr(signal, sr)
         #signalx = np.atleast_2d(filtering.rrcos_pulseshaping(signal_s, beta))
-        wx, er = equalisation.equalise_signal(signal_s, 3e-4, Ntaps=ntaps, method="mcma", adaptive_step=True)
+        wx, er = equalisation.equalise_signal(signal_s, 3e-4, Ntaps=ntaps, method="mcma", adaptive_step=True, avoid_cma_sing=False)
         signalafter = equalisation.apply_filter(signal_s,  wx )
         signalafter = helpers.normalise_and_center(signalafter)
         evm1[i] = signal.cal_evm()[0]
