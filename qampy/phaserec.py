@@ -151,3 +151,32 @@ def viterbiviterbi(E, N):
     """
     return core.phaserecovery.viterbiviterbi(E, N, E.M)
 
+def pilot_cpe(signal, N=1, pilot_rat=1, max_blocks=None, rm_pilots=True):
+    """
+    Pilot based Carrier Phase Estimation
+
+    Parameters
+    ----------
+    signal : PilotSignalObject
+        the signal to perform phase estimation on
+    N : int (optional)
+        length of the averaging filter for phase estimation
+    pilot_rat : int (optional)
+        use every nth pilot
+    max_blocks : int (optional)
+        maximum number of blocks to process
+    rm_pilots : bool (optional)
+        remove pilots from output
+    Returns
+    -------
+    signal : PilotSignalObject
+        phase compensated signal
+    trace : array_like
+        phase trace
+    """
+    data, phase = core.pilotbased_receiver(signal[:, signal._pilot_seq_len:signal.frame_len], signal.ph_pilots,
+                                           signal._pilot_ins_rat, num_average=N, use_pilot_ratio=pilot_rat,
+                                           max_num_block=max_block, remove_phase_pilots=rm_pilots)
+    return signal.recreate_from_np_array(data), phase
+
+
