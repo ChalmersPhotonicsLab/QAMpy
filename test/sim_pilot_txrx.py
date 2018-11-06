@@ -2,7 +2,7 @@ import numpy as np
 from qampy.core import equalisation,  phaserecovery, pilotbased_receiver,pilotbased_transmitter,filter,\
     resample
 from qampy import signals, impairments, helpers
-from qampy.equalisation import _pilot_equalizer
+from qampy.equalisation import pilot_equalizer
 import matplotlib.pylab as plt
 
 def run_pilot_receiver2(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=128, Numtaps=(17, 45),
@@ -14,7 +14,7 @@ def run_pilot_receiver2(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=1
     #signal = np.roll(signal, -shift_factor[shift_factor>=0].min(), axis=-1)
     #shift_factors -= shift_factors[shift_factors>=0].min()
     #signal.shiftfctrs = shift_factors
-    taps_all, eq_mode_sig = _pilot_equalizer(rec_signal, mu, Numtaps[1], apply=True)
+    taps_all, eq_mode_sig = pilot_equalizer(rec_signal, mu, Numtaps[1], apply=True)
     print(repr(eq_mode_sig))
     symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, eq_mode_sig._pilot_seq_len:eq_mode_sig.frame_len],
                                                            eq_mode_sig.ph_pilots, eq_mode_sig._pilot_ins_rat,
@@ -143,7 +143,7 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
         #ber_res[l] = signal.cal_ber(np.vstackdsp_out[1][l])
     #gmi_res = sout.cal_gmi()[0]
     #ber_res = sout.cal_ber()
-    dsp_out0 = dsp_out
+    #dsp_out0 = dsp_out
 
         
     return dsp_out, dsp_out0, sig_tx, phase, signal, dsp_out2
