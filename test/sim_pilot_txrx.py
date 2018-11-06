@@ -2,13 +2,30 @@ import numpy as np
 from qampy.core import equalisation,  phaserecovery, pilotbased_receiver,pilotbased_transmitter,filter,\
     resample
 from qampy import signals, impairments, helpers
+from qampy.equalisation import _pilot_equalizer
 import matplotlib.pylab as plt
 
-def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Numtaps=(17, 45),
+def run_pilot_receiver2(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=128, Numtaps=(17, 45),
                        frame_length=2 ** 16, method=('cma', 'cma'), pilot_seq_len=512, pilot_ins_ratio=32,
                        Niter=(10, 30), mu=(1e-3, 1e-3), adap_step=(True, True), cpe_average=5, use_cpe_pilot_ratio=1,
                        remove_inital_cpe_output=True, remove_phase_pilots=True):
+    rec_signal.sync2frame(Ntaps=Numtaps[0], mu=mu[0], method=method[0], adaptive_stepsize=adap_step[0])
+    #shift_factor = pilotbased_receiver.correct_shifts(rec_signal.shiftfctrs, Numtaps, rec_signal.os)
+    #signal = np.roll(signal, -shift_factor[shift_factor>=0].min(), axis=-1)
+    #shift_factors -= shift_factors[shift_factors>=0].min()
+    #signal.shiftfctrs = shift_factors
+    taps_all, eq_mode_sig = _pilot_equalizer(rec_signal, mu, Numtaps[1], apply=True)
+    print(repr(eq_mode_sig))
+    symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, eq_mode_sig._pilot_seq_len:eq_mode_sig.frame_len],
+                                                           eq_mode_sig.ph_pilots, eq_mode_sig._pilot_ins_rat,
+                                                              use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
+                                                       remove_phase_pilots=True)
+    return np.array(symbs), trace, eq_mode_sig
 
+def run_pilot_receiver(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=128, Numtaps=(17, 45),
+                       frame_length=2 ** 16, method=('cma', 'cma'), pilot_seq_len=512, pilot_ins_ratio=32,
+                       Niter=(10, 30), mu=(1e-3, 1e-3), adap_step=(True, True), cpe_average=5, use_cpe_pilot_ratio=1,
+                       remove_inital_cpe_output=True, remove_phase_pilots=True):
     ref_symbs = rec_signal.pilot_seq
     nmodes = rec_signal.shape[0]
 
@@ -31,23 +48,20 @@ def run_pilot_receiver(rec_signal, process_frame_id=0, sh=False, os=2, M=128, Nu
     taps_all = []
     foe_all = []
     if np.all(shift_factor == 0):
-        taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(rec_signal, ref_symbs,
-                                                                    os, sh=sh,
-                                                                    mu=mu, methods=method,
-                                                                    ntaps=Numtaps[1], Niter=Niter[1],
-                                                                    adapt_step=adap_step[1])
+        taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(rec_signal, ref_symbs, os, foe_comp=foe_comp, mu=mu,
+                                                                        Ntaps=Numtaps[1], Niter=Niter[1],
+                                                                        adaptive_stepsize=adap_step[1], methods=method)
     else:
         for i in range(nmodes):
             rec_signal2 = np.roll(rec_signal, -shift_factor[i], axis=-1)
-            taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal2, ref_symbs,
-                                                                    os, sh=sh,
-                                                                    mu=mu, methods=method,
-                                                                    ntaps=Numtaps[1], Niter=Niter[1],
-                                                                    adapt_step=adap_step[1])
+            taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(rec_signal2, ref_symbs, os, sh=foe_comp, mu=mu,
+                                                                           Ntaps=Numtaps[1], Niter=Niter[1],
+                                                                           adaptive_stepsize=adap_step[1],
+                                                                           methods=method)
             taps_all.append(taps[i])
             foe_all.append(foePerMode[i])
 
-    if not sh:
+    if foe_comp:
         out_sig = phaserecovery.comp_freq_offset(rec_signal, np.array(foe_all), os=os)
         out_sig = rec_signal.recreate_from_np_array(out_sig)
     else:
@@ -110,10 +124,16 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
 
 
     # Run DSP
-    dsp_out, phase, dsp_out2 = run_pilot_receiver(sig_tx,
-                                 frame_length=sig_tx.frame_len, M=M, pilot_seq_len=sig_tx.pilot_seq.shape[-1],
-                                 pilot_ins_ratio=sig_tx._pilot_ins_rat,cpe_average=cpe_avg,os=int(sig_tx.fs/sig_tx.fb) ,
-                                 Numtaps=(17,Ntaps), mu = (1e-3, 1e-3), method=("cma","sbd"))
+    dsp_out, phase, dsp_out2 = run_pilot_receiver2(sig_tx, os=int(sig_tx.fs / sig_tx.fb), M=M, Numtaps=(17, Ntaps),
+                                                  frame_length=sig_tx.frame_len, method=("cma", "sbd"),
+                                                  pilot_seq_len=sig_tx.pilot_seq.shape[-1],
+                                                  pilot_ins_ratio=sig_tx._pilot_ins_rat, mu=(1e-3, 1e-3),
+                                                  cpe_average=cpe_avg)
+    dsp_out0, phase0, dsp_out20 = run_pilot_receiver(sig_tx, os=int(sig_tx.fs / sig_tx.fb), M=M, Numtaps=(17, Ntaps),
+                                                  frame_length=sig_tx.frame_len, method=("cma", "sbd"),
+                                                  pilot_seq_len=sig_tx.pilot_seq.shape[-1],
+                                                  pilot_ins_ratio=sig_tx._pilot_ins_rat, mu=(1e-3, 1e-3),
+                                                  cpe_average=cpe_avg)
 
     # Calculate GMI and BER
     #ber_res = np.zeros(npols)
@@ -123,14 +143,18 @@ def sim_pilot_txrx(sig_snr, Ntaps=45, beta=0.1, M=256, freq_off = None,cpe_avg=2
         #ber_res[l] = signal.cal_ber(np.vstackdsp_out[1][l])
     #gmi_res = sout.cal_gmi()[0]
     #ber_res = sout.cal_ber()
+    dsp_out0 = dsp_out
 
         
-    return dsp_out, sig_tx, phase, signal, dsp_out2
+    return dsp_out, dsp_out0, sig_tx, phase, signal, dsp_out2
     #return dsp_out, signal
 
 if __name__ == "__main__":
     #gmi, ber = sim_pilot_txrx(20)
-    dsp, sig, ph, sign, sig2 = sim_pilot_txrx(40, laser_lw=100e3, freq_off=50e6)
+    dsp, dsp1, sig, ph, sign, sig2 = sim_pilot_txrx(40, laser_lw=100e3, freq_off=50e6)
     sigo = sign.symbols.recreate_from_np_array(dsp)
+    sigo1 = sign.symbols.recreate_from_np_array(dsp1)
     sigo = helpers.normalise_and_center(sigo)
+    sigo1 = helpers.normalise_and_center(sigo1)
     print(sigo.cal_gmi())
+    print(sigo1.cal_gmi())
