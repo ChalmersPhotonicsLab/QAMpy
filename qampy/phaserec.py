@@ -174,9 +174,9 @@ def pilot_cpe(signal, N=1, pilot_rat=1, max_blocks=None, rm_pilots=True):
     trace : array_like
         phase trace
     """
-    data, phase = core.pilotbased_receiver(signal[:, signal._pilot_seq_len:signal.frame_len], signal.ph_pilots,
+    data, phase = core.pilotbased_receiver.pilot_based_cpe(signal[:, signal._pilot_seq_len:signal.frame_len], signal.ph_pilots,
                                            signal._pilot_ins_rat, num_average=N, use_pilot_ratio=pilot_rat,
-                                           max_num_block=max_block, remove_phase_pilots=rm_pilots)
+                                           max_num_blocks=max_blocks, remove_phase_pilots=rm_pilots)
     return signal.recreate_from_np_array(data), phase
 
 
