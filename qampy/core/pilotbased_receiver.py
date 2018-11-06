@@ -358,7 +358,7 @@ def shift_signal(sig, shift_factors):
     return sig
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
+def equalize_pilot_sequence(rx_signal, ref_symbs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
                             adaptive_stepsize=True, methods=('cma', 'cma')):
     """
     
@@ -370,9 +370,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False, mu=(1e-4, 1e-4),
     pilot_seq_len = ref_symbs.shape[-1]
     pilot_seq = rx_signal[:, :pilot_seq_len * os + Ntaps - 1]
     # Run FOE and shift spectrum
-    if sh:
-        foePerMode = np.zeros([npols,1])
-    else:
+    if foe_comp:
         syms_out, wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,
                                                          Ntaps=Ntaps,
                                                          Niter=Niter, method=methods[0],
@@ -381,6 +379,8 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, sh=False, mu=(1e-4, 1e-4),
 
         foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
         pilot_seq = phaserecovery.comp_freq_offset(pilot_seq, foePerMode, os=os)
+    else:
+        foePerMode = np.zeros([npols,1])
     out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
                                                         methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), apply=False)
     return out_taps, foePerMode
