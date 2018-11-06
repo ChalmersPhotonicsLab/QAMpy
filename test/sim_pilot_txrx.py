@@ -1,7 +1,7 @@
 import numpy as np
 from qampy.core import equalisation,  phaserecovery, pilotbased_receiver,pilotbased_transmitter,filter,\
     resample
-from qampy import signals, impairments, helpers
+from qampy import signals, impairments, helpers, phaserec
 from qampy.equalisation import pilot_equalizer
 import matplotlib.pylab as plt
 
@@ -15,11 +15,11 @@ def run_pilot_receiver2(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=1
     #shift_factors -= shift_factors[shift_factors>=0].min()
     #signal.shiftfctrs = shift_factors
     taps_all, eq_mode_sig = pilot_equalizer(rec_signal, mu, Numtaps[1], apply=True)
-    print(repr(eq_mode_sig))
-    symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, eq_mode_sig._pilot_seq_len:eq_mode_sig.frame_len],
-                                                           eq_mode_sig.ph_pilots, eq_mode_sig._pilot_ins_rat,
-                                                              use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
-                                                       remove_phase_pilots=True)
+    #symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, eq_mode_sig._pilot_seq_len:eq_mode_sig.frame_len],
+                                                           #eq_mode_sig.ph_pilots, eq_mode_sig._pilot_ins_rat,
+                                                              #use_pilot_ratio=use_cpe_pilot_ratio, num_average=cpe_average,
+                                                       #remove_phase_pilots=True)
+    symbs, trace = phaserec.pilot_cpe(eq_mode_sig, N=cpe_average, pilot_rat=use_cpe_pilot_ratio, rm_pilots=True)
     return np.array(symbs), trace, eq_mode_sig
 
 def run_pilot_receiver(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=128, Numtaps=(17, 45),
