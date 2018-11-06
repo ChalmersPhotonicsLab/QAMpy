@@ -1510,10 +1510,15 @@ class SignalWithPilots(SignalBase):
                                                                               frame_len=self.frame_len,
                                                                               M_pilot=self.Mpilots, **eqkwargs)
         self[:,:] = self[mode_alignment,:]
+        self.symbols[:,:] = self.symbols[mode_alignment, :]
+        self.pilots[:,:] = self.pilots[mode_alignment, :]
         self.shiftfctrs = shift_factors
         self.synctaps = Ntaps
         if returntaps:
             return wx1
+
+    def shift_signal(self):
+        self[:,:] = pilotbased_receiver.shift_signal(self, self.shiftfctrs)
 
     def get_data(self, shift_factors=None):
         """
