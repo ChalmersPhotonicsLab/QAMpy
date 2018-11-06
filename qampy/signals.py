@@ -1580,8 +1580,8 @@ class SignalWithPilots(SignalBase):
         SER : array_like
             SER per mode
         """
-        if signal_rx is None:
-            signal_rx = self.get_data(shift_factors)
+        #if signal_rx is None:
+        #    signal_rx = self.get_data(shift_factors)
         return super().cal_ser(signal_rx, synced=True, verbose=verbose)
 
     def cal_ber(self, signal_rx=None, shift_factors=None, verbose=False):
@@ -1602,8 +1602,8 @@ class SignalWithPilots(SignalBase):
         BER : array_like
             BER per mode
         """
-        if signal_rx is None:
-            signal_rx = self.get_data(shift_factors)
+        #if signal_rx is None:
+        #    signal_rx = self.get_data(shift_factors)
         return super().cal_ber(signal_rx, synced=True, verbose=verbose)
 
     def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
@@ -1625,8 +1625,8 @@ class SignalWithPilots(SignalBase):
         EVM : array_like
             EVM per mode
         """
-        if signal_rx is None:
-            signal_rx = self.get_data(shift_factors)
+        #if signal_rx is None:
+        #    signal_rx = self.get_data(shift_factors)
         return super().cal_evm(signal_rx, blind=blind)
 
     def cal_gmi(self, signal_rx=None, shift_factors=None):
@@ -1647,8 +1647,8 @@ class SignalWithPilots(SignalBase):
         gmi_per_bit : array_like
             generalized mutual information per transmitted bit per mode
         """
-        if signal_rx is None:
-            signal_rx = self.get_data(shift_factors)
+        #if signal_rx is None:
+        #    signal_rx = self.get_data(shift_factors)
         return super().cal_gmi(signal_rx, synced=True)
 
     def est_snr(self, signal_rx=None, synced=True, shift_factors=None, symbols_tx=None):
@@ -1671,6 +1671,6 @@ class SignalWithPilots(SignalBase):
         SNR : array_like
             estimated SNR per mode
         """
-        if signal_rx is None:
-            signal_rx = self.get_data(shift_factors)
+        #if signal_rx is None:
+        #    signal_rx = self.get_data(shift_factors)
         return super().est_snr(signal_rx, synced=synced, symbols_tx=symbols_tx)
