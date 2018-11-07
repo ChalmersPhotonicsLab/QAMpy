@@ -1358,7 +1358,8 @@ class SignalWithPilots(SignalBase):
         the scaling factor for the pilot amplitude
     """
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
-                     "_idx_dat", "_pilot_scale", "_pilot_ins_rat", "_shiftfctrs", "_synctaps"]
+                     "_idx_dat", "_pilot_scale", "_pilot_ins_rat", "_shiftfctrs", "_synctaps",
+                     "_idx_pil"]
     _inheritbase_ = ["_fs"]
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
@@ -1381,6 +1382,7 @@ class SignalWithPilots(SignalBase):
         obj._symbols = symbs
         obj._pilots = pilots
         obj._idx_dat = idx_dat
+        obj._idx_pil = idx_pil
         obj._pilot_scale = pilot_scale
         obj._shiftfctrs = None
         obj._synctaps = None
@@ -1452,6 +1454,7 @@ class SignalWithPilots(SignalBase):
         obj._symbols = data[:, :Ndat].copy()
         obj._pilots = pilots
         obj._idx_dat = idx_dat
+        obj._idx_pil = idx_pil
         obj._shiftfctrs = None
         obj._synctaps = None
         return obj
@@ -1519,6 +1522,7 @@ class SignalWithPilots(SignalBase):
 
     def shift_signal(self):
         self[:,:] = pilotbased_receiver.shift_signal(self, self.shiftfctrs)
+        self.shiftfctrs = [0]*self.shape[0]
 
     def get_data(self, shift_factors=None):
         """
