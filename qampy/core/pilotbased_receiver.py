@@ -300,10 +300,7 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     pilot_idx_full = pilot_idx_full[ilim]
 
     rec_pilots = signal[:, pilot_idx_full]
-    if seq_len is None:
-        pilot_symbs = np.tile(pilot_symbs[:, ::use_pilot_ratio], nframes)[:, :rec_pilots.shape[-1]]
-    else:
-        pilot_symbs = np.tile(np.hstack([pilot_symbs[:, :seq_len], pilot_symbs[:, seq_len:max_num_blocks]])[:, ::use_pilot_ratio], nframes)[:, :rec_pilots.shape[-1]]
+    pilot_symbs = np.tile(pilot_symbs[:, ::use_pilot_ratio], nframes)[:, :rec_pilots.shape[-1]]
     assert rec_pilots.shape == pilot_symbs.shape, "Inproper pilot configuration, the number of"\
             +" received pilots differs from reference ones"
 
