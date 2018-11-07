@@ -158,43 +158,42 @@ def pilot_based_cpe2(rec_symbs, pilot_symbs,  num_average = 1, use_pilot_ratio =
         data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
 
     return data_symbs, phase_trace
-
 def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
     """
     Carrier phase recovery using periodically inserted symbols.
-    
+
     Performs a linear interpolation with averaging over n symbols to estimate
     the phase drift from laser phase noise to compensate for this.
-    
-    Input: 
+
+    Input:
         rec_symbs: Received symbols in block (first of each block is the pilot)
-        pilot_symbs: Corresponding pilot symbols. 
+        pilot_symbs: Corresponding pilot symbols.
             Index N is the first symbol in transmitted block N.
         pilot_ins_ratio: Length of each block. Ex. 16 -> 1 pilot symbol followed
             by 15 data symbols
-        num_average: Number of pilot symbols to average over to avoid noise. 
+        num_average: Number of pilot symbols to average over to avoid noise.
         use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
         max_num_blocks: Maximum number of blocks to process
         remove_phase_pilots: Remove phase pilots after CPE. Default: True
-        
+
     Output:
         data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
         phase_trace: Resulting phase trace of the CPE
     """
-    
+
     rec_symbs = np.atleast_2d(rec_symbs)
     pilot_symbs = np.atleast_2d(pilot_symbs)
     npols = rec_symbs.shape[0]
 
     # Extract the pilot symbols
     numBlocks = np.floor(np.shape(rec_symbs)[1]/pilot_ins_ratio)
-    # If selected, only process a limited number of blocks. 
+    # If selected, only process a limited number of blocks.
     if (max_num_blocks is not None) and numBlocks > max_num_blocks:
-        numBlocks = max_num_blocks   
-    
+        numBlocks = max_num_blocks
+
     # Make sure that a given number of pilots can be used
     if (numBlocks % use_pilot_ratio):
-        numBlocks -= (numBlocks % use_pilot_ratio)            
+        numBlocks -= (numBlocks % use_pilot_ratio)
 
     # Adapt for number of blocks
     rec_pilots = rec_symbs[:,::int(pilot_ins_ratio)]
@@ -209,21 +208,21 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
         rec_pilots = rec_pilots[:,:int(numBlocks)]
     elif numRefPilots > numBlocks:
         pilot_symbs = pilot_symbs[:,:int(numBlocks)]
-    
+
     # Remove every X pilot symbol if selected
     if use_pilot_ratio >= pilot_symbs.shape[1]:
         raise ValueError("Can not use every %d pilots since only %d pilot symbols are present"%(use_pilot_ratio,pilot_symbs.shape[1]))
     rec_pilots = rec_pilots[:,::int(use_pilot_ratio)]
     pilot_symbs = pilot_symbs[:,::int(use_pilot_ratio)]
-    
+
     # Check for a out of bounch error
     if pilot_symbs.shape[1] <= num_average:
         raise ValueError("Inpropper pilot symbol configuration. Larger averaging block size than total number of pilot symbols")
-    
+
     # Should be an odd number to keey symmetry in averaging
     if not(num_average % 2):
         num_average += 1
-    
+
     # Allocate output memory and process modes
     data_symbs = np.zeros([npols,np.shape(rec_symbs)[1]], dtype = complex)
     phase_trace = np.zeros([npols,np.shape(rec_symbs)[1]])
@@ -247,8 +246,72 @@ def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, us
     if remove_phase_pilots:
         pilot_pos = np.arange(0,np.shape(data_symbs)[1],pilot_ins_ratio)
         data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
-        
+
     return data_symbs, phase_trace
+
+def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None, num_average=1, use_pilot_ratio=1,
+                        max_num_blocks=None, nframes=1):
+    """
+    Carrier phase recovery using periodically inserted symbols.
+    
+    Performs a linear interpolation with averaging over n symbols to estimate
+    the phase drift from laser phase noise to compensate for this.
+    
+    Input: 
+        rec_symbs: Received symbols in block (first of each block is the pilot)
+        pilot_symbs: Corresponding pilot symbols. 
+            Index N is the first symbol in transmitted block N.
+        pilot_ins_ratio: Length of each block. Ex. 16 -> 1 pilot symbol followed
+            by 15 data symbols
+        num_average: Number of pilot symbols to average over to avoid noise. 
+        use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
+        max_num_blocks: Maximum number of blocks to process
+        remove_phase_pilots: Remove phase pilots after CPE. Default: True
+        
+    Output:
+        data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
+        phase_trace: Resulting phase trace of the CPE
+    """
+    
+    signal = np.atleast_2d(signal)
+    pilot_symbs = np.atleast_2d(pilot_symbs)
+
+    # select idx based on insertion ratio and pilot sequence
+    if seq_len is None:
+        pilot_idx_new = pilot_idx[:max_num_blocks:use_pilot_ratio]
+    else:
+        pilot_idx_new = np.hstack([pilot_idx[:seq_len], pilot_idx[seq_len:max_num_blocks:use_pilot_ratio]])
+    nlen = min(frame_len*nframes, signal.shape[-1])
+    frl = np.arange(nframes)*frame_len
+    pilot_idx_new = np.nonzero(pilot_idx_new)[0]
+    pilot_idx2 = np.broadcast_to(pilot_idx_new, (nframes, pilot_idx_new.shape[-1]))
+    pilot_idx_full = np.ravel(pilot_idx2 + frl[:, None])
+    ilim = pilot_idx_full < nlen
+    pilot_idx_full = pilot_idx_full[ilim]
+
+    rec_pilots = signal[:, pilot_idx_full]
+    pilot_symbs = np.tile(pilot_symbs[:, ::use_pilot_ratio], nframes)[:, :rec_pilots.shape[-1]]
+    assert rec_pilots.shape == pilot_symbs.shape, "Inproper pilot configuration, the number of"\
+            +" received pilots differs from reference ones"
+
+    # Should be an odd number to keey symmetry in averaging
+    if not(num_average % 2):
+        num_average += 1
+    # Check for a out of bounch error
+    assert pilot_symbs.shape[-1] >= num_average, "Inpropper pilot symbol configuration. Larger averaging block size than total number of pilot symbols"
+
+    res_phase = np.unwrap(np.angle(pilot_symbs.conjugate()*rec_pilots), axis=-1)
+    res_phase_avg = filter.moving_average(res_phase, num_average)
+    i_filt_adj = int((num_average-1)/2)
+    idx_avg = pilot_idx_full[i_filt_adj:-i_filt_adj]
+    assert idx_avg.shape[-1] == res_phase_avg.shape[-1], "averaged phase and new indices are not the same shape"
+
+    inter = interp1d(idx_avg, res_phase_avg, axis=-1, bounds_error=False,
+                     fill_value="extrapolate")
+
+    phase_trace = inter(np.arange(0, nlen))
+    sig_out = signal[:, :nlen]*np.exp(-1j*phase_trace)
+    return sig_out[:, :nframes*frame_len], phase_trace[:, :nframes*frame_len]
     
 def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
                mu=1e-3, Ntaps=17, **eqargs):

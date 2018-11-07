@@ -151,7 +151,7 @@ def viterbiviterbi(E, N):
     """
     return core.phaserecovery.viterbiviterbi(E, N, E.M)
 
-def pilot_cpe(signal, N=1, pilot_rat=1, max_blocks=None, rm_pilots=True):
+def pilot_cpe(signal, N=1, pilot_rat=1, max_blocks=None, nframes=1, use_seq=False):
     """
     Pilot based Carrier Phase Estimation
 
@@ -165,8 +165,10 @@ def pilot_cpe(signal, N=1, pilot_rat=1, max_blocks=None, rm_pilots=True):
         use every nth pilot
     max_blocks : int (optional)
         maximum number of blocks to process
-    rm_pilots : bool (optional)
-        remove pilots from output
+    nframes: int (optional)
+        how many frames to process, the output data will be truncated to min(signal.shape[-1], signal.frame_len*nframes)
+    use_seq : bool (optional)
+        use the pilot sequence for CPE as well
     Returns
     -------
     signal : PilotSignalObject
@@ -174,9 +176,13 @@ def pilot_cpe(signal, N=1, pilot_rat=1, max_blocks=None, rm_pilots=True):
     trace : array_like
         phase trace
     """
-    data, phase = core.pilotbased_receiver.pilot_based_cpe(signal[:, signal._pilot_seq_len:signal.frame_len], signal.ph_pilots,
-                                           signal._pilot_ins_rat, num_average=N, use_pilot_ratio=pilot_rat,
-                                           max_num_blocks=max_blocks, remove_phase_pilots=rm_pilots)
+    if use_seq:
+        seq_len = signal._pilot_seq_len
+    else:
+        seq_len = None
+    data, phase = core.pilotbased_receiver.pilot_based_cpe_new(signal, signal.pilots, signal._idx_pil, signal.frame_len, seq_len=seq_len,
+                                                           max_num_blocks=max_blocks, use_pilot_ratio=pilot_rat, num_average=N,
+                                                            nframes=nframes)
     return signal.recreate_from_np_array(data), phase
 
 
