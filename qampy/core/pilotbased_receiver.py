@@ -291,13 +291,9 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     pilot_symbs = np.atleast_2d(pilot_symbs)
 
     # select idx based on insertion ratio and pilot sequence
-    if seq_len is None:
-        pilot_idx_new = pilot_idx[:max_num_blocks]
-    else:
-        pilot_idx_new = np.hstack([pilot_idx[:seq_len], pilot_idx[seq_len:max_num_blocks]])
+    pilot_idx_new = pilot_idx[:max_num_blocks:use_pilot_ratio]
     nlen = min(frame_len*nframes, signal.shape[-1])
     frl = np.arange(nframes)*frame_len
-    pilot_idx_new = np.nonzero(pilot_idx_new)[0][::use_pilot_ratio]
     pilot_idx2 = np.broadcast_to(pilot_idx_new, (nframes, pilot_idx_new.shape[-1]))
     pilot_idx_full = np.ravel(pilot_idx2 + frl[:, None])
     ilim = pilot_idx_full < nlen

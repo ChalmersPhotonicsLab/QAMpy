@@ -16,6 +16,7 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+import numpy as np
 from qampy import core
 from qampy.core.phaserecovery import bps_twostage, phase_partition_16qam
 
@@ -178,11 +179,11 @@ def pilot_cpe(signal, N=1, pilot_rat=1, max_blocks=None, nframes=1, use_seq=Fals
     """
     if use_seq:
         seq_len = signal._pilot_seq_len
-        idx = signal._idx_pil
+        idx = np.nonzero(signal._idx_pil)[0]
         pilots = signal.pilots
     else:
         seq_len = None
-        idx = signal._idx_pil[signal._pilot_seq_len:]
+        idx = np.nonzero(signal._idx_pil)[0][signal._pilot_seq_len:]
         pilots = signal.ph_pilots
     data, phase = core.pilotbased_receiver.pilot_based_cpe_new(signal, pilots, idx, signal.frame_len, seq_len=seq_len,
                                                            max_num_blocks=max_blocks, use_pilot_ratio=pilot_rat, num_average=N,
