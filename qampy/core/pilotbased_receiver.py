@@ -257,20 +257,34 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     Performs a linear interpolation with averaging over n symbols to estimate
     the phase drift from laser phase noise to compensate for this.
     
-    Input: 
-        rec_symbs: Received symbols in block (first of each block is the pilot)
-        pilot_symbs: Corresponding pilot symbols. 
-            Index N is the first symbol in transmitted block N.
-        pilot_ins_ratio: Length of each block. Ex. 16 -> 1 pilot symbol followed
-            by 15 data symbols
-        num_average: Number of pilot symbols to average over to avoid noise. 
-        use_pilot_ratio: Use ever n pilots. Can be used to sweep required rate.
-        max_num_blocks: Maximum number of blocks to process
-        remove_phase_pilots: Remove phase pilots after CPE. Default: True
-        
-    Output:
-        data_symbs: Complex symbols after pilot-aided CPE. Pilot symbols removed
-        phase_trace: Resulting phase trace of the CPE
+    Parameters
+    ----------
+    signal : array_like
+        input signal containing pilots
+    pilot_symbs : array_like
+        the transmitter pilot symbols
+    pilot_idx : array_like
+        the position indices of the pilots in the signal
+    frame_len : int
+        length of a frame
+    seq_len : int (optional)
+        length of the pilot sequence, if None (default) do not use the pilot sequence for CPE,
+        else use pilot sequence for CPE as well
+    num_average : int (optional)
+        length of the moving average filter
+    use_pilot_ratio : int (optional)
+        use only every nth pilot symbol
+    max_num_blocks : int (optional)
+        maximum number of phase pilot blocks, if None use maximum number of blocks that fit into data
+    nframes : int (optional)
+        number of frames to do phase recovery on
+
+    Returns
+    -------
+    data_symbs : array_like
+        compensated output signal, truncated to nframes*frame_len or max_num_blocks*block_length
+    phase_trace : array_like
+        trace of the phase
     """
     
     signal = np.atleast_2d(signal)
