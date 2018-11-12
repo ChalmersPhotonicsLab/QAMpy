@@ -28,7 +28,7 @@ from qampy.core import resample
 from qampy import theory
 from qampy.core import ber_functions
 from qampy.core.prbs import make_prbs_extXOR
-from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper
+from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper
 
 
 
@@ -416,7 +416,7 @@ class SignalBase(np.ndarray):
                 snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
             return snr
 
-    def cal_gmi(self, signal_rx=None, synced=False):
+    def cal_gmi(self, signal_rx=None, synced=False, llr_minmax=False):
         """
         Calculate the generalized mutual information for the received signal.
 
@@ -426,6 +426,10 @@ class SignalBase(np.ndarray):
             equalised input signal
         symbols_tx : array_like
             transmitted symbols (default:None use self.symbols_tx of the modulator)
+        synced : bool, optional
+            wether input and outputs are synchronized
+        llr_minmax : bool, optional
+            use minmax method for log-likelyhood ratio calculation, much faster but more unaccurate (we do not minimize over s)
 
         Returns
         -------
@@ -444,7 +448,10 @@ class SignalBase(np.ndarray):
         bits = self.demodulate(self.make_decision(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
-            l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self._bitmap_mtx)
+            if llr_minmax:
+                l_values = soft_l_value_demapper_minmax(rx[mode], self.M, snr[mode], self._bitmap_mtx)
+            else:
+                l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self._bitmap_mtx)
             # GMI per bit
             for bit in range(self.Nbits):
                 GMI_per_bit[mode, bit] = 1 - np.mean(

@@ -130,6 +130,31 @@ cpdef double[:] soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs
             L_values[symb*num_bits + bit] = log(tmp) - log(tmp2)
     return L_values
 
+cpdef double[:] soft_l_value_demapper_minmax(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
+    cdef int num_bits = int(np.log2(M))
+    cdef double[:] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
+    cdef int mode, bit, symb, l
+    cdef int N = rx_symbs.shape[0]
+    cdef int k = bits_map.shape[1]
+    cdef double tmp = 10000
+    cdef double tmp2 = 10000
+    cdef double tmp3 = 10000
+    cdef double tmp4 = 10000
+    for bit in prange(num_bits, schedule="static",nogil=True):
+        #for symb in prange(N, schedule='static', nogil=True):
+        for symb in range(N):
+            tmp = 10000
+            tmp2 = 10000
+            for l in range(k):
+                tmp3 = cabssq(bits_map[bit,l,1] - rx_symbs[symb])
+                if tmp3 < tmp:
+                    tmp = tmp3
+                tmp4 = cabssq(bits_map[bit,l,0] - rx_symbs[symb])
+                if tmp4 < tmp2:
+                    tmp2 = tmp4
+            L_values[symb*num_bits + bit] = snr*(tmp2-tmp)
+    return L_values
+
 cpdef prbs_ext(np.int64_t seed, taps, int nbits, int N):
     cdef int t
     cdef np.int64_t xor, sr
