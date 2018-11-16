@@ -53,10 +53,12 @@ References
 from __future__ import division
 import warnings
 import numpy as np
+from timeit import default_timer as timer
 
 import qampy.helpers
 from qampy.theory import cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.segmentaxis import segment_axis
+from qampy.core.equalisation import pythran_equalisation
 
 
 #TODO: include selection for either numba or cython code
@@ -78,6 +80,12 @@ TRAINING_FCTS = ["cma", "mcma",
                  "dd"]
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
+    if method in ["cma_pth"]:
+        return pythran_equalisation.cma_error
+    if method in ["mcma_pth"]:
+        return pythran_equalisation.mcma_error
+    if method in ["sbd_pth"]:
+        return pythran_equalisation.sbd_error
     if method in ["mcma"]:
         return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
@@ -470,6 +478,13 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     """
     method = method.lower()
     eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
+    if method in ["mcma_pth", "cma_pth", "sbd_pth"]:
+        if method in ["cma_path"]:
+            R = _cal_Rconstant(M)+0j
+        else:
+            R = _cal_Rconstant_complex(M)
+        symbs = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
+        prms = (R, symbs)
     # scale signal
     Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     wxy = wxy.astype(E.dtype)
@@ -483,10 +498,15 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         if method == "data":
             eqfct.mode = l
         for i in range(Niter):
-            if method == "data":
-                eqfct.i = 0
-            err[l, i * TrSyms:(i + 1) * TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct,
-                                                                       adaptive=adaptive_stepsize)
+            if method in ["mcma_pth", "cma_pth", "sbd_pth"]:
+                t1 = timer()
+                err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = pythran_equalisation.train_eq(E, TrSyms, os, mu, wxy[l], eqfct, prms, adaptive_stepsize)
+                t2 = timer()
+            else:
+                t1 = timer()
+                err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
+                t2 = timer()
+            print("Time {}".format(t2-t1))
         if (l < 1) and avoid_cma_sing:
             wxy[l + 1] = orthogonalizetaps(wxy[l])
     if apply:
