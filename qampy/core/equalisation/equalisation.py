@@ -81,11 +81,14 @@ TRAINING_FCTS = ["cma", "mcma",
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma_pth"]:
-        return pythran_equalisation.cma_error
+        #return pythran_equalisation.cma_error
+        return 1
     if method in ["mcma_pth"]:
-        return pythran_equalisation.mcma_error
+        #return pythran_equalisation.mcma_error
+        return 2
     if method in ["sbd_pth"]:
-        return pythran_equalisation.sbd_error
+        #return pythran_equalisation.sbd_error
+        return 3
     if method in ["mcma"]:
         return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
