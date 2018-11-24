@@ -42,7 +42,8 @@ def test_bps(dtype, method, benchmark):
         npt.assert_allclose(0, ser)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-def test_equalisation_prec(dtype, benchmark):
+@pytest.mark.parametrize("method", ["mcma", "mcma_pth"])
+def test_equalisation_prec(dtype, method, benchmark):
     fb = 40.e9
     os = 2
     fs = os*fb
@@ -57,13 +58,13 @@ def test_equalisation_prec(dtype, benchmark):
     snr =  14
     sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2, dtype=dtype)
     S = sig.resample(fs, renormalise=True, beta=0.1)
-    S = impairments.apply_phase_noise(S, 100e3)
+    #S = impairments.apply_phase_noise(S, 100e3)
     S = impairments.change_snr(S, snr)
     SS = impairments.apply_PMD(S, theta, t_pmd)
-    wxy, err = benchmark(equalisation.equalise_signal, SS, mu, Ntaps=ntaps, method="mcma", adaptive_stepsize=True)
+    wxy, err = benchmark(equalisation.equalise_signal, SS, mu, Ntaps=ntaps, method=method, adaptive_stepsize=True)
     E = equalisation.apply_filter(SS,  wxy)
     E = helpers.normalise_and_center(E)
-    E, ph = phaserec.viterbiviterbi(E, 11)
+    #E, ph = phaserec.viterbiviterbi(E, 11)
     E = helpers.dump_edges(E, 20)
     ser = E.cal_ser().mean()
     npt.assert_allclose(0, ser, atol=3e-5)
