@@ -22,8 +22,7 @@ import numpy as np
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.signal_quality import cal_s0
 from qampy.core.dsp_cython import bps as _bps_idx_pyx
-from qampy.core.dsp_cython import select_angles
-
+from qampy.core.pythran_dsp import bps as _bps_idx_pyt
 from qampy.core.filter import moving_average
 try:
     import arrayfire as af
@@ -129,6 +128,8 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
         bps_fct = _bps_idx_af
     elif method.lower() == "py":
         bps_fct = _bps_idx_py
+    elif method.lower() == "pyt":
+        bps_fct = _bps_idx_pyt
     else:
         raise ValueError("Method needs to be 'pyx', 'py' or 'af'")
     if E.dtype is np.dtype(np.complex64):

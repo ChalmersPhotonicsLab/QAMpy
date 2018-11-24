@@ -7,8 +7,6 @@ from qampy import signals, impairments, equalisation, helpers, phaserec
 from qampy.core import resample
 from qampy.core.equalisation import cython_equalisation
 from qampy.core.equalisation import pythran_equalisation
-from qampy.core.dsp_cython import soft_l_value_demapper as soft_l_value_demapper_pyx
-from qampy.core.pythran_dsp import soft_l_value_demapper as soft_l_value_demapper_pyt
 from qampy.core import equalisation as cequalisation
 
 
@@ -28,12 +26,18 @@ def test_quantize_precision(dtype, benchmark):
     npt.assert_array_almost_equal(s.symbols[0], o)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+def test_quantize_pt_precision(dtype, benchmark):
+    s = signals.SignalQAMGrayCoded(128, 2**20, dtype=dtype)
+    o = benchmark(pythran_equalisation.make_decision, s[0], s.coded_symbols)
+    npt.assert_array_almost_equal(s.symbols[0], o)
+
+@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 @pytest.mark.parametrize("method", ["pyx", "py", "af"])
 def test_bps(dtype, method, benchmark):
         angle = np.pi/5.1
         s = signals.SignalQAMGrayCoded(64, 2**12, dtype=dtype)
         s3 = s*np.exp(1.j*angle)
-        s2, ph = benchmark(phaserec.bps, s, 64 , 11, method=method)
+        s2, ph = benchmark(phaserec.bps, s, 64, 11, method=method)
         ser = s2[:,20:-20].cal_ser()
         npt.assert_allclose(0, ser)
 

@@ -49,6 +49,24 @@ def cma_error(Xest, R, symbs):
 def mcma_error(Xest, R, symbs):
     return (R.real - Xest.real**2)*Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j
 
+def det_symbol(X, symbs):
+    dist = np.abs(X-symbs)
+    idx = np.argmin(dist)
+    return symbs[idx], dist[idx]
+
 def sbd_error(Xest, R, symbs):
-    R = symbs[np.argmin(np.abs(Xest-symbs))]
+    ##R,d = symbs[np.argmin(np.abs(Xest-symbs))]
+    R, d = det_symbol(Xest, symbs)
     return (R.real - Xest.real)*abs(R.real) + (R.imag - Xest.imag)*1.j*abs(R.imag)
+
+#pythran export make_decision(complex128[], complex128[])
+#pythran export make_decision(complex64[], complex64[])
+def make_decision(E, symbols):
+    L = E.shape[0]
+    M = symbols.shape[0]
+    det_symbs = np.zeros_like(E)
+    #omp parallel for
+    for i in range(L):
+        det_symbs[i] = det_symbol(E[i], symbols)[0]
+    return det_symbs
+
