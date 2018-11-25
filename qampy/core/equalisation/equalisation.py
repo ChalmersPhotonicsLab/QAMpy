@@ -502,14 +502,9 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             eqfct.mode = l
         for i in range(Niter):
             if method in ["mcma_pth", "cma_pth", "sbd_pth"]:
-                t1 = timer()
                 err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = pythran_equalisation.train_eq(E, TrSyms, os, mu, wxy[l], eqfct, prms, adaptive_stepsize)
-                t2 = timer()
             else:
-                t1 = timer()
                 err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
-                t2 = timer()
-            print("Time {}".format(t2-t1))
         if (l < 1) and avoid_cma_sing:
             wxy[l + 1] = orthogonalizetaps(wxy[l])
     if apply:
