@@ -211,7 +211,7 @@ def bps_pyx(E, testangles, symbols, N, **kwargs):
     """
     return bps(E, testangles, symbols, N, method="pyx", **kwargs)
 
-
+#TODO: I should remove the numba dependency
 @numba.jit(nopython=True)
 def select_angles(angles, idx):
     if angles.shape[0] > 1:
