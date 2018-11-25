@@ -28,6 +28,16 @@ try:
 except ImportError:
     af = None
 
+def _soft_l_value_demapper_af(rx_symbs, M, snr, bits_map):
+    num_bits = int(np.log2(M))
+    N = rx_symbs.shape[0]
+    k = bits_map.shape[1]
+    sig = af.np_to_af_array(rx_symbs)
+    bit_mtx = af.moddims(af.np_to_af_array(bits_map), 1, num_bits, k, 2)
+    tmp = af.sum(af.broadcast(lambda x,y: af.exp(-snr*af.abs(x-y)**2), bit_mtx, sig), dim=2)
+    lvl = af.log(tmp[:,:,:,1]) - af.log(tmp[:,:,:,0])
+    return np.array(lvl)
+
 def make_decision(signal, symbols, method="pyx", **kwargs):
     """
     Quantize signal array onto symbols.
