@@ -145,8 +145,8 @@ def test_apply_filter_benchmark(dtype, method, benchmark):
     wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, method="mcma", adaptive_step=True)
     E1 = benchmark(equalisation.apply_filter, SS,  wxy, method)
     E1 = helpers.normalise_and_center(E1)
-    gmi = np.sum(E1.cal_gmi()[0])
-    assert gmi > 3.99
+    ser = E1.cal_ser()
+    npt.assert_allclose(0, ser, atol=3e-5)
 
 
 

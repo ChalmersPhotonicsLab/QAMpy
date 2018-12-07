@@ -15,6 +15,22 @@ def apply_filter(E, wx):
             Xest += E[k, i]*np.conj(wx[k,i])
     return Xest
 
+#pythran export apply_filter_to_signal(complex128[][], int, complex128[][][])
+#pythran export apply_filter_to_signal(complex64[][], int, complex64[][][])
+def apply_filter_to_signal(E, os, wx):
+    Ntaps = wx.shape[2]
+    L = E.shape[1]
+    modes = E.shape[0]
+    N = (L-Ntaps+os)//os
+    output  = np.zeros((modes, N), dtype=E.dtype)
+    #omp parallel for
+    for idx in range(modes*N): # manual collapse of loop
+        j = idx//N
+        i = idx%N
+        Xest = apply_filter(E[:, i*os:i*os+Ntaps], wx[j])
+        output[j, i] = Xest
+    return output
+
 #pythran export train_eq(complex128[][], int, int, float64,
     # complex128[][], int,
     # (complex128, complex128[]), bool)
