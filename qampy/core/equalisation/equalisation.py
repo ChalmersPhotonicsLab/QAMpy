@@ -163,6 +163,8 @@ def apply_filter(E, os, wxy, method="pyx"):
         return apply_filter_py(E, os, wxy)
     elif method == "pyx":
         return apply_filter_pyx(E, os, wxy)
+    elif method == "pth":
+        return pythran_equalisation.apply_filter_to_signal(E, os, wxy)
     else:
         raise NotImplementedError("Only py and pyx methods are implemented")
 

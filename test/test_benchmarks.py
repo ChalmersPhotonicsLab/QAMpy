@@ -124,7 +124,7 @@ def test_soft_l_values_benchmark(dtype, method, benchmark):
 
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["py", "pyx"])
+@pytest.mark.parametrize("method", ["py", "pyx", "pth"])
 def test_apply_filter_benchmark(dtype, method, benchmark):
     benchmark.group = "apply filter "+str(dtype)
     fb = 40.e9
@@ -140,39 +140,13 @@ def test_apply_filter_benchmark(dtype, method, benchmark):
     snr =  14
     sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2, dtype=dtype)
     S = sig.resample(fs, renormalise=True, beta=0.1)
-    S = impairments.change_snr(S, snr)
-    SS = impairments.apply_PMD(S, theta, t_pmd)
+    SS = impairments.change_snr(S, snr)
+    #SS = impairments.apply_PMD(S, theta, t_pmd)
     wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, method="mcma", adaptive_step=True)
-    benchmark(equalisation.apply_filter, SS,  wxy, method)
     E1 = benchmark(equalisation.apply_filter, SS,  wxy, method)
     E1 = helpers.normalise_and_center(E1)
-    ser = E1.cal_ser()
-    npt.assert_allclose(0, ser, atol=3e-5)
+    gmi = np.sum(E1.cal_gmi()[0])
+    assert gmi > 3.99
 
-@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["pyt", "pyx"])
-@pytest.mark.parametrize("M", [64, 128, 256])
-def test_select_angles_benchmark(dtype, method, benchmark, M):
-    from qampy.core.dsp_cython import bps
-    if method == "pyx":
-        from qampy.core.dsp_cython import select_angles
-    elif method == "pyt":
-        from qampy.core.pythran_dsp import select_angles
-    fb = 40.e9
-    N = 2**17
-    NL = 40
-    sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=1, dtype=dtype)
-    sig = impairments.apply_phase_noise(sig, 40e3)
-    if dtype is np.dtype(np.complex64):
-        fdtype = np.float32
-    else:
-        fdtype = np.float64
-    angles = np.linspace(-np.pi/4, np.pi/4, M, endpoint=False, dtype=fdtype).reshape(1,-1)
-    idx = bps(sig[0], angles, sig.coded_symbols, NL)
-    ph = np.array(benchmark(select_angles,  angles, idx)).reshape(1, -1)
-    ph[:, NL:-NL] = np.unwrap(ph[:, NL:-NL]*4)/4
-    sigo = sig*np.exp(1j*ph).astype(sig.dtype)
-    sigo = helpers.dump_edges(sigo, 100)
-    ser = sigo.cal_ser()
-    npt.assert_allclose(0, ser, atol=3e-5)
+
 
