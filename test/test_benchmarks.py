@@ -44,8 +44,10 @@ def test_bps(dtype, method, benchmark):
         npt.assert_allclose(0, ser)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["mcma", "mcma_pth"])
-def test_equalisation_prec(dtype, method, benchmark):
+@pytest.mark.parametrize("method", ["cma", "mcma", "sbd",  "mddma", "dd" ])
+@pytest.mark.parametrize("backend", ["pyx", "pth"])
+def test_equalisation_prec(dtype, method, benchmark, backend):
+    benchmark.group = method
     fb = 40.e9
     os = 2
     fs = os*fb
@@ -63,13 +65,15 @@ def test_equalisation_prec(dtype, method, benchmark):
     #S = impairments.apply_phase_noise(S, 100e3)
     S = impairments.change_snr(S, snr)
     SS = impairments.apply_PMD(S, theta, t_pmd)
-    wxy, err = benchmark(equalisation.equalise_signal, SS, mu, Ntaps=ntaps, method=method, adaptive_stepsize=True)
-    E = equalisation.apply_filter(SS,  wxy)
-    E = helpers.normalise_and_center(E)
+    if backend=="pth":
+        method = method+"_pth"
+    wxy, err = benchmark(equalisation.equalise_signal, SS, mu, Ntaps=ntaps, method=method, adaptive_stepsize=True, )
+    #E = equalisation.apply_filter(SS,  wxy)
+    #E = helpers.normalise_and_center(E)
     #E, ph = phaserec.viterbiviterbi(E, 11)
-    E = helpers.dump_edges(E, 20)
-    ser = E.cal_ser().mean()
-    npt.assert_allclose(0, ser, atol=3e-5)
+    #E = helpers.dump_edges(E, 20)
+    #ser = E.cal_ser().mean()
+    #npt.assert_allclose(0, ser, atol=3e-5)
 
 @pytest.mark.parametrize("dtype", [ np.complex64, np.complex128])
 #@pytest.m    npt.assert_allclose(0, ser, atol=3e-5)ark.parametrize("method", [cequalisation.apply_filter, cython_equalisation.apply_filter_signal, cython_equalisation.apply_filter_singal2 ])
