@@ -81,14 +81,15 @@ TRAINING_FCTS = ["cma", "mcma",
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma_pth"]:
-        #return pythran_equalisation.cma_error
         return 1
     if method in ["mcma_pth"]:
-        #return pythran_equalisation.mcma_error
         return 2
     if method in ["sbd_pth"]:
-        #return pythran_equalisation.sbd_error
         return 3
+    if method in ["mddma_pth"]:
+        return 4
+    if method in ["dd_pth"]:
+        return 5
     if method in ["mcma"]:
         return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
@@ -481,13 +482,13 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     """
     method = method.lower()
     eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-    if method in ["mcma_pth", "cma_pth", "sbd_pth"]:
+    if method in ["mcma_pth", "cma_pth", "sbd_pth", "dd_pth", "mddma_pth"]:
         if method in ["cma_path"]:
             R = _cal_Rconstant(M)+0j
         else:
             R = _cal_Rconstant_complex(M)
         symbs = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
-        prms = (R, symbs)
+        prms = (E.dtype.type(R), E.dtype.type(symbs))
     # scale signal
     Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     wxy = wxy.astype(E.dtype)
@@ -501,7 +502,9 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         if method == "data":
             eqfct.mode = l
         for i in range(Niter):
-            if method in ["mcma_pth", "cma_pth", "sbd_pth"]:
+            if method in ["mcma_pth", "cma_pth", "sbd_pth", "dd_pth", "mddma_pth"]:
+                if E.dtype == np.complex64:
+                    mu = np.float32(mu)
                 err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = pythran_equalisation.train_eq(E, TrSyms, os, mu, wxy[l], eqfct, prms, adaptive_stepsize)
             else:
                 err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
