@@ -22,8 +22,9 @@ import numpy as np
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.signal_quality import cal_s0
 from qampy.core.dsp_cython import bps as _bps_idx_pyx
+from qampy.core.dsp_cython import select_angles
+
 from qampy.core.filter import moving_average
-import numba
 try:
     import arrayfire as af
 except ImportError:
@@ -211,21 +212,6 @@ def bps_pyx(E, testangles, symbols, N, **kwargs):
     """
     return bps(E, testangles, symbols, N, method="pyx", **kwargs)
 
-#TODO: I should remove the numba dependency
-@numba.jit(nopython=True)
-def select_angles(angles, idx):
-    if angles.shape[0] > 1:
-        L = angles.shape[0]
-        anglesn = np.zeros(L, dtype=np.float64)
-        for i in range(L):
-            anglesn[i] = angles[i, idx[i]]
-        return anglesn
-    else:
-        L = idx.shape[0]
-        anglesn = np.zeros(L, dtype=np.float64)
-        for i in range(L):
-            anglesn[i] = angles[0, idx[i]]
-        return anglesn
 
 def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
     """
@@ -275,7 +261,11 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
         bps_fct = _bps_idx_py
     else:
         raise ValueError("Method needs to be 'pyx', 'py' or 'af'")
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
+    if E.dtype is np.dtype(np.complex64):
+        dtype = np.float32
+    else:
+        dtype = np.float64
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False, dtype=dtype).reshape(1,-1)
     Ew = np.atleast_2d(E)
     ph_out = []
     for i in range(Ew.shape[0]):
