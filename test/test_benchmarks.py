@@ -34,7 +34,7 @@ def test_quantize_pt_precision(dtype, benchmark):
     npt.assert_array_almost_equal(s.symbols[0], o)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["pyx", "py", "af"])
+@pytest.mark.parametrize("method", ["pyx", "py", "af", "pyt"])
 def test_bps(dtype, method, benchmark):
         angle = np.pi/5.1
         s = signals.SignalQAMGrayCoded(64, 2**12, dtype=dtype)
