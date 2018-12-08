@@ -30,7 +30,7 @@ def test_bps(dtype, method, benchmark):
         angle = np.pi/5.1
         s = signals.SignalQAMGrayCoded(64, 2**12, dtype=dtype)
         s3 = s*np.exp(1.j*angle)
-        s2, ph = benchmark(phaserec.bps, s, 64 , s.coded_symbols, 11, method=method)
+        s2, ph = benchmark(phaserec.bps, s, 64 , 11, method=method)
         ser = s2[:,20:-20].cal_ser()
         npt.assert_allclose(0, ser)
 
