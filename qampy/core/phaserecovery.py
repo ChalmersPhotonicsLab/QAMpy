@@ -141,12 +141,11 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     for i in range(Ew.shape[0]):
         idx =  bps_fct(Ew[i], angles, symbols, N)
         ph.append(select_angles(angles, idx))
-    ph = np.asarray(ph)
+    ph = np.asarray(ph, dtype=dtype)
     # ignore the phases outside the averaging window
     # better to use normal unwrap instead of fancy tricks
     #ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
     ph[:, N:-N] = np.unwrap(ph[:, N:-N]*4)/4
-    ph = ph.astype(dtype)
     if E.ndim == 1:
         return (Ew*np.exp(1.j*ph)).flatten(), ph.flatten()
     else:
@@ -276,7 +275,7 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
         idx2 = bps_fct(Ew[i], phn, symbols, N, **kwargs)
         phf = select_angles(phn, idx2)
         ph_out.append(np.unwrap(phf*4, discont=np.pi*4/4)/4)
-    ph_out = np.asarray(ph_out)
+    ph_out = np.asarray(ph_out, dtype=dtype)
     En = Ew*np.exp(1.j*ph_out)
     if E.ndim == 1:
         return En.flatten(), ph_out.flatten()
