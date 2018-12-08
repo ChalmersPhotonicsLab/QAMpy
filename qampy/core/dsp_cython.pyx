@@ -124,7 +124,7 @@ cpdef select_angles(cython.floating[:,:] angles, long[:] idx):
         angles_out = np.zeros(L, dtype="f%d"%angles.itemsize)
         for i in prange(L, schedule='static', nogil=True):
             angles_out[i] = angles[0, idx[i] ]
-    return angles_out
+    return np.array(angles_out)
 
 cpdef double[:] soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
     cdef int num_bits = int(np.log2(M))
