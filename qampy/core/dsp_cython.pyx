@@ -111,7 +111,7 @@ cpdef ssize_t[:] select_angle_index(cython.floating[:,:] x, int N):
                     dmin = dtmp
     return idx
 
-cpdef select_angles(cython.floating[:,:] angles, long[:] idx):
+cpdef select_angles(cython.floating[:,:] angles, cython.integral[:] idx):
     cdef cython.floating[:] angles_out
     cdef int i, L
     if angles.shape[0] > 1:
