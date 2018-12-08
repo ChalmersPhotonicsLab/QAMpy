@@ -8,7 +8,9 @@ from qampy.core import resample
 from qampy.core.equalisation import cython_equalisation
 from qampy.core.equalisation import pythran_equalisation
 from qampy.core.dsp_cython import soft_l_value_demapper as soft_l_value_demapper_pyx
+from qampy.core.dsp_cython import soft_l_value_demapper_minmax as soft_l_value_demapper_minmax_pyx
 from qampy.core.pythran_dsp import soft_l_value_demapper as soft_l_value_demapper_pyt
+from qampy.core.pythran_dsp import soft_l_value_demapper_minmax as soft_l_value_demapper_minmax_pyt
 from qampy.core import equalisation as cequalisation
 
 
@@ -110,17 +112,23 @@ def test_apply_filter(dtype, benchmark):
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 @pytest.mark.parametrize("method", ["pyt", "pyx"])
-def test_soft_l_values_benchmark(dtype, method, benchmark):
+@pytest.mark.parametrize("type", ["log", "mm"])
+def test_soft_l_values_benchmark(dtype, method, benchmark, type):
     M = 64
     N = 10**5
     snr = dtype(20.).real
     sig = signals.SignalQAMGrayCoded(M, N,  nmodes=1, dtype=dtype)
     s = impairments.change_snr(sig, snr)
     if method == "pyt":
-        benchmark(soft_l_value_demapper_pyt, s[0], M, snr, s._bitmap_mtx)
+        if type == "log":
+            benchmark(soft_l_value_demapper_pyt, s[0], M, snr, s._bitmap_mtx)
+        else:
+            benchmark(soft_l_value_demapper_minmax_pyt, s[0], M, snr, s._bitmap_mtx)
     else:
-        benchmark(soft_l_value_demapper_pyx, s[0], M, snr, s._bitmap_mtx)
-
+        if type == "log":
+            benchmark(soft_l_value_demapper_pyx, s[0], M, snr, s._bitmap_mtx)
+        else:
+            benchmark(soft_l_value_demapper_minmax_pyx, s[0], M, snr, s._bitmap_mtx)
 
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
