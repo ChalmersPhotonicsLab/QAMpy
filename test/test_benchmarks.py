@@ -127,14 +127,14 @@ def test_apply_filter_benchmark(dtype, method, benchmark):
     npt.assert_allclose(0, ser, atol=3e-5)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["nb", "pyx"])
+@pytest.mark.parametrize("method", ["pyt", "pyx"])
 @pytest.mark.parametrize("M", [64, 128, 256])
 def test_select_angles_benchmark(dtype, method, benchmark, M):
     from qampy.core.dsp_cython import bps
-    if method == "nb":
-        from qampy.core.phaserecovery import select_angles
-    elif method == "pyx":
+    if method == "pyx":
         from qampy.core.dsp_cython import select_angles
+    elif method == "pyt":
+        from qampy.core.pythran_dsp import select_angles
     fb = 40.e9
     N = 2**17
     NL = 40
@@ -152,8 +152,4 @@ def test_select_angles_benchmark(dtype, method, benchmark, M):
     sigo = helpers.dump_edges(sigo, 100)
     ser = sigo.cal_ser()
     npt.assert_allclose(0, ser, atol=3e-5)
-
-
-
-
 
