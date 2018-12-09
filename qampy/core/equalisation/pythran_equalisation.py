@@ -1,5 +1,9 @@
 import numpy as np
 
+
+def cabsq(x):
+    return x.real**2 + x.imag**2
+
 def adapt_step(mu, err_p, err):
     if err.real*err_p.real > 0 and err.imag*err_p.imag > 0:
         return mu
@@ -84,10 +88,23 @@ def dd_error(Xest, R, symbs):
     R, d = det_symbol(Xest, symbs)
     return R - Xest
 
+#def det_symbol(X, symbs):
+    #dist = np.abs(X-symbs)
+    #idx = np.argmin(dist)
+    #return symbs[idx], dist[idx]
+
+#we need to use this version because of #1133 which made argmin significantly slower
+#pythran export det_symbol(complex128, complex128[])
+#pythran export det_symbol(complex64, complex64[])
 def det_symbol(X, symbs):
-    dist = np.abs(X-symbs)
-    idx = np.argmin(dist)
-    return symbs[idx], dist[idx]
+    d0 = 1000.
+    s = 1.+1.j
+    for j in range(symbs.shape[0]):
+        d = cabsq(X-symbs[j])
+        if d < d0:
+            d0 = d
+            s = symbs[j]
+    return s, d0
 
 #pythran export make_decision(complex128[], complex128[])
 #pythran export make_decision(complex64[], complex64[])
