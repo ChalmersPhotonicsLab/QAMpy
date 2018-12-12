@@ -22,8 +22,9 @@ import numpy as np
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.signal_quality import cal_s0
 from qampy.core.dsp_cython import bps as _bps_idx_pyx
+from qampy.core.dsp_cython import select_angles
+
 from qampy.core.filter import moving_average
-import numba
 try:
     import arrayfire as af
 except ImportError:
@@ -140,12 +141,11 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     for i in range(Ew.shape[0]):
         idx =  bps_fct(Ew[i], angles, symbols, N)
         ph.append(select_angles(angles, idx))
-    ph = np.asarray(ph)
+    ph = np.asarray(ph, dtype=dtype)
     # ignore the phases outside the averaging window
     # better to use normal unwrap instead of fancy tricks
     #ph[N:-N] = unwrap_discont(ph[N:-N], 10*np.pi/2/Mtestangles, np.pi/2)
     ph[:, N:-N] = np.unwrap(ph[:, N:-N]*4)/4
-    ph = ph.astype(dtype)
     if E.ndim == 1:
         return (Ew*np.exp(1.j*ph)).flatten(), ph.flatten()
     else:
@@ -212,21 +212,6 @@ def bps_pyx(E, testangles, symbols, N, **kwargs):
     return bps(E, testangles, symbols, N, method="pyx", **kwargs)
 
 
-@numba.jit(nopython=True)
-def select_angles(angles, idx):
-    if angles.shape[0] > 1:
-        L = angles.shape[0]
-        anglesn = np.zeros(L, dtype=np.float64)
-        for i in range(L):
-            anglesn[i] = angles[i, idx[i]]
-        return anglesn
-    else:
-        L = idx.shape[0]
-        anglesn = np.zeros(L, dtype=np.float64)
-        for i in range(L):
-            anglesn[i] = angles[0, idx[i]]
-        return anglesn
-
 def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
     """
     Perform a blind phase search phase recovery using two stages after _[1]
@@ -275,7 +260,11 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
         bps_fct = _bps_idx_py
     else:
         raise ValueError("Method needs to be 'pyx', 'py' or 'af'")
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False).reshape(1,-1)
+    if E.dtype is np.dtype(np.complex64):
+        dtype = np.float32
+    else:
+        dtype = np.float64
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False, dtype=dtype).reshape(1,-1)
     Ew = np.atleast_2d(E)
     ph_out = []
     for i in range(Ew.shape[0]):
@@ -286,7 +275,7 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
         idx2 = bps_fct(Ew[i], phn, symbols, N, **kwargs)
         phf = select_angles(phn, idx2)
         ph_out.append(np.unwrap(phf*4, discont=np.pi*4/4)/4)
-    ph_out = np.asarray(ph_out)
+    ph_out = np.asarray(ph_out, dtype=dtype)
     En = Ew*np.exp(1.j*ph_out)
     if E.ndim == 1:
         return En.flatten(), ph_out.flatten()
