@@ -93,6 +93,18 @@ class TestSyncAndAdjust(object):
         else:
             assert (tx.shape[0] == N) and (rx.shape[0] == N)
 
+    @pytest.mark.parametrize("plus", [True, False])
+    @pytest.mark.parametrize("adjust", ['rx', 'tx'])
+    def test_slices(self, plus, adjust):
+        x = np.arange(100.)
+        xx = np.tile(x, 3)
+        if plus:
+            y = xx[11:100+3*11]
+        else:
+            y = xx[11:100-3*11]
+        tx, rx = ber_functions.sync_and_adjust(x, y, adjust=adjust)
+        npt.assert_array_almost_equal(tx, rx)
+
     @pytest.mark.parametrize("N0", [(None, 1000), (1000, None)])
     @pytest.mark.parametrize("shiftN", [0, 43, 150, 800])
     @pytest.mark.parametrize("adjust", ['rx', 'tx'])

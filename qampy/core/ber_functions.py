@@ -303,6 +303,7 @@ def adjust_data_length(data_tx, data_rx, method=None, offset=0):
             if offset == 0:
                 data_tx = _adjust_to(data_tx, data_rx.shape[0])
             else:
+                print(offset)
                 data_tx1 = _adjust_to(data_tx, offset, back=False)
                 data_tx2 = _adjust_to(data_tx, data_rx.shape[0]-offset)
                 data_tx = np.hstack([data_tx1, data_tx2])
