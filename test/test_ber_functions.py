@@ -137,6 +137,18 @@ class TestSyncAndAdjust(object):
         tx, rx = ber_functions.sync_and_adjust(syms[:N1]*1j**tx_i, syms2[:N2]*1j**rx_i, adjust=adjust)
         npt.assert_allclose(tx, rx)
 
+    @pytest.mark.parametrize("N", [12342])
+    @pytest.mark.parametrize("plus", [True, False])
+    def test_ser_with_random_slice(self, N, plus):
+        s = signals.SignalQAMGrayCoded(4, 2**17)
+        ss = np.tile(s, 4)
+        if plus:
+            s2 = ss[0,N:2**17+3*N]
+        else:
+            s2 = ss[0,N:2**17-3*N]
+        npt.assert_allclose(s2.cal_ser(),0)
+
+
 class TestAdjustDataLength(object):
     s = signals.SignalQAMGrayCoded(16, 3 * 10 ** 4, nmodes=1)
     d = np.diff(np.unique(s.symbols.real)).min()
