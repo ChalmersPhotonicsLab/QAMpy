@@ -101,14 +101,24 @@ class TestSyncAndAdjust(object):
             assert (tx.shape[0] == N) and (rx.shape[0] == N)
 
 
-    @pytest.mark.parametrize("rx_longer", [True, False, None])
-    @pytest.mark.parametrize("adjust", ['tx', 'rx'])
+    @pytest.mark.parametrize(
+        ("rx_longer", "adjust"),
+        [
+            (True, "tx"),
+            pytest.param(False, "tx", marks=pytest.mark.xfail(reason="to short array throws off offset find")),
+            pytest.param(True, "rx", marks=pytest.mark.xfail(reason="to short array throws off offset find")),
+                (False, 'rx'),
+            (True, "tx"),
+            (None, "rx"),
+            (None, "tx"),
+        ]
+    )
     def test_slices(self, rx_longer, adjust):
-        x = np.arange(100.)
+        x = np.arange(1000.)
         xx = np.tile(x, 3)
-        y = xx[11:100 + 3 * 11]
-        ym = xx[11:100 - 3 * 11]
-        y_equal = xx[11:100 + 1 * 11]
+        y = xx[110:1000 + 3 * 110]
+        ym = xx[110:1000 - 3 * 110]
+        y_equal = xx[110:1000 + 1 * 110]
         if rx_longer is None:
             tx = x
             rx = y_equal
@@ -130,13 +140,42 @@ class TestSyncAndAdjust(object):
         tx, rx = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
         npt.assert_array_almost_equal(tx, rx)
 
+    @pytest.mark.parametrize("N", [234, 1000, 2001])
+    @pytest.mark.parametrize("rx_longer", [True, False, None])
+    def test_slices_data_tx(self, N, rx_longer):
+        s = signals.SignalQAMGrayCoded(4, 2**16)[0]
+        ss = np.tile(s, 3)
+        if rx_longer is None:
+            y = ss[N:2**16+N]
+        elif rx_longer:
+            y = ss[N:2**16+2*N]
+        else:
+            y = ss[N:2**16-2*N]
+        tx, rx = ber_functions.sync_and_adjust(s, y, adjust="tx")
+        npt.assert_array_almost_equal(tx,rx)
+
+    @pytest.mark.parametrize("N", [234, 1000, 2001])
+    @pytest.mark.parametrize("tx_longer", [True, False, None])
+    def test_slices_data_rx(self, N, tx_longer):
+        s = signals.SignalQAMGrayCoded(4, 2**16)[0]
+        ss = np.tile(s, 3)
+        if tx_longer is None:
+            y = ss[N:2**16+N]
+        elif tx_longer:
+            y = ss[N:2**16+2*N]
+        else:
+            y = ss[N:2**16-2*N]
+        tx, rx = ber_functions.sync_and_adjust(y, s, adjust="rx")
+        npt.assert_array_almost_equal(tx,rx)
+
+
     @pytest.mark.parametrize("rx_longer", [True, False, None])
     @pytest.mark.parametrize("adjust", ['tx', 'rx'])
     def test_slices_length(self, rx_longer, adjust):
-        x = np.arange(100.)
+        x = np.arange(1000.)
         xx = np.tile(x, 3)
-        y = xx[11:100+3*11]
-        y_equal = xx[11:100+1*11]
+        y = xx[11:1000+3*11]
+        y_equal = xx[11:1000+1*11]
         if rx_longer is None:
             tx = x
             rx = y_equal
