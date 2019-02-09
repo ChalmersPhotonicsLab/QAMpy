@@ -60,7 +60,7 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1]*1j**i, sig2)
+        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1] * 1j ** i, sig2)
         assert (shiftN == -offset) or (shiftN+offset == 2*(2**15-1))
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
@@ -70,7 +70,7 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1]*1j**i, sig2)
+        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1] * 1j ** i, sig2)
         sig2 = np.roll(sig2, offset)
         npt.assert_allclose(syms2, sig2[:N1], atol=self.d/4)
 
@@ -80,7 +80,7 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms*1j**i, sig2)
+        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms, sig2 * 1j ** i)
         assert (4-ii)%4 == i
 
 class TestSyncAndAdjust(object):
