@@ -93,29 +93,31 @@ class TestSyncAndAdjust(object):
         else:
             assert (tx.shape[0] == N) and (rx.shape[0] == N)
 
-    @pytest.mark.parametrize("plus", [True, False])
-    @pytest.mark.parametrize("mult", [1, 3])
-    @pytest.mark.parametrize("adjust", ['rx', 'tx'])
-    def test_slices(self, plus, mult, adjust):
+    @pytest.mark.parametrize("rx_longer", [True, False, None])
+    @pytest.mark.parametrize("adjust", ['tx'])#, 'tx'])
+    def test_slices(self, rx_longer, adjust):
         x = np.arange(100.)
         xx = np.tile(x, 3)
-        if plus:
-            y = xx[11:100+mult*11]
+        if rx_longer is None:
+            y = xx[11:100+1*11]
+        elif rx_longer:
+            y = xx[11:100+3*11]
         else:
-            y = xx[11:100-mult*11]
+            y = xx[11:100-3*11]
         tx, rx = ber_functions.sync_and_adjust(x, y, adjust=adjust)
         npt.assert_array_almost_equal(tx, rx)
 
-    @pytest.mark.parametrize("plus", [True, False])
-    @pytest.mark.parametrize("mult", [1, 3])
+    @pytest.mark.parametrize("rx_longer", [True, False, None])
     @pytest.mark.parametrize("adjust", ['rx', 'tx'])
-    def test_slices_length(self, plus, mult, adjust):
+    def test_slices_length(self, rx_longer, adjust):
         x = np.arange(100.)
         xx = np.tile(x, 3)
-        if plus:
-            y = xx[11:100+mult*11]
+        if rx_longer is None:
+            y = xx[11:100+1*11]
+        elif rx_longer:
+            y = xx[11:100+3*11]
         else:
-            y = xx[11:100-mult*11]
+            y = xx[11:100-3*11]
         tx, rx = ber_functions.sync_and_adjust(x, y, adjust=adjust)
         assert tx.shape == rx.shape
 
