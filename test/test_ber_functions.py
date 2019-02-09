@@ -68,11 +68,11 @@ class TestFindSequenceOffsetComplex(object):
     @pytest.mark.parametrize("N1", [None, 4000])
     def test_data(self, shiftN, i, N1):
         sig = self.s[0]
-        syms = self.s.symbols[0]
+        syms = self.s.symbols[0]*1j**i
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1] * 1j ** i, sig2)
-        sig2 = np.roll(sig2, offset)
-        npt.assert_allclose(syms2, sig2[:N1], atol=self.d/4)
+        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1], sig2)
+        sig2 = np.roll(syms2, offset)
+        npt.assert_allclose(syms[:N1], sig2[:N1], atol=self.d/4)
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("i", range(4))
