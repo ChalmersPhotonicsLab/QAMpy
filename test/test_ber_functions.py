@@ -20,7 +20,7 @@ class TestFindSequenceOffset(object):
         syms = sig.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
-        assert (offset == shiftN)
+        assert (offset == -shiftN) or ((3*10**4 - offset )== shiftN)
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("N1", [None, 4000])
@@ -29,7 +29,7 @@ class TestFindSequenceOffset(object):
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
-        sig2 = np.roll(sig2, -offset)
+        sig2 = np.roll(sig2, offset)
         npt.assert_allclose(syms[:N1], sig2[:N1], atol=self.d/4)
 
     @pytest.mark.parametrize("shiftN", [100, 1000, 5001])
@@ -38,8 +38,15 @@ class TestFindSequenceOffset(object):
         b = np.random.randint(0,2, 2**16)
         b2 = np.roll(b, shift=shiftN)
         offset = ber_functions.find_sequence_offset(b[:N1], b2)
-        assert (shiftN == offset)
+        assert (shiftN == -offset)
 
+    @pytest.mark.parametrize("shiftN", [100, 1000, 5001])
+    @pytest.mark.parametrize("N1", [None, 4000])
+    def test_ints_shift2(self, shiftN, N1):
+        b = np.random.randint(0,2, 2**16)
+        b2 = np.roll(b, shift=shiftN)
+        offset = ber_functions.find_sequence_offset(b, b2[:N1])
+        assert (shiftN == -offset) or (shiftN+offset == 2**16)
 
 class TestFindSequenceOffsetComplex(object):
     s = signals.SignalQAMGrayCoded(16, 2 * (2 ** 15 - 1), nmodes=1)
@@ -93,32 +100,62 @@ class TestSyncAndAdjust(object):
         else:
             assert (tx.shape[0] == N) and (rx.shape[0] == N)
 
+
     @pytest.mark.parametrize("rx_longer", [True, False, None])
-    @pytest.mark.parametrize("adjust", ['tx'])#, 'tx'])
+    @pytest.mark.parametrize("adjust", ['tx', 'rx'])
     def test_slices(self, rx_longer, adjust):
         x = np.arange(100.)
         xx = np.tile(x, 3)
+        y = xx[11:100 + 3 * 11]
+        ym = xx[11:100 - 3 * 11]
+        y_equal = xx[11:100 + 1 * 11]
         if rx_longer is None:
-            y = xx[11:100+1*11]
-        elif rx_longer:
-            y = xx[11:100+3*11]
+            tx = x
+            rx = y_equal
         else:
-            y = xx[11:100-3*11]
-        tx, rx = ber_functions.sync_and_adjust(x, y, adjust=adjust)
+            if adjust == "tx":
+                if rx_longer:
+                    rx = y
+                    tx = x
+                else:
+                    rx = ym
+                    tx = x
+            elif adjust == "rx":
+                if rx_longer:
+                    rx = x
+                    tx = ym
+                else:
+                    rx = x
+                    tx = y
+        tx, rx = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
         npt.assert_array_almost_equal(tx, rx)
 
     @pytest.mark.parametrize("rx_longer", [True, False, None])
-    @pytest.mark.parametrize("adjust", ['rx', 'tx'])
+    @pytest.mark.parametrize("adjust", ['tx', 'rx'])
     def test_slices_length(self, rx_longer, adjust):
         x = np.arange(100.)
         xx = np.tile(x, 3)
+        y = xx[11:100+3*11]
+        y_equal = xx[11:100+1*11]
         if rx_longer is None:
-            y = xx[11:100+1*11]
-        elif rx_longer:
-            y = xx[11:100+3*11]
+            tx = x
+            rx = y_equal
         else:
-            y = xx[11:100-3*11]
-        tx, rx = ber_functions.sync_and_adjust(x, y, adjust=adjust)
+            if adjust == "tx":
+                if rx_longer:
+                    rx = y
+                    tx = x
+                else:
+                    rx = x
+                    tx = y
+            elif adjust == "rx":
+                if rx_longer:
+                    rx = y
+                    tx = x
+                else:
+                    rx = x
+                    tx = y
+        tx, rx = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
         assert tx.shape == rx.shape
 
     @pytest.mark.parametrize("N0", [(None, 1000), (1000, None)])
