@@ -27,21 +27,21 @@ from qampy.core import utils
 class DataSyncError(Exception):
     pass
 
-def find_sequence_offset(data_tx, data_rx, show_cc=False):
+def find_sequence_offset(x, y, show_cc=False):
     """
-    Find the offset of the transmitted data sequence inside the received data, which
+    Find the time shift between two input signals that might contain errors
     might contain errors, using cross-correlation between data_rx and data_tx.
-    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This assumes that len(data_rx) >= len(data_tx) and that
-    data_tx is at least once inside data_rx.
+    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This calculates how data_rx
+    has to be shifted to align with data_tx
 
     Parameters
     ----------
 
-    data_tx : array_like
-            the known input data sequence.
+    x : array_like
+            The first signal
 
-    data_rx : array_like
-        the received data sequence which might contain errors.
+    y : array_like
+        second signal, this is the signal that will need to be shifted
 
     show_cc : bool, optional
         if true return the calculated crosscorrelation
@@ -49,28 +49,20 @@ def find_sequence_offset(data_tx, data_rx, show_cc=False):
     Returns
     -------
     offset index : int
-        the index where data_tx starts in data_rx
+        the index to shift y in order to align both signals
     crosscorrelation: array_like, optional
-        the autocorrelation
+        the "full" crosscorrelation between x and y
     """
     # needed to convert bools to integers
-    tx = 1.*data_tx
-    rx = 1.*data_rx
-    N_rx = rx.shape[0]
-    N_tx = tx.shape[0]
-    assert not N_tx > N_rx, "length of data tx must be shorter or equal to length of data_rx"
-    if np.issubdtype(rx.dtype , np.complexfloating):
-        ac = fftconvolve(rx, tx.conj()[::-1], 'same')
+    X = 1.*x
+    Y = 1.*y
+    N_X = X.shape[0]
+    N_Y = Y.shape[0]
+    if np.issubdtype(Y.dtype , np.complexfloating):
+        ac = fftconvolve(X, Y.conj()[::-1], 'full')
     else:
-        ac = fftconvolve(np.hstack([rx,rx,rx]), tx[::-1], 'same')[N_rx:-N_rx]
-    if N_rx == N_tx:
-        idx = abs(ac).argmax()-N_tx//2
-        if idx < 0:
-            idx += N_tx
-    elif N_rx > N_tx:
-        idx = abs(ac).argmax() - N_tx//2
-        if idx < 0:
-            idx += N_rx
+        ac = fftconvolve(X, Y[::-1], 'full')
+    idx = abs(ac).argmax()-(N_Y-1) # this is necessary to find the correct position (size of full is N_X+N_Y-1)
     if show_cc is True:
         return idx, ac
     else:
