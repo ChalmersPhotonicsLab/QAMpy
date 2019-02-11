@@ -17,13 +17,13 @@ class TestReturnObject(object):
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_bps(self, ndim):
         s = signals.SignalQAMGrayCoded(32, 2 ** 16, fb=20e9, nmodes=ndim)
-        s2, ph = phaserec.bps(s, 32, s.coded_symbols, 10)
+        s2, ph = phaserec.bps(s, 32, 10)
         assert type(s2) is type(s)
 
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
     def test_bps_twostage(self, ndim):
         s = signals.SignalQAMGrayCoded(32, 2 ** 16, fb=20e9, nmodes=ndim)
-        s2, ph = phaserec.bps_twostage(s, 32, s.coded_symbols, 10)
+        s2, ph = phaserec.bps_twostage(s, 32, 10)
         assert type(s2) is type(s)
 
     @pytest.mark.parametrize("ndim", np.arange(1, 4))
@@ -108,7 +108,15 @@ class TestDtype(object):
     def test_bps(self, dtype):
         s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
         s *= np.exp(1.j*np.pi/3)
-        s2, ph = phaserec.bps(s, 32, s.coded_symbols, 10, method="pyx")
+        s2, ph = phaserec.bps(s, 32, 10, method="pyx")
+        assert s2.dtype is np.dtype(dtype)
+        assert ph.dtype.itemsize is np.dtype(dtype).itemsize//2
+
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_bps_two_stage(self, dtype):
+        s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
+        s *= np.exp(1.j*np.pi/3)
+        s2, ph = phaserec.bps_twostage(s, 32, 10, method="pyx")
         assert s2.dtype is np.dtype(dtype)
         assert ph.dtype.itemsize is np.dtype(dtype).itemsize//2
 
@@ -120,7 +128,19 @@ class TestCorrect(object):
     def test_bps(self, dtype, angle, method):
         s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
         s3 = s*np.exp(1.j*angle)
-        s2, ph = phaserec.bps(s3, 32 , s.coded_symbols, 11, method=method)
+        s2, ph = phaserec.bps(s3, 32 , 11, method=method)
+        o = ph[0][20:-20]+angle
+        ser = s2[:,20:-20].cal_ser()
+        npt.assert_allclose(0, ser)
+        npt.assert_allclose(0, o, atol=np.pi/4/32)
+
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    @pytest.mark.parametrize("angle", np.linspace(0.1, np.pi/4.1, 8))
+    @pytest.mark.parametrize("method", ["pyx", "py", "af"])
+    def test_bps_two_stage(self, dtype, angle, method):
+        s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
+        s3 = s*np.exp(1.j*angle)
+        s2, ph = phaserec.bps_twostage(s3, 32//2 , 11, method=method)
         o = ph[0][20:-20]+angle
         ser = s2[:,20:-20].cal_ser()
         npt.assert_allclose(0, ser)
