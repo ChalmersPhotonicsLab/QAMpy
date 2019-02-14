@@ -24,7 +24,7 @@ cimport cython
 cimport numpy as np
 from ccomplex cimport *
 from qampy.core.equalisation cimport cython_equalisation
-from qampy.core.equalisation.cmath cimport exp, log, pow
+from qampy.core.equalisation.cmath cimport exp, log, pow, log2
 
 
 cdef double cabssq(cython_equalisation.complexing x) nogil:
@@ -111,6 +111,20 @@ cpdef ssize_t[:] select_angle_index(cython.floating[:,:] x, int N):
                     dmin = dtmp
     return idx
 
+cpdef select_angles(cython.floating[:,:] angles, cython.integral[:] idx):
+    cdef cython.floating[:] angles_out
+    cdef int i, L
+    if angles.shape[0] > 1:
+        L = angles.shape[0]
+        angles_out = np.zeros(L, dtype="f%d"%angles.itemsize)
+        for i in prange(L, schedule='static', nogil=True):
+            angles_out[i] = angles[i, idx[i]]
+    else:
+        L = idx.shape[0]
+        angles_out = np.zeros(L, dtype="f%d"%angles.itemsize)
+        for i in prange(L, schedule='static', nogil=True):
+            angles_out[i] = angles[0, idx[i] ]
+    return np.array(angles_out)
 
 cpdef double[:] soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
     cdef int num_bits = int(np.log2(M))
@@ -128,6 +142,31 @@ cpdef double[:] soft_l_value_demapper(cython_equalisation.complexing[:] rx_symbs
                 tmp = tmp + exp(-snr*cabssq(bits_map[bit,l,1] - rx_symbs[symb]))
                 tmp2 = tmp2 + exp(-snr*cabssq(bits_map[bit,l,0] - rx_symbs[symb]))
             L_values[symb*num_bits + bit] = log(tmp) - log(tmp2)
+    return L_values
+
+cpdef double[:] soft_l_value_demapper_minmax(cython_equalisation.complexing[:] rx_symbs, int M, double snr, cython_equalisation.complexing[:,:,:] bits_map):
+    cdef int num_bits = int(np.log2(M))
+    cdef double[:] L_values = np.zeros(rx_symbs.shape[0]*num_bits)
+    cdef int mode, bit, symb, l
+    cdef int N = rx_symbs.shape[0]
+    cdef int k = bits_map.shape[1]
+    cdef double tmp = 10000
+    cdef double tmp2 = 10000
+    cdef double tmp3 = 10000
+    cdef double tmp4 = 10000
+    for bit in prange(num_bits, schedule="static",nogil=True):
+        #for symb in prange(N, schedule='static', nogil=True):
+        for symb in range(N):
+            tmp = 10000
+            tmp2 = 10000
+            for l in range(k):
+                tmp3 = cabssq(bits_map[bit,l,1] - rx_symbs[symb])
+                if tmp3 < tmp:
+                    tmp = tmp3
+                tmp4 = cabssq(bits_map[bit,l,0] - rx_symbs[symb])
+                if tmp4 < tmp2:
+                    tmp2 = tmp4
+            L_values[symb*num_bits + bit] = snr*(tmp2-tmp)
     return L_values
 
 cpdef prbs_ext(np.int64_t seed, taps, int nbits, int N):
@@ -195,4 +234,29 @@ def lfsr_int(np.int64_t seed, np.int64_t mask):
         if xor != 0:
             state ^= mask #this performs the modulus operation
         yield xor, state
+
+cpdef cal_gmi_mc(double complex[:] symbols, double snr, int ns, double complex[:,:,:] bit_map):
+    cdef int M = symbols.size
+    cdef int nbits = int(np.log2(M))
+    cdef double complex[:] z
+    cdef double gmi = 0
+    cdef int i, j, b, l
+    cdef double complex sym
+    z = np.sqrt(1/snr)*(np.random.randn(ns) + 1j*np.random.randn(ns))/np.sqrt(2)
+    for k in range(nbits):
+        for b in range(2):
+            for sym in bit_map[k,:,b]:
+                for l in range(ns):
+                    nom = cal_exp_sum(sym, symbols, z[l], snr)
+                    denom = cal_exp_sum(sym, bit_map[k,:,b], z[l], snr)
+                    gmi += log2(nom/denom)/ns
+    return nbits - gmi/M
+
+cdef double cal_exp_sum(double complex sym, double complex[:] syms, double complex z, double sigma):
+    cdef int i
+    cdef double out = 0
+    cdef N = syms.size
+    for i in range(N):
+        out += exp(-sigma*(2*creal(z*(sym-syms[i])) + cabs(sym-syms[i])**2))
+    return out
 

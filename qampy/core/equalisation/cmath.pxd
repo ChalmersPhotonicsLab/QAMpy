@@ -8,6 +8,9 @@ cdef extern from "math.h" nogil:
     double log(double)
 
 cdef extern from "math.h" nogil:
+    double log2(double)
+
+cdef extern from "math.h" nogil:
     double exp(double)
 
 cdef extern from "math.h" nogil:

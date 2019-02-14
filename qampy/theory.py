@@ -255,3 +255,33 @@ def hybrid_qam_ber_vs_esn0(snr, pr, fr, M1, M2):
     bps1 = np.log2(M1)
     bps2 = np.log2(M2)
     return 1/((1-fr)*bps1+fr*bps2)*((1-fr)*bps1*theory.MQAM_BERvsEsN0(snr/((1-fr)+fr*pr), M1) + fr*bps2*theory.MQAM_BERvsEsN0(pr*snr/((1-fr)+fr*pr), M2))
+
+def cal_gmi(M, snr, N=10**3):
+    """
+    Calculate the soft-decision GMI for a given modulation format
+    based on a Monte-Carlo method. Assumes a gray-coded square QAM format.
+
+    Parameters
+    ----------
+    M : int
+        QAM order
+    snr : float or array_like
+        Signal-to-noise-ratio in dB where to calculate the gmi
+    N : int, optional
+        Number of noise realisations for the Monte-Carlo simulation
+
+    Returns
+    -------
+    GMI
+    """
+    from qampy.signals import SignalQAMGrayCoded
+    from qampy.core.dsp_cython import cal_gmi_mc
+    snr = np.atleast_1d(snr)
+    s = SignalQAMGrayCoded(M, 1000, nmodes=1)
+    btx = s._bitmap_mtx
+    syms = s.coded_symbols
+    snr_lin = 10**(snr/10)
+    gmi = np.zeros_like(snr_lin)
+    for i in range(snr.size):
+        gmi[i] = cal_gmi_mc(syms, snr_lin[i], N, btx)
+    return gmi
