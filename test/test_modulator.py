@@ -169,6 +169,16 @@ class TestQAMSymbolsGray(object):
         assert s.fb ==1
         assert sn.fb == 1
 
+    @pytest.mark.parametrize("fs", [160e9, 80e9])
+    #@pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("beta", [None, 0.2])
+    def test_resample_freq(self, fs, fftconv, beta):
+        N = 2**18
+        s = signals.SignalQAMGrayCoded(128, N, fb=35e9)
+        sn = s.resample(fs, beta=beta, renormalise=False, fftconv=fftconv)
+        npt.assert_allclose(sn.fs, fs)
+
     @pytest.mark.parametrize("fftconv", [True, False])
     @pytest.mark.parametrize("os", np.arange(2, 5))
     @pytest.mark.parametrize("ntaps", [4000, 4001, None]) # taps should hit all filter cases
