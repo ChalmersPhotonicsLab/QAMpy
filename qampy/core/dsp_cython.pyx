@@ -88,15 +88,15 @@ def bps(cython_equalisation.complexing[:] E, cython.floating[:,:] testangles, cy
                 dists[i, j] = dtmp
     return np.array(select_angle_index(dists, 2*N))
 
-cpdef ssize_t[:] select_angle_index(cython.floating[:,:] x, int N):
+cpdef int[:] select_angle_index(cython.floating[:,:] x, int N):
     cdef cython.floating[:,:] csum
-    cdef ssize_t[:] idx
-    cdef ssize_t i,k, L, M
+    cdef int[:] idx
+    cdef int i,k, L, M
     cdef cython.floating dmin, dtmp
     L = x.shape[0]
     M = x.shape[1]
     csum = np.zeros((L,M), dtype="f%d"%x.itemsize)
-    idx = np.zeros(L, dtype=np.intp)
+    idx = np.zeros(L, dtype=np.intc)
     for i in range(1, L):
         dmin = 1000.
         if i < N:
