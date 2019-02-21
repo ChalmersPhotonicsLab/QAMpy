@@ -223,6 +223,7 @@ class SignalBase(np.ndarray):
         tx_out = []
         rx_out = []
         idxx = list(range(rx.shape[0]))
+        # TODO: check if it's possible to do this in a faster way. One option: only shift once.
         for j in range(rx.shape[0]):
             acm = -100.
             for i in idxx:
