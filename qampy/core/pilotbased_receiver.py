@@ -400,7 +400,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
         found_delay = np.zeros(nmodes, dtype=np.int)
         for ref_pol in not_found_modes:
             ix, dat, ii, ac = ber_functions.find_sequence_offset_complex(ref_symbs[ref_pol], symbs_out[l])
-            found_delay[ref_pol] = ix
+            found_delay[ref_pol] = -ix
             max_phase_rot[ref_pol] = ac
         # Check for which mode found and extract the reference delay
         max_sync_pol = np.argmax(max_phase_rot)
