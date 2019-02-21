@@ -202,12 +202,13 @@ class SignalBase(np.ndarray):
     @classmethod
     def _resample_array(cls, arr, fnew, fold, fb, **kwargs):
         os = fnew / fold
+        Nnew = int(np.round(os*arr.shape[1]))
         if np.isclose(os, 1):
             return arr.copy().view(cls)
-        onew = np.empty((arr.shape[0], int(os * arr.shape[1])), dtype=arr.dtype)
+        onew = []
         for i in range(arr.shape[0]):
-            onew[i, :] = resample.rrcos_resample(arr[i], fold, fnew, Ts=1 / fb, **kwargs)
-        onew = np.asarray(onew).view(cls)
+            onew.append(resample.rrcos_resample(arr[i], fold, fnew, Ts=1 / fb, **kwargs))
+        onew = np.asarray(onew, dtype=arr.dtype).view(cls)
         cls._copy_inherits(arr, onew)
         return onew
 
