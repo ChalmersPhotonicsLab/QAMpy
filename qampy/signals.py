@@ -202,12 +202,13 @@ class SignalBase(np.ndarray):
     @classmethod
     def _resample_array(cls, arr, fnew, fold, fb, **kwargs):
         os = fnew / fold
+        Nnew = int(np.round(os*arr.shape[1]))
         if np.isclose(os, 1):
             return arr.copy().view(cls)
-        onew = np.empty((arr.shape[0], int(os * arr.shape[1])), dtype=arr.dtype)
+        onew = []
         for i in range(arr.shape[0]):
-            onew[i, :] = resample.rrcos_resample(arr[i], fold, fnew, Ts=1 / fb, **kwargs)
-        onew = np.asarray(onew).view(cls)
+            onew.append(resample.rrcos_resample(arr[i], fold, fnew, Ts=1 / fb, **kwargs))
+        onew = np.asarray(onew, dtype=arr.dtype).view(cls)
         cls._copy_inherits(arr, onew)
         return onew
 
@@ -222,10 +223,20 @@ class SignalBase(np.ndarray):
             return self._adjust_only(tx, rx)
         tx_out = []
         rx_out = []
-        for i in range(tx.shape[0]):
-            t, r = ber_functions.sync_and_adjust(tx[i], rx[i])
-            tx_out.append(t)
-            rx_out.append(r)
+        idxx = list(range(rx.shape[0]))
+        # TODO: check if it's possible to do this in a faster way. One option: only shift once.
+        for j in range(rx.shape[0]):
+            acm = -100.
+            for i in idxx:
+                (t, r), act = ber_functions.sync_and_adjust(tx[i], rx[j])
+                if act > acm:
+                    itmp = i
+                    acm = act
+                    t_tmp = t
+                    r_tmp = r
+            idxx.remove(itmp)
+            tx_out.append(t_tmp)
+            rx_out.append(r_tmp)
         return np.array(tx_out), np.array(rx_out)
 
     def _adjust_only(self, tx, rx, which="tx"):

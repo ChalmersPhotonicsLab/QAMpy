@@ -27,21 +27,21 @@ from qampy.core import utils
 class DataSyncError(Exception):
     pass
 
-def find_sequence_offset(data_tx, data_rx, show_cc=False):
+def find_sequence_offset(x, y, show_cc=False):
     """
-    Find the offset of the transmitted data sequence inside the received data, which
+    Find the time shift between two input signals that might contain errors
     might contain errors, using cross-correlation between data_rx and data_tx.
-    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This assumes that len(data_rx) >= len(data_tx) and that
-    data_tx is at least once inside data_rx.
+    Calculates np.fftconvolve(data_rx, data_tx, 'same'). This calculates how data_rx
+    has to be shifted to align with data_tx
 
     Parameters
     ----------
 
-    data_tx : array_like
-            the known input data sequence.
+    x : array_like
+            The first signal
 
-    data_rx : array_like
-        the received data sequence which might contain errors.
+    y : array_like
+        second signal, this is the signal that will need to be shifted
 
     show_cc : bool, optional
         if true return the calculated crosscorrelation
@@ -49,69 +49,57 @@ def find_sequence_offset(data_tx, data_rx, show_cc=False):
     Returns
     -------
     offset index : int
-        the index where data_tx starts in data_rx
+        the index to shift y in order to align both signals
     crosscorrelation: array_like, optional
-        the autocorrelation
+        the "full" crosscorrelation between x and y
     """
     # needed to convert bools to integers
-    tx = 1.*data_tx
-    rx = 1.*data_rx
-    N_rx = rx.shape[0]
-    N_tx = tx.shape[0]
-    assert not N_tx > N_rx, "length of data tx must be shorter or equal to length of data_rx"
-    if np.issubdtype(rx.dtype , np.complexfloating):
-        ac = fftconvolve(rx, tx.conj()[::-1], 'same')
+    X = 1.*x
+    Y = 1.*y
+    N_X = X.shape[0]
+    N_Y = Y.shape[0]
+    if np.issubdtype(Y.dtype , np.complexfloating):
+        ac = fftconvolve(X, Y.conj()[::-1], 'full')
     else:
-        ac = fftconvolve(np.hstack([rx,rx,rx]), tx[::-1], 'same')[N_rx:-N_rx]
-    if N_rx == N_tx:
-        idx = abs(ac).argmax()-N_tx//2
-        if idx < 0:
-            idx += N_tx
-    elif N_rx > N_tx:
-        idx = abs(ac).argmax() - N_tx//2
-        if idx < 0:
-            idx += N_rx
+        ac = fftconvolve(X, Y[::-1], 'full')
+    idx = abs(ac).argmax()-(N_Y-1) # this is necessary to find the correct position (size of full is N_X+N_Y-1)
     if show_cc is True:
         return idx, ac
     else:
         return idx
 
-def find_sequence_offset_complex(data_tx, data_rx, show_cc=False):
+def find_sequence_offset_complex(x, y):
     """
     Find the offset of one sequence in the other even if both sequences are complex.
 
     Parameters
     ----------
-    data_tx : array_like
+    x : array_like
         transmitted data sequence
-    data_rx : array_like
+    y : array_like
         received data sequence
 
     Returns
     -------
     idx : integer
         offset index
-    tx : array_like
-        tx array possibly rotated to correct 1.j**i for complex arrays
+    y : array_like
+        y array possibly rotated to correct 1.j**i for complex arrays
     ii : integer
         power for complex rotation angle 1.j**ii
     """
     acm = 0.
-    if not np.iscomplexobj(data_tx) and not np.iscomplexobj(data_rx):
-        return find_sequence_offset(data_tx, data_rx), data_tx, 0
+    if not np.iscomplexobj(x) and not np.iscomplexobj(y):
+        return find_sequence_offset(x, y), y, 0
     for i in range(4):
-        tx = data_tx*1.j**i
-        idx, ac = find_sequence_offset(tx, data_rx, show_cc=True)
+        rx = y * 1.j ** i
+        idx, ac = find_sequence_offset(x, rx, show_cc=True)
         act = ac.real.max()
         if act > acm:
             ii = i
             ix = idx
             acm = act
-    if show_cc:
-        return ix, data_tx*1.j**ii, ii, acm
-    else:
-        return ix, data_tx*1.j**ii, ii
-
+    return ix, y * 1.j ** ii, ii, acm
 
 def sync_and_adjust(data_tx, data_rx, adjust="tx"):
     """
@@ -143,30 +131,30 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
     N_rx = data_rx.shape[0]
     assert adjust == "tx" or adjust == "rx", "adjust need to be either 'tx' or 'rx'"
     if N_tx > N_rx:
-        offset, rx, ii = find_sequence_offset_complex(data_rx, data_tx)
         if adjust == "tx":
-            tx = np.roll(data_tx, -offset)
-            return adjust_data_length(tx, rx, method="truncate")
+            offset, tx, ii, acm = find_sequence_offset_complex(data_rx, data_tx)
+            tx = np.roll(tx, offset)
+            return adjust_data_length(tx, data_rx, method="truncate"), acm
         elif adjust == "rx":
+            offset, rx, ii, acm = find_sequence_offset_complex(data_tx, data_rx)
             tx, rx = adjust_data_length(data_tx, rx, method="extend", offset=offset)
-            return tx, rx
-            #return tx, np.roll(rx, offset)
+            return (tx, rx), acm
     elif N_tx < N_rx:
-        offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
         if adjust == "tx":
-            # this is still buggy, I if the length of data_rx is not a multiple of length of tx
+            offset, tx, ii, acm = find_sequence_offset_complex(data_rx, data_tx)
             tx, rx = adjust_data_length(tx, data_rx, method="extend", offset=offset)
-            return tx, rx
-            #return np.roll(tx, offset), rx
+            return (tx, rx), acm
         elif adjust is "rx":
-            rx = np.roll(data_rx, -offset)
-            return adjust_data_length(tx, rx, method="truncate")
+            offset, rx, ii, acm  = find_sequence_offset_complex(data_tx, data_rx)
+            rx = np.roll(rx, offset)
+            return adjust_data_length(data_tx, rx, method="truncate"), acm
     else:
-        offset, tx, ii = find_sequence_offset_complex(data_tx, data_rx)
         if adjust == "tx":
-            return np.roll(tx, offset), data_rx
+            offset, tx, ii, acm = find_sequence_offset_complex(data_rx, data_tx)
+            return (np.roll(tx, offset), data_rx), acm
         elif adjust == "rx":
-            return tx, np.roll(data_rx, -offset)
+            offset, rx, ii, acm = find_sequence_offset_complex(data_tx, data_rx)
+            return (data_tx, np.roll(rx, offset)), acm
 
 def sync_rx2tx(data_tx, data_rx, Lsync, imax=200):
     """Sync the received data sequence to the transmitted data, which
@@ -299,7 +287,7 @@ def adjust_data_length(data_tx, data_rx, method=None, offset=0):
                 data_rx = _adjust_to(data_rx, data_tx.shape[0])
             else:
                 data_rx1 = _adjust_to(data_rx, offset, back=False)
-                data_rx2 = _adjust_to(data_rx, data_tx.shape[0]-offset)
+                data_rx2 = _adjust_to(data_rx, data_tx.shape[0]-data_rx1.shape[0])
                 data_rx = np.hstack([data_rx1, data_rx2])
             return data_tx, data_rx
         elif len(data_tx) < len(data_rx):
@@ -307,7 +295,7 @@ def adjust_data_length(data_tx, data_rx, method=None, offset=0):
                 data_tx = _adjust_to(data_tx, data_rx.shape[0])
             else:
                 data_tx1 = _adjust_to(data_tx, offset, back=False)
-                data_tx2 = _adjust_to(data_tx, data_rx.shape[0]-offset)
+                data_tx2 = _adjust_to(data_tx, data_rx.shape[0]-data_tx1.shape[0])
                 data_tx = np.hstack([data_tx1, data_tx2])
             return data_tx, data_rx
         else:
