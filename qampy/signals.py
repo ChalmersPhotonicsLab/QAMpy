@@ -222,10 +222,20 @@ class SignalBase(np.ndarray):
             return self._adjust_only(tx, rx)
         tx_out = []
         rx_out = []
-        for i in range(tx.shape[0]):
-            t, r = ber_functions.sync_and_adjust(tx[i], rx[i])
-            tx_out.append(t)
-            rx_out.append(r)
+        idxx = list(range(rx.shape[0]))
+        # TODO: check if it's possible to do this in a faster way. One option: only shift once.
+        for j in range(rx.shape[0]):
+            acm = -100.
+            for i in idxx:
+                (t, r), act = ber_functions.sync_and_adjust(tx[i], rx[j])
+                if act > acm:
+                    itmp = i
+                    acm = act
+                    t_tmp = t
+                    r_tmp = r
+            idxx.remove(itmp)
+            tx_out.append(t_tmp)
+            rx_out.append(r_tmp)
         return np.array(tx_out), np.array(rx_out)
 
     def _adjust_only(self, tx, rx, which="tx"):

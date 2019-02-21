@@ -314,6 +314,18 @@ class TestQAMSymbolsGray(object):
         assert s.fs == s2.fs
         assert s.M == s2.M
 
+    @pytest.mark.parametrize("Nmodes", [2, 3, 4, 6])
+    @pytest.mark.parametrize("M", [ 4, 16])
+    def test_sync_reorder_modes(self, Nmodes, M):
+        sig = signals.SignalQAMGrayCoded(M, 2**16, nmodes=Nmodes)
+        sig = impairments.change_snr(sig, M+10)
+        idx = np.arange(Nmodes)
+        np.random.shuffle(idx)
+        s2 = sig[idx,:]
+        ser = s2.cal_ser()
+        npt.assert_array_almost_equal(ser, 0)
+
+
 
 class TestResampledQAM(object):
     @pytest.mark.parametrize("attr", ["M", "fs", "fb", "bits", "coded_symbols", "_encoding",
