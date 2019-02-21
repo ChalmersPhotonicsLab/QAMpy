@@ -140,14 +140,11 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
             offset, rx, ii, acm = find_sequence_offset_complex(data_tx, data_rx)
             tx, rx = adjust_data_length(data_tx, rx, method="extend", offset=offset)
             return (tx, rx), acm
-            #return tx, np.roll(rx, offset)
     elif N_tx < N_rx:
         if adjust == "tx":
             offset, tx, ii, acm = find_sequence_offset_complex(data_rx, data_tx)
-            # this is still buggy, I if the length of data_rx is not a multiple of length of tx
             tx, rx = adjust_data_length(tx, data_rx, method="extend", offset=offset)
             return (tx, rx), acm
-            #return np.roll(tx, offset), rx
         elif adjust is "rx":
             offset, rx, ii, acm  = find_sequence_offset_complex(data_tx, data_rx)
             rx = np.roll(rx, offset)
