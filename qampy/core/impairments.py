@@ -44,11 +44,13 @@ def H_PMD(theta, t_dgd, omega):
     .. [1] Ip and Kahn JLT 25, 2033 (2007)
     """
     h1 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-    h2 = np.array([[np.exp(1.j*omega*t_dgd/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(-1.j*omega*t_dgd/2)]])
-    h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+    h2 = np.array([[np.exp(-1.j*omega*t_dgd/2), np.zeros(len(omega))],[np.zeros(len(omega)), np.exp(1.j*omega*t_dgd/2)]])
+    #h3 = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+    #h3 = h1.T
+    h3 =np.array([[np.cos(-theta), -np.sin(-theta)], [np.sin(-theta), np.cos(-theta)]])
     H = np.einsum('ij,jkl->ikl', h1, h2)
-    H = np.einsum('ijl,jk->ikl', H, h3)
-    return H
+    #H = np.einsum('ijl,jk->ikl', H, h3)
+    return H, h3
 
 def rotate_field(field, theta):
     """
@@ -71,10 +73,23 @@ def rotate_field(field, theta):
     h = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype="f%d"%(field.itemsize//2))
     return np.dot(h, field)
 
-def _applyPMD(field, H):
-    Sf = np.fft.fftshift(np.fft.fft(np.fft.fftshift(field, axes=1),axis=1), axes=1)
+def _applyPMD_einsum(field, H, h3):
+    Sf = np.fft.fftshift(np.fft.fft(np.fft.ifftshift(field, axes=1),axis=1), axes=1)
     SSf = np.einsum('ijk,ik -> ik',H , Sf)
-    SS = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(SSf, axes=1),axis=1), axes=1)
+    SS = np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(SSf, axes=1),axis=1), axes=1)
+    SS = np.dot(h3, SS)
+    try:
+        return field.recreate_from_np_array(SS.astype(field.dtype))
+    except:
+        return SS.astype(field.dtype)
+
+def _applyPMD_dot(field, theta, t_dgd, omega):
+    Sf = np.fft.fftshift(np.fft.fft(np.fft.ifftshift(field, axes=1),axis=1), axes=1)
+    Sff = rotate_field(Sf, theta)
+    h2 = np.array([np.exp(-1.j*omega*t_dgd/2),  np.exp(1.j*omega*t_dgd/2)])
+    Sn = Sff*h2
+    Sf2 = rotate_field(Sn, -theta)
+    SS = np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(Sf2, axes=1), axis=1), axes=1)
     try:
         return field.recreate_from_np_array(SS.astype(field.dtype))
     except:
@@ -105,8 +120,7 @@ def apply_PMD_to_field(field, theta, t_dgd, fs):
        new dual polarisation field with PMD
     """
     omega = 2*np.pi*np.linspace(-fs/2, fs/2, field.shape[1], endpoint=False)
-    H = H_PMD(theta, t_dgd, omega)
-    return _applyPMD(field, H)
+    return _applyPMD_dot(field, theta, t_dgd, omega)
 
 def phase_noise(sz, df, fs):
     """
