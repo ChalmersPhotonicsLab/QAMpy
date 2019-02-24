@@ -29,6 +29,7 @@ from qampy import theory
 from qampy.core import ber_functions
 from qampy.core.prbs import make_prbs_extXOR
 from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper
+from qampy.core.io import save_signal
 
 
 
@@ -490,6 +491,9 @@ class SignalBase(np.ndarray):
             p = self.est_snr(synced=synced, verbose=True)[1]
             for i in range(self.shape[0]):
                 self[i] /= np.sqrt(p[i])
+
+    def save_to_file(self, fn, lvl=5):
+        save_signal(fn, self, lvl)
 
     @classmethod
     @abc.abstractmethod
