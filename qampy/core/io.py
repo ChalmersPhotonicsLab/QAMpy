@@ -18,11 +18,51 @@
 
 from __future__ import division, print_function
 import numpy as np
+import zlib
+import pickle
 import tables as tb
 
 PARAM_UNITS = {"symbolrate_unit": "Gbaud", "osnr_unit": "dB", "wl_unit": "nm", "Psig_unit": "dBm"}
 MEAS_UNITS = {"samplingrate_unit": "GS/s"}
 DSP_UNITS = {"ber_unit": "dB", "ser_unit": "dB", "evm_unit": "%"}
+
+def save_signal(fn, signal, lvl=4):
+    """
+    Save a signal object using zlib compression
+
+    Parameters
+    ----------
+    fn : basestring
+        filename
+    signal : SignalObject
+        the signal to save
+    lvl : int, optional
+        the compression to use for zlib
+    """
+    fp = open(fn, "wb")
+    sc = zlib.compress(pickle.dumps(signal, protocol=pickle.HIGHEST_PROTOCOL), level=lvl)
+    fp.write(sc)
+    fp.close()
+
+def load_signal(fn):
+    """
+    Load a signal object from a zlib compressed pickle file.
+
+    Parameters
+    ----------
+    fn : basestring
+        filename of the file
+
+    Returns
+    -------
+    sig : SignalObject
+        The loaded signal object
+
+    """
+    fp = open(fn, "rb")
+    s = zlib.decompress(fp.read())
+    obj = pickle.loads(s)
+    return obj
 
 class tVLArray(tb.VLArray):
     """A variable length array that saves and returns the transpose of the arrays passed to it"""
