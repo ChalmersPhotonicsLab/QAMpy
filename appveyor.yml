@@ -19,6 +19,7 @@ install:
   - "%PYTHON%\\python.exe -m pip install wheel"
   - "%PYTHON%\\python.exe -m pip install cython"
   - "%PYTHON%\\python.exe -m pip install numpy"
+  - "%PYTHON%\\python.exe -m pip install scipy"
 
 build: off
 
