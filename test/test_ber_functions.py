@@ -20,7 +20,7 @@ class TestFindSequenceOffset(object):
         syms = sig.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
-        assert (offset == shiftN)
+        assert (offset == -shiftN) or ((3*10**4 - offset )== shiftN)
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("N1", [None, 4000])
@@ -29,7 +29,7 @@ class TestFindSequenceOffset(object):
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
         offset = ber_functions.find_sequence_offset(syms[:N1], sig2)
-        sig2 = np.roll(sig2, -offset)
+        sig2 = np.roll(sig2, offset)
         npt.assert_allclose(syms[:N1], sig2[:N1], atol=self.d/4)
 
     @pytest.mark.parametrize("shiftN", [100, 1000, 5001])
@@ -38,8 +38,15 @@ class TestFindSequenceOffset(object):
         b = np.random.randint(0,2, 2**16)
         b2 = np.roll(b, shift=shiftN)
         offset = ber_functions.find_sequence_offset(b[:N1], b2)
-        assert (shiftN == offset)
+        assert (shiftN == -offset)
 
+    @pytest.mark.parametrize("shiftN", [100, 1000, 5001])
+    @pytest.mark.parametrize("N1", [None, 4000])
+    def test_ints_shift2(self, shiftN, N1):
+        b = np.random.randint(0,2, 2**16)
+        b2 = np.roll(b, shift=shiftN)
+        offset = ber_functions.find_sequence_offset(b, b2[:N1])
+        assert (shiftN == -offset) or (shiftN+offset == 2**16)
 
 class TestFindSequenceOffsetComplex(object):
     s = signals.SignalQAMGrayCoded(16, 2 * (2 ** 15 - 1), nmodes=1)
@@ -53,19 +60,19 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1]*1j**i, sig2)
-        assert (offset == shiftN)
+        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1] * 1j ** i, sig2)
+        assert (shiftN == -offset) or (shiftN+offset == 2*(2**15-1))
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("i", range(4))
     @pytest.mark.parametrize("N1", [None, 4000])
     def test_data(self, shiftN, i, N1):
         sig = self.s[0]
-        syms = self.s.symbols[0]
+        syms = self.s.symbols[0]*1j**i
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1]*1j**i, sig2)
-        sig2 = np.roll(sig2, -offset)
-        npt.assert_allclose(syms2, sig2[:N1], atol=self.d/4)
+        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1], sig2)
+        sig2 = np.roll(syms2, offset)
+        npt.assert_allclose(syms[:N1], sig2[:N1], atol=self.d/4)
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
     @pytest.mark.parametrize("i", range(4))
@@ -73,7 +80,7 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms*1j**i, sig2)
+        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms, sig2 * 1j ** i)
         assert (4-ii)%4 == i
 
 class TestSyncAndAdjust(object):
@@ -92,6 +99,103 @@ class TestSyncAndAdjust(object):
             assert (tx.shape[0] == N1) and (rx.shape[0] == N1)
         else:
             assert (tx.shape[0] == N) and (rx.shape[0] == N)
+
+
+    @pytest.mark.parametrize(
+        ("rx_longer", "adjust"),
+        [
+            (True, "tx"),
+            pytest.param(False, "tx", marks=pytest.mark.xfail(reason="to short array throws off offset find")),
+            pytest.param(True, "rx", marks=pytest.mark.xfail(reason="to short array throws off offset find")),
+                (False, 'rx'),
+            (True, "tx"),
+            (None, "rx"),
+            (None, "tx"),
+        ]
+    )
+    def test_slices(self, rx_longer, adjust):
+        x = np.arange(1000.)
+        xx = np.tile(x, 3)
+        y = xx[110:1000 + 3 * 110]
+        ym = xx[110:1000 - 3 * 110]
+        y_equal = xx[110:1000 + 1 * 110]
+        if rx_longer is None:
+            tx = x
+            rx = y_equal
+        else:
+            if adjust == "tx":
+                if rx_longer:
+                    rx = y
+                    tx = x
+                else:
+                    rx = ym
+                    tx = x
+            elif adjust == "rx":
+                if rx_longer:
+                    rx = x
+                    tx = ym
+                else:
+                    rx = x
+                    tx = y
+        tx, rx = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
+        npt.assert_array_almost_equal(tx, rx)
+
+    @pytest.mark.parametrize("N", [234, 1000, 2001])
+    @pytest.mark.parametrize("rx_longer", [True, False, None])
+    def test_slices_data_tx(self, N, rx_longer):
+        s = signals.SignalQAMGrayCoded(4, 2**16)[0]
+        ss = np.tile(s, 3)
+        if rx_longer is None:
+            y = ss[N:2**16+N]
+        elif rx_longer:
+            y = ss[N:2**16+2*N]
+        else:
+            y = ss[N:2**16-2*N]
+        tx, rx = ber_functions.sync_and_adjust(s, y, adjust="tx")
+        npt.assert_array_almost_equal(tx,rx)
+
+    @pytest.mark.parametrize("N", [234, 1000, 2001])
+    @pytest.mark.parametrize("tx_longer", [True, False, None])
+    def test_slices_data_rx(self, N, tx_longer):
+        s = signals.SignalQAMGrayCoded(4, 2**16)[0]
+        ss = np.tile(s, 3)
+        if tx_longer is None:
+            y = ss[N:2**16+N]
+        elif tx_longer:
+            y = ss[N:2**16+2*N]
+        else:
+            y = ss[N:2**16-2*N]
+        tx, rx = ber_functions.sync_and_adjust(y, s, adjust="rx")
+        npt.assert_array_almost_equal(tx,rx)
+
+
+    @pytest.mark.parametrize("rx_longer", [True, False, None])
+    @pytest.mark.parametrize("adjust", ['tx', 'rx'])
+    def test_slices_length(self, rx_longer, adjust):
+        x = np.arange(1000.)
+        xx = np.tile(x, 3)
+        y = xx[11:1000+3*11]
+        y_equal = xx[11:1000+1*11]
+        if rx_longer is None:
+            tx = x
+            rx = y_equal
+        else:
+            if adjust == "tx":
+                if rx_longer:
+                    rx = y
+                    tx = x
+                else:
+                    rx = x
+                    tx = y
+            elif adjust == "rx":
+                if rx_longer:
+                    rx = y
+                    tx = x
+                else:
+                    rx = x
+                    tx = y
+        tx, rx = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
+        assert tx.shape == rx.shape
 
     @pytest.mark.parametrize("N0", [(None, 1000), (1000, None)])
     @pytest.mark.parametrize("shiftN", [0, 43, 150, 800])
@@ -136,6 +240,18 @@ class TestSyncAndAdjust(object):
         syms2 = np.roll(syms, shift=shiftN)
         tx, rx = ber_functions.sync_and_adjust(syms[:N1]*1j**tx_i, syms2[:N2]*1j**rx_i, adjust=adjust)
         npt.assert_allclose(tx, rx)
+
+    @pytest.mark.parametrize("N", [12342])
+    @pytest.mark.parametrize("plus", [True, False])
+    def test_ser_with_random_slice(self, N, plus):
+        s = signals.SignalQAMGrayCoded(4, 2**17)
+        ss = np.tile(s, 4)
+        if plus:
+            s2 = ss[0,N:2**17+3*N]
+        else:
+            s2 = ss[0,N:2**17-3*N]
+        npt.assert_allclose(s2.cal_ser(),0)
+
 
 class TestAdjustDataLength(object):
     s = signals.SignalQAMGrayCoded(16, 3 * 10 ** 4, nmodes=1)

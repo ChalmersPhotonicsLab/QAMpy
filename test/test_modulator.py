@@ -169,6 +169,16 @@ class TestQAMSymbolsGray(object):
         assert s.fb ==1
         assert sn.fb == 1
 
+    @pytest.mark.parametrize("fs", [160e9, 80e9])
+    #@pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("fftconv", [True, False])
+    @pytest.mark.parametrize("beta", [None, 0.2])
+    def test_resample_freq(self, fs, fftconv, beta):
+        N = 2**18
+        s = signals.SignalQAMGrayCoded(128, N, fb=35e9)
+        sn = s.resample(fs, beta=beta, renormalise=False, fftconv=fftconv)
+        npt.assert_allclose(sn.fs, fs)
+
     @pytest.mark.parametrize("fftconv", [True, False])
     @pytest.mark.parametrize("os", np.arange(2, 5))
     @pytest.mark.parametrize("ntaps", [4000, 4001, None]) # taps should hit all filter cases
@@ -313,6 +323,18 @@ class TestQAMSymbolsGray(object):
         assert s.fb == s2.fb
         assert s.fs == s2.fs
         assert s.M == s2.M
+
+    @pytest.mark.parametrize("Nmodes", [2, 3, 4, 6])
+    @pytest.mark.parametrize("M", [ 4, 16])
+    def test_sync_reorder_modes(self, Nmodes, M):
+        sig = signals.SignalQAMGrayCoded(M, 2**16, nmodes=Nmodes)
+        sig = impairments.change_snr(sig, M+10)
+        idx = np.arange(Nmodes)
+        np.random.shuffle(idx)
+        s2 = sig[idx,:]
+        ser = s2.cal_ser()
+        npt.assert_array_almost_equal(ser, 0)
+
 
 
 class TestResampledQAM(object):
