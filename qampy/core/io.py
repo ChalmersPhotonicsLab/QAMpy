@@ -39,10 +39,9 @@ def save_signal(fn, signal, lvl=4):
     lvl : int, optional
         the compression to use for zlib
     """
-    fp = open(fn, "wb")
-    sc = zlib.compress(pickle.dumps(signal, protocol=pickle.HIGHEST_PROTOCOL), level=lvl)
-    fp.write(sc)
-    fp.close()
+    with  open(fn, "wb") as fp:
+        sc = zlib.compress(pickle.dumps(signal, protocol=pickle.HIGHEST_PROTOCOL), level=lvl)
+        fp.write(sc)
 
 def load_signal(fn):
     """
@@ -59,9 +58,9 @@ def load_signal(fn):
         The loaded signal object
 
     """
-    fp = open(fn, "rb")
-    s = zlib.decompress(fp.read())
-    obj = pickle.loads(s)
+    with open(fn, "rb") as fp:
+        s = zlib.decompress(fp.read())
+        obj = pickle.loads(s)
     return obj
 
 class tVLArray(tb.VLArray):
