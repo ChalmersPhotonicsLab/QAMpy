@@ -58,6 +58,7 @@ deploy:
   artifact: dist/*\.whl            # upload all wheel packages to release assets
   draft: false
   prerelease: false
+  force_update: true
   on:
     branch: master                 # release from master branch only
     APPVEYOR_REPO_TAG: true        # deploy on tag push only
