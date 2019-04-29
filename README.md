@@ -54,6 +54,15 @@ QAMPy depends on the following python modules *numpy*, *scipy*, *cython*, *bitar
 *numba* (as a fall-back option). You will also need to have a working c/c++ compiler with open-mp support
 installed to compile the cython modules. 
 
+We provide binaries for the latest 0.2 release for Windows and python 3.5-3.7. You can find them under github releases and can 
+install them with `pip [filename]`. Note that the builds assume a processor with `sse2` and `avx` extensions, however this should 
+be any recent CPU from Intel or AMD. 
+
+## Building 
+
+On Linux we recommend building to get the best performance, see the instructions below. Building on Windows is also possible 
+but typically a bit more complicated.
+
 ### Linux
 
 On Linux installation works fine using the usual `python3 setup.py build` and `python3 setup.py install`.
