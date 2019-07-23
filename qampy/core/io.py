@@ -59,7 +59,7 @@ def load_signal(fn):
         obj = pickle.loads(s)
     return obj
 
-def ndarray_from_matlab(fn, keys, transpose=False):
+def ndarray_from_matlab(fn, keys, transpose=False, dim2cmplx=False, portmap=[[0,1], [2,3]]):
     """
     Load a signal from matlab and put in the correct numpy array format
 
@@ -80,6 +80,12 @@ def ndarray_from_matlab(fn, keys, transpose=False):
                                                         [[key_mode1_real, key_mode1_imag], ... [key_modeN_real, key_modeN_imag]]
     transpose: boolean, optional
         Whether to transpose the matlab arrays
+    dim2cmplx: boolean, optional
+        Whether one of the dimensions is of the matlab arrays indicates real and imaginary parts.
+        This is common for data from a realtime oscilloscope
+    portmap: list, optional
+        The mapping of dimension to mode and real and imaginary (or quadrature and in-phase) parts.
+        only used when dim2cmplx is True.
 
     Returns
     -------
@@ -109,4 +115,9 @@ def ndarray_from_matlab(fn, keys, transpose=False):
                 symbs = np.vstack([ symbs, out])
             else:
                 symbs = out
+    if dim2cmplx:
+        out = []
+        for i in range(len(portmap)):
+            out.append(symbs[portmap[i][0]] + 1j*symbs[portmap[i][1]]
+        symbs = np.array(out)
     return symbs
