@@ -3,6 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import os
 import tempfile
+from scipy.io import loadmat, savemat
 
 from qampy import io, signals
 
@@ -35,3 +36,61 @@ class Testsave(object):
         sigld = io.load_signal(fn)
         for attr in ['fb', 'M', "fs"]:
             assert getattr(sig, attr) == getattr(sigld, attr)
+
+class TestMatIO(object):
+    @pytest.mark.parametrize("nmodes", np.arange(1,4))
+    def test_load_single_key(self, nmodes):
+        sig = signals.SignalQAMGrayCoded(16, 2**16, nmodes, fb=20e9)
+        tmpdir = tempfile.mkdtemp()
+        fn = os.path.join(tmpdir, "tmp")
+        savemat(fn, {"sig":sig.symbols})
+        sigout = io.load_symbols_from_matlab_file(fn, sig.M, (("sig",),), fb=sig.fb, normalise=False)
+        assert sig.fb == sigout.fb
+        assert sig.M == sigout.M
+        npt.assert_almost_equal(sig, sigout)
+
+    @pytest.mark.parametrize("nmodes", np.arange(1,4))
+    def test_load_key_per_dim(self, nmodes):
+        sig = signals.SignalQAMGrayCoded(16, 2**16, nmodes, fb=20e9)
+        tmpdir = tempfile.mkdtemp()
+        fn = os.path.join(tmpdir, "tmp")
+        dat = {}
+        keys = []
+        for i in range(nmodes):
+            dat["sig_{}".format(i)] = sig.symbols[i]
+            keys.append(("sig_{}".format(i),))
+        savemat(fn, dat)
+        sigout = io.load_symbols_from_matlab_file(fn, sig.M, keys, fb=sig.fb, normalise=False)
+        assert sig.fb == sigout.fb
+        assert sig.M == sigout.M
+        assert sig.shape == sigout.shape
+        npt.assert_almost_equal(sig, sigout)
+
+    @pytest.mark.parametrize("nmodes", np.arange(1,4))
+    def test_load_real_imag(self, nmodes):
+        sig = signals.SignalQAMGrayCoded(16, 2**16, nmodes, fb=20e9)
+        tmpdir = tempfile.mkdtemp()
+        fn = os.path.join(tmpdir, "tmp")
+        savemat(fn, {"sig_r":sig.symbols.real, "sig_i":sig.symbols.imag})
+        sigout = io.load_symbols_from_matlab_file(fn, sig.M, (("sig_r","sig_i"),), fb=sig.fb, normalise=False)
+        assert sig.fb == sigout.fb
+        assert sig.M == sigout.M
+        npt.assert_almost_equal(sig, sigout)
+
+    @pytest.mark.parametrize("nmodes", np.arange(1,4))
+    def test_load_key_per_dim_real_imag(self, nmodes):
+        sig = signals.SignalQAMGrayCoded(16, 2**16, nmodes, fb=20e9)
+        tmpdir = tempfile.mkdtemp()
+        fn = os.path.join(tmpdir, "tmp")
+        dat = {}
+        keys = []
+        for i in range(nmodes):
+            dat["sig_{}_r".format(i)] = sig.symbols[i].real
+            dat["sig_{}_i".format(i)] = sig.symbols[i].imag
+            keys.append(("sig_{}_r".format(i),"sig_{}_i".format(i)))
+        savemat(fn, dat)
+        sigout = io.load_symbols_from_matlab_file(fn, sig.M, keys, fb=sig.fb, normalise=False)
+        assert sig.fb == sigout.fb
+        assert sig.M == sigout.M
+        assert sig.shape == sigout.shape
+        npt.assert_almost_equal(sig, sigout)
