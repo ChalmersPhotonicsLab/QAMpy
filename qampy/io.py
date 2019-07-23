@@ -71,3 +71,35 @@ def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, transpose=False, fake_po
         symbs = helpers.normalise_and_center(symbs)
     return signals.SignalQAMGrayCoded.from_symbol_array(symbs, M, fb)
 
+
+def add_matlab_data_to_symbol(symbols, fn, fs, keys, transpose=False, normalise=True, dim2cmplx=False, portmap=[[0,1],[2,3]]):
+    """
+    symbols: signal_object
+        The signal object corresponding to the symbols at the transmitter
+    fn: basestring
+        filename of the matlab file
+    keys: list or tuple
+        Nested list of keys (array names) in the matlab file. Depending on how the data is structured the keys can be in
+        one of the following formats:
+            If the symbols are given as a multi-dimensional array of complex numbers:
+                                                        [[ keyname ]]
+            If the symbols are given as multi-dimensional real arrays pairs for real and imaginary part:
+                                                        [[ key_real, key_imag ]]
+            If the different symbols of modes are saved in different complex arrays:
+                                                        [[key_mode1], ..., [key_modeN]]
+            If the symbols are given as pairs of real arrays for each mode:
+                                                        [[key_mode1_real, key_mode1_imag], ... [key_modeN_real, key_modeN_imag]]
+    transpose: boolean, optional
+        Whether to transpose the matlab arrays
+    dim2cmplx: boolean, optional
+        Whether one of the dimensions is of the matlab arrays indicates real and imaginary parts.
+        This is common for data from a realtime oscilloscope
+    portmap: list, optional
+        The mapping of dimension to mode and real and imaginary (or quadrature and in-phase) parts.
+        only used when dim2cmplx is True.
+
+    """
+    data = ndarray_from_matlab(fn, keys, tranpose=transpose)
+    return symbols.recreate_from_np_array(data, fs=fs)
+
+
