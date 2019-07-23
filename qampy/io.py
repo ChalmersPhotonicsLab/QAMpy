@@ -17,7 +17,7 @@
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
 import numpy as np
-from qampy.core.io import load_signal, save_signal
+from qampy.core.io import load_signal, save_signal, ndarray_from_matlab
 from qampy import signals
 from qampy import helpers
 from scipy.io import loadmat
@@ -66,30 +66,10 @@ def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, transpose=False, fake_po
     sig : signal_object
         Signal generated from the loaded symbols
     """
-    mat_dict = loadmat(fn)
-    if len(keys) == 1:
-        if len(keys[0]) == 2:
-            symbs = mat_dict[keys[0][0]] + 1j*mat_dict[keys[0][1]]
-        elif len(keys[0]) == 1:
-            symbs = mat_dict[keys[0][0]]
-        else:
-            raise ValueError("Keys is in the wrong format, see documentation for correct format")
-        if transpose:
-            symbs = np.transpose(symbs)
-    else:
-        for i in range(len(keys)):
-            if len(keys[0]) == 2:
-                out = mat_dict[keys[i][0]] + 1j*mat_dict[keys[i][1]]
-            elif len(keys[0]) == 1:
-                out = mat_dict[keys[i][0]].flatten()
-            else:
-                raise ValueError("Keys is in the wrong format, see documentation for correct format")
-            if i > 0:
-                symbs = np.vstack([ symbs, out])
-            else:
-                symbs = out
+    symbs = ndarray_from_matlab(fn, keys, transpose=transpose)
     if fake_polmux:
         symbs = np.vstack([np.roll(symbs, fake_pm_delay ), symbs])
     if normalise:
         symbs = helpers.normalise_and_center(symbs)
     return signals.SignalQAMGrayCoded.from_symbol_array(symbs, M, fb)
+
