@@ -46,8 +46,6 @@ def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, transpose=False, fake_po
                                                         [[key_mode1], ..., [key_modeN]]
             If the symbols are given as pairs of real arrays for each mode:
                                                         [[key_mode1_real, key_mode1_imag], ... [key_modeN_real, key_modeN_imag]]
-    nmodes: int, optional
-        Number of modes
     fb: float, optional
         Symbol rate
     transpose: boolean, optional
