@@ -73,8 +73,13 @@ def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, fake_polmux=False, fake_
     return signals.SignalQAMGrayCoded.from_symbol_array(symbs, M, fb)
 
 
-def add_matlab_data_to_symbol(symbols, fn, fs, keys, transpose=False, normalise=True, dim2cmplx=False, portmap=[[0,1],[2,3]]):
+def create_signal_from_matlab(symbols, fn, fs, keys, **kwargs):
     """
+    Load data from matlab file and generate signal object
+
+    Parameters
+    ----------
+
     symbols: signal_object
         The signal object corresponding to the symbols at the transmitter
     fn: basestring
@@ -90,17 +95,15 @@ def add_matlab_data_to_symbol(symbols, fn, fs, keys, transpose=False, normalise=
                                                         [[key_mode1], ..., [key_modeN]]
             If the symbols are given as pairs of real arrays for each mode:
                                                         [[key_mode1_real, key_mode1_imag], ... [key_modeN_real, key_modeN_imag]]
-    transpose: boolean, optional
-        Whether to transpose the matlab arrays
-    dim2cmplx: boolean, optional
-        Whether one of the dimensions is of the matlab arrays indicates real and imaginary parts.
-        This is common for data from a realtime oscilloscope
-    portmap: list, optional
-        The mapping of dimension to mode and real and imaginary (or quadrature and in-phase) parts.
-        only used when dim2cmplx is True.
+    kwargs: dict
+        Keyword arguments to pass to core.io.ndarray_from_matlab (see documentation for details)
 
+    Returns
+    -------
+    signal : signal_object
+        signal object containing the data loaded from matlab file
     """
-    data = ndarray_from_matlab(fn, keys, tranpose=transpose)
+    data = ndarray_from_matlab(fn, keys, **kwargs)
     return symbols.recreate_from_np_array(data, fs=fs)
 
 

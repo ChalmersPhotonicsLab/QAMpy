@@ -112,3 +112,16 @@ class TestMatIO(object):
         assert sig.M == sigout.M
         assert sig.shape == sigout.shape
         npt.assert_almost_equal(sig, sigout)
+
+    @pytest.mark.parametrize("nmodes", np.arange(1,4))
+    def test_create_signal_from_matlab(self, nmodes):
+        sig = signals.SignalQAMGrayCoded(16, 2**16, nmodes, fb=20e9)
+        sig2 = sig.resample(2*sig.fb, beta=0.1)
+        tmpdir = tempfile.mkdtemp()
+        fn = os.path.join(tmpdir, "tmp")
+        savemat(fn, {"data":sig2})
+        sigout = io.create_signal_from_matlab(sig, fn, 2*sig.fs, (("data",),))
+        assert sig2.fs == sigout.fs
+        assert sig2.M == sigout.M
+        assert sig2.shape == sigout.shape
+        npt.assert_almost_equal(sig2, sigout)
