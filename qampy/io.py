@@ -24,8 +24,8 @@ from scipy.io import loadmat
 
 
 
-def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, transpose=False, fake_polmux=False, fake_pm_delay=0,
-                                  normalise=True):
+def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, fake_polmux=False, fake_pm_delay=0,
+                                  normalise=True, **kwargs):
     """
     Create a signal object from matlab file.
 
@@ -48,15 +48,16 @@ def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, transpose=False, fake_po
                                                         [[key_mode1_real, key_mode1_imag], ... [key_modeN_real, key_modeN_imag]]
     fb: float, optional
         Symbol rate
-    transpose: boolean, optional
-        Whether to transpose the matlab arrays
     fake_polmux: boolean, optional
         Whether the signal uses fake polmux, thus the single dimension matlab symbol array should be duplicated
     fake_pm_delay: int, optional
         Number of symbols to delay the second dimension in the fake pol-mux
     normalise : boolean, optional
         Normalise the symbols to an average power of 1 or not. Note that if you do not normalise you need to be very
-        careful with your signal metrix
+        careful with your signal metrics
+    kwargs: dict
+        Keyword arguments to pass to core.io.ndarray_from_matlab (see documentation for details)
+
 
     Returns
     -------
@@ -64,7 +65,7 @@ def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, transpose=False, fake_po
     sig : signal_object
         Signal generated from the loaded symbols
     """
-    symbs = ndarray_from_matlab(fn, keys, transpose=transpose)
+    symbs = ndarray_from_matlab(fn, keys, **kwargs)
     if fake_polmux:
         symbs = np.vstack([np.roll(symbs, fake_pm_delay ), symbs])
     if normalise:
