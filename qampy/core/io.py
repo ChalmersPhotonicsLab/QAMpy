@@ -118,6 +118,6 @@ def ndarray_from_matlab(fn, keys, transpose=False, dim2cmplx=False, portmap=[[0,
     if dim2cmplx:
         out = []
         for i in range(len(portmap)):
-            out.append(symbs[portmap[i][0]] + 1j*symbs[portmap[i][1]]
+            out.append(symbs[portmap[i][0]] + 1j*symbs[portmap[i][1]])
         symbs = np.array(out)
     return symbs
