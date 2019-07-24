@@ -50,6 +50,24 @@ class TestMatIO(object):
         npt.assert_almost_equal(sig, sigout)
 
     @pytest.mark.parametrize("nmodes", np.arange(1,4))
+    def test_load_single_key_dim2cmplx(self, nmodes):
+        sig = signals.SignalQAMGrayCoded(16, 2**16, nmodes, fb=20e9)
+        tmpdir = tempfile.mkdtemp()
+        dat = []
+        for i in range(nmodes):
+            dat.append(sig.symbols[i].real)
+            dat.append(sig.symbols[i].imag)
+        portmap = np.arange(2*nmodes)
+        portmap = portmap.reshape(-1, 2)
+        fn = os.path.join(tmpdir, "tmp")
+        savemat(fn, {"sig":dat})
+        sigout = io.load_symbols_from_matlab_file(fn, sig.M, (("sig",),), fb=sig.fb,
+                                                  normalise=False, dim2cmplx=True, portmap=portmap)
+        assert sig.fb == sigout.fb
+        assert sig.M == sigout.M
+        npt.assert_almost_equal(sig, sigout)
+
+    @pytest.mark.parametrize("nmodes", np.arange(1,4))
     def test_load_key_per_dim(self, nmodes):
         sig = signals.SignalQAMGrayCoded(16, 2**16, nmodes, fb=20e9)
         tmpdir = tempfile.mkdtemp()
