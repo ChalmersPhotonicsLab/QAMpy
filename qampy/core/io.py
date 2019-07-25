@@ -106,7 +106,7 @@ def ndarray_from_matlab(fn, keys, transpose=False, dim2cmplx=False, portmap=[[0,
     else:
         for i in range(len(keys)):
             if len(keys[0]) == 2:
-                out = mat_dict[keys[i][0]] + 1j*mat_dict[keys[i][1]]
+                out = mat_dict[keys[i][0]].flatten() + 1j*mat_dict[keys[i][1]].flatten()
             elif len(keys[0]) == 1:
                 out = mat_dict[keys[i][0]].flatten()
             else:
