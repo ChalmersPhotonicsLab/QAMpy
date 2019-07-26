@@ -49,7 +49,7 @@ plt.hexbin(sig[0,::2].real, sig[0,::2].imag)
 plt.text(0.999, 0.9, r"$EVM_x={:.1f}\%$".format(100*evm[0]), color='w', horizontalalignment="right", fontsize=14)
 plt.subplot(224)
 plt.hexbin(sig[1,::2].real, sig[1,::2].imag)
-plt.text(0.999, 0.9, r"$EVM_x={:.1f}\%$".format(100*evm[1]), color='w', horizontalalignment="right", fontsize=14)
+plt.text(0.999, 0.9, r"$EVM_y={:.1f}\%$".format(100*evm[1]), color='w', horizontalalignment="right", fontsize=14)
 
 plt.figure()
 plt.subplot(221)
