@@ -188,14 +188,13 @@ def rrcos_time(t, beta, T):
     ----------
     ..[1] https://en.wikipedia.org/wiki/Root-raised-cosine_filter
     """
-    np.seterr(divide="ignore")
-    rrcos = 1/T*((np.sin(np.pi*t/T*(1-beta)) +  4*beta*t/T*np.cos(np.pi*t/T*(1+beta)))/(np.pi*t/T*(1-(4*beta*t/T)**2)))
-    eps = abs(t[0]-t[1])/4
-    idx1 = np.where(abs(t)<eps)
-    rrcos[idx1] = 1/T*(1+beta*(4/np.pi-1))
-    idx2 = np.where(abs(abs(t)-abs(T/(4*beta)))<eps)
-    rrcos[idx2] = beta/(T*np.sqrt(2))*((1+2/np.pi)*np.sin(np.pi/(4*beta))+(1-2/np.pi)*np.cos(np.pi/(4*beta)))
-    np.seterr(divide="warn")
+    with np.errstate(divide='ignore', invalid='ignore'):
+        rrcos = 1/T*((np.sin(np.pi*t/T*(1-beta)) +  4*beta*t/T*np.cos(np.pi*t/T*(1+beta)))/(np.pi*t/T*(1-(4*beta*t/T)**2)))
+        eps = abs(t[0]-t[1])/4
+        idx1 = np.where(abs(t)<eps)
+        rrcos[idx1] = 1/T*(1+beta*(4/np.pi-1))
+        idx2 = np.where(abs(abs(t)-abs(T/(4*beta)))<eps)
+        rrcos[idx2] = beta/(T*np.sqrt(2))*((1+2/np.pi)*np.sin(np.pi/(4*beta))+(1-2/np.pi)*np.cos(np.pi/(4*beta)))
     return rrcos
 
 
