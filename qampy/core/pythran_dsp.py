@@ -58,49 +58,53 @@ def bps(E, testangles, symbols, N):
                 dists[i, j] = dtmp
     return select_angle_index(dists, 2*N)
 
+def l_values(btx, rx, snr):
+    tmp = 0
+    tmp2 = 0
+    k = btx.shape[0]
+    for l in range(k):
+        tmp += np.exp(-snr*abs(btx[l,1] - rx)**2)
+        tmp2 += np.exp(-snr*abs(btx[l,0] - rx)**2)
+    return tmp, tmp2
+
 #pythran export soft_l_value_demapper(complex128[], int, float64, complex128[][][])
 #pythran export soft_l_value_demapper(complex64[], int, float32, complex64[][][])
-def soft_l_value_demapper(rx_symbs, M, snr, bits_map):
-    num_bits = int(np.log2(M))
-    L_values = np.zeros(rx_symbs.shape[0]*num_bits)
+def soft_l_value_demapper(rx_symbs, num_bits, snr, bits_map):
     N = rx_symbs.shape[0]
+    L_values = np.zeros((N, num_bits))
     k = bits_map.shape[1]
-    #omp parallel for
-    for idx in range(N*num_bits): # collapse the loop manually
-        bit = idx//N
-        symb = idx%N
-        tmp = 0
-        tmp2 = 0
-        for l in range(k):
-            tmp += np.exp(-snr*abs(bits_map[bit,l,1] - rx_symbs[symb])**2)
-            tmp2 += np.exp(-snr*abs(bits_map[bit,l,0] - rx_symbs[symb])**2)
-        L_values[idx] = np.log(tmp) - np.log(tmp2)
+    #omp parallel for collapse(2)
+    for symb in range(N):
+        for bit in range(num_bits):
+            tmp, tmp2 = l_values(bits_map[bit,:,:], rx_symbs[symb], snr)
+            L_values[symb, bit] = np.log(tmp) - np.log(tmp2)
     return L_values
 
+def find_minmax(btx, rx):
+    tmp = 10000.
+    tmp2 = 10000.
+    k = btx.shape[0]
+    for l in range(k):
+        tmp3 = abs(btx[l,1] - rx)**2
+        tmp4 = abs(btx[l,0] - rx)**2
+        if tmp3 < tmp:
+            tmp = tmp3
+        if tmp4 < tmp2:
+           tmp2 = tmp4
+    return tmp, tmp2
 
 #pythran export soft_l_value_demapper_minmax(complex128[], int, float64, complex128[][][])
 #pythran export soft_l_value_demapper_minmax(complex64[], int, float32, complex64[][][])
-def soft_l_value_demapper_minmax(rx_symbs, M, snr, bits_map):
-    num_bits = int(np.log2(M))
-    L_values = np.zeros(rx_symbs.shape[0]*num_bits)
+def soft_l_value_demapper_minmax(rx_symbs, num_bits, snr, bits_map):
     N = rx_symbs.shape[0]
+    L_values = np.zeros((N, num_bits))
     k = bits_map.shape[1]
-    #omp parallel for
-    for idx in range(N*num_bits): # collapse the loop manually
-        bit = idx//N
-        symb = idx%N
-        tmp = 10000.
-        tmp2 = 10000.
-        for l in range(k):
-            tmp3 = abs(bits_map[bit,l,1] - rx_symbs[symb])**2
-            tmp4 = abs(bits_map[bit,l,0] - rx_symbs[symb])**2
-            if tmp3 < tmp:
-                tmp = tmp3
-            if tmp4 < tmp2:
-                tmp2 = tmp4
-        L_values[idx] = snr*(tmp2-tmp)
+    #omp parallel for collapse(2)
+    for symb in range(N):
+        for bit in range(num_bits):
+            tmp, tmp2 = find_minmax(bits_map[bit,:,:], rx_symbs[symb])
+            L_values[symb,bit] = snr*(tmp2-tmp)
     return L_values
-
 
 #pythran export select_angles(float64[][], int[])
 #pythran export select_angles(float32[][], int[])

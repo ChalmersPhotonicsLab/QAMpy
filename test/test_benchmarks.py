@@ -128,9 +128,9 @@ def test_soft_l_values_benchmark(dtype, method, benchmark, type):
     s = impairments.change_snr(sig, snr)
     if method == "pyt":
         if type == "log":
-            benchmark(soft_l_value_demapper_pyt, s[0], M, snr, s._bitmap_mtx)
+            benchmark(soft_l_value_demapper_pyt, s[0], int(np.log2(M)), snr, s._bitmap_mtx)
         else:
-            benchmark(soft_l_value_demapper_minmax_pyt, s[0], M, snr, s._bitmap_mtx)
+            benchmark(soft_l_value_demapper_minmax_pyt, s[0], int(np.log2(M)), snr, s._bitmap_mtx)
     else:
         if type == "log":
             benchmark(soft_l_value_demapper_pyx, s[0], M, snr, s._bitmap_mtx)
