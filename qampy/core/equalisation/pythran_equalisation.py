@@ -36,32 +36,32 @@ def apply_filter_to_signal(E, os, wx):
     return output
 
 #pythran export train_eq(complex128[][], int, int, float64,
-    # complex128[][], int,
+    # complex128[][], str,
     # (complex128, complex128[]), bool)
 #pythran export train_eq(complex64[][], int, int, float32,
-        # complex64[][], int,
+        # complex64[][], str,
         # (complex64, complex64[]), bool)
-def train_eq(E, TrSyms, os, mu, wx, errN,  errfctprs, adaptive):
+def train_eq(E, TrSyms, os, mu, wx, method,  errfctprs, adaptive):
     Ntaps = wx.shape[1]
     pols = wx.shape[0]
     R, symbs = errfctprs
-    if errN == 1:
+    if method == "cma":
         errfct = cma_error
-    elif errN == 2:
+    elif method == "mcma":
         errfct = mcma_error
-    elif errN == 3:
+    elif method == "sbd":
         errfct = sbd_error
-    elif errN == 4:
+    elif method == "mddma":
         errfct = mddma_error
-    elif errN == 5:
+    elif method == "dd":
         errfct = dd_error
     else:
-        raise ValueError("%d does not correspond to an error function (valid values: 1=5)")
+        raise ValueError("%s does not correspond to an error function")
     err = np.zeros(TrSyms, dtype=E.dtype)
     for i in range(TrSyms):
         X = E[:, i * os:i * os + Ntaps]
         Xest = apply_filter(X,  wx)
-        err[i] = errfct(Xest, R, symbs)
+        err[i], R = errfct(Xest, R, symbs)
         wx += mu * np.conj(err[i]) * X
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i], err[i-1])
@@ -70,38 +70,49 @@ def train_eq(E, TrSyms, os, mu, wx, errN,  errfctprs, adaptive):
 # Error functions
 
 def cma_error(Xest, R, symbs):
-    return (R.real - abs(Xest)**2)*Xest
+    return (R.real - abs(Xest)**2)*Xest, R+0j
 
 def mcma_error(Xest, R, symbs):
-    return (R.real - Xest.real**2)*Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j
+    return (R.real - Xest.real**2)*Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j, R
 
 def sbd_error(Xest, R, symbs):
     #R,d = symbs[np.argmin(np.abs(Xest-symbs))]
     R, d = det_symbol(Xest, symbs)
-    return (R.real - Xest.real)*abs(R.real) + (R.imag - Xest.imag)*1.j*abs(R.imag)
+    return (R.real - Xest.real)*abs(R.real) + (R.imag - Xest.imag)*1.j*abs(R.imag), R
 
 def mddma_error(Xest, R, symbs):
     R, d = det_symbol(Xest, symbs)
-    return (R.real**2 - Xest.real**2)*Xest.real + 1.j*(R.imag**2 - Xest.imag**2)*Xest.imag
+    return (R.real**2 - Xest.real**2)*Xest.real + 1.j*(R.imag**2 - Xest.imag**2)*Xest.imag, R
 
 def dd_error(Xest, R, symbs):
     R, d = det_symbol(Xest, symbs)
-    return R - Xest
+    return R - Xest, R
 
-#def det_symbol(X, symbs):
-    #dist = np.abs(X-symbs)
-    #idx = np.argmin(dist)
-    #return symbs[idx], dist[idx]
+def det_symbol_argmin(X, symbs): # this version is about 1.5 times slower than the one below
+    dist = np.abs(X-symbs)
+    idx = np.argmin(dist)
+    return symbs[idx], dist[idx]
 
-#we need to use this version because of #1133 which made argmin significantly slower
 #pythran export det_symbol(complex128, complex128[])
 #pythran export det_symbol(complex64, complex64[])
 def det_symbol(X, symbs):
     d0 = 1000.
     s = 1.+1.j
+    for j in range(symbs.shape[0]):
+        d = cabsq(X-symbs[j])
+        if d < d0:
+            d0 = d
+            s = symbs[j]
+    return s, d0
+
+#pythran export det_symbol_parallel(complex128, complex128[])
+#pythran export det_symbol_parallel(complex64, complex64[])
+def det_symbol_parallel(X, symbs): # this version can be much faster if not in a tight loop
+    d0 = 1000.
+    s = 1.+1.j
     d0_priv = d0
     s_priv = s
-    #omp parallel for
+    ##omp parallel for
     for j in range(symbs.shape[0]):
         d = cabsq(X-symbs[j])
         if d < d0_priv:
