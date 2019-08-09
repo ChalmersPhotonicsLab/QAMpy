@@ -81,15 +81,15 @@ TRAINING_FCTS = ["cma", "mcma",
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma_pth"]:
-        return 1
+        return "cma"
     if method in ["mcma_pth"]:
-        return 2
+        return "mcma"
     if method in ["sbd_pth"]:
-        return 3
+        return "sbd"
     if method in ["mddma_pth"]:
-        return 4
+        return "mddma"
     if method in ["dd_pth"]:
-        return 5
+        return "dd"
     if method in ["mcma"]:
         return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
@@ -491,6 +491,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             R = _cal_Rconstant_complex(M)
         symbs = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
         prms = (E.dtype.type(R), E.dtype.type(symbs))
+    else:
+        eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
     # scale signal
     Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     wxy = wxy.astype(E.dtype)
@@ -507,7 +509,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             if method in ["mcma_pth", "cma_pth", "sbd_pth", "dd_pth", "mddma_pth"]:
                 if E.dtype == np.complex64:
                     mu = np.float32(mu)
-                err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = pythran_equalisation.train_eq(E, TrSyms, os, mu, wxy[l], eqfct, prms, adaptive_stepsize)
+                err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = pythran_equalisation.train_eq(E, TrSyms, os, mu, wxy[l], method[:-4], prms, adaptive_stepsize)
             else:
                 err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
