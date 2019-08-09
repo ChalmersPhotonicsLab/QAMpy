@@ -36,9 +36,6 @@ def select_angle_index(x, N):
 #pythran export bps(complex128[], float64[][], complex128[], int)
 #pythran export bps(complex64[], float32[][], complex64[], int)
 def bps(E, testangles, symbols, N):
-    """
-    Blind phase search using Python. This is slow compared to the cython and arrayfire methods and should not be used.
-    """
     L = E.shape[0]
     p = testangles.shape[0]
     M = symbols.shape[0]
