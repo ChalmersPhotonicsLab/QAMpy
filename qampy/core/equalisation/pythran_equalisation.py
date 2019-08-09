@@ -70,7 +70,7 @@ def train_eq(E, TrSyms, os, mu, wx, method,  errfctprs, adaptive):
 # Error functions
 
 def cma_error(Xest, R, symbs):
-    return (R.real - abs(Xest)**2)*Xest, R+0j
+    return (R.real - abs(Xest)**2)*Xest, R+0j # the +0j is need to not confuse pythran
 
 def mcma_error(Xest, R, symbs):
     return (R.real - Xest.real**2)*Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j, R
