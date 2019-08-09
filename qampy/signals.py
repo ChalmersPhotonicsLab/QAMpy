@@ -28,9 +28,7 @@ from qampy.core import resample
 from qampy import theory, phaserec
 from qampy.core import ber_functions, pilotbased_receiver
 from qampy.core.prbs import make_prbs_extXOR
-from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper
-from qampy.core.io import save_signal
-
+from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper, soft_l_value_demapper_minmax
 
 
 class RandomBits(np.ndarray):
@@ -434,8 +432,8 @@ class SignalBase(np.ndarray):
             for i in range(nmodes):
                 snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
             return snr
-
-    def cal_gmi(self, signal_rx=None, synced=False, snr=None, llr_minmax=False):
+        
+    def cal_gmi(self, signal_rx=None, synced=False, llr_minmax=False):
         """
         Calculate the generalized mutual information for the received signal.
 
@@ -470,17 +468,16 @@ class SignalBase(np.ndarray):
         else:
             snr = 10**(snr/10)
         bits = self.demodulate(self.make_decision(tx)).astype(np.int)
+        bits = bits.reshape(nmodes, -1, self.Nbits)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
             if llr_minmax:
-                l_values = soft_l_value_demapper_minmax(rx[mode], self.M, snr[mode], self._bitmap_mtx)
+                l_values = soft_l_value_demapper_minmax(rx[mode], self.Nbits, snr[mode], self._bitmap_mtx)
             else:
-                l_values = soft_l_value_demapper(rx[mode], self.M, snr[mode], self._bitmap_mtx)
+                l_values = soft_l_value_demapper(rx[mode], self.Nbits, snr[mode], self._bitmap_mtx)
             # GMI per bit
-            for bit in range(self.Nbits):
-                GMI_per_bit[mode, bit] = 1 - np.mean(
-                    np.log2(1 + np.exp(((-1) ** bits[mode, bit::self.Nbits]) * l_values[bit::self.Nbits])))
-            GMI[mode] = np.sum(GMI_per_bit[mode])
+            GMI_per_bit[mode, :] = 1 - np.mean(np.log2(1 + np.exp(((-1)**bits[mode]) * l_values)), axis=0)
+        GMI = np.sum(GMI_per_bit, axis=-1)
         return GMI, GMI_per_bit
 
     def normalize_and_center(self, symbol_based=False, synced=False):

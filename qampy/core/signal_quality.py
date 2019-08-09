@@ -21,8 +21,8 @@ import numpy as np
 from qampy.helpers import cabssquared
 from qampy.theory import  cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.equalisation.cython_equalisation import make_decision as _decision_pyx
-from qampy.core.dsp_cython import soft_l_value_demapper
-from qampy.core.dsp_cython import soft_l_value_demapper_minmax
+from qampy.core.pythran_dsp import soft_l_value_demapper
+from qampy.core.pythran_dsp import soft_l_value_demapper_minmax
 
 try:
     import arrayfire as af
