@@ -99,8 +99,10 @@ def dd_error(Xest, R, symbs):
 def det_symbol(X, symbs):
     d0 = 1000.
     s = 1.+1.j
+    #omp parallel for
     for j in range(symbs.shape[0]):
         d = cabsq(X-symbs[j])
+        #omp critical
         if d < d0:
             d0 = d
             s = symbs[j]
