@@ -72,6 +72,8 @@ On Linux installation works fine using the usual `python3 setup.py build` and `p
 On Windows, cython modules need to be compiled with the same compiler as python was compiled with, which 
 is often a very old version of Visual Studio. If you do not use the correct Visual Studio version
 you will often encounter cryptic compile errors. We will try to include more specific instructions in the future. 
+More detailed instructions can be found on the [wiki](https://github.com/ChalmersPhotonicsLab/QAMpy/wiki/Installation).
+
 
 ## Status
 
