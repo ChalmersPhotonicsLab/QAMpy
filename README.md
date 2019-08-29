@@ -54,6 +54,15 @@ QAMPy depends on the following python modules *numpy*, *scipy*, *cython*, *bitar
 *numba* (as a fall-back option). You will also need to have a working c/c++ compiler with open-mp support
 installed to compile the cython modules. 
 
+We provide binaries for the latest 0.2 release for Windows and python 3.5-3.7. You can find them under github releases and can 
+install them with `pip [filename]`. Note that the builds assume a processor with `sse2` and `avx` extensions, however this should 
+be any recent CPU from Intel or AMD. 
+
+## Building 
+
+On Linux we recommend building to get the best performance, see the instructions below. Building on Windows is also possible 
+but typically a bit more complicated.
+
 ### Linux
 
 On Linux installation works fine using the usual `python3 setup.py build` and `python3 setup.py install`.
@@ -63,6 +72,8 @@ On Linux installation works fine using the usual `python3 setup.py build` and `p
 On Windows, cython modules need to be compiled with the same compiler as python was compiled with, which 
 is often a very old version of Visual Studio. If you do not use the correct Visual Studio version
 you will often encounter cryptic compile errors. We will try to include more specific instructions in the future. 
+More detailed instructions can be found on the [wiki](https://github.com/ChalmersPhotonicsLab/QAMpy/wiki/Installation).
+
 
 ## Status
 
@@ -79,4 +90,5 @@ and is licenced under GPLv3 or later.
 If you use QAMpy in your work please cite us as `Jochen Schröder and Mikael Mazur, "QAMPy a DSP chain for optical 
 communications, DOI: 10.5281/zenodo.1195720"`.
 
-
+## Acknowledgements
+The GPU graphics card used for part of this work was donated by NVIDIA Corporation
