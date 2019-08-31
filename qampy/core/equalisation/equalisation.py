@@ -81,15 +81,21 @@ TRAINING_FCTS = ["cma", "mcma",
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma_pth"]:
-        return "cma"
+        return pythran_equalisation.cma_equaliser, [_cal_Rconstant(M) + 0j]
     if method in ["mcma_pth"]:
-        return "mcma"
+        return pythran_equalisation.mcma_equaliser, [_cal_Rconstant_complex(M)]
     if method in ["sbd_pth"]:
-        return "sbd"
+        if symbols is None:
+            symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+        return pythran_equalisation.sbd_equaliser, [symbols]
     if method in ["mddma_pth"]:
-        return "mddma"
+        if symbols is None:
+            symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+        return pythran_equalisation.mddma_equaliser, [symbols]
     if method in ["dd_pth"]:
-        return "dd"
+        if symbols is None:
+            symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+        return pythran_equalisation.ddlms_equaliser, [symbols]
     if method in ["mcma"]:
         return ErrorFctMCMA(_cal_Rconstant_complex(M))
     elif method in ["cma"]:
@@ -484,36 +490,18 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     """
     method = method.lower()
     eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
+    E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
+    wxy = wxy.astype(E.dtype)
     if method in ["mcma_pth", "cma_pth", "sbd_pth", "dd_pth", "mddma_pth"]:
-        if method in ["cma_path"]:
-            R = _cal_Rconstant(M)+0j
-        else:
-            R = _cal_Rconstant_complex(M)
-        symbs = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
-        prms = (E.dtype.type(R), E.dtype.type(symbs))
+        eqfct, prms = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
+        err, wxy, mu = eqfct(E, TrSyms, Niter, os, mu, wxy, adaptive_stepsize, *prms)
     else:
         eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-    # scale signal
-    Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
-    wxy = wxy.astype(E.dtype)
-
-    if selected_modes is None:
-        pols = np.arange(E.shape[0])
-    else:
-        pols = selected_modes
-
-    for l in pols:
-        if method == "data":
-            eqfct.mode = l
-        for i in range(Niter):
-            if method in ["mcma_pth", "cma_pth", "sbd_pth", "dd_pth", "mddma_pth"]:
-                if E.dtype == np.complex64:
-                    mu = np.float32(mu)
-                err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = pythran_equalisation.train_eq(E, TrSyms, os, mu, wxy[l], method[:-4], prms, adaptive_stepsize)
-            else:
+        for l in range(pols):
+            for i in range(Niter):
                 err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
-        if (l < 1) and avoid_cma_sing:
-            wxy[l + 1] = orthogonalizetaps(wxy[l])
+            if (l < 1) and avoid_cma_sing:
+                wxy[l+1] = orthogonalizetaps(wxy[l])
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)

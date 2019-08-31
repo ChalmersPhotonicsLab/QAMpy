@@ -2,12 +2,13 @@ import numpy as np
 import matplotlib.pylab as plt
 from qampy import equalisation, signals, impairments, helpers
 #from dsp.core import impairments
+from timeit import default_timer as timer
 
 fb = 40.e9
 os = 2
 fs = os*fb
 N = 2**17
-theta = 1* np.pi/4.8
+theta = 1* np.pi/3
 theta2 = np.pi/4.8
 M = 64
 snr = 25
@@ -23,16 +24,26 @@ sig = impairments.change_snr(sig, snr)
 
 SS = impairments.apply_PMD(sig, theta, t_pmd)
 
+t1 = timer()
 E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
-                                                                     methods=("mcma", "sbd"),
+                                                                     methods=("cma_pth", "sbd_pth"),
                                                                      adaptive_stepsize=(True, True))
 
+t2 = timer()
+E_s2, wxy_s2, (err_s2, err_rde_s2) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
+                                                                     methods=("mcma", "sbd"),
+                                                                     adaptive_stepsize=(True, True))
+t3 = timer()
+print("pythran: {}".format(t2-t1))
+print("cython: {}".format(t3-t2))
 
 E_s = helpers.normalise_and_center(E_s)
 evm = sig[:, ::2].cal_evm()
 evmE_s = E_s.cal_evm()
 gmiE = E_s.cal_gmi()
+gmiE2 = E_s2.cal_gmi()
 print(gmiE)
+print(gmiE2)
 
 
 plt.figure()

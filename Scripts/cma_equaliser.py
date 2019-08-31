@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pylab as plt
 from qampy import equalisation, signals, impairments, helpers, phaserec
 import sys
-from timeit import default_timer as ttime
+from timeit import default_timer as timer
 
 fb = 40.e9
 os = 2
@@ -14,33 +14,30 @@ theta2 = np.pi/2.1
 t_pmd = 75e-12
 M = 4
 ntaps=40
-snr =  14
+snr =  5
 
-sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2, dtype=np.complex64)
+sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=2, dtype=np.complex128)
 S = sig.resample(fs, renormalise=True, beta=0.1)
 #S = impairments.apply_phase_noise(S, 100e3)
 S = impairments.change_snr(S, snr)
 
-SS = impairments.apply_PMD(S, theta, t_pmd)
-t1 = ttime()
+SS = impairments.apply_PMD(S, theta2, t_pmd)
+t1 = timer()
 wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, TrSyms=None, method="mcma", adaptive_step=True)
-t2 = ttime()
-t3 = ttime()
+t2 = timer()
 wxy_m, err_m = equalisation.equalise_signal(SS, mu,  TrSyms=None,Ntaps=ntaps, method="mcma_pth", adaptive_step=True)
-t4 = ttime()
-dt1 = t2-t1
-dt2 = t4-t2
-print("cython equaliser t = {}".format( dt1))
-print("pythran equaliser t = {}".format( dt2))
-print("ratio = {}".format(dt2/dt1))
+t3 = timer()
+print("cython t={}".format(t2-t1))
+print("pythran t={}".format(t3-t2))
+#sys.exit()
 E = equalisation.apply_filter(SS,  wxy)
 E_m = equalisation.apply_filter(SS, wxy_m)
 E = helpers.normalise_and_center(E)
 E_m = helpers.normalise_and_center(E_m)
 #E, ph = phaserec.viterbiviterbi(E, 11)
 #E_m, ph = phaserec.viterbiviterbi(E_m, 11)
-#E = helpers.dump_edges(E, 20)
-#E_m = helpers.dump_edges(E_m, 20)
+E = helpers.dump_edges(E, 20)
+E_m = helpers.dump_edges(E_m, 20)
 
 
 # note that because of the noise we get sync failures doing SER
