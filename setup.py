@@ -5,8 +5,10 @@ from codecs import open
 from os import path
 import sys
 import numpy as np
+from pythran import PythranExtension
 
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
+COMPILER_ARGS_PYT = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-DUSE_XSIMD"]
 LINK_ARGS = ["-fopenmp", "-lm"]
 
 WIN_COMPILER_ARGS = ["/O2", "/openmp", "/GL", "/fp:fast", "/arch:AVX2"]
@@ -47,6 +49,14 @@ else:
                              include_dirs=["qampy/core/equalisation", np.get_include(), "qampy/core/"],
                        extra_compile_args=COMPILER_ARGS,
                              extra_link_args=LINK_ARGS)
+    dsp_pythran = PythranExtension(name="qampy.core.pythran_dsp",
+                                   sources = ["qampy/core/pythran_dsp.py"],
+                                   extra_compile_args=COMPILER_ARGS_PYT,
+                                   extra_link_args=LINK_ARGS)
+    pythran_equalisation = PythranExtension(name="qampy.core.equalisation.pythran_equalisation",
+                                   sources = ["qampy/core/equalisation/pythran_equalisation.py"],
+                                   extra_compile_args=COMPILER_ARGS_PYT,
+                                   extra_link_args=LINK_ARGS)
 
 
 
@@ -117,7 +127,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy', 'bitarray'],
 
-    ext_modules = [cython_errorfcts, cython_equalisation, dsp_cython],
+    ext_modules = [cython_errorfcts, cython_equalisation, dsp_cython, dsp_pythran, pythran_equalisation],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
