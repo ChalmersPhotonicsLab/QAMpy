@@ -3,6 +3,15 @@ import numpy as np
 def cabsq(x):
     return x.real**2 + x.imag**2
 
+
+def cal_exp_sum(sym , syms, z, sigma):
+    N = syms.size
+    out = 0.
+    for i in range(N):
+        out += np.exp(-sigma*(2*np.real(z*(sym-syms[i])) +
+                              abs(sym-syms[i])**2))
+    return out
+
 #we need to use this version because of #1133 which made argmin significantly slower
 def det_symbol(X, symbs):
     d0 = 1000.
