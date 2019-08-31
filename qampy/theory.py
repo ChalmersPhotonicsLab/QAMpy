@@ -23,7 +23,6 @@ from scipy.special import erfc
 from qampy.core.special_fcts import q_function
 from qampy.core.utils import bin2gray
 from qampy.helpers import dB2lin
-from pythran_dsp import cal_gmi_mc
 
 
 # All the formulas below are taken from dsplog.com
@@ -276,7 +275,7 @@ def cal_gmi(M, snr, N=10**3):
     GMI
     """
     from qampy.signals import SignalQAMGrayCoded
-    from qampy.core.dsp_cython import cal_gmi_mc
+    from qampy.core.pythran_dsp import cal_gmi_mc
     snr = np.atleast_1d(snr)
     s = SignalQAMGrayCoded(M, 1000, nmodes=1)
     btx = s._bitmap_mtx
