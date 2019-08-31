@@ -74,7 +74,9 @@ def l_values(btx, rx, snr):
     return tmp, tmp2
 
 #pythran export soft_l_value_demapper(complex128[], int, float64, complex128[][][])
+#pythran export soft_l_value_demapper(complex128[], int, float32, complex128[][][])
 #pythran export soft_l_value_demapper(complex64[], int, float32, complex64[][][])
+#pythran export soft_l_value_demapper(complex64[], int, float64, complex64[][][])
 def soft_l_value_demapper(rx_symbs, num_bits, snr, bits_map):
     N = rx_symbs.shape[0]
     L_values = np.zeros((N, num_bits))
