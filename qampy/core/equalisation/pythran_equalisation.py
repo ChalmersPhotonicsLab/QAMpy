@@ -57,6 +57,22 @@ def cma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, R):
     err, wx, mu = cma_like(E, TrSyms, Niter, os, mu, wx, adaptive, R, cma_error)
     return err, wx, mu
 
+#pythran export rde_equaliser(complex128[][], int, int, int, float64, complex128[][][],
+    # bool, complex128[], complex128[])
+#pythran export rde_equaliser(complex64[][], int, int, int, float32, complex64[][][],
+    # bool, complex64[], complex64[])
+def rde_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook):
+    err, wx, mu = rde_like(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook, rde_error)
+    return err, wx, mu
+
+#pythran export mrde_equaliser(complex128[][], int, int, int, float64, complex128[][][],
+    # bool, complex128[], complex128[])
+#pythran export mrde_equaliser(complex64[][], int, int, int, float32, complex64[][][],
+    # bool, complex64[], complex64[])
+def mrde_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook):
+    err, wx, mu = rde_like(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook, mrde_error)
+    return err, wx, mu
+
 #pythran export sbd_equaliser(complex128[][], int, int, int, float64, complex128[][][],
     # bool, complex128[])
 #pythran export sbd_equaliser(complex64[][], int, int, int, float32, complex64[][][],
@@ -97,6 +113,22 @@ def cma_like(E, TrSyms, Niter, os, mu, wx, adaptive, R, errfct):
                     mu = adapt_step(mu, err[pol, it*Niter+i], err[pol, it*Niter+i-1])
     return err, wx, mu
 
+def rde_like(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook, errfct):
+    Ntaps = wx.shape[-1]
+    pols = wx.shape[0]
+    err = np.zeros((pols, TrSyms*Niter), dtype=E.dtype)
+    #omp parallel for
+    for pol in range(pols):
+        for it in range(Niter):
+            for i in range(TrSyms):
+                X = E[:, i * os:i * os + Ntaps]
+                Xest = apply_filter(X,  wx[pol])
+                err[pol, it*Niter+i] = errfct(Xest, partition, codebook)
+                wx[pol] += mu * np.conj(err[pol, it*Niter+i]) * X
+                if adaptive and i > 0:
+                    mu = adapt_step(mu, err[pol, it*Niter+i], err[pol, it*Niter+i-1])
+    return err, wx, mu
+
 def dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbols, errfct):
     Ntaps = wx.shape[-1]
     pols = wx.shape[0]
@@ -121,6 +153,16 @@ def cma_error(Xest, R):
 
 def mcma_error(Xest, R):
     return (R.real - Xest.real**2)*Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j
+
+def rde_error(Xest, partition, codebook):
+    sq = abs(Xest)**2
+    r = partition_value(sq, partition.real, codebook.real)
+    return Xest*(r-sq)
+
+def mrde_error(Xest, partition, codebook):
+    sq = Xest.real**2 + 1j*Xest.imag
+    r = partition_value(sq.real, partition.real, codebook.real) + 1j * partition_value(sq.imag, partition.imag, codebook.imag)
+    return (r.real - sq.real)*Xest.real + 1j*(r.imag - sq.imag)*Xest.imag
 
 def sbd_error(Xest, symbs):
     symbol, dist = det_symbol(Xest, symbs)
