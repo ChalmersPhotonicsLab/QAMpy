@@ -41,58 +41,98 @@ def apply_filter_to_signal(E, os, wx):
         output[j, i] = Xest
     return output
 
-#pythran export train_eq(complex128[][], int, int, float64,
-    # complex128[][], str,
-    # (complex128, complex128[]), bool)
-#pythran export train_eq(complex64[][], int, int, float32,
-        # complex64[][], str,
-        # (complex64, complex64[]), bool)
-def train_eq(E, TrSyms, os, mu, wx, method,  errfctprs, adaptive):
-    Ntaps = wx.shape[1]
-    pols = wx.shape[0]
-    R, symbs = errfctprs
-    if method == "cma":
-        errfct = cma_error
-    elif method == "mcma":
-        errfct = mcma_error
-    elif method == "sbd":
-        errfct = sbd_error
-    elif method == "mddma":
-        errfct = mddma_error
-    elif method == "dd":
-        errfct = dd_error
-    else:
-        raise ValueError("%s does not correspond to an error function")
-    err = np.zeros(TrSyms, dtype=E.dtype)
-    for i in range(TrSyms):
-        X = E[:, i * os:i * os + Ntaps]
-        Xest = apply_filter(X,  wx)
-        err[i], R = errfct(Xest, R, symbs)
-        wx += mu * np.conj(err[i]) * X
-        if adaptive and i > 0:
-            mu = adapt_step(mu, err[i], err[i-1])
+#pythran export mcma_equaliser(complex128[][], int, int, int, float64, complex128[][][],
+    # bool, complex128)
+#pythran export mcma_equaliser(complex64[][], int, int, int, float32, complex64[][][],
+# bool, complex64)
+def mcma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, R):
+    err, wx, mu = cma_like(E, TrSyms, Niter, os, mu, wx, adaptive, R, mcma_error)
     return err, wx, mu
 
+#pythran export cma_equaliser(complex128[][], int, int, int, float64, complex128[][][],
+    # bool, complex128)
+#pythran export cma_equaliser(complex64[][], int, int, int, float32, complex64[][][],
+# bool, complex64)
+def cma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, R):
+    err, wx, mu = cma_like(E, TrSyms, Niter, os, mu, wx, adaptive, R, cma_error)
+    return err, wx, mu
+
+#pythran export sbd_equaliser(complex128[][], int, int, int, float64, complex128[][][],
+    # bool, complex128[])
+#pythran export sbd_equaliser(complex64[][], int, int, int, float32, complex64[][][],
+# bool, complex64[])
+def sbd_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
+    err, wx, mu = dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbs, sbd_error)
+    return err, wx, mu
+
+#pythran export mddma_equaliser(complex128[][], int, int, int, float64, complex128[][][],
+    # bool, complex128[])
+#pythran export mddma_equaliser(complex64[][], int, int, int, float32, complex64[][][],
+# bool, complex64[])
+def mddma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
+    err, wx, mu = dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbs, mddma_error)
+    return err, wx, mu
+
+#pythran export ddlms_equaliser(complex128[][], int, int, int, float64, complex128[][][],
+# bool, complex128[])
+#pythran export ddlms_equaliser(complex64[][], int, int, int, float32, complex64[][][],
+# bool, complex64[])
+def ddlms_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
+    err, wx, mu = dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbs, ddlms_error)
+    return err, wx, mu
+
+def cma_like(E, TrSyms, Niter, os, mu, wx, adaptive, R, errfct):
+    Ntaps = wx.shape[-1]
+    pols = wx.shape[0]
+    err = np.zeros((pols, TrSyms*Niter), dtype=E.dtype)
+    #omp parallel for
+    for pol in range(pols):
+        for it in range(Niter):
+            for i in range(TrSyms):
+                X = E[:, i * os:i * os + Ntaps]
+                Xest = apply_filter(X,  wx[pol])
+                err[pol, it*Niter+i] = errfct(Xest, R)
+                wx[pol] += mu * np.conj(err[pol, it*Niter+i]) * X
+                if adaptive and i > 0:
+                    mu = adapt_step(mu, err[pol, it*Niter+i], err[pol, it*Niter+i-1])
+    return err, wx, mu
+
+def dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbols, errfct):
+    Ntaps = wx.shape[-1]
+    pols = wx.shape[0]
+    err = np.zeros((pols, TrSyms*Niter), dtype=E.dtype)
+    #omp parallel for
+    for pol in range(pols):
+        for it in range(Niter):
+            for i in range(TrSyms):
+                X = E[:, i * os:i * os + Ntaps]
+                Xest = apply_filter(X,  wx[pol])
+                err[pol, it*Niter+i], dist, symb = errfct(Xest, symbols)
+                wx[pol] += mu * np.conj(err[pol, it*Niter+i]) * X
+                if adaptive and i > 0:
+                    mu = adapt_step(mu, err[pol, it*Niter+i], err[pol, it*Niter+i-1])
+    return err, wx, mu
+
+######################################################
 # Error functions
+######################################################
+def cma_error(Xest, R):
+    return (R.real - abs(Xest)**2)*Xest
 
-def cma_error(Xest, R, symbs):
-    return (R.real - abs(Xest)**2)*Xest, R+0j # the +0j is need to not confuse pythran
+def mcma_error(Xest, R):
+    return (R.real - Xest.real**2)*Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j
 
-def mcma_error(Xest, R, symbs):
-    return (R.real - Xest.real**2)*Xest.real + (R.imag - Xest.imag**2)*Xest.imag*1.j, R
+def sbd_error(Xest, symbs):
+    symbol, dist = det_symbol(Xest, symbs)
+    return (symbol.real - Xest.real)*abs(symbol.real) + (symbol.imag - Xest.imag)*1.j*abs(symbol.imag), symbol, dist
 
-def sbd_error(Xest, R, symbs):
-    #R,d = symbs[np.argmin(np.abs(Xest-symbs))]
-    R, d = det_symbol(Xest, symbs)
-    return (R.real - Xest.real)*abs(R.real) + (R.imag - Xest.imag)*1.j*abs(R.imag), R
+def mddma_error(Xest, symbs):
+    symbol, dist = det_symbol(Xest, symbs)
+    return (symbol.real**2 - Xest.real**2)*Xest.real + 1.j*(symbol.imag**2 - Xest.imag**2)*Xest.imag, symbol, dist
 
-def mddma_error(Xest, R, symbs):
-    R, d = det_symbol(Xest, symbs)
-    return (R.real**2 - Xest.real**2)*Xest.real + 1.j*(R.imag**2 - Xest.imag**2)*Xest.imag, R
-
-def dd_error(Xest, R, symbs):
-    R, d = det_symbol(Xest, symbs)
-    return R - Xest, R
+def ddlms_error(Xest, symbs):
+    symbol, dist = det_symbol(Xest, symbs)
+    return symbol - Xest, symbol, dist
 
 def det_symbol_argmin(X, symbs): # this version is about 1.5 times slower than the one below
     dist = np.abs(X-symbs)
