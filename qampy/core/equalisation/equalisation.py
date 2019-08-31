@@ -51,96 +51,45 @@ References
 """
 
 from __future__ import division
-import warnings
 import numpy as np
-from timeit import default_timer as timer
 
 import qampy.helpers
 from qampy.theory import cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.equalisation import pythran_equalisation
 
-
-#TODO: include selection for either numba or cython code
-try:
-    from qampy.core.equalisation.cython_errorfcts import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
-        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME,ErrorFctSBDDataAided
-    from qampy.core.equalisation.cython_equalisation import train_eq, ErrorFct
-    from qampy.core.equalisation.cython_equalisation import apply_filter_to_signal as apply_filter_pyx
-except:
-    ##use python code if cython code is not available
-    warnings.warn("can not use cython training functions")
-    from qampy.core.equalisation.numba_equalisation import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
-        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, train_eq
-
 TRAINING_FCTS = ["cma", "mcma",
                  "rde", "mrde",
                  "sbd", "mddma",
-                 "sca", "cme",
                  "dd"]
+
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
-    if method in ["cma_pth"]:
-        return pythran_equalisation.cma_equaliser, [_cal_Rconstant(M) + 0j]
-    if method in ["mcma_pth"]:
-        return pythran_equalisation.mcma_equaliser, [_cal_Rconstant_complex(M)]
-    if method in ["sbd_pth"]:
+    if method in ["cma"]:
+        return pythran_equalisation.cma_equaliser, [(_cal_Rconstant(M) + 0j).astype(dtype)]
+    if method in ["mcma"]:
+        return pythran_equalisation.mcma_equaliser, [_cal_Rconstant_complex(M).astype(dtype)]
+    if method in ["rde"]:
+        p, c = generate_partition_codes_radius(M)
+        return pythran_equalisation.rde_equaliser, [(p+0j).astype(dtype), (c+0j).astype(dtype)]
+    if method in ["mrde"]:
+        p, c = generate_partition_codes_complex(M)
+        return pythran_equalisation.mrde_equaliser, [p.astype(dtype), c.astype(dtype)]
+    if method in ["sbd"]:
         if symbols is None:
             symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return pythran_equalisation.sbd_equaliser, [symbols]
-    if method in ["mddma_pth"]:
+    if method in ["mddma"]:
         if symbols is None:
             symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return pythran_equalisation.mddma_equaliser, [symbols]
-    if method in ["dd_pth"]:
+    if method in ["dd"]:
         if symbols is None:
             symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return pythran_equalisation.ddlms_equaliser, [symbols]
-    if method in ["mcma"]:
-        return ErrorFctMCMA(_cal_Rconstant_complex(M))
-    elif method in ["cma"]:
-        return ErrorFctCMA(_cal_Rconstant(M))
-    elif method in ["rde"]:
-        p, c = generate_partition_codes_radius(M)
-        return ErrorFctRDE(p, c)
-    elif method in ["mrde"]:
-        p, c = generate_partition_codes_complex(M)
-        return ErrorFctMRDE(p, c)
-    elif method in ["sca"]:
-        return ErrorFctSCA(_cal_Rsca(M))
-    elif method in ["cme"]:
-        if symbols is None:
-            syms = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
-            syms = syms.astype(dtype)
-        else:
-            syms = symbols
-        d = np.min(abs(np.diff(np.unique(syms.real)))) # should be fixed to consider different spacing between real and imag
-        R = _cal_Rconstant(M)
-        r2 = np.mean(abs(syms)**2)
-        r4 = np.mean(abs(syms)**4)
-        A = r4/r2
-        bb = np.max(abs(syms*abs(syms)**2-A))
-        try:
-            beta = kwargs['beta']
-        except:
-            r2 = np.mean(abs(syms)**2)
-            r4 = np.mean(abs(syms)**4)
-            A = r4/r2
-            beta = np.max(abs(syms*abs(syms)**2-A))/2
-        return ErrorFctCME(R, d, beta)
-    elif method in ['sbd']:
-        if symbols is None:
-            return ErrorFctSBD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
-        else:
-            return ErrorFctSBD(symbols)
-    elif method in ['mddma']:
-        return ErrorFctMDDMA((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
-    elif method in ['dd']:
-        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
-    else:
-        raise ValueError("%s is unknown method"%method)
+    raise ValueError("%s is unknown method"%method)
 
-def apply_filter(E, os, wxy, method="pyx"):
+def apply_filter(E, os, wxy, method="pyt"):
     """
     Apply the equaliser filter taps to the input signal.
 
@@ -157,7 +106,7 @@ def apply_filter(E, os, wxy, method="pyx"):
         filter taps for the x and y polarisation
 
     method : string
-        use python ("py") based or cython ("pyx") based function
+        use python ("py") based or pythran ("pyt") based function
 
     Returns
     -------
@@ -167,9 +116,7 @@ def apply_filter(E, os, wxy, method="pyx"):
     """
     if method == "py":
         return apply_filter_py(E, os, wxy)
-    elif method == "pyx":
-        return apply_filter_pyx(E, os, wxy)
-    elif method == "pth":
+    elif method == "pyt":
         return pythran_equalisation.apply_filter_to_signal(E, os, wxy)
     else:
         raise NotImplementedError("Only py and pyx methods are implemented")
@@ -336,7 +283,7 @@ def generate_partition_codes_radius(M):
     parts = codes[:-1] + np.diff(codes)/2
     return parts, codes
 
-def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
+def _lms_init(E, os, wxy, Ntaps, TrSyms, mu):
     E = np.atleast_2d(E)
     pols = E.shape[0]
     L = E.shape[1]
@@ -344,31 +291,23 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     E = qampy.helpers.normalise_and_center(E)
     if wxy is None:
         # Allocate matrix and set first taps
-        wxy = np.zeros((pols,pols,Ntaps), dtype=np.complex128)
+        wxy = np.zeros((pols,pols,Ntaps), dtype=E.dtype)
         wxy[0] = _init_taps(Ntaps, pols)
-
         # Add orthogonal taps to all other modes
         if pols > 1:
             for pol in range(1,pols):
                 wxy[pol] = np.roll(wxy[0],pol,axis=0)
     else:
-        wxy = np.asarray(wxy)
-        Ntaps = wxy.shape[-1]
-        #else:
-            #try:
-                #wxy = wxy.flatten()
-                #Ntaps = len(wxy)
-                #wxy = np.asarray([wxy.copy(),])
-            #except:
-                #Ntaps = len(wxy[0])
-            #Ntaps = wxy.shape[-1]
+        wxy = np.asarray(wxy, dtype=E.dtype)
+        Ntaps = wxy[0].shape[1]
     if TrSyms is None:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
-    err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
+    if E.dtype.type == np.complex64:
+        mu = np.float32(mu)
     # the copy below is important because otherwise the array will not be contiguous, which will cause issues in
     # the C functions
     Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
-    return Eout, wxy, TrSyms, Ntaps, err, pols
+    return Eout, wxy, TrSyms, Ntaps, mu, pols
 
 def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), selected_modes = None, apply=True, **kwargs):
     """
@@ -489,19 +428,10 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     """
     method = method.lower()
-    eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-    E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
+    E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu)
     wxy = wxy.astype(E.dtype)
-    if method in ["mcma_pth", "cma_pth", "sbd_pth", "dd_pth", "mddma_pth"]:
-        eqfct, prms = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-        err, wxy, mu = eqfct(E, TrSyms, Niter, os, mu, wxy, adaptive_stepsize, *prms)
-    else:
-        eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-        for l in range(pols):
-            for i in range(Niter):
-                err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
-            if (l < 1) and avoid_cma_sing:
-                wxy[l+1] = orthogonalizetaps(wxy[l])
+    eqfct, prms = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
+    err, wxy, mu = eqfct(E, TrSyms, Niter, os, mu, wxy, adaptive_stepsize, *prms)
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)
