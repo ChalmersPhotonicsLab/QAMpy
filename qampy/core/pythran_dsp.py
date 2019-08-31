@@ -145,3 +145,20 @@ def prbs_int(seed, mask, nbits, N):
             state ^= mask
         out[i] = xor
     return out
+
+#pythran export cal_gmi_mc_omp(complex128[], float64, int, complex128[][][])
+def cal_gmi_mc_omp(symbols, snr, ns, bit_map):
+    M = symbols.size
+    nbits = int(np.log2(M))
+    gmi = 0
+    z = np.sqrt(1/snr)*(np.random.randn(ns) +
+                        1j*np.random.randn(ns))/np.sqrt(2)
+    #omp parallel for collapse(3) reduction(+:gmi)
+    for k in range(nbits):
+        for b in range(2):
+            for l in range(ns):
+                for sym in bit_map[k, :, b]:
+                    nom = cal_exp_sum(sym, symbols, z[l], snr)
+                    denom = cal_exp_sum(sym, bit_map[k, :, b], z[l], snr)
+                    gmi += np.log2(nom/denom)/ns
+    return nbits-gmi/M
