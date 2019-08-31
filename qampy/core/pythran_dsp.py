@@ -121,3 +121,27 @@ def select_angles(angles, idx):
             anglesn[i] = angles[0, idx[i]]
     return anglesn
 
+#pythran export prbs_ext(int, int[], int, int)
+def prbs_ext(seed, taps, nbits, N):
+    out = np.zeros(N, dtype=np.uint8)
+    sr = seed
+    for i in range(N):
+        xor = 0
+        for t in taps:
+            if (sr & (1 << (nbits-t))) != 0:
+                xor ^= 1
+        sr = (xor << nbits -1 ) + (sr >> 1)
+        out[i] = xor
+    return out
+
+#pythran export prbs_int(int, int, int, int)
+def prbs_int(seed, mask, nbits, N):
+    out = np.zeros(N, dtype=np.uint8)
+    state = seed
+    for i in range(N):
+        state = (state << 1)
+        xor = state >> nbits
+        if xor != 0:
+            state ^= mask
+        out[i] = xor
+    return out
