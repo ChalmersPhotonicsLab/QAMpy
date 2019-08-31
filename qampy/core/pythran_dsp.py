@@ -160,5 +160,5 @@ def cal_gmi_mc_omp(symbols, snr, ns, bit_map):
                 for sym in bit_map[k, :, b]:
                     nom = cal_exp_sum(sym, symbols, z[l], snr)
                     denom = cal_exp_sum(sym, bit_map[k, :, b], z[l], snr)
-                    gmi += np.log2(nom/denom)/ns
-    return nbits-gmi/M
+                    gmi += np.log2(nom/denom)
+    return nbits-gmi/(M*ns)
