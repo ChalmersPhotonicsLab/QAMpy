@@ -23,6 +23,7 @@ from scipy.special import erfc
 from qampy.core.special_fcts import q_function
 from qampy.core.utils import bin2gray
 from qampy.helpers import dB2lin
+from pythran_dsp import cal_gmi_mc
 
 
 # All the formulas below are taken from dsplog.com
