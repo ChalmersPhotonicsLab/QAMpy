@@ -20,7 +20,7 @@ from __future__ import division, print_function
 import numpy as np
 from qampy.helpers import cabssquared
 from qampy.theory import  cal_symbols_qam, cal_scaling_factor_qam
-from qampy.core.equalisation.cython_equalisation import make_decision as _decision_pyx
+from qampy.core.equalisation.pythran_equalisation import make decision as _decision_pyt
 from qampy.core.pythran_dsp import soft_l_value_demapper
 from qampy.core.pythran_dsp import soft_l_value_demapper_minmax
 
@@ -39,7 +39,7 @@ def _soft_l_value_demapper_af(rx_symbs, M, snr, bits_map):
     lvl = af.log(tmp[:,:,:,1]) - af.log(tmp[:,:,:,0])
     return np.array(lvl)
 
-def make_decision(signal, symbols, method="pyx", **kwargs):
+def make_decision(signal, symbols, method="pyt", **kwargs):
     """
     Quantize signal array onto symbols.
 
@@ -60,8 +60,8 @@ def make_decision(signal, symbols, method="pyx", **kwargs):
         array of quantized symbols
 
     """
-    if method == "pyx":
-        return _decision_pyx(signal, symbols, **kwargs)
+    if method == "pyt":
+        return _decision_pyt(signal, symbols, **kwargs)
     elif method == "af":
         if af == None:
             raise RuntimeError("Arrayfire was not imported so cannot use this method for quantization")
