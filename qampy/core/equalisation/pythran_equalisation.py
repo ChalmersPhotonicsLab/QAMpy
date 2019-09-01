@@ -28,6 +28,23 @@ def apply_filter(E, wx):
 #pythran export apply_filter_to_signal(complex128[][], int, complex128[][][])
 #pythran export apply_filter_to_signal(complex64[][], int, complex64[][][])
 def apply_filter_to_signal(E, os, wx):
+    """
+    Apply a filter to a signal 
+    
+    Parameters
+    ----------
+    E : array_like
+        Signal to filter 
+    os : int
+        oversampling factor
+    wx : array_like
+        filter taps
+
+    Returns
+    -------
+    output : array_like
+        filtered and downsampled signal
+    """
     Ntaps = wx.shape[2]
     L = E.shape[1]
     modes = E.shape[0]
@@ -46,6 +63,37 @@ def apply_filter_to_signal(E, os, wx):
 #pythran export mcma_equaliser(complex64[][], int, int, int, float32, complex64[][][],
 # bool, complex64)
 def mcma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, R):
+    """
+    Train filter taps using the modified constant modulus algorithm (MCMA) (see equalisation.py for references)
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal 
+    TrSyms : int
+        number of training symbols to use
+    Niter : int
+        interations over the training symbols
+    os : int
+        oversampling factor
+    mu : float
+        equaliser step size 
+    wx : array_like
+        filter taps 
+    adaptive : bool
+        whether to perform an adaptive stepsize
+    R : complex
+        complex radius for the constant modulus
+
+    Returns
+    -------
+    err : array_like
+        error vector
+    wx  : array_like
+        filter taps
+    mu  : float
+        last step size
+    """
     err, wx, mu = cma_like(E, TrSyms, Niter, os, mu, wx, adaptive, R, mcma_error)
     return err, wx, mu
 
@@ -54,6 +102,37 @@ def mcma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, R):
 #pythran export cma_equaliser(complex64[][], int, int, int, float32, complex64[][][],
 # bool, complex64)
 def cma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, R):
+    """
+    Train filter taps using the constant modulus algorithm (CMA) (see equalisation.py for references)
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal 
+    TrSyms : int
+        number of training symbols to use
+    Niter : int
+        interations over the training symbols
+    os : int
+        oversampling factor
+    mu : float
+        equaliser step size 
+    wx : array_like
+        filter taps 
+    adaptive : bool
+        whether to perform an adaptive stepsize
+    R : complex
+        complex radius for the constant modulus
+
+    Returns
+    -------
+    err : array_like
+        error vector
+    wx  : array_like
+        filter taps
+    mu  : float
+        last step size
+    """    
     err, wx, mu = cma_like(E, TrSyms, Niter, os, mu, wx, adaptive, R, cma_error)
     return err, wx, mu
 
@@ -62,6 +141,39 @@ def cma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, R):
 #pythran export rde_equaliser(complex64[][], int, int, int, float32, complex64[][][],
     # bool, complex64[], complex64[])
 def rde_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook):
+    """
+    Train filter taps using the radius direced (RDE) algorithm (see equalisation.py for references)
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal 
+    TrSyms : int
+        number of training symbols to use
+    Niter : int
+        interations over the training symbols
+    os : int
+        oversampling factor
+    mu : float
+        equaliser step size 
+    wx : array_like
+        filter taps 
+    adaptive : bool
+        whether to perform an adaptive stepsize
+    partition : array_like
+        complex partitioning borders for the radius decision
+    codebook : array_like
+        complex output radii for the radius decision
+
+    Returns
+    -------
+    err : array_like
+        error vector
+    wx  : array_like
+        filter taps
+    mu  : float
+        last step size
+    """ 
     err, wx, mu = rde_like(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook, rde_error)
     return err, wx, mu
 
@@ -70,6 +182,39 @@ def rde_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook):
 #pythran export mrde_equaliser(complex64[][], int, int, int, float32, complex64[][][],
     # bool, complex64[], complex64[])
 def mrde_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook):
+    """
+    Train filter taps using the modified radius directed (MRDE) algorithm (see equalisation.py for references)
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal 
+    TrSyms : int
+        number of training symbols to use
+    Niter : int
+        interations over the training symbols
+    os : int
+        oversampling factor
+    mu : float
+        equaliser step size 
+    wx : array_like
+        filter taps 
+    adaptive : bool
+        whether to perform an adaptive stepsize
+    partition : array_like
+        complex partitioning borders for the radius decision
+    codebook : array_like
+        complex output radii for the radius decision
+
+    Returns
+    -------
+    err : array_like
+        error vector
+    wx  : array_like
+        filter taps
+    mu  : float
+        last step size
+    """ 
     err, wx, mu = rde_like(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook, mrde_error)
     return err, wx, mu
 
@@ -78,6 +223,37 @@ def mrde_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, partition, codebook):
 #pythran export sbd_equaliser(complex64[][], int, int, int, float32, complex64[][][],
 # bool, complex64[])
 def sbd_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
+    """
+    Train filter taps using the symbol based decision (SBD) algorithm (see equalisation.py for references)
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal 
+    TrSyms : int
+        number of training symbols to use
+    Niter : int
+        interations over the training symbols
+    os : int
+        oversampling factor
+    mu : float
+        equaliser step size 
+    wx : array_like
+        filter taps 
+    adaptive : bool
+        whether to perform an adaptive stepsize
+    symbs : array_like
+        complex symbol alphabet
+
+    Returns
+    -------
+    err : array_like
+        error vector
+    wx  : array_like
+        filter taps
+    mu  : float
+        last step size
+    """   
     err, wx, mu = dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbs, sbd_error)
     return err, wx, mu
 
@@ -86,6 +262,37 @@ def sbd_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
 #pythran export mddma_equaliser(complex64[][], int, int, int, float32, complex64[][][],
 # bool, complex64[])
 def mddma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
+    """
+    Train filter taps using the modified decsions directed modulus (MDDMA) algorithm (see equalisation.py for references)
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal 
+    TrSyms : int
+        number of training symbols to use
+    Niter : int
+        interations over the training symbols
+    os : int
+        oversampling factor
+    mu : float
+        equaliser step size 
+    wx : array_like
+        filter taps 
+    adaptive : bool
+        whether to perform an adaptive stepsize
+    symbs : array_like
+        complex symbol alphabet
+
+    Returns
+    -------
+    err : array_like
+        error vector
+    wx  : array_like
+        filter taps
+    mu  : float
+        last step size
+    """    
     err, wx, mu = dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbs, mddma_error)
     return err, wx, mu
 
@@ -94,6 +301,37 @@ def mddma_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
 #pythran export ddlms_equaliser(complex64[][], int, int, int, float32, complex64[][][],
 # bool, complex64[])
 def ddlms_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbs):
+    """
+    Train filter taps using the decision directed least mean (DDLMS) square algorithm (see equalisation.py for references)
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal 
+    TrSyms : int
+        number of training symbols to use
+    Niter : int
+        interations over the training symbols
+    os : int
+        oversampling factor
+    mu : float
+        equaliser step size 
+    wx : array_like
+        filter taps 
+    adaptive : bool
+        whether to perform an adaptive stepsize
+    symbs : array_like
+        complex symbol alphabet
+
+    Returns
+    -------
+    err : array_like
+        error vector
+    wx  : array_like
+        filter taps
+    mu  : float
+        last step size
+    """    
     err, wx, mu = dd_like(E, TrSyms, Niter, os, mu, wx, adaptive, symbs, ddlms_error)
     return err, wx, mu
 
@@ -184,6 +422,23 @@ def det_symbol_argmin(X, symbs): # this version is about 1.5 times slower than t
 #pythran export det_symbol(complex128, complex128[])
 #pythran export det_symbol(complex64, complex64[])
 def det_symbol(X, symbs):
+    """
+    Decision operator function
+    
+    Parameters
+    ----------
+    X : complex
+        sample to make a decision on
+    symbs: array_like
+        symbol alphabet
+        
+    Returns
+    -------
+    s : complex
+        symbol from symbs that was decided on
+    d : float
+        distance of X from s
+    """
     d0 = 1000.
     s = 1.+1.j
     for j in range(symbs.shape[0]):
@@ -196,6 +451,24 @@ def det_symbol(X, symbs):
 #pythran export det_symbol_parallel(complex128, complex128[])
 #pythran export det_symbol_parallel(complex64, complex64[])
 def det_symbol_parallel(X, symbs): # this version can be much faster if not in a tight loop
+    """
+    Decision operator function. This is the parallel version which can be much faster if not run in a
+    tight loop.
+
+    Parameters
+    ----------
+    X : complex
+        sample to make a decision on
+    symbs: array_like
+        symbol alphabet
+
+    Returns
+    -------
+    s : complex
+        symbol from symbs that was decided on
+    d : float
+         distance of X from s
+    """
     d0 = 1000.
     s = 1.+1.j
     d0_priv = d0
@@ -215,6 +488,21 @@ def det_symbol_parallel(X, symbs): # this version can be much faster if not in a
 #pythran export make_decision(complex128[], complex128[])
 #pythran export make_decision(complex64[], complex64[])
 def make_decision(E, symbols):
+    """
+    Apply decision operator to input signal
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal to decide on
+    symbols : array_like
+        symbol alphabet
+
+    Returns
+    -------
+    det_symbs : array_like
+        decided symbols decision
+    """
     L = E.shape[0]
     M = symbols.shape[0]
     det_symbs = np.zeros_like(E)
