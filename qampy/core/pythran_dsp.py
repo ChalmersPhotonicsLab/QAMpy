@@ -45,6 +45,25 @@ def select_angle_index(x, N):
 #pythran export bps(complex128[], float64[][], complex128[], int)
 #pythran export bps(complex64[], float32[][], complex64[], int)
 def bps(E, testangles, symbols, N):
+    """
+    Blind phase search algorithm
+    
+    Parameters
+    ----------
+    E : array_like
+        input signal
+    testangles : array_like
+        set of test angles
+    symbols : array_like
+        symbol alphabet
+    N : int
+        averaging filter
+
+    Returns
+    -------
+    phase : array_like
+        estimated phase vector
+    """
     L = E.shape[0]
     p = testangles.shape[0]
     M = symbols.shape[0]

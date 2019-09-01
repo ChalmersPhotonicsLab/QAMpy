@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pylab as plt
 from qampy import equalisation, signals, impairments, helpers
+from qampy.core.equalisation.pythran_equalisation import apply_filter_to_signal
+from timeit import default_timer as timer
 
 fb = 40.e9
 os = 2
@@ -21,17 +23,21 @@ sig = signals.ResampledQAM(M, N, nmodes=2, fb=fb, fs=fs, resamplekwargs={"beta":
 sig = impairments.change_snr(sig, snr)
 
 SS = impairments.apply_PMD(sig, theta, t_pmd)
-
+t1 = timer()
 E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
                                                                      methods=("mcma", "sbd"),
                                                                      adaptive_stepsize=(True, True))
+t2 = timer()
+print("eqn time: {}".format(t2-t1))
 
+EE = apply_filter_to_signal(SS, os, wxy_s, False)
 
 E_s = helpers.normalise_and_center(E_s)
 evm = sig[:, ::2].cal_evm()
 evmE_s = E_s.cal_evm()
 gmiE = E_s.cal_gmi()
 print(gmiE)
+
 
 
 plt.figure()
