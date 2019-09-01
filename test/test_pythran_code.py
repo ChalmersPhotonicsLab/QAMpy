@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 from qampy import signals, impairments
-from qampy.core.equalisation import cython_equalisation
+from qampy.core.equalisation import pythran_equalisation
 
 
 class TestQuantize(object):
@@ -10,14 +10,14 @@ class TestQuantize(object):
     def test_dtype(self, dtype):
         s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
         s = impairments.change_snr(s, 23).astype(dtype)
-        o = np.array(cython_equalisation.make_decision(s[0], s.coded_symbols))
+        o = np.array(pythran_equalisation.make_decision(s[0], s.coded_symbols))
         assert o.dtype is np.dtype(dtype)
 
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
     def test_decision(self, dtype):
         s = signals.SignalQAMGrayCoded(32, 2**12, dtype=dtype)
         s = impairments.change_snr(s, 30).astype(dtype)
-        o = cython_equalisation.make_decision(s[0], s.coded_symbols)
+        o = pythran_equalisation.make_decision(s[0], s.coded_symbols)
         xx = abs(s.symbols[0] - o)
         npt.assert_array_almost_equal(xx, 0)
 
