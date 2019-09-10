@@ -43,7 +43,7 @@ def ttanh(x, A, x0, w):
     array_like
         calculated array
     """
-    return A * tanh((x - x0) / w)
+    return A * np.tanh((x - x0) / w)
 
 
 def gauss(x, A, x0, w):
