@@ -12,4 +12,5 @@
 - remove numba dependency (it's too slow)
 - add frequency domain equaliser
 - test cases for all functions
+- use black for code formatting
 
