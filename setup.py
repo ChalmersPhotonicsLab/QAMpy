@@ -9,7 +9,7 @@ import numpy as np
 COMPILER_ARGS = ["-O3", "-march=native", "-ffast-math", "-mfpmath=sse", "-funroll-loops", "-fopenmp"]
 LINK_ARGS = ["-fopenmp", "-lm"]
 
-WIN_COMPILER_ARGS = ["/O2", "/openmp"]
+WIN_COMPILER_ARGS = ["/O2", "/openmp", "/GL", "/fp:fast", "/arch:AVX2"]
 WIN_LINK_ARGS = ["/openmp"]
 
 if sys.platform.startswith("win"):
