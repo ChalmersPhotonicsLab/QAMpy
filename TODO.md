@@ -5,6 +5,7 @@
 - write demo notebooks
 - implement a configurable backend for arrayfire or cython
     - this still needs a arrayfire equaliser
+    - select to build pythran or python backend
 - possible pythran backend
     - test under windows
 - add an MI calculation
