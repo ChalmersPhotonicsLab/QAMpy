@@ -7,9 +7,6 @@ def partition_value(signal, partitions, codebook):
         index += 1
     return codebook[index]
 
-def cabsq(x):
-    return x.real**2 + x.imag**2
-
 def adapt_step(mu, err_p, err):
     if err.real*err_p.real > 0 and err.imag*err_p.imag > 0:
         return mu
@@ -442,7 +439,7 @@ def det_symbol(X, symbs):
     d0 = 1000.
     s = 1.+1.j
     for j in range(symbs.shape[0]):
-        d = cabsq(X-symbs[j])
+        d = abs(X-symbs[j])**2
         if d < d0:
             d0 = d
             s = symbs[j]
@@ -475,7 +472,7 @@ def det_symbol_parallel(X, symbs): # this version can be much faster if not in a
     s_priv = s
     ##omp parallel for
     for j in range(symbs.shape[0]):
-        d = cabsq(X-symbs[j])
+        d = abs(X-symbs[j])**2
         if d < d0_priv:
             d0_priv = d
             s_priv = symbs[j]
