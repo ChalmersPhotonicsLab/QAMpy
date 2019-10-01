@@ -408,7 +408,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     else:
         return wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, apply=False, **kwargs):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, apply=False, selected_modes = None, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -468,11 +468,22 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     # scale signal
     Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     wxy = wxy.astype(E.dtype)
-    for l in range(pols):
+    
+    if selected_modes is None:
+        pols = np.arange(pols)
+    else:
+        pols = selected_modes
+    
+    for l in pols:
+        if method == "data":
+            eqfct.mode = l
         for i in range(Niter):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(Et, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
+            if method == "data":
+                eqfct.i = 0
+            err[l, i * TrSyms:(i + 1) * TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct,
+                                                                       adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
-            wxy[l+1] = orthogonalizetaps(wxy[l])
+            wxy[l + 1] = orthogonalizetaps(wxy[l])
 
     if apply:
         Eest = apply_filter(E, os, wxy)
