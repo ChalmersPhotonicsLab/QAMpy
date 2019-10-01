@@ -201,11 +201,10 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
     else:
         out_sig = signal
     if apply:
-        
         if np.unique(signal.shiftfctrs).shape[0] > 1:
             eq_mode_sig = []
             for l in range(signal.shape[0]):
-                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,signal.shiftfctrs[l]:], signal.os, taps_all[l])[l])
+                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,signal.shiftfctrs[l]:int(signal.shiftfctrs[l]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all[l])[l])
             eq_mode_sig = signal.recreate_from_np_array(np.array(eq_mode_sig),fs=signal.fb)
         else:
             out_sig.shift_signal()
