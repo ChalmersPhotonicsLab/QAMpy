@@ -347,7 +347,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
     return Eout, wxy, TrSyms, Ntaps, err, pols
 
-def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), apply=True, **kwargs):
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), selected_modes = None, apply=True, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -400,8 +400,8 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
 
     if apply is False do not return E
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0], **kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols, avoid_cma_sing=avoid_cma_sing[1], **kwargs)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0], selected_modes = None,**kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols, avoid_cma_sing=avoid_cma_sing[1],selected_modes = None, **kwargs)
     if apply:
         Eest = apply_filter(E, os, wxy2)
         return Eest, wxy2, (err1, err2)
@@ -470,7 +470,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     wxy = wxy.astype(E.dtype)
     
     if selected_modes is None:
-        pols = np.arange(pols)
+        pols = np.arange(E.shape[0])
     else:
         pols = selected_modes
     
