@@ -1531,6 +1531,7 @@ class SignalWithPilots(SignalBase):
         self._shiftfctrs = value
 
     def sync2frame(self, Ntaps=17, returntaps=False, **eqkwargs):
+        # TODO fix for syncing correctly
         shift_factors, corse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
@@ -1544,10 +1545,12 @@ class SignalWithPilots(SignalBase):
             return wx1
 
     def shift_signal(self):
+        # TODO fix for syncing correctly
         self[:,:] = pilotbased_receiver.shift_signal(self, self.shiftfctrs)
         self.shiftfctrs = [0]*self.shape[0]
 
     def get_data(self, shift_factors=None):
+        # TODO fix for syncing correctly
         """
         Get data payload by removing the pilots. Note this only works on signal sampled at the symbol rate
 
@@ -1568,6 +1571,7 @@ class SignalWithPilots(SignalBase):
         return self.shift_seq2start(shift_factors)
 
     def extract_pilots(self, shift_factors=None):
+        # TODO fix for syncing correctly
         if shift_factors is None:
             idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
             return self.pilots.recreate_from_np_array(self[:, idx])
@@ -1580,6 +1584,7 @@ class SignalWithPilots(SignalBase):
         return self.pilots.recreate_from_np_array(np.array(out))
 
     def shift_seq2start(self, shift_factors):
+        # TODO fix for syncing correctly
         out = []
         idxn = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
         for i in range(shift_factors.shape[0]):
