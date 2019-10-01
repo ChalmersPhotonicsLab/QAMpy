@@ -186,12 +186,12 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
                                                                 apply=apply,**kwargs)
 
 
-#def equalize_pilot_sequence(rx_signal, ref_symbs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
-#                            adaptive_stepsize=True, methods=('cma', 'cma')):
 
 def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
 
-
+    if signal.shiftfctrs is None:
+        raise ValueError("Stupid student, sync first")
+    
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, signal.shiftfctrs, os=signal.os, mu=mu,
                                                                     Ntaps = Ntaps, **eqkwargs)
     taps_all = np.array(taps_all)
