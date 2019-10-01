@@ -62,7 +62,7 @@ from qampy.core.segmentaxis import segment_axis
 #TODO: include selection for either numba or cython code
 try:
     from qampy.core.equalisation.cython_errorfcts import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
-        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
+        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME,ErrorFctSBDDataAided
     from qampy.core.equalisation.cython_equalisation import train_eq, ErrorFct
     from qampy.core.equalisation.cython_equalisation import apply_filter_to_signal as apply_filter_pyx
 except:
@@ -118,7 +118,9 @@ def _select_errorfct(method, M, symbols, dtype, **kwargs):
     elif method in ['mddma']:
         return ErrorFctMDDMA((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
     elif method in ['dd']:
-        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
+        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))    
+    elif method in ['data']:
+        return ErrorFctSBDDataAided(symbols.astype(dtype))
     else:
         raise ValueError("%s is unknown method"%method)
 
