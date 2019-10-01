@@ -17,6 +17,7 @@
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
 
+import warnings
 import numpy as np
 from scipy.interpolate import interp1d
 from qampy.core import equalisation
@@ -361,6 +362,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     mode_sync_order: array_like
         Synced descrambled reference pattern order
     """
+    FRAME_SYNC_THRS = 120 # this is somewhat arbitrary but seems to work well
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
     pilot_seq_len = ref_symbs.shape[-1]
@@ -406,6 +408,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
             max_phase_rot[ref_pol] = ac
         # Check for which mode found and extract the reference delay
         max_sync_pol = np.argmax(max_phase_rot)
+        if max_phase_rot[max_sync_pol] < FRAME_SYNC_THRS: #
+            warnings.warn("Very low autocorrelation, likely the frame-sync failed")
         mode_sync_order[l] = max_sync_pol
         symb_delay = found_delay[max_sync_pol]
         # Remove the found reference mode
