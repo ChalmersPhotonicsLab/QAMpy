@@ -168,6 +168,7 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
     if apply is False do not return sig_out
 
     """
+    
     try:
         syms = sig.coded_symbols
     except AttributeError:
@@ -184,24 +185,15 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
                                                                 avoid_cma_sing=avoid_cma_sing,
                                                                 apply=apply,**kwargs)
 
+
+#def equalize_pilot_sequence(rx_signal, ref_symbs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
+#                            adaptive_stepsize=True, methods=('cma', 'cma')):
+
 def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
-    shift_factors = pilotbased_receiver.correct_shifts(signal.shiftfctrs, (signal.synctaps, Ntaps), signal.os)
-    signal = np.roll(signal, -shift_factors[shift_factors>=0].min(), axis=-1)
-    shift_factors -= shift_factors[shift_factors>=0].min()
-    signal.shiftfctrs = shift_factors
-    nmodes = signal.shape[0]
-    taps_all = []
-    foe_all = []
-    if np.all(shift_factors == 0):
-        taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, os=signal.os, mu=mu,
-                                                                        Ntaps=Ntaps, foe_comp=foe_comp, **eqkwargs)
-    else:
-        for i in range(nmodes):
-            signal_new = np.roll(signal, -shift_factors[i], axis=-1)
-            taps, foePerMode = pilotbased_receiver.equalize_pilot_sequence(signal_new, signal.pilot_seq, mu=mu, foe_comp=foe_comp,
-                                                                           os=signal_new.os, Ntaps=Ntaps, **eqkwargs)
-            taps_all.append(taps[i])
-            foe_all.append(foePerMode[i])
+
+
+    taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, signal.shiftfctrs, os=signal.os, mu=mu,
+                                                                    Ntaps = Ntaps, **eqkwargs)
     taps_all = np.array(taps_all)
     foe_all = np.array(foe_all)
     if foe_comp:
