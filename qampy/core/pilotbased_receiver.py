@@ -365,6 +365,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     pilot_seq_len = ref_symbs.shape[-1]
     nmodes = rx_signal.shape[0]
     assert rx_signal.shape[-1] >= (frame_len + 2*pilot_seq_len)*os, "Signal must be at least as long as frame"
+    
     mode_sync_order = np.zeros(nmodes, dtype=int)
     not_found_modes = np.arange(0, nmodes)
     search_overlap = 2 # fraction of pilot_sequence to overlap
@@ -431,7 +432,7 @@ def shift_signal(sig, shift_factors):
     return sig
 
 
-def equalize_pilot_sequence(rx_signal, ref_symbs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
+def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
                             adaptive_stepsize=True, methods=('cma', 'cma')):
     """
     
@@ -441,21 +442,45 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, os, foe_comp=False, mu=(1e-4, 
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]    
     pilot_seq_len = ref_symbs.shape[-1]
-    pilot_seq = rx_signal[:, :pilot_seq_len * os + Ntaps - 1]
+    if np.unique(shift_fctrs).shape[0] > 1:
+        syms_out = []
+        
+        for i in range(npols):
+            rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
+            
+            syms_out_tmp, wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot,
+                                                 Ntaps=Ntaps,
+                                                 Niter=Niter, method=methods[0],
+                                                 adaptive_stepsize=adaptive_stepsize,
+                                                 apply=True,selected_modes=[i])
+            syms_out.append(syms_out)
+
+    else:
+        rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
+        syms_out, wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot,
+                                     Ntaps=Ntaps,
+                                     Niter=Niter, method=methods[0],
+                                     adaptive_stepsize=adaptive_stepsize,
+                                     apply=True)
+        
     # Run FOE and shift spectrum
     if foe_comp:
-        syms_out, wx, err = equalisation.equalise_signal(pilot_seq, os, mu[0], M_pilot,
-                                                         Ntaps=Ntaps,
-                                                         Niter=Niter, method=methods[0],
-                                                         adaptive_stepsize=adaptive_stepsize,
-                                                         apply=True)
-
         foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
-        pilot_seq = phaserecovery.comp_freq_offset(pilot_seq, foePerMode, os=os)
+        rx_signal = phaserecovery.comp_freq_offset(rx_signal, foePerMode, os=os)
     else:
         foePerMode = np.zeros([npols,1])
-    out_taps, err = equalisation.dual_mode_equalisation(pilot_seq, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
-                                                        methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), apply=False)
+        
+    if np.unique(shift_fctrs).shape[0] > 1:
+        out_taps = []
+        for i in range(npols):
+            rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
+            tmp_taps, err = equalisation.dual_mode_equalisation(rx_sig_mode, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
+                                                        methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), selected_modes=[i],apply=False)
+            out_taps.append(tmp_taps)
+    else:
+        rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
+        out_taps, err = equalisation.dual_mode_equalisation(rx_sig_mode, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
+                                                            methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), apply=False)
     return out_taps, foePerMode
 
 
