@@ -186,12 +186,12 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
                                                                 apply=apply,**kwargs)
 
 
-#def equalize_pilot_sequence(rx_signal, ref_symbs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
-#                            adaptive_stepsize=True, methods=('cma', 'cma')):
 
 def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
 
-
+    if signal.shiftfctrs is None:
+        raise ValueError("Stupid student, sync first")
+    
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, signal.shiftfctrs, os=signal.os, mu=mu,
                                                                     Ntaps = Ntaps, **eqkwargs)
     taps_all = np.array(taps_all)
@@ -201,8 +201,15 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
     else:
         out_sig = signal
     if apply:
-        out_sig.shift_signal()
-        eq_mode_sig = apply_filter(out_sig, np.array(taps_all))
+        
+        if np.unique(signal.shiftfctrs).shape[0] > 1:
+            eq_mode_sig = []
+            for l in range(signal.shape[0]):
+                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,signal.shiftfctrs[l]:], signal.os, taps_all[l])[l])
+            eq_mode_sig = signal.recreate_from_np_array(np.array(eq_mode_sig),fs=signal.fb)
+        else:
+            out_sig.shift_signal()
+            eq_mode_sig = apply_filter(out_sig, np.array(taps_all))
         return taps_all, eq_mode_sig
     else:
         return taps_all
