@@ -1530,12 +1530,19 @@ class SignalWithPilots(SignalBase):
     def shiftfctrs(self, value):
         self._shiftfctrs = value
 
-    def sync2frame(self, Ntaps=17, returntaps=False, **eqkwargs):
+    def sync2frame(self, Ntaps=17, returntaps=False, **kwargs):
         # TODO fix for syncing correctly
+        eqargs = {"adaptive_stepsize": True, "Niter": 10, "method": "cma"}
+        try:
+            mu = kwargs.pop("mu")
+        except KeyError:
+            mu = 1e-3
+        eqargs.update(kwargs)
         shift_factors, corse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
+                                                                              mu=mu,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
-                                                                              M_pilot=self.Mpilots, **eqkwargs)
+                                                                              M_pilot=self.Mpilots, **eqargs)
         self[:,:] = self[mode_alignment,:]
         self.symbols[:,:] = self.symbols[mode_alignment, :]
         self.pilots[:,:] = self.pilots[mode_alignment, :]
