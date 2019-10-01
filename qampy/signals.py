@@ -1530,14 +1530,28 @@ class SignalWithPilots(SignalBase):
     def shiftfctrs(self, value):
         self._shiftfctrs = value
 
-    def sync2frame(self, Ntaps=17, returntaps=False, **kwargs):
+    def sync2frame(self, returntaps=False, **kwargs):
+        """
+        Synchronize the signal to the pilot frame, by finding the offsets
+        into the frame where the sequence starts. This function rearranges
+        the modes according to the found syncs. After the sync, there will
+        be a shift_factors attribute which contains the shifts to the pilot
+        sequence.
+
+        Parameters
+        ----------
+        returntaps : bool, optional
+            wether to return the equaliser taps
+        **kwargs
+            arguments to be passed to the equaliser, the defaults are:
+               {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 1e-3}
+
+        """
         # TODO fix for syncing correctly
-        eqargs = {"adaptive_stepsize": True, "Niter": 10, "method": "cma"}
-        try:
-            mu = kwargs.pop("mu")
-        except KeyError:
-            mu = 1e-3
+        eqargs = {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 1e-3}
         eqargs.update(kwargs)
+        mu = eqargs.pop("mu")
+        Ntaps = eqargs.pop("Ntaps")
         shift_factors, corse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
                                                                               mu=mu,
                                                                               Ntaps=Ntaps,
