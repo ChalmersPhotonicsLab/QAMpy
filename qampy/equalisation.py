@@ -208,7 +208,7 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
             eq_mode_sig = signal.recreate_from_np_array(np.array(eq_mode_sig),fs=signal.fb)
         else:
             out_sig.shift_signal()
-            eq_mode_sig = apply_filter(out_sig, np.array(taps_all))
+            eq_mode_sig = apply_filter(out_sig[:, :signal.frame_len*signal.os + Ntaps -1], np.array(taps_all))
         return taps_all, eq_mode_sig
     else:
         return taps_all
