@@ -11,8 +11,8 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with QAMpy.  If not, see <http://www.gnu.org/licenses/>.
+    #  You should have received a copy of the GNU General Public License
+    #  along with QAMpy.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
@@ -40,6 +40,50 @@ cdef class ErrorFctGenericDD_f(ErrorFct): #TODO: need to figure out how to chang
     def __init__(self, float complex[:] symbols):
         self.symbols = symbols
         self.N = symbols.shape[0]
+
+# Data-aided processing
+cdef class ErrorFctGenericDataAided_d(ErrorFct):
+    cdef public double complex[:,:] symbols
+    cdef public double dist
+    cdef public int i
+    cdef public int mode
+    def __init__(self, double complex[:,:] symbols):
+        self.symbols = symbols
+        self.i = 0
+        self.mode = 0
+
+cdef class ErrorFctGenericDataAided_f(ErrorFct):
+    cdef public float complex[:,:] symbols
+    cdef public float dist
+    cdef public int i
+    cdef public int mode
+    def __init__(self, float complex[:,:] symbols):
+        self.symbols = symbols
+        self.i = 0
+        self.mode = 0
+
+cdef class ErrorFctSBDDataAided_d(ErrorFctGenericDataAided_d):
+    cpdef double complex calc_error(self, double complex Xest):
+        cdef double complex R
+        R = self.symbols[self.mode, self.i]
+        self.i = self.i + 1
+        return (R.real - Xest.real)*abs(R.real) + 1.j*(R.imag - Xest.imag)*abs(R.imag)
+
+cdef class ErrorFctSBDDataAided_f(ErrorFctGenericDataAided_f):
+    cpdef float complex calc_errorf(self, float complex Xest):
+        cdef float complex R
+        R = self.symbols[self.mode, self.i]
+        self.i = self.i + 1
+        return (R.real - Xest.real)*abs(R.real) + 1.j*(R.imag - Xest.imag)*abs(R.imag)
+
+cpdef ErrorFctSBDDataAided(complexing[:,:] symbols): # this is needed to work around bug with fused types and special functions in cython
+    if complexing is complex64_t:
+        return ErrorFctSBDDataAided_f(symbols)
+    else:
+        return ErrorFctSBDDataAided_d(symbols)
+
+
+
 
 cdef class ErrorFctSBD_d(ErrorFctGenericDD_d):
     cpdef double complex calc_error(self, double complex Xest):
