@@ -1549,7 +1549,7 @@ class SignalWithPilots(SignalBase):
         self[:,:] = pilotbased_receiver.shift_signal(self, self.shiftfctrs)
         self.shiftfctrs = [0]*self.shape[0]
 
-    def get_data(self, shift_factors=None):
+    def get_data(self, shift_factors=None, nframes=1):
         # TODO fix for syncing correctly
         """
         Get data payload by removing the pilots. Note this only works on signal sampled at the symbol rate
@@ -1564,7 +1564,7 @@ class SignalWithPilots(SignalBase):
             the recovered data symbols
         """
         if shift_factors is None:
-            idx = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
+            idx = np.tile(self._idx_dat, nframes)#[:self.shape[-1]]
             return self.symbols.recreate_from_np_array(self[:, idx])
         shift_factors = np.asarray(shift_factors)
         assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
