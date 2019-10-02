@@ -1568,11 +1568,6 @@ class SignalWithPilots(SignalBase):
         if returntaps:
             return wx1
 
-    def shift_signal(self):
-        # TODO fix for syncing correctly
-        self[:,:] = pilotbased_receiver.shift_signal(self, self.shiftfctrs)
-        self.shiftfctrs = [0]*self.shape[0]
-
     def get_data(self, shift_factors=None, nframes=1):
         # TODO fix for syncing correctly
         """
@@ -1607,13 +1602,6 @@ class SignalWithPilots(SignalBase):
             out.append(np.roll(self[i], -shift_factors[i])[idxn])
         return self.pilots.recreate_from_np_array(np.array(out))
 
-    def shift_seq2start(self, shift_factors):
-        # TODO fix for syncing correctly
-        out = []
-        idxn = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
-        for i in range(shift_factors.shape[0]):
-            out.append(np.roll(self[i], -shift_factors[i])[idxn])
-        return self.symbols.recreate_from_np_array(np.array(out))
 
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
