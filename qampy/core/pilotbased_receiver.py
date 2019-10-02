@@ -313,9 +313,11 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     i_filt_adj = int((num_average-1)/2)
     idx_avg = pilot_idx_full[i_filt_adj:-i_filt_adj]
     assert idx_avg.shape[-1] == res_phase_avg.shape[-1], "averaged phase and new indices are not the same shape"
-    inter = interp1d(idx_avg, res_phase_avg, axis=-1, bounds_error=False,
-                     fill_value="extrapolate")
-    phase_trace = inter(np.arange(0, nlen))
+    nmodes = pilot_symbs.shape[0]
+    phase_trace = np.zeros((nmodes, nlen), dtype=pilot_symbs.dtype)
+    idxnew = np.arange(0, nlen)
+    for i in range(nmodes):
+        phase_trace[i] = np.interp(idxnew, idx_avg, res_phase_avg[i])
     sig_out = signal[:, :nlen]*np.exp(-1j*phase_trace)
     return sig_out[:, :nframes*frame_len], phase_trace[:, :nframes*frame_len]
     
