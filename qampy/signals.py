@@ -428,7 +428,7 @@ class SignalBase(np.ndarray):
                 snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
             return snr
 
-    def cal_gmi(self, signal_rx=None, synced=False, llr_minmax=False):
+    def cal_gmi(self, signal_rx=None, synced=False, snr=None, llr_minmax=False):
         """
         Calculate the generalized mutual information for the received signal.
 
@@ -440,6 +440,8 @@ class SignalBase(np.ndarray):
             transmitted symbols (default:None use self.symbols_tx of the modulator)
         synced : bool, optional
             wether input and outputs are synchronized
+        snr : float, optional
+            estimate of SNR, if not given use the signal to estimate
         llr_minmax : bool, optional
             use minmax method for log-likelyhood ratio calculation, much faster but more unaccurate (we do not minimize over s)
 
@@ -456,7 +458,8 @@ class SignalBase(np.ndarray):
         GMI = np.zeros(nmodes, dtype=np.float64)
         GMI_per_bit = np.zeros((nmodes, self.Nbits), dtype=np.float64)
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
-        snr = self.est_snr(rx, synced=True, symbols_tx=tx)
+        if snr is None:
+            snr = self.est_snr(rx, synced=True, symbols_tx=tx)
         bits = self.demodulate(self.make_decision(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
@@ -1027,7 +1030,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
     def from_bit_array(cls, bits, M, fb=1):
         raise NotImplementedError("SymbolOnlySignal class does not have bits")
 
-    def cal_gmi(self, signal_rx=None):
+    def cal_gmi(self, signal_rx=None, snr=None):
         raise NotImplementedError("SymbolOnlySignal class does not have bits gmi calculation not possible")
 
     def cal_ber(self, signal_rx=None):
@@ -1664,7 +1667,7 @@ class SignalWithPilots(SignalBase):
             signal_rx = self.get_data()
         return signal_rx.cal_evm(synced=synced, blind=blind)
 
-    def cal_gmi(self, synced=True, signal_rx=None):
+    def cal_gmi(self, synced=True, snr=None, signal_rx=None, use_pilot_snr=False):
         """
         Calculate Generalised Mutual Information on the data payload
 
@@ -1673,8 +1676,12 @@ class SignalWithPilots(SignalBase):
         synced : bool, optional
             if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
             it is possible that modes are rotated in the IQ-plane, which would result in errors
+        snr : float, optional
+            Estimate of the signal SNR, if not given use the data to calculate
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
+        use_pilot_snr : bool, optional
+            use the pilots to calculate the SNR instead of the data
 
         Returns
         -------
@@ -1683,9 +1690,12 @@ class SignalWithPilots(SignalBase):
         gmi_per_bit : array_like
             generalized mutual information per transmitted bit per mode
         """
+        assert not (use_pilot_snr and snr is not None), "use_pilot_snr must not be True if snr is not None"
         if signal_rx is None:
             signal_rx = self.get_data()
-        return signal_rx.cal_gmi(synced=synced)
+        if use_pilot_snr:
+            snr = self.est_snr(use_pilots=True)
+        return signal_rx.cal_gmi(synced=synced, snr=snr)
 
     def est_snr(self, synced=True, signal_rx=None, symbols_tx=None, use_pilots=False):
         """
