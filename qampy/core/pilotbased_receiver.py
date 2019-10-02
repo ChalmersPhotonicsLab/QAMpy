@@ -416,6 +416,9 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
         not_found_modes = not_found_modes[not_found_modes != max_sync_pol]
         # New starting sample
         shift_factor[l] = (idx_min)*step + os*symb_delay - search_window
+    # Important: the shift factors are arranged in the order of the signal modes, but
+    # the mode_sync_order specifies how the signal modes need to be rearranged to match the pilots
+    # therefore shift factors also need to be "mode_aligned"
     return shift_factor, foe_corse, mode_sync_order, wx1
 
 def correct_shifts(shift_factors, ntaps, os):
