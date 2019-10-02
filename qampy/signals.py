@@ -1382,7 +1382,7 @@ class SignalWithPilots(SignalBase):
     """
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
                      "_idx_dat", "_pilot_scale", "_pilot_ins_rat", "_shiftfctrs", "_synctaps",
-                     "_idx_pil"]
+                     "_idx_pil", "_foe"]
     _inheritbase_ = ["_fs"]
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
@@ -1481,6 +1481,10 @@ class SignalWithPilots(SignalBase):
         obj._shiftfctrs = None
         obj._synctaps = None
         return obj
+
+    @property
+    def foe(self):
+        return self._foe
 
     @property
     def Mpilots(self):
