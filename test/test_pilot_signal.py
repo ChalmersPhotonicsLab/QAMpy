@@ -65,5 +65,5 @@ class TestPilotSignalRecovery(object):
         sig4.sync2frame()
         s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True)
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
-        assert np.mean(d.cal_ber()) < 1e-6
+        assert np.mean(d.cal_ber()) < 1e-5
 #
