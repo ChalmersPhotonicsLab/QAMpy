@@ -233,6 +233,11 @@ def _cal_Rconstant_complex(M):
 
 def _init_taps(Ntaps, pols):
     wx = np.zeros((pols, Ntaps), dtype=np.complex128)
+    # we could use gaussian initialisation, but no big advantage
+    #itaps = np.arange(0, Ntaps)-Ntaps//2
+    #width = Ntaps//8
+    #wx[0] = np.exp(-itaps**2/2/width**2)
+    #wx[0] = wx[0]/np.sqrt(np.sum(abs(wx[0])**2))
     wx[0, Ntaps // 2] = 1
     return wx
 
