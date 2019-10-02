@@ -330,15 +330,15 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
                 wxy[pol] = np.roll(wxy[0],pol,axis=0)
     else:
         wxy = np.asarray(wxy)
-        if pols > 1:
-            Ntaps = wxy[0].shape[1]
-        else:
-            try:
-                wxy = wxy.flatten()
-                Ntaps = len(wxy)
-                wxy = np.asarray([wxy.copy(),])
-            except:
-                Ntaps = len(wxy[0])
+        Ntaps = wxy.shape[-1]
+        #else:
+            #try:
+                #wxy = wxy.flatten()
+                #Ntaps = len(wxy)
+                #wxy = np.asarray([wxy.copy(),])
+            #except:
+                #Ntaps = len(wxy[0])
+            #Ntaps = wxy.shape[-1]
     if TrSyms is None:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
@@ -400,7 +400,7 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
 
     if apply is False do not return E
     """
-    if len(symbols) == 1:
+    if len(symbols) == 1 or symbols.ndim == 1:
         symbols = [symbols, symbols]
     wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[0], selected_modes = None,**kwargs)
     wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[1],selected_modes = None, **kwargs)
