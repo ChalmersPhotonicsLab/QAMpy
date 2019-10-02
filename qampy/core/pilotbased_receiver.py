@@ -481,12 +481,12 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
         for i in range(npols):
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
             tmp_taps, err = equalisation.dual_mode_equalisation(rx_sig_mode, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
-                                                        methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), selected_modes=[i],apply=False)
+                                                        methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), selected_modes=[i], symbols=ref_symbs, apply=False)
             out_taps.append(tmp_taps)
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
         out_taps, err = equalisation.dual_mode_equalisation(rx_sig_mode, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
-                                                            methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), apply=False)
+                                                            methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize),symbols=ref_symbs, apply=False)
     return out_taps, foePerMode
 
 
