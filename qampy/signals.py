@@ -1560,10 +1560,14 @@ class SignalWithPilots(SignalBase):
         self[:,:] = self[mode_alignment,:]
         self.shiftfctrs = shift_factors[mode_alignment]
         self.synctaps = Ntaps
-        if corr_coarse_foe:
-            self[:,:] = phaserec.comp_freq_offset(self, np.ones(coarse_foe.shape)*np.mean(coarse_foe))
+        self.foe = coarse_foe
         if returntaps:
             return wx1
+
+    def corr_foe(self, additional_foe = 0):
+        foe_off = np.ones(self.foe.shape)*(np.mean(self.foe) + additional_foe)
+        self[:,:] = phaserec.comp_freq_offset(self, foe_off)
+
 
     def get_data(self, shift_factors=None, nframes=1):
         # TODO fix for syncing correctly
