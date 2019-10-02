@@ -199,7 +199,7 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
     if (abs(Ntaps-signal.synctaps) % signal.os) != 0:
         raise ValueError("Tap difference need to be an integer of the oversampling")
     elif Ntaps != signal.synctaps:
-        signal.shiftfctrs -= Ntaps - signal.synctaps
+        signal.shiftfctrs -= (Ntaps - signal.synctaps)//2
     
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, signal.shiftfctrs, os=signal.os, mu=mu,
                                                                     foe_comp=foe_comp, Ntaps = Ntaps, **eqkwargs)
