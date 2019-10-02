@@ -1530,24 +1530,46 @@ class SignalWithPilots(SignalBase):
     def shiftfctrs(self, value):
         self._shiftfctrs = value
 
-    def sync2frame(self, Ntaps=17, returntaps=False, **eqkwargs):
+    def sync2frame(self, returntaps=False, **kwargs):
+        """
+        Synchronize the signal to the pilot frame, by finding the offsets
+        into the frame where the sequence starts. This function rearranges
+        the modes according to the found syncs. After the sync, there will
+        be a shift_factors attribute which contains the shifts to the pilot
+        sequence.
+
+        Parameters
+        ----------
+        returntaps : bool, optional
+            wether to return the equaliser taps
+        **kwargs
+            arguments to be passed to the equaliser, the defaults are:
+               {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 1e-3}
+
+        """
+        # TODO fix for syncing correctly
+        eqargs = {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 1e-3}
+        eqargs.update(kwargs)
+        mu = eqargs.pop("mu")
+        Ntaps = eqargs.pop("Ntaps")
         shift_factors, corse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
+                                                                              mu=mu,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
-                                                                              M_pilot=self.Mpilots, **eqkwargs)
+                                                                              M_pilot=self.Mpilots, **eqargs)
         self[:,:] = self[mode_alignment,:]
-        self.symbols[:,:] = self.symbols[mode_alignment, :]
-        self.pilots[:,:] = self.pilots[mode_alignment, :]
-        self.shiftfctrs = shift_factors
+        self.shiftfctrs = shift_factors[mode_alignment]
         self.synctaps = Ntaps
         if returntaps:
             return wx1
 
     def shift_signal(self):
+        # TODO fix for syncing correctly
         self[:,:] = pilotbased_receiver.shift_signal(self, self.shiftfctrs)
         self.shiftfctrs = [0]*self.shape[0]
 
-    def get_data(self, shift_factors=None):
+    def get_data(self, shift_factors=None, nframes=1):
+        # TODO fix for syncing correctly
         """
         Get data payload by removing the pilots. Note this only works on signal sampled at the symbol rate
 
@@ -1561,13 +1583,14 @@ class SignalWithPilots(SignalBase):
             the recovered data symbols
         """
         if shift_factors is None:
-            idx = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
+            idx = np.tile(self._idx_dat, nframes)#[:self.shape[-1]]
             return self.symbols.recreate_from_np_array(self[:, idx])
         shift_factors = np.asarray(shift_factors)
         assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
         return self.shift_seq2start(shift_factors)
 
     def extract_pilots(self, shift_factors=None):
+        # TODO fix for syncing correctly
         if shift_factors is None:
             idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
             return self.pilots.recreate_from_np_array(self[:, idx])
@@ -1580,6 +1603,7 @@ class SignalWithPilots(SignalBase):
         return self.pilots.recreate_from_np_array(np.array(out))
 
     def shift_seq2start(self, shift_factors):
+        # TODO fix for syncing correctly
         out = []
         idxn = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
         for i in range(shift_factors.shape[0]):
@@ -1589,12 +1613,15 @@ class SignalWithPilots(SignalBase):
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
 
-    def cal_ser(self, signal_rx=None, shift_factors=None, verbose=False):
+    def cal_ser(self, synced=True, signal_rx=None, shift_factors=None, verbose=False):
         """
         Calculate Symbol Error Rate on the data payload.
 
         Parameters
         ----------
+        synced : bool, optional
+            if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
+            it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
         shift_factors : array_like, optional
@@ -1609,14 +1636,17 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_ser(signal_rx, synced=True, verbose=verbose)
+        return signal_rx.cal_ser(synced=synced, verbose=verbose)
 
-    def cal_ber(self, signal_rx=None, shift_factors=None, verbose=False):
+    def cal_ber(self, synced=True, signal_rx=None, shift_factors=None, verbose=False):
         """
         Calculate Bit Error Rate on the data payload.
 
         Parameters
         ----------
+        synced : bool, optional
+            if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
+            it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
         shift_factors : array_like, optional
@@ -1631,14 +1661,17 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_ber(signal_rx, synced=True, verbose=verbose)
+        return signal_rx.cal_ber(synced=synced, verbose=verbose)
 
-    def cal_evm(self, signal_rx=None, shift_factors=None, blind=False):
+    def cal_evm(self, synced=True, signal_rx=None, shift_factors=None, blind=False):
         """
         Calculate Error Vector Magnitude on the data payload.
 
         Parameters
         ----------
+        synced : bool, optional
+            if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
+            it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
         shift_factors : array_like, optional
@@ -1654,14 +1687,17 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_evm(signal_rx, blind=blind)
+        return signal_rx.cal_evm(synced=synced, blind=blind)
 
-    def cal_gmi(self, signal_rx=None, shift_factors=None):
+    def cal_gmi(self, synced=True, signal_rx=None, shift_factors=None):
         """
         Calculate Generalised Mutual Information on the data payload
 
         Parameters
         ----------
+        synced : bool, optional
+            if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
+            it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
         shift_factors : array_like, optional
@@ -1676,18 +1712,19 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().cal_gmi(signal_rx, synced=True)
+        return signal_rx.cal_gmi(synced=synced)
 
-    def est_snr(self, signal_rx=None, synced=True, shift_factors=None, symbols_tx=None):
+    def est_snr(self, synced=True, signal_rx=None, shift_factors=None, symbols_tx=None):
         """
         Estimate SNR using known symbols.
 
         Parameters
         ----------
+        synced : bool, optional
+            if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
+            it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
-        synced : bool, optional
-            if the signal is synced or not
         shift_factors : array_like, optional
             integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
         symbols_tx : array_like, optional
@@ -1700,4 +1737,4 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             signal_rx = self.get_data(shift_factors)
-        return super().est_snr(signal_rx, synced=synced, symbols_tx=symbols_tx)
+        return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)

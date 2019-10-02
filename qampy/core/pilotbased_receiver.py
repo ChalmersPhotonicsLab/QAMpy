@@ -17,6 +17,7 @@
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
 
+import warnings
 import numpy as np
 from scipy.interpolate import interp1d
 from qampy.core import equalisation
@@ -325,6 +326,7 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     
 def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
                mu=1e-3, Ntaps=17, **eqargs):
+    # TODO fix for syncing correctly
     """
     Locate the pilot sequence frame
     
@@ -360,6 +362,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     mode_sync_order: array_like
         Synced descrambled reference pattern order
     """
+    FRAME_SYNC_THRS = 120 # this is somewhat arbitrary but seems to work well
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
     pilot_seq_len = ref_symbs.shape[-1]
@@ -405,15 +408,21 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
             max_phase_rot[ref_pol] = ac
         # Check for which mode found and extract the reference delay
         max_sync_pol = np.argmax(max_phase_rot)
+        if max_phase_rot[max_sync_pol] < FRAME_SYNC_THRS: #
+            warnings.warn("Very low autocorrelation, likely the frame-sync failed")
         mode_sync_order[l] = max_sync_pol
         symb_delay = found_delay[max_sync_pol]
         # Remove the found reference mode
         not_found_modes = not_found_modes[not_found_modes != max_sync_pol]
         # New starting sample
         shift_factor[l] = (idx_min)*step + os*symb_delay - search_window
+    # Important: the shift factors are arranged in the order of the signal modes, but
+    # the mode_sync_order specifies how the signal modes need to be rearranged to match the pilots
+    # therefore shift factors also need to be "mode_aligned"
     return shift_factor, foe_corse, mode_sync_order, wx1
 
 def correct_shifts(shift_factors, ntaps, os):
+    # TODO fix for syncing correctly
     # taps cause offset on shift factors
     shift_factors = np.asarray(shift_factors)
     if not((ntaps[1]-ntaps[0])%os  ==  0):
@@ -423,6 +432,7 @@ def correct_shifts(shift_factors, ntaps, os):
     return shift_factors
 
 def shift_signal(sig, shift_factors):
+    # TODO fix for syncing correctly
     k = len(shift_factors)
     if k > 1:
         for i in range(k):
@@ -434,6 +444,7 @@ def shift_signal(sig, shift_factors):
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
                             adaptive_stepsize=True, methods=('cma', 'cma')):
+    # TODO fix for syncing correctly
     """
     
     """
