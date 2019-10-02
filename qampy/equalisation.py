@@ -48,7 +48,7 @@ def apply_filter(sig, wxy, method="pyx"):
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
-                    avoid_cma_sing=False, apply=False,
+                    avoid_cma_sing=False, apply=False, symbols=None, 
                     **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary.
@@ -98,24 +98,28 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     err       : array_like
        estimation error for x and y polarisation
     """
+#    if method == "data" and symbols is None:
+#        raise ValueError("DataAided equalization requires reference symbols!")
+#    elif method == "data":
+#        syms = symbols
+#    else:
     try:
         syms = sig.coded_symbols
     except AttributeError:
         syms = None
+        
     if apply:
         sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                                  adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                                 avoid_cma_sing=avoid_cma_sing, apply=False,
-                                                           **kwargs)
+                                                 avoid_cma_sing=avoid_cma_sing, apply=False, **kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wxy, err
     else:
         return core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                             avoid_cma_sing=avoid_cma_sing, apply=apply,
-                                                 **kwargs)
+                                             avoid_cma_sing=avoid_cma_sing, apply=apply,**kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
-                           adaptive_stepsize=(False, False), avoid_cma_sing=(False, False), apply=True,
+                           adaptive_stepsize=(False, False), avoid_cma_sing=(False, False), apply=True, symbols=None,
                            **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE.
@@ -212,8 +216,7 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
                 eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,signal.shiftfctrs[l]:int(signal.shiftfctrs[l]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all[l])[l])
             eq_mode_sig = signal.recreate_from_np_array(np.array(eq_mode_sig),fs=signal.fb)
         else:
-            out_sig.shift_signal()
-            eq_mode_sig = apply_filter(out_sig[:, :signal.frame_len*signal.os + Ntaps -1], np.array(taps_all))
+            eq_mode_sig = apply_filter(out_sig[:,signal.shiftfctrs[0]:int(signal.shiftfctrs[0]+signal.frame_len*signal.os + Ntaps - 1)], np.array(taps_all))
         if verbose:
             return taps_all, eq_mode_sig, foe_all, (Ntaps, signal.synctaps)
         else:
