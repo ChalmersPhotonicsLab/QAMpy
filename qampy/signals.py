@@ -1560,11 +1560,8 @@ class SignalWithPilots(SignalBase):
         self[:,:] = self[mode_alignment,:]
         self.shiftfctrs = shift_factors[mode_alignment]
         self.synctaps = Ntaps
-        
         if corr_coarse_foe:
             self[:,:] = phaserec.comp_freq_offset(self, np.ones(coarse_foe.shape)*np.mean(coarse_foe))
-        
-        
         if returntaps:
             return wx1
 
