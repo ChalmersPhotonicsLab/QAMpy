@@ -18,6 +18,7 @@
 import numpy as np
 from qampy import core
 from qampy.core.impairments import rotate_field, add_awgn, add_modal_delay
+import warnings
 
 def apply_PMD(field, theta, t_dgd):
     """
@@ -125,6 +126,8 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         signal with transmission impairments applied
     """
     if roll_frame_sync:
+        if not (sig.nframes > 1):
+            warnings.warn("Only single frame present, discontinuity introduced")
         sig = np.roll(sig,sig.pilots.shape[1],axis=-1)
     if lwdth is not None:
         sig = apply_phase_noise(sig, lwdth)
