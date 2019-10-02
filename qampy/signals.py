@@ -1382,7 +1382,7 @@ class SignalWithPilots(SignalBase):
     """
     _inheritattr_ = ["_pilots", "_symbols", "_frame_len", "_pilot_seq_len", "_nframes",
                      "_idx_dat", "_pilot_scale", "_pilot_ins_rat", "_shiftfctrs", "_synctaps",
-                     "_idx_pil", "_foe"]
+                     "_idx_pil"]
     _inheritbase_ = ["_fs"]
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
@@ -1483,10 +1483,6 @@ class SignalWithPilots(SignalBase):
         return obj
 
     @property
-    def foe(self):
-        return self._foe
-
-    @property
     def Mpilots(self):
         return self.pilots.M
 
@@ -1564,37 +1560,54 @@ class SignalWithPilots(SignalBase):
         self[:,:] = self[mode_alignment,:]
         self.shiftfctrs = shift_factors[mode_alignment]
         self.synctaps = Ntaps
-        if corr_coarse_foe:
-            self[:,:] = phaserec.comp_freq_offset(self, np.ones(coarse_foe.shape)*np.mean(coarse_foe))
+        self._foe = coarse_foe
         if returntaps:
             return wx1
 
-    def get_data(self, nframes=1):
+    def corr_foe(self, additional_foe = 0):
+        foe_off = np.ones(self.foe.shape)*(np.mean(self.foe) + additional_foe)
+        self[:,:] = phaserec.comp_freq_offset(self, foe_off)
+
+
+    def get_data(self, shift_factors=None, nframes=1):
         # TODO fix for syncing correctly
         """
         Get data payload by removing the pilots. Note this only works on signal sampled at the symbol rate
 
         Parameters
         ----------
-        nframes : int, optional
-            number of data frames
+        shift_factors : array_like, optional
+            factors by which to shift the signal to remove delays
         Returns
         -------
         outdata : SignalBase object
             the recovered data symbols
         """
-        idx = np.tile(self._idx_dat, nframes)#[:self.shape[-1]]
-        return self.symbols.recreate_from_np_array(self[:, idx])
+        if shift_factors is None:
+            idx = np.tile(self._idx_dat, nframes)#[:self.shape[-1]]
+            return self.symbols.recreate_from_np_array(self[:, idx])
+        shift_factors = np.asarray(shift_factors)
+        assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
+        return self.shift_seq2start(shift_factors)
 
-    def extract_pilots(self):
+    def extract_pilots(self, shift_factors=None):
         # TODO fix for syncing correctly
-        idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
-        return self.pilots.recreate_from_np_array(self[:, idx])
+        if shift_factors is None:
+            idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
+            return self.pilots.recreate_from_np_array(self[:, idx])
+        shift_factors = np.asarray(shift_factors)
+        assert shift_factors.shape[0] == self.shape[0], "length of shift factors must be the same as number of modes"
+        out = []
+        idxn = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
+        for i in range(shift_factors.shape[0]):
+            out.append(np.roll(self[i], -shift_factors[i])[idxn])
+        return self.pilots.recreate_from_np_array(np.array(out))
+
 
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
 
-    def cal_ser(self, synced=True, signal_rx=None, verbose=False):
+    def cal_ser(self, synced=True, signal_rx=None, shift_factors=None, verbose=False):
         """
         Calculate Symbol Error Rate on the data payload.
 
@@ -1605,6 +1618,8 @@ class SignalWithPilots(SignalBase):
             it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
         verbose   : bool, optional
             return the vector of symbol errors
 
@@ -1614,10 +1629,10 @@ class SignalWithPilots(SignalBase):
             SER per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(shift_factors)
         return signal_rx.cal_ser(synced=synced, verbose=verbose)
 
-    def cal_ber(self, synced=True, signal_rx=None, verbose=False):
+    def cal_ber(self, synced=True, signal_rx=None, shift_factors=None, verbose=False):
         """
         Calculate Bit Error Rate on the data payload.
 
@@ -1628,6 +1643,8 @@ class SignalWithPilots(SignalBase):
             it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
         verbose   : bool, optional
             return the vector of symbol errors
 
@@ -1637,10 +1654,10 @@ class SignalWithPilots(SignalBase):
             BER per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(shift_factors)
         return signal_rx.cal_ber(synced=synced, verbose=verbose)
 
-    def cal_evm(self, synced=True, signal_rx=None, blind=False):
+    def cal_evm(self, synced=True, signal_rx=None, shift_factors=None, blind=False):
         """
         Calculate Error Vector Magnitude on the data payload.
 
@@ -1651,6 +1668,8 @@ class SignalWithPilots(SignalBase):
             it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
         blind : bool, optional
             perform blind EVM calculation without knowledge of transmitted symbols. Note that this significantly
             underestimates the real EVM at low SNRs.
@@ -1661,10 +1680,10 @@ class SignalWithPilots(SignalBase):
             EVM per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(shift_factors)
         return signal_rx.cal_evm(synced=synced, blind=blind)
 
-    def cal_gmi(self, synced=True, signal_rx=None):
+    def cal_gmi(self, synced=True, signal_rx=None, shift_factors=None):
         """
         Calculate Generalised Mutual Information on the data payload
 
@@ -1675,6 +1694,8 @@ class SignalWithPilots(SignalBase):
             it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
 
         Returns
         -------
@@ -1684,10 +1705,10 @@ class SignalWithPilots(SignalBase):
             generalized mutual information per transmitted bit per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(shift_factors)
         return signal_rx.cal_gmi(synced=synced)
 
-    def est_snr(self, synced=True, signal_rx=None, symbols_tx=None):
+    def est_snr(self, synced=True, signal_rx=None, shift_factors=None, symbols_tx=None):
         """
         Estimate SNR using known symbols.
 
@@ -1698,6 +1719,8 @@ class SignalWithPilots(SignalBase):
             it is possible that modes are rotated in the IQ-plane, which would result in errors
         signal_rx : SignalBase object, optional
             signal on which to measure SER. Default: None -> calculate SER on self
+        shift_factors : array_like, optional
+            integer shift factors to align frame. Default: None -> do not perform shifting (assume frame is aligned)
         symbols_tx : array_like, optional
             symbols to use in SNR estimation, default: None use self.symbols
 
@@ -1707,5 +1730,5 @@ class SignalWithPilots(SignalBase):
             estimated SNR per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(shift_factors)
         return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)
