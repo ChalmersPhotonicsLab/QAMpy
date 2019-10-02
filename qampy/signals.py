@@ -1565,7 +1565,8 @@ class SignalWithPilots(SignalBase):
             return wx1
 
     def corr_foe(self, additional_foe = 0):
-        foe_off = np.ones(self.foe.shape)*(np.mean(self.foe) + additional_foe)
+        foe_off = np.ones(self._foe.shape)*(np.mean(self._foe) + additional_foe)
+        self._foe = 0
         self[:,:] = phaserec.comp_freq_offset(self, foe_off)
 
 
