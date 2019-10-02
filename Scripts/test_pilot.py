@@ -1,4 +1,4 @@
-from qampy import signals, equalisation, impairments, core
+from qampy import signals, equalisation, impairments, core, phaserec
 import numpy as np
 import matplotlib.pylab as plt
 ntaps = 17
@@ -15,13 +15,15 @@ sig3 = impairments.change_snr(sig2, snr)
 #sig4[0,:] = sig3[1,20000:]
 #sig4[1,:] = sig3[0,20000:]
 sig4 = sig3[:, 20000:]
-sig4 = impairments.apply_PMD(sig4, theta, dgd)
+#sig4 = impairments.apply_PMD(sig4, theta, dgd)
 sig4 = impairments.apply_phase_noise(sig4, 100e3)
+sig4 = impairments.apply_PMD(sig4, theta, dgd)
 #sig4[0,:] = sig3[1, 20000:]
 #sig4[1,:] = sig3[0, 20000:]
 
 sig4.sync2frame(Ntaps=ntaps)
 s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True)
+d, ph = phaserec.pilot_cpe(s2, nframes=1)
 gmi = s2.cal_gmi()
 evm = s2.cal_evm()
 ber = s2.cal_ser()
