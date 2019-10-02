@@ -287,10 +287,13 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     phase_trace : array_like
         trace of the phase
     """
-    
+    assert num_average > 1, "need to take average over at least 3"
+    # Should be an odd number to keey symmetry in averaging
+    if not(num_average % 2):
+        num_average += 1
+        warnings.warn("Number of averages should be odd, adding one average, num_average={}".format(num_average))
     signal = np.atleast_2d(signal)
     pilot_symbs = np.atleast_2d(pilot_symbs)
-
     # select idx based on insertion ratio and pilot sequence
     pilot_idx_new = pilot_idx[:max_num_blocks:use_pilot_ratio]
     nlen = min(frame_len*nframes, signal.shape[-1])
@@ -299,27 +302,19 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     pilot_idx_full = np.ravel(pilot_idx2 + frl[:, None])
     ilim = pilot_idx_full < nlen
     pilot_idx_full = pilot_idx_full[ilim]
-
     rec_pilots = signal[:, pilot_idx_full]
     pilot_symbs = np.tile(pilot_symbs[:, ::use_pilot_ratio], nframes)[:, :rec_pilots.shape[-1]]
     assert rec_pilots.shape == pilot_symbs.shape, "Inproper pilot configuration, the number of"\
             +" received pilots differs from reference ones"
-
-    # Should be an odd number to keey symmetry in averaging
-    if not(num_average % 2):
-        num_average += 1
     # Check for a out of bounch error
     assert pilot_symbs.shape[-1] >= num_average, "Inpropper pilot symbol configuration. Larger averaging block size than total number of pilot symbols"
-
     res_phase = np.unwrap(np.angle(pilot_symbs.conjugate()*rec_pilots), axis=-1)
     res_phase_avg = filter.moving_average(res_phase, num_average)
     i_filt_adj = int((num_average-1)/2)
     idx_avg = pilot_idx_full[i_filt_adj:-i_filt_adj]
     assert idx_avg.shape[-1] == res_phase_avg.shape[-1], "averaged phase and new indices are not the same shape"
-
     inter = interp1d(idx_avg, res_phase_avg, axis=-1, bounds_error=False,
                      fill_value="extrapolate")
-
     phase_trace = inter(np.arange(0, nlen))
     sig_out = signal[:, :nlen]*np.exp(-1j*phase_trace)
     return sig_out[:, :nframes*frame_len], phase_trace[:, :nframes*frame_len]
