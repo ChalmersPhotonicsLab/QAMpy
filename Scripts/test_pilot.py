@@ -11,10 +11,12 @@ sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9
 sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
 sig3 = impairments.change_snr(sig2, snr)
 #sig3 = core.impairments.rotate_field(sig3, np.pi/)
-sig4 = sig3[::-1, 20000:]
+#sig4 = sig3[::-1, 20000:]
 #sig4[0,:] = sig3[1,20000:]
 #sig4[1,:] = sig3[0,20000:]
+sig4 = sig3[:, 20000:]
 sig4 = impairments.apply_PMD(sig4, theta, dgd)
+sig4 = impairments.apply_phase_noise(sig4, 100e3)
 #sig4[0,:] = sig3[1, 20000:]
 #sig4[1,:] = sig3[0, 20000:]
 
