@@ -25,7 +25,7 @@ from bitarray import bitarray
 
 from qampy import helpers
 from qampy.core import resample
-from qampy import theory
+from qampy import theory, phaserec
 from qampy.core import ber_functions, pilotbased_receiver
 from qampy.core.prbs import make_prbs_extXOR
 from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper
@@ -1530,7 +1530,7 @@ class SignalWithPilots(SignalBase):
     def shiftfctrs(self, value):
         self._shiftfctrs = value
 
-    def sync2frame(self, returntaps=False, **kwargs):
+    def sync2frame(self, corr_coarse_foe = True, returntaps=False, **kwargs):
         """
         Synchronize the signal to the pilot frame, by finding the offsets
         into the frame where the sequence starts. This function rearranges
@@ -1552,7 +1552,7 @@ class SignalWithPilots(SignalBase):
         eqargs.update(kwargs)
         mu = eqargs.pop("mu")
         Ntaps = eqargs.pop("Ntaps")
-        shift_factors, corse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
+        shift_factors, coarse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
                                                                               mu=mu,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
@@ -1560,6 +1560,11 @@ class SignalWithPilots(SignalBase):
         self[:,:] = self[mode_alignment,:]
         self.shiftfctrs = shift_factors[mode_alignment]
         self.synctaps = Ntaps
+        
+        if corr_coarse_foe:
+            self[:,:] = phaserec.comp_freq_offset(self, np.ones(coarse_foe.shape)*np.mean(coarse_foe))
+        
+        
         if returntaps:
             return wx1
 
