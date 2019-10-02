@@ -190,4 +190,48 @@ def pilot_cpe(signal, N=3, pilot_rat=1, max_blocks=None, nframes=1, use_seq=Fals
                                                             nframes=nframes)
     return signal.recreate_from_np_array(out), phase
 
+def find_pilot_const_phase(rec_pilots, ref_pilots):
+    """
+    Finds a constant phase offset between the decoded pilot
+    symbols and the transmitted ones
 
+    Parameters
+    ----------
+    rec_pilots: array_like
+        Complex received pilots (after FOE and alignment)
+    ref_pilots: array_like
+        Corresponding transmitted pilot symbols (aligned!)
+
+    Returns
+    -------
+    phase_corr: array_like
+        array of constant phase offsets per mode
+    """
+    rec_pilots = np.atleast_2d(rec_pilots)
+    ref_pilots = np.atleast_2d(ref_pilots)
+    nmodes = rec_pilots.shape[0]
+    phase_corr = np.zeros((nmodes,1), dtype=np.float64)
+    for l in range(nmodes):
+        # phases need to be unwrapped before taking the mean otherwise one gets very strange results
+        phase_corr[l] = np.mean(np.unwrap(np.angle(ref_pilots[l,:].conj()*rec_pilots[l,:])))
+    return  phase_corr
+
+def correct_pilot_const_phase(signal, phase_offsets):
+    """
+    Corrects a constant phase offset between the decoded pilot
+    symbols and the transmitted ones
+
+    Parameters
+    ----------
+    signal: array_like
+        received signal
+    phase_offsets: array_like
+        constant phase offsets (1 per mode)
+
+    Returns
+    -------
+    signal_out: array_like
+        signal with corrected phases
+    """
+    assert signal.shape[0] == phase_offsets.size, "Number of signal modes and phase offsets must be the same"
+    return signal*np.exp(-1j*phase_offsets)
