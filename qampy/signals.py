@@ -1687,7 +1687,7 @@ class SignalWithPilots(SignalBase):
             signal_rx = self.get_data()
         return signal_rx.cal_gmi(synced=synced)
 
-    def est_snr(self, synced=True, signal_rx=None, symbols_tx=None):
+    def est_snr(self, synced=True, signal_rx=None, symbols_tx=None, use_pilots=False):
         """
         Estimate SNR using known symbols.
 
@@ -1700,6 +1700,8 @@ class SignalWithPilots(SignalBase):
             signal on which to measure SER. Default: None -> calculate SER on self
         symbols_tx : array_like, optional
             symbols to use in SNR estimation, default: None use self.symbols
+        use_pilots : bool, optional
+            use the pilots for SNR estimation
 
         Returns
         -------
@@ -1707,5 +1709,8 @@ class SignalWithPilots(SignalBase):
             estimated SNR per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            if use_pilots:
+                signal_rx = self.extract_pilots()
+            else:
+                signal_rx = self.get_data()
         return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)
