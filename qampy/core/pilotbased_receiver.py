@@ -513,8 +513,9 @@ def find_const_phase_offset(rec_pilots, ref_symbs):
 
     phase_corr = np.zeros([npols,1],dtype = float)
     
-    for l in range(npols):    
-        phase_corr[l] = np.mean(np.angle(ref_symbs[l,:].conj()*rec_pilots[l,:]))
+    for l in range(npols):
+        # phases need to be unwrapped before taking the mean otherwise one gets very strange results
+        phase_corr[l] = np.mean(np.unwrap(np.angle(ref_symbs[l,:].conj()*rec_pilots[l,:])))
 
     return  phase_corr
     
