@@ -99,7 +99,7 @@ def add_carrier_offset(sig, fo):
     """
     return core.impairments.add_carrier_offset(sig, fo, sig.fs)
 
-def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None):
+def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None,roll_frame_sync=False):
     """
     Convenience function to simulate impairments on signal at once
 
@@ -124,6 +124,8 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
     signal : array_like
         signal with transmission impairments applied
     """
+    if roll_frame_sync:
+        sig = np.roll(sig,sig.pilots.shape[1],axis=-1)
     if lwdth is not None:
         sig = apply_phase_noise(sig, lwdth)
     if freq_off is not None:
