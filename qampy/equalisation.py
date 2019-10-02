@@ -198,9 +198,10 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
         signal.shiftfctrs -= Ntaps - signal.synctaps
     
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, signal.shiftfctrs, os=signal.os, mu=mu,
-                                                                    Ntaps = Ntaps, **eqkwargs)
+                                                                    foe_comp=foe_comp, Ntaps = Ntaps, **eqkwargs)
     taps_all = np.array(taps_all)
     foe_all = np.array(foe_all)
+    print(foe_all)
     if foe_comp:
         out_sig = phaserec.comp_freq_offset(signal, foe_all)
     else:
