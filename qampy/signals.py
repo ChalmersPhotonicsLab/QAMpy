@@ -1560,7 +1560,7 @@ class SignalWithPilots(SignalBase):
         self[:,:] = self[mode_alignment,:]
         self.shiftfctrs = shift_factors[mode_alignment]
         self.synctaps = Ntaps
-        self.foe = coarse_foe
+        self._foe = coarse_foe
         if returntaps:
             return wx1
 
