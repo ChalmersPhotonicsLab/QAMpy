@@ -1544,11 +1544,11 @@ class SignalWithPilots(SignalBase):
             wether to return the equaliser taps
         **kwargs
             arguments to be passed to the equaliser, the defaults are:
-               {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 1e-3}
+               {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 5e-3}
 
         """
         # TODO fix for syncing correctly
-        eqargs = {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 1e-3}
+        eqargs = {"adaptive_stepsize": True, "Niter": 10, "method": "cma", "Ntaps":17, "mu": 5e-3}
         eqargs.update(kwargs)
         mu = eqargs.pop("mu")
         Ntaps = eqargs.pop("Ntaps")
