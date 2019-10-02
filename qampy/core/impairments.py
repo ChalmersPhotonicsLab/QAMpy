@@ -16,6 +16,7 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 import numpy as np
+import warnings
 from ..helpers import normalise_and_center
 
 def H_PMD(theta, t_dgd, omega):
@@ -271,7 +272,7 @@ def add_modal_delay(sig, delay):
     return sig_out
 
 
-def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None):
+def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None, roll_frame_sync=False):
     """
     Convenience function to simulate impairments on signal at once
 
@@ -300,6 +301,11 @@ def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=
     signal : array_like
         signal with transmission impairments applied
     """
+    
+    if roll_frame_sync:
+        if not (sig.nframes > 1):
+            warnings.warn("Only single frame present, discontinuity introduced")
+        sig = np.roll(sig,sig.pilots.shape[1],axis=-1)
     if lwdth is not None:
         sig = apply_phase_noise(sig, lwdth, fs)
     if freq_off is not None:
