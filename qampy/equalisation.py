@@ -195,13 +195,16 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
 
     if signal.shiftfctrs is None:
         raise ValueError("Stupid student, sync first")
+    else:
+        eq_shiftfctrs = np.array(signal.shiftfctrs,dtype=int)
         
     if (abs(Ntaps-signal.synctaps) % signal.os) != 0:
         raise ValueError("Tap difference need to be an integer of the oversampling")
     elif Ntaps != signal.synctaps:
-        signal.shiftfctrs -= (Ntaps - signal.synctaps)//2
+        eq_shiftfctrs -= (Ntaps - signal.synctaps)//2
+            
     
-    taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, signal.shiftfctrs, os=signal.os, mu=mu,
+    taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, eq_shiftfctrs, os=signal.os, mu=mu,
                                                                     foe_comp=foe_comp, Ntaps = Ntaps, **eqkwargs)
     taps_all = np.array(taps_all)
     foe_all = np.array(foe_all)
@@ -213,10 +216,10 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
         if np.unique(signal.shiftfctrs).shape[0] > 1:
             eq_mode_sig = []
             for l in range(signal.shape[0]):
-                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,signal.shiftfctrs[l]:int(signal.shiftfctrs[l]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all[l])[l])
+                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,eq_shiftfctrs[l]:int(eq_shiftfctrs[l]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all[l])[l])
             eq_mode_sig = signal.recreate_from_np_array(np.array(eq_mode_sig),fs=signal.fb)
         else:
-            eq_mode_sig = apply_filter(out_sig[:,signal.shiftfctrs[0]:int(signal.shiftfctrs[0]+signal.frame_len*signal.os + Ntaps - 1)], np.array(taps_all))
+            eq_mode_sig = apply_filter(out_sig[:,eq_shiftfctrs[0]:int(eq_shiftfctrs[0]+signal.frame_len*signal.os + Ntaps - 1)], np.array(taps_all))
         if verbose:
             return taps_all, eq_mode_sig, foe_all, (Ntaps, signal.synctaps)
         else:
