@@ -381,8 +381,8 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     adaptive_stepsize : tuple(bool, bool)
         whether to adapt the step size upon training for each of the equaliser modes
 
-    symbols : array_like
-        array of coded symbols to decide on for dd-based equalisation functions
+    symbols : array_like, optional
+        tuple of symbol arrays. If only a single array is given they are used for both dimensions
 
     apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
@@ -400,8 +400,10 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
 
     if apply is False do not return E
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0], selected_modes = None,**kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols, avoid_cma_sing=avoid_cma_sing[1],selected_modes = None, **kwargs)
+    if len(symbols) = 1:
+        symbols = [symbols, symbols]
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[0], selected_modes = None,**kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[1],selected_modes = None, **kwargs)
     if apply:
         Eest = apply_filter(E, os, wxy2)
         return Eest, wxy2, (err1, err2)
