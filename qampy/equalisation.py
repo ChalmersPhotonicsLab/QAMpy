@@ -187,21 +187,20 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
 
 
 
-def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
+def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False, **eqkwargs):
 
     if signal.shiftfctrs is None:
         raise ValueError("Stupid student, sync first")
         
     if (abs(Ntaps-signal.synctaps) % signal.os) != 0:
         raise ValueError("Tap difference need to be an integer of the oversampling")
-    elif Ntaps != signal._synctaps:
+    elif Ntaps != signal.synctaps:
         signal.shiftfctrs -= Ntaps - signal.synctaps
     
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, signal.shiftfctrs, os=signal.os, mu=mu,
                                                                     foe_comp=foe_comp, Ntaps = Ntaps, **eqkwargs)
     taps_all = np.array(taps_all)
     foe_all = np.array(foe_all)
-    print(foe_all)
     if foe_comp:
         out_sig = phaserec.comp_freq_offset(signal, foe_all)
     else:
@@ -215,6 +214,12 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, **eqkwargs):
         else:
             out_sig.shift_signal()
             eq_mode_sig = apply_filter(out_sig[:, :signal.frame_len*signal.os + Ntaps -1], np.array(taps_all))
-        return taps_all, eq_mode_sig
+        if verbose:
+            return taps_all, eq_mode_sig, foe_all, (Ntaps, signal.synctaps)
+        else:
+            return taps_all, eq_mode_sig
     else:
-        return taps_all
+        if verbose:
+            taps_all, foe_all, (Ntaps, signal.synctaps)
+        else:
+            return taps_all
