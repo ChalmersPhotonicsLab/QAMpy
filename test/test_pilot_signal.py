@@ -34,11 +34,21 @@ class TestPilotSignalRecovery(object):
         #sig3 = core.impairments.rotate_field(sig3, np.pi*theta)
         sig4 = sig3[:, 20000:]
         sig4.sync2frame(Ntaps=ntaps, Niter=10)
-        s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True)
+        s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True)
         ser = s2.cal_ser(synced=False)
         snr_m = s2.est_snr(synced=False)
         snr_db = 10*np.log10(np.mean(snr_m))
         assert np.mean(ser) < 1e-4
         #npt.assert_almost_equal(snr, snr_db)
 
-
+    def test_swap_pols(self):
+        snr = 30.
+        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
+        sig2 = sig.resample(2*sig.fb, beta=0.1, renormalise=True)
+        sig2 = impairments.change_snr(sig2, snr)
+        sig3 = sig2[::-1]
+        sig4 = sig3[:, 20000:]
+        sig4.sync2frame()
+        s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], 17, True, adaptive_stepsize=True)
+        ser = s2.cal_ser(synced=True)
+        assert np.mean(ser) < 1e-4
