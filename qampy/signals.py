@@ -1587,8 +1587,9 @@ class SignalWithPilots(SignalBase):
         outdata : SignalBase object
             the recovered data symbols
         """
-        idx = np.tile(self._idx_dat, nframes)#[:self.shape[-1]]
-        return self.symbols.recreate_from_np_array(self[:, idx])
+        assert nframes <= self.nframes, "Signal object only contains {} frames can't extract more".format(self.nframes)
+        idx = np.nonzero(np.tile(self._idx_dat, nframes)[:self.shape[-1]])
+        return self.symbols.recreate_from_np_array(self[:, idx[0]].copy()) # better save to make copy here
 
     def extract_pilots(self):
         idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
