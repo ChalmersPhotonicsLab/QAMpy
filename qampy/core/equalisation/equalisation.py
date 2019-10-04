@@ -62,7 +62,7 @@ from qampy.core.segmentaxis import segment_axis
 #TODO: include selection for either numba or cython code
 try:
     from qampy.core.equalisation.cython_errorfcts import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
-        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME
+        ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME,ErrorFctSBDDataAided
     from qampy.core.equalisation.cython_equalisation import train_eq, ErrorFct
     from qampy.core.equalisation.cython_equalisation import apply_filter_to_signal as apply_filter_pyx
 except:
@@ -118,7 +118,9 @@ def _select_errorfct(method, M, symbols, dtype, **kwargs):
     elif method in ['mddma']:
         return ErrorFctMDDMA((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
     elif method in ['dd']:
-        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
+        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))    
+    elif method in ['data']:
+        return ErrorFctSBDDataAided(symbols.astype(dtype))
     else:
         raise ValueError("%s is unknown method"%method)
 
@@ -231,6 +233,11 @@ def _cal_Rconstant_complex(M):
 
 def _init_taps(Ntaps, pols):
     wx = np.zeros((pols, Ntaps), dtype=np.complex128)
+    # we could use gaussian initialisation, but no big advantage
+    #itaps = np.arange(0, Ntaps)-Ntaps//2
+    #width = Ntaps//8
+    #wx[0] = np.exp(-itaps**2/2/width**2)
+    #wx[0] = wx[0]/np.sqrt(np.sum(abs(wx[0])**2))
     wx[0, Ntaps // 2] = 1
     return wx
 
@@ -328,15 +335,15 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
                 wxy[pol] = np.roll(wxy[0],pol,axis=0)
     else:
         wxy = np.asarray(wxy)
-        if pols > 1:
-            Ntaps = wxy[0].shape[1]
-        else:
-            try:
-                wxy = wxy.flatten()
-                Ntaps = len(wxy)
-                wxy = np.asarray([wxy.copy(),])
-            except:
-                Ntaps = len(wxy[0])
+        Ntaps = wxy.shape[-1]
+        #else:
+            #try:
+                #wxy = wxy.flatten()
+                #Ntaps = len(wxy)
+                #wxy = np.asarray([wxy.copy(),])
+            #except:
+                #Ntaps = len(wxy[0])
+            #Ntaps = wxy.shape[-1]
     if TrSyms is None:
         TrSyms = int(L//os//Ntaps-1)*int(Ntaps)
     err = np.zeros((pols, Niter * TrSyms ), dtype=np.complex128)
@@ -345,7 +352,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, Niter):
     Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
     return Eout, wxy, TrSyms, Ntaps, err, pols
 
-def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), apply=True, **kwargs):
+def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), selected_modes = None, apply=True, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -379,8 +386,8 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
     adaptive_stepsize : tuple(bool, bool)
         whether to adapt the step size upon training for each of the equaliser modes
 
-    symbols : array_like
-        array of coded symbols to decide on for dd-based equalisation functions
+    symbols : array_like, optional
+        tuple of symbol arrays. If only a single array is given they are used for both dimensions
 
     apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
@@ -398,15 +405,17 @@ def dual_mode_equalisation(E, os, mu, M, Ntaps, TrSyms=(None,None), Niter=(1,1),
 
     if apply is False do not return E
     """
-    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols, avoid_cma_sing=avoid_cma_sing[0], **kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols, avoid_cma_sing=avoid_cma_sing[1], **kwargs)
+    if len(symbols) == 1 or symbols.ndim == 1:
+        symbols = [symbols, symbols]
+    wxy, err1 = equalise_signal(E, os, mu[0], M, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[0], selected_modes = None,**kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[1],selected_modes = None, **kwargs)
     if apply:
         Eest = apply_filter(E, os, wxy2)
         return Eest, wxy2, (err1, err2)
     else:
         return wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, apply=False, **kwargs):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, apply=False, selected_modes = None, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -464,13 +473,24 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     method = method.lower()
     eqfct = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
     # scale signal
-    E, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
+    Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     wxy = wxy.astype(E.dtype)
-    for l in range(pols):
+    
+    if selected_modes is None:
+        pols = np.arange(E.shape[0])
+    else:
+        pols = selected_modes
+    
+    for l in pols:
+        if method == "data":
+            eqfct.mode = l
         for i in range(Niter):
-            err[l, i * TrSyms:(i+1)*TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct, adaptive=adaptive_stepsize)
+            if method == "data":
+                eqfct.i = 0
+            err[l, i * TrSyms:(i + 1) * TrSyms], wxy[l], mu = train_eq(E, TrSyms, os, mu, wxy[l], eqfct,
+                                                                       adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
-            wxy[l+1] = orthogonalizetaps(wxy[l])
+            wxy[l + 1] = orthogonalizetaps(wxy[l])
 
     if apply:
         Eest = apply_filter(E, os, wxy)

@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import numpy.testing as npt
 
-from qampy import signals, theory, impairments
+from qampy import signals, theory, impairments, equalisation, core
 
 
 def _flip_symbols(sig, idx, d, mode=0):
@@ -709,6 +709,30 @@ class TestSignalQualityCorrectnes(object):
         ber = s.cal_ber()
         npt.assert_almost_equal(ber.flatten(), err_syms/(N*np.log2(M)))
 
+class TestPilotCalcs(object):
+    @pytest.mark.parametrize("ntaps", range(17, 20))
+    @pytest.mark.parametrize("shift", np.arange(0, 2)+3000)
+    def test_sync_frame(self, ntaps, shift):
+        s = signals.SignalWithPilots(128, 2**16, 1024, 32, nframes=3)
+        s = s.resample(2*s.fs, beta=0.1)
+        s = impairments.change_snr(s, 30)
+        s = np.roll(s, shift, axis=-1)
+        s.sync2frame(Ntaps=ntaps, adaptive_stepsize=True, mu=1e-2, method="cma", Niter=10)
+        shf = shift-ntaps//2
+        npt.assert_equal(s.shiftfctrs[0], shf - shf%2)
+
+    @pytest.mark.parametrize("ntaps", range(17, 21))
+    @pytest.mark.parametrize("shift", np.arange(0, 2)+3000)
+    def test_sync_frame_equalise(self, ntaps, shift):
+        s = signals.SignalWithPilots(128, 2**16, 512, 32, nframes=3, nmodes=1)
+        s = s.resample(2*s.fs, beta=0.1)
+        s = impairments.change_snr(s, 40)
+        s = np.roll(s, shift, axis=-1)
+        wx1 = s.sync2frame(Ntaps=ntaps, returntaps=True, adaptive_stepsize=True, mu=1e-2, method="cma", Niter=10)
+        ss = np.roll(s, -s.shiftfctrs[0], axis=-1)
+        so = core.equalisation.apply_filter(ss, ss.os, wx1)
+        npt.assert_array_equal(np.sign(so[0,:512].imag), np.sign(s.pilot_seq[0].imag))
+        npt.assert_array_equal(np.sign(so[0,:512].real), np.sign(s.pilot_seq[0].real))
 
 class TestSignalQualityOnSignal(object):
 
@@ -723,7 +747,7 @@ class TestSignalQualityOnSignal(object):
         ser = s.cal_ser()
         assert ser[0] == 0
 
-    @pytest.mark.parametrize("nmodes", np.arange(1, 4))
+    @pytest.mark.p        #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
     def test_evm_shape(self, nmodes):
         s = signals.ResampledQAM(16, 2 ** 16, nmodes=nmodes)
         evm = s.cal_evm()
