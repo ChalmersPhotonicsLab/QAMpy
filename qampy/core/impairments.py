@@ -16,7 +16,8 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 import numpy as np
-
+import warnings
+from ..helpers import normalise_and_center
 
 def H_PMD(theta, t_dgd, omega):
     """
@@ -146,9 +147,11 @@ def phase_noise(sz, df, fs):
     """
     var = 2*np.pi*df/fs
     f = np.random.normal(scale=np.sqrt(var), size=sz)
-    return np.cumsum(f, axis=1)
+    if len(f.shape) > 1:
+        return np.cumsum(f, axis=1)
+    else:
+        return np.cumsum(f)
 
-#TODO: make multi-dim phase noise configurable
 def apply_phase_noise(signal, df, fs):
     """
     Add phase noise from local oscillators, based on a Wiener noise process.
@@ -269,7 +272,7 @@ def add_modal_delay(sig, delay):
     return sig_out
 
 
-def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None):
+def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None, roll_frame_sync=False):
     """
     Convenience function to simulate impairments on signal at once
 
@@ -298,6 +301,11 @@ def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=
     signal : array_like
         signal with transmission impairments applied
     """
+    
+    if roll_frame_sync:
+        if not (sig.nframes > 1):
+            warnings.warn("Only single frame present, discontinuity introduced")
+        sig = np.roll(sig,sig.pilots.shape[1],axis=-1)
     if lwdth is not None:
         sig = apply_phase_noise(sig, lwdth, fs)
     if freq_off is not None:
@@ -310,3 +318,42 @@ def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=
         sig = apply_PMD_to_field(sig, theta, dgd, fs)
     return sig
 
+def quantize_signal(sig, nbits=6, rescale=True, re_normalize=True):
+    """
+    Function so simulate limited resultion using DACs and ADCs
+
+    Parameters:
+        sig:            Input signal, numpy array
+        nbits:          Quantization resultion
+        rescale:        Rescale to range p/m 1, default True
+        re_normalize:   Renormalize signal after quantization
+
+    Returns:
+        sig_out:        Output quantized waveform
+
+    """
+    # Create a 2D signal
+    sig = np.atleast_2d(sig)
+    npols=sig.shape[0]
+
+    # Rescale to
+    if rescale:
+        for pol in range(npols):
+            sig[pol] /= np.abs(sig[pol]).max()
+
+
+    levels = np.linspace(-1,1,2**(nbits))
+
+    sig_out = np.zeros(sig.shape,dtype="complex")
+    for pol in range(npols):
+        sig_quant_re = levels[np.digitize(sig[pol].real,levels[:-1],right=False)]
+        sig_quant_im = levels[np.digitize(sig[pol].imag,levels[:-1],right=False)]
+        sig_out[pol] = sig_quant_re + 1j*sig_quant_im
+
+    if not np.iscomplexobj(sig):
+        sig_out = sig_out.real
+
+    if re_normalize:
+        sig_out = normalise_and_center(sig_out)
+
+    return sig_out

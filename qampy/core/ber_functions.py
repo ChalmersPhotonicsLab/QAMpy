@@ -101,7 +101,6 @@ def find_sequence_offset_complex(x, y):
             acm = act
     return ix, y * 1.j ** ii, ii, acm
 
-
 def sync_and_adjust(data_tx, data_rx, adjust="tx"):
     """
     Synchronize and adjust length of received and transmitted data sequence. When the length

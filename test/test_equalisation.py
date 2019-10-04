@@ -33,3 +33,13 @@ class TestReturnObject(object):
         s3 = equalisation.apply_filter(s2, self.os, wx)
         assert type(s3) is type(self.s)
 
+class TestEqualisation(object):
+
+    @pytest.mark.parametrize("N", [1,2,3])
+    def test_nd_dualmode(self, N):
+        import numpy as np
+        from qampy import impairments
+        s = signals.ResampledQAM(16, 2 ** 16, fb=20e9, fs=40e9, nmodes=N)
+        s2 = impairments.change_snr(s, 25)
+        E, wx, err = equalisation.dual_mode_equalisation(s2, (1e-3, 1e-3), 11, apply=True, adaptive_stepsize=(True,True))
+        assert np.mean(E.cal_ber() < 1e-3)
