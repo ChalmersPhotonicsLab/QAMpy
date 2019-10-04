@@ -16,6 +16,7 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+import numpy as np
 from qampy import core
 from qampy.core.phaserecovery import bps_twostage, phase_partition_16qam
 
@@ -151,3 +152,86 @@ def viterbiviterbi(E, N):
     """
     return core.phaserecovery.viterbiviterbi(E, N, E.M)
 
+def pilot_cpe(signal, N=3, pilot_rat=1, max_blocks=None, nframes=1, use_seq=False):
+    """
+    Pilot based Carrier Phase Estimation
+
+    Parameters
+    ----------
+    signal : PilotSignalObject
+        the signal to perform phase estimation on
+    N : int (optional)
+        length of the averaging filter for phase estimation
+    pilot_rat : int (optional)
+        use every nth pilot
+    max_blocks : int (optional)
+        maximum number of blocks to process
+    nframes: int (optional)
+        how many frames to process, the output data will be truncated to min(signal.shape[-1], signal.frame_len*nframes)
+    use_seq : bool (optional)
+        use the pilot sequence for CPE as well
+    Returns
+    -------
+    signal : PilotSignalObject
+        phase compensated signal
+    trace : array_like
+        phase trace
+    """
+    if use_seq:
+        seq_len = signal._pilot_seq_len
+        idx = np.nonzero(signal._idx_pil)[0]
+        pilots = signal.pilots
+    else:
+        seq_len = None
+        idx = np.nonzero(signal._idx_pil)[0][signal._pilot_seq_len:]
+        pilots = signal.ph_pilots
+    out, phase = core.pilotbased_receiver.pilot_based_cpe_new(signal, pilots, idx, signal.frame_len, seq_len=seq_len,
+                                                           max_num_blocks=max_blocks, use_pilot_ratio=pilot_rat, num_average=N,
+                                                            nframes=nframes)
+    return signal.recreate_from_np_array(out), phase
+
+def find_pilot_const_phase(rec_pilots, ref_pilots):
+    """
+    Finds a constant phase offset between the decoded pilot
+    symbols and the transmitted ones
+
+    Parameters
+    ----------
+    rec_pilots: array_like
+        Complex received pilots (after FOE and alignment)
+    ref_pilots: array_like
+        Corresponding transmitted pilot symbols (aligned!)
+
+    Returns
+    -------
+    phase_corr: array_like
+        array of constant phase offsets per mode
+    """
+    rec_pilots = np.atleast_2d(rec_pilots)
+    ref_pilots = np.atleast_2d(ref_pilots)
+    nmodes = rec_pilots.shape[0]
+    phase_corr = np.zeros((nmodes,1), dtype=np.float64)
+    for l in range(nmodes):
+        # phases need to be unwrapped before taking the mean otherwise one gets very strange results
+        phase_corr[l] = np.mean(np.unwrap(np.angle(ref_pilots[l,:].conj()*rec_pilots[l,:])))
+    return  phase_corr
+
+def correct_pilot_const_phase(signal, phase_offsets):
+    """
+    Corrects a constant phase offset between the decoded pilot
+    symbols and the transmitted ones
+
+    Parameters
+    ----------
+    signal: array_like
+        received signal
+    phase_offsets: array_like
+        constant phase offsets (1 per mode)
+
+    Returns
+    -------
+    signal_out: array_like
+        signal with corrected phases
+    """
+    assert signal.shape[0] == phase_offsets.size, "Number of signal modes and phase offsets must be the same"
+    return signal*np.exp(-1j*phase_offsets)
