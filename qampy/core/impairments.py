@@ -357,3 +357,35 @@ def quantize_signal(sig, nbits=6, rescale=True, re_normalize=True):
         sig_out = normalise_and_center(sig_out)
 
     return sig_out
+
+def add_dispersion(sig, fs, D, L, wl0=1550e-9):
+    """
+    Add dispersion to signal.
+
+    Parameters
+    ----------
+    sig : array_like
+        input signal
+    fs : flaot
+        sampling frequency of the signal (in SI units)
+    D : float
+        Dispersion factor in s/m/m
+    L : float
+        Length of the dispersion in m
+    wl0 : float,optional
+        center wavelength of the signal
+
+    Returns
+    -------
+    sig_out : array_like
+        dispersed signal
+    """
+    C = 2.99792458e8
+    N = sig.shape[-1]
+    omega = np.fft.fftfreq(N, 1/fs)*np.pi*2
+    beta2 = D * wl0**2 / (C*np.pi*2)
+    H = np.exp(-0.5j * omega**2 * beta2 * L)
+    sff = np.fft.fft(np.fft.ifftshift(sig, axes=-1), axis=-1)
+    sig_out = np.fft.fftshift(np.fft.ifft(sff*H))
+    return sig_out
+

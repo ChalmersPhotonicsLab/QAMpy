@@ -100,6 +100,29 @@ def add_carrier_offset(sig, fo):
     """
     return core.impairments.add_carrier_offset(sig, fo, sig.fs)
 
+def add_dispersion(sig, D, L, wl0=1550e-9):
+    """
+    Add dispersion to a signal
+    
+    Parameters
+    ----------
+    sig : signal_object
+        signal to operate on
+    D : float
+        Dispersion parameter in s/m/m
+    L : float
+        Length of the dispersion in m
+    wl0 : float, optional
+        Centre wavelength in m
+
+    Returns
+    -------
+    sig_out : signal_object
+        output signal with added dispersion
+    """
+    so = core.impairments.add_dispersion(sig, sig.fs, D, L, wl0=wl0)
+    return sig.recreate_from_nparray(so)
+
 def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None,roll_frame_sync=False):
     """
     Convenience function to simulate impairments on signal at once
