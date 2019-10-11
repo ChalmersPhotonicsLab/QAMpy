@@ -1493,7 +1493,7 @@ class SignalWithPilots(SignalBase):
             if pilots.shape[0] == nmodes:
                 pass
             elif pilots.shape[0] == 1:
-                pilots = np.vstack([pilots]*nmodes)
+                pilots = np.array(np.vstack([pilots]*nmodes)) # this is necessary because np.vstack does not inherit attributes see issue #5
             else:
                 raise ValueError("Pilots need to have the same number of modes as data or be one mode")
             if not issubclass(pilots.__class__, SignalBase):
