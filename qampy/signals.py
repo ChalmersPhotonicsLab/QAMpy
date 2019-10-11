@@ -1430,20 +1430,23 @@ class SignalWithPilots(SignalBase):
         return idx, idx_dat, idx_pil
 
     @classmethod
-    def from_data_array(cls, data, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4, **pilot_kwargs):
+    def from_symbol_array(cls, payload, frame_len, pilot_seq_len, pilot_ins_rat, pilots=None, nframes=1, pilot_scale=1, Mpilots=4, **pilot_kwargs):
         """
-        Generate a pilot-bases signal from a provided data signal object.
+        Generate a pilot-bases signal from a provided payload symbol signal object.
 
         Parameters
         ----------
-        data : SignalBase object
-            The data symbols needs to be long enough to fill one frame. If it is longer than required the data will be truncated
+        payload : SignalBase object
+            The payload symbols needs to be long enough to fill one frame. If it is longer than required the data will be truncated
         frame_length : int
             overall length of the signal comprised of the pilot sequence, the phase pilots and the data payload.
         pilot_seq_len : int
             number of pilots at the beginning of the frame
         pilot_ins_rat : int
             phase pilots are spaced every pilot_ins_symbol starting at the first symbol after the pilot sequence
+        pilots : SignalBase object, optional
+            use pilot signal object if given, otherwise generate pilots. If given the number of modes for the pilots needs
+            to be one or the same as that of the data. If it is one pilots we extend along that dimension.
         nframes : int, optional
             how often to repeat the overall frame
         pilot_scale : float, optional
@@ -1452,32 +1455,36 @@ class SignalWithPilots(SignalBase):
             QAM order of the pilots in the sequence and the phase pilots    frame_len : int
         pilot_kwargs
             keyword arguments to pass to the pilot generation
-
         Returns
         -------
         signal :
             pilot-based signal of shape (nmodes, frame_len*nframes)
         """
-        nmodes, N = data.shape
+        nmodes, N = payload.shape
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
         assert np.count_nonzero(idx_dat) <= N, "data frame is to short for the given frame length"
         if np.count_nonzero(idx_dat) > N:
             warnings.warn("Data for frame is shorter than length of data array, truncating")
-        out_symbs = np.empty((nmodes, frame_len), dtype=data.dtype)
+        out_symbs = np.empty((nmodes, frame_len), dtype=payload.dtype)
         Ndat = np.count_nonzero(idx_dat)
-        pilots = SignalQAMGrayCoded(4, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=data.dtype, **pilot_kwargs) / np.sqrt(
+        if pilots is None:
+            pilots = SignalQAMGrayCoded(Mpilots, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=data.dtype, **pilot_kwargs) / np.sqrt(
             pilot_scale)
+        else:
+            assert (nmodes == pilots.shape[0]) or (pilots.shape[0] == 1), "Pilots need to have the same number of modes as data or be one mode"
+            if pilots.shape[0] == 1:
+                pilots = np.vstack[[pilots]*nmodes]
         out_symbs[:, idx_pil] = pilots
-        out_symbs[:, idx_dat] = data[:, :Ndat]
+        out_symbs[:, idx_dat] = payload[:, :Ndat]
         out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
-        obj._fs = data.fb
+        obj._fs = payload.fb
         obj._pilot_scale = pilot_scale
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
         obj._nframes = nframes
-        obj._symbols = data[:, :Ndat].copy()
+        obj._symbols = payload[:, :Ndat].copy()
         obj._pilots = pilots
         obj._idx_dat = idx_dat
         obj._idx_pil = idx_pil
