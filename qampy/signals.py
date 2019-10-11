@@ -691,6 +691,9 @@ class SignalQAMGrayCoded(SignalBase):
             M = np.unique(symbs).shape[0]
         if dtype is None:
             dtype = symbs.dtype
+        P = (abs(np.unique(symbs))**2).mean()
+        if not np.isclose(P, 1):
+            warnings.warn("Power of symbols is not normalized to 1, this might cause issues later")
         scale = np.sqrt(theory.cal_scaling_factor_qam(M)) / np.sqrt((abs(np.unique(symbs)) ** 2).mean())
         coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
         out = np.empty_like(symbs).astype(dtype)
