@@ -111,12 +111,12 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     if apply:
         sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                                  adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                                 avoid_cma_sing=avoid_cma_sing, apply=False, **kwargs)
+                                                 avoid_cma_sing=avoid_cma_sing, apply=True, **kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wxy, err
     else:
         return core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                             avoid_cma_sing=avoid_cma_sing, apply=apply,**kwargs)
+                                             avoid_cma_sing=avoid_cma_sing, apply=False, **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
                            adaptive_stepsize=(False, False), avoid_cma_sing=(False, False), apply=True, symbols=None,
@@ -181,13 +181,13 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
         sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
-                                                                apply=apply,**kwargs)
+                                                                apply=True,**kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
     else:
         return core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
-                                                                apply=apply,**kwargs)
+                                                                apply=False,**kwargs)
 
 
 
