@@ -402,20 +402,12 @@ def mcma_error(Xest, R):
 
 def rde_error(Xest, partition, codebook):
     sq = abs(Xest)**2
-    #r = partition_value(sq, partition.real, codebook.real)
-    # we cannot use the function because MSVC chokes
-    index = 0
-    L = partition.shape[0]
-    while index < L and sq < partition[index].real:
-        index += 1
-    r = codebook[index].real
+    r = partition_value(sq, partition.real, codebook.real)
     return Xest*(r-sq)
 
 def mrde_error(Xest, partition, codebook):
     sq = Xest.real**2 + 1j*Xest.imag
-    # we need to use the complex function instead of the commented because MSVC chokes otherwise
-    #r = partition_value(sq.real, partition.real, codebook.real) + 1j * partition_value(sq.imag, partition.imag, codebook.imag)
-    r = partition_value_complex(sq, partition, codebook)
+    r = partition_value(sq.real, partition.real, codebook.real) + 1j * partition_value(sq.imag, partition.imag, codebook.imag)
     return (r.real - sq.real)*Xest.real + 1j*(r.imag - sq.imag)*Xest.imag
 
 def sbd_error(Xest, symbs):
