@@ -101,12 +101,14 @@ def mcma_error(Xest, s1):
     di = (s1[0].imag - Xest.imag**2)
     return dr*Xest.real + di*Xest.imag*1.j, Xest, dr + di
 
-def rde_error(Xest, partition, codebook):
+def rde_error(Xest, symbs):
+    partition, codebook = np.split(symbs, 2)
     sq = abs(Xest)**2
     r = partition_value(sq, partition.real, codebook.real)
     return Xest*(r-sq), r+0j, sq
 
-def mrde_error(Xest, partition, codebook):
+def mrde_error(Xest, symbs):
+    partition, codebook = np.split(symbs, 2)
     sq = Xest.real**2 + 1j*Xest.imag
     r = partition_value(sq.real, partition.real, codebook.real) + 1j * partition_value(sq.imag, partition.imag, codebook.imag)
     return (r.real - sq.real)*Xest.real + 1j*(r.imag - sq.imag)*Xest.imag, r, sq
