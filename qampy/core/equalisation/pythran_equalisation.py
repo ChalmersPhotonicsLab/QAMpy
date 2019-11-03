@@ -71,8 +71,8 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbols,  method):
         errorfct = mddma_error
     elif method == "ddlms":
         errorfct = ddlms_error
-    #else:
-    #    errorfct = mcma_error
+    else:
+        raise ValueError("Unknown method %s"%method)
         
     ntaps = wx.shape[-1]
     pols = wx.shape[0]
