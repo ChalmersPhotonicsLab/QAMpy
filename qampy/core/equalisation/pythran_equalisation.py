@@ -1,16 +1,5 @@
 import numpy as np
 
-def partition_value_complex(signal, partitions, codebook):
-# without this function compilation on windows fails
-    L = partitions.shape[0]
-    r = 0+0j
-    for i in range(L):
-        if signal.real <= partitions[i].real:
-            r = codebook[i].real + 1j*r.imag
-        if signal.imag <= partitions[i].imag:
-            r = r.real + 1j*codebook[i].imag
-    return r
-
 def partition_value(signal, partitions, codebook):
     L = partitions.shape[0]
     index = 0
@@ -230,4 +219,3 @@ def make_decision(E, symbols):
     for i in range(L):
         det_symbs[i] = det_symbol(E[i], symbols)[0]
     return det_symbs
-
