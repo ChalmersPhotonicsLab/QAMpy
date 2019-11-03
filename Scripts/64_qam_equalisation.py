@@ -24,13 +24,13 @@ sig = impairments.change_snr(sig, snr)
 
 SS = impairments.apply_PMD(sig, theta, t_pmd)
 t1 = timer()
-E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
-                                                                     methods=("mcma", "sbd"),
-                                                                     adaptive_stepsize=(True, True))
+#E_s, wxy_s, (err_s, err_rde_s) = equalisation.dual_mode_equalisation(SS, (muCMA, muRDE), ntaps, TrSyms=(Ncma, Nrde),
+                                                                     #methods=("mcma", "mddma"),
+                                                                     #adaptive_stepsize=(True, True))
+E_s, wxy_s, err_s = equalisation.equalise_signal(SS, muCMA, Ntaps=ntaps, TrSyms=Ncma, method="mcma", adaptive_stepsize=True, apply=True)
 t2 = timer()
 print("eqn time: {}".format(t2-t1))
 
-EE = apply_filter_to_signal(SS, os, wxy_s, False)
 
 E_s = helpers.normalise_and_center(E_s)
 evm = sig[:, ::2].cal_evm()

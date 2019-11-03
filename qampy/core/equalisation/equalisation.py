@@ -66,27 +66,27 @@ TRAINING_FCTS = ["cma", "mcma",
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma"]:
-        return pythran_equalisation.cma_equaliser, [(_cal_Rconstant(M) + 0j).astype(dtype)]
+        return (_cal_Rconstant(M) + 0j).astype(dtype)
     if method in ["mcma"]:
-        return pythran_equalisation.mcma_equaliser, [_cal_Rconstant_complex(M).astype(dtype)]
+        return _cal_Rconstant_complex(M).astype(dtype)
     if method in ["rde"]:
-        p, c = generate_partition_codes_radius(M)
-        return pythran_equalisation.rde_equaliser, [(p+0j).astype(dtype), (c+0j).astype(dtype)]
+        p = generate_partition_codes_radius(M)
+        return (p+0j).astype(dtype)
     if method in ["mrde"]:
-        p, c = generate_partition_codes_complex(M)
-        return pythran_equalisation.mrde_equaliser, [p.astype(dtype), c.astype(dtype)]
+        p = generate_partition_codes_complex(M)
+        return  p.astype(dtype)
     if method in ["sbd"]:
         if symbols is None:
             symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
-        return pythran_equalisation.sbd_equaliser, [symbols]
+        return symbols
     if method in ["mddma"]:
         if symbols is None:
             symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
-        return pythran_equalisation.mddma_equaliser, [symbols]
+        return  symbols
     if method in ["dd"]:
         if symbols is None:
             symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
-        return pythran_equalisation.ddlms_equaliser, [symbols]
+        return symbols
     raise ValueError("%s is unknown method"%method)
 
 def apply_filter(E, os, wxy, method="pyt"):
@@ -258,7 +258,7 @@ def generate_partition_codes_complex(M):
     part_r = syms_r[:-1] + np.diff(syms_r)/2
     part_i = syms_i[:-1] + np.diff(syms_i)/2
     parts = part_r + 1.j*part_i
-    return parts, codes
+    return np.hstack([parts, codes])
 
 def generate_partition_codes_radius(M):
     """
@@ -281,7 +281,7 @@ def generate_partition_codes_radius(M):
     syms /= np.sqrt(scale)
     codes = np.unique(abs(syms)**4/abs(syms)**2)
     parts = codes[:-1] + np.diff(codes)/2
-    return parts, codes
+    return np.hstack([parts,codes])
 
 def _lms_init(E, os, wxy, Ntaps, TrSyms, mu):
     E = np.atleast_2d(E)
@@ -430,8 +430,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     method = method.lower()
     E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu)
     wxy = wxy.astype(E.dtype)
-    eqfct, prms = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-    err, wxy, mu = eqfct(E, TrSyms, Niter, os, mu, wxy, adaptive_stepsize, *prms)
+    symbols = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
+    err, wxy, mu = pythran_equalisation.train_equaliser(E, TrSyms, Niter, os, mu, wxy, adaptive_stepsize, np.atleast_2d(symbols), method)
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)

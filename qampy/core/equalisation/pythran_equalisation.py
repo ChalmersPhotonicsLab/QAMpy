@@ -63,10 +63,10 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbols,  method):
         errorfct = cma_error
     elif method == "sbd":
         errorfct = sbd_error
-    #elif method == "rde":
-    #    errorfct = rde_error
-    #elif method == "mrde":
-    #    errorfct = mrde_error
+    elif method == "rde":
+        errorfct = rde_error
+    elif method == "mrde":
+        errorfct = mrde_error
     elif method == "mddma":
         errorfct = mddma_error
     elif method == "ddlms":
@@ -83,7 +83,7 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbols,  method):
             for i in range(TrSyms):
                 X = E[:, i * os:i * os + ntaps]
                 Xest = apply_filter(X,  wx[pol])
-                err[pol, it*Niter+i], symb, d = errorfct(Xest, symbols[pol])
+                err[pol, it*Niter+i], symb, d = errorfct(Xest, symbols[0])
                 wx[pol] += mu * np.conj(err[pol, it*Niter+i]) * X
                 if adaptive and i > 0:
                     mu = adapt_step(mu, err[pol, it*Niter+i], err[pol, it*Niter+i-1])
@@ -109,9 +109,9 @@ def rde_error(Xest, symbs):
 
 def mrde_error(Xest, symbs):
     partition, codebook = np.split(symbs, 2)
-    sq = Xest.real**2 + 1j*Xest.imag
+    sq = Xest.real**2 + 1j*Xest.imag**2
     r = partition_value(sq.real, partition.real, codebook.real) + 1j * partition_value(sq.imag, partition.imag, codebook.imag)
-    return (r.real - sq.real)*Xest.real + 1j*(r.imag - sq.imag)*Xest.imag, r, sq
+    return (r.real - sq.real)*Xest.real + 1j*(r.imag - sq.imag)*Xest.imag, r, abs(sq)
 
 def sbd_error(Xest, symbs):
     symbol, dist = det_symbol(Xest, symbs)
