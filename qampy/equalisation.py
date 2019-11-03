@@ -22,7 +22,7 @@ from qampy.core import equalisation, pilotbased_receiver
 from qampy import phaserec
 __doc__= equalisation.equalisation.__doc__
 
-def apply_filter(sig, wxy, method="pyx"):
+def apply_filter(sig, wxy, method="pyt"):
     """
     Apply the equaliser filter taps to the input signal.
 

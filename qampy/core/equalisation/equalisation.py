@@ -117,7 +117,7 @@ def apply_filter(E, os, wxy, method="pyt"):
     if method == "py":
         return apply_filter_py(E, os, wxy)
     elif method == "pyt":
-        return pythran_equalisation.apply_filter_to_signal(E, os, wxy)
+        return pythran_equalisation.apply_filter_to_signal(E.copy(), os, wxy.copy())
     else:
         raise NotImplementedError("Only py and pyx methods are implemented")
 
