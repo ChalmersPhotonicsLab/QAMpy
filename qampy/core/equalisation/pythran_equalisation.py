@@ -55,8 +55,8 @@ def apply_filter_to_signal(E, os, wx):
         output[j, i] = Xest
     return output
 
-#pythran export train_equaliser(complex128[][], int, int, int, float64, complex128[][][], bool, complex128[][], str)
-def train_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbols,  method):
+#pythran export train_equaliser(complex128[][], int, int, int, float64, complex128[][][], int[], bool, complex128[][], str)
+def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  method):
     if method == "mcma":
         errorfct = mcma_error
     elif method == "cma":
@@ -73,20 +73,19 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, adaptive, symbols,  method):
         errorfct = ddlms_error
     else:
         raise ValueError("Unknown method %s"%method)
-        
+    assert symbols.shape[0] >= modes.size, "symbols must be at least size of modes"
     ntaps = wx.shape[-1]
-    pols = wx.shape[0]
-    err = np.zeros((pols, TrSyms*Niter), dtype=E.dtype)
+    err = np.zeros((modes.size, TrSyms*Niter), dtype=E.dtype)
     #omp parallel for
-    for pol in range(pols):
+    for mode in modes:
         for it in range(Niter):
             for i in range(TrSyms):
                 X = E[:, i * os:i * os + ntaps]
-                Xest = apply_filter(X,  wx[pol])
-                err[pol, it*Niter+i], symb, d = errorfct(Xest, symbols[0])
-                wx[pol] += mu * np.conj(err[pol, it*Niter+i]) * X
+                Xest = apply_filter(X,  wx[mode])
+                err[mode, it*Niter+i], symb, d = errorfct(Xest, symbols[mode])
+                wx[mode] += mu * np.conj(err[mode, it*Niter+i]) * X
                 if adaptive and i > 0:
-                    mu = adapt_step(mu, err[pol, it*Niter+i], err[pol, it*Niter+i-1])
+                    mu = adapt_step(mu, err[mode, it*Niter+i], err[mode, it*Niter+i-1])
     return err, wx, mu
 
 ######################################################
