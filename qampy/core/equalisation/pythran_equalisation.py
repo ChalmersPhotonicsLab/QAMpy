@@ -71,6 +71,8 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
         errorfct = mddma_error
     elif method == "ddlms":
         errorfct = ddlms_error
+    elif method == "sbd_data":
+        errorfct = sbd_data_error
     else:
         raise ValueError("Unknown method %s"%method)
     assert symbols.shape[0] >= modes.size, "symbols must be at least size of modes"
@@ -82,7 +84,7 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
             for i in range(TrSyms):
                 X = E[:, i * os:i * os + ntaps]
                 Xest = apply_filter(X,  wx[mode])
-                err[mode, it*Niter+i], symb, d = errorfct(Xest, symbols[mode])
+                err[mode, it*Niter+i], symb, d = errorfct(Xest, symbols[mode], i)
                 wx[mode] += mu * np.conj(err[mode, it*Niter+i]) * X
                 if adaptive and i > 0:
                     mu = adapt_step(mu, err[mode, it*Niter+i], err[mode, it*Niter+i-1])
@@ -91,36 +93,41 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
 ######################################################
 # Error functions
 ######################################################
-def cma_error(Xest, s1):
+def cma_error(Xest, s1, i):
     d = s1[0].real - abs(Xest)**2
     return d*Xest, Xest, d
 
-def mcma_error(Xest, s1):
+def mcma_error(Xest, s1, i):
     dr = (s1[0].real - Xest.real**2)
     di = (s1[0].imag - Xest.imag**2)
     return dr*Xest.real + di*Xest.imag*1.j, Xest, dr + di
 
-def rde_error(Xest, symbs):
+def rde_error(Xest, symbs, i):
     partition, codebook = np.split(symbs, 2)
     sq = abs(Xest)**2
     r = partition_value(sq, partition.real, codebook.real)
     return Xest*(r-sq), r+0j, sq
 
-def mrde_error(Xest, symbs):
+def mrde_error(Xest, symbs, i):
     partition, codebook = np.split(symbs, 2)
     sq = Xest.real**2 + 1j*Xest.imag**2
     r = partition_value(sq.real, partition.real, codebook.real) + 1j * partition_value(sq.imag, partition.imag, codebook.imag)
     return (r.real - sq.real)*Xest.real + 1j*(r.imag - sq.imag)*Xest.imag, r, abs(sq)
 
-def sbd_error(Xest, symbs):
+def sbd_error(Xest, symbs, i):
     symbol, dist = det_symbol(Xest, symbs)
     return (symbol.real - Xest.real)*abs(symbol.real) + (symbol.imag - Xest.imag)*1.j*abs(symbol.imag), symbol, dist
 
-def mddma_error(Xest, symbs):
+def sbd_data_error(Xest, symbs, i):
+    symbol = symbs[i]
+    dist = symbol - Xest
+    return dist.real*abs(symbol.real) + dist.imag*1.j*abs(symbol.imag), symbol, abs(dist)
+
+def mddma_error(Xest, symbs, i):
     symbol, dist = det_symbol(Xest, symbs)
     return (symbol.real**2 - Xest.real**2)*Xest.real + 1.j*(symbol.imag**2 - Xest.imag**2)*Xest.imag, symbol, dist
 
-def ddlms_error(Xest, symbs):
+def ddlms_error(Xest, symbs, i):
     symbol, dist = det_symbol(Xest, symbs)
     return symbol - Xest, symbol, dist
 
