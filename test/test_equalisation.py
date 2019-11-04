@@ -88,5 +88,19 @@ class TestEqualiseSignalParameters(object):
         ser = np.mean(E.cal_ser())
         assert ser < 1e-5
             
+    def test_dual_mode_64qam(self):
+        sig = signals.SignalQAMGrayCoded(64, 10**5, nmodes=2)
+        sig = impairments.change_snr(sig, 30)
+        sig = sig.resample(sig.fb*2, beta=0.1)
+        E, wx, e = equalisation.dual_mode_equalisation(sig, (1e-3, 1e-3), 19, adaptive_stepsize=(True, True))
+        ser = np.mean(E)
+        assert ser < 1e-5
             
-            
+    def test_single_mode_64(self):
+        sig = signals.SignalQAMGrayCoded(64, 10**5, nmodes=2)
+        sig = impairments.change_snr(sig, 30)
+        sig = sig.resample(sig.fb*2, beta=0.1)
+        E, wx, e = equalisation.equalise_signal(sig,1e-3, Ntaps=19, adaptive_stepsize=True, apply=True)
+        ser = np.mean(E.cal_ser())
+        assert ser < 1e-5
+                        
