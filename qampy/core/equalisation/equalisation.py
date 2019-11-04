@@ -66,26 +66,26 @@ TRAINING_FCTS = ["cma", "mcma",
 def _select_errorfct(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma"]:
-        return (_cal_Rconstant(M) + 0j).astype(dtype)
+        return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
     if method in ["mcma"]:
-        return _cal_Rconstant_complex(M).astype(dtype)
+        return np.atleast_2d(_cal_Rconstant_complex(M)).astype(dtype)
     if method in ["rde"]:
-        p = generate_partition_codes_radius(M)
-        return (p+0j).astype(dtype)
+        p, c= generate_partition_codes_radius(M)
+        return np.atleast_2d(p+0j).astype(dtype)
     if method in ["mrde"]:
-        p = generate_partition_codes_complex(M)
-        return  p.astype(dtype)
+        p, c = generate_partition_codes_complex(M)
+        return  np.atleast_2d(p).astype(dtype)
     if method in ["sbd"]:
         if symbols is None:
-            symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+            symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
     if method in ["mddma"]:
         if symbols is None:
-            symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+            symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return  symbols
     if method in ["dd"]:
         if symbols is None:
-            symbols = (cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+            symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
     raise ValueError("%s is unknown method"%method)
 
@@ -431,7 +431,9 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu)
     wxy = wxy.astype(E.dtype)
     symbols = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-    err, wxy, mu = pythran_equalisation.train_equaliser(E, TrSyms, Niter, os, mu, wxy, adaptive_stepsize, np.atleast_2d(symbols), method)
+    if symbols.shape[0] != E.shape[0]:
+        symbols = np.tile(symbols, (E.shape[0], 1))
+    err, wxy, mu = pythran_equalisation.train_equaliser(E, TrSyms, Niter, os, mu, wxy, np.arange(pols), adaptive_stepsize, symbols, method)
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)
