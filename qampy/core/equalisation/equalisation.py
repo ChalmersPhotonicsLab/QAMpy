@@ -63,7 +63,7 @@ TRAINING_FCTS = ["cma", "mcma",
                  "sbd", "mddma",
                  "dd"]
 
-def _select_errorfct(method, M, symbols, dtype, **kwargs):
+def generate_symbols_for_eq(method, M, symbols, dtype, **kwargs):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma"]:
         return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
@@ -196,15 +196,6 @@ def _cal_Rconstant_complex(M):
     syms /= np.sqrt(scale)
     return np.mean(syms.real**4)/np.mean(syms.real**2) + 1.j * np.mean(syms.imag**4)/np.mean(syms.imag**2)
 
-def _init_taps(Ntaps, pols):
-    wx = np.zeros((pols, Ntaps), dtype=np.complex128)
-    # we could use gaussian initialisation, but no big advantage
-    #itaps = np.arange(0, Ntaps)-Ntaps//2
-    #width = Ntaps//8
-    #wx[0] = np.exp(-itaps**2/2/width**2)
-    #wx[0] = wx[0]/np.sqrt(np.sum(abs(wx[0])**2))
-    wx[0, Ntaps // 2] = 1
-    return wx
 
 def orthogonalizetaps(wx):
     """
@@ -283,9 +274,22 @@ def generate_partition_codes_radius(M):
     parts = codes[:-1] + np.diff(codes)/2
     return np.hstack([parts,codes])
 
-def _lms_init(E, os, wxy, Ntaps, TrSyms, mu):
+def _cal_training_symbol_len(os, ntaps, L):
+    return int(L//os//ntaps-1)*int(ntaps)
+
+def _init_taps(Ntaps, nmodes, nmodes2, dtype):
+    wxy = np.zeros((nmodes, nmodes2, Ntaps), dtype=dtype)
+    for i in range(nmodes):
+        wxy[i, i, Ntaps // 2] = 1
+    # we could use gaussian initialisation, but no big advantage
+    #itaps = np.arange(0, Ntaps)-Ntaps//2
+    #width = Ntaps//8
+    #wx[0] = np.exp(-itaps**2/2/width**2)
+    #wx[0] = wx[0]/np.sqrt(np.sum(abs(wx[0])**2))
+    return wxy
+
+def _lms_init(E, os, wxy, Ntaps, TrSyms, mu, selected_modes):
     E = np.atleast_2d(E)
-    pols = E.shape[0]
     L = E.shape[1]
     # scale signal
     E = qampy.helpers.normalise_and_center(E)
@@ -428,12 +432,29 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     """
     method = method.lower()
-    E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu)
-    wxy = wxy.astype(E.dtype)
-    symbols = _select_errorfct(method, M, symbols, E.dtype, **kwargs)
-    if symbols.shape[0] != E.shape[0]:
-        symbols = np.tile(symbols, (E.shape[0], 1))
-    err, wxy, mu = pythran_equalisation.train_equaliser(E, TrSyms, Niter, os, mu, wxy, np.arange(pols), adaptive_stepsize, symbols, method)
+    #E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu, selected_modes)
+    if selected_modes is None:
+        nmodes = E.shape[0]
+        selected_modes = np.arange(nmodes)
+    else:
+        selected_modes = np.atleast_1d(selected_modes)
+        assert np.max(selected_modes) <  E.shape[0], "Maximum selected mode must not be larger than modes in signal"
+        nmodes = selected_modes.size
+    if wxy is None:
+        wxy = _init_taps(Ntaps, nmodes, E.shape[0] , E.dtype)
+    else:
+        wxy = wxy.astype(E.dtype)
+        Ntaps = wxy.shape[-1]
+    TrSyms = _cal_training_symbol_len(os, Ntaps, E.shape[-1])
+    if symbols is None:
+        symbols = generate_symbols_for_eq(method, M, symbols, E.dtype)
+    else:
+        symbols = symbols.astype(E.dtype)
+    if symbols.ndim == 1 or symbols.shape[0] == 1:
+        symbols = np.tile(symbols, (nmodes, 1))
+    elif symbols.shape[0] != nmodes:
+        raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
+    err, wxy, mu = pythran_equalisation.train_equaliser(E, TrSyms, Niter, os, mu, wxy, selected_modes, adaptive_stepsize, symbols, method)
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)

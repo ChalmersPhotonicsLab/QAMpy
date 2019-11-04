@@ -55,7 +55,7 @@ def apply_filter_to_signal(E, os, wx):
         output[j, i] = Xest
     return output
 
-#pythran export train_equaliser(complex128[][], int, int, int, float64, complex128[][][], int[], bool, complex128[][], str)
+#pythran export train_equaliser(complex128[][], int, int, int, float64, complex128[][][], int[] or int64[], bool, complex128[][], str)
 def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  method):
     if method == "mcma":
         errorfct = mcma_error

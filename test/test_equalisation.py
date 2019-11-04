@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 import numpy.testing as npt
 
 from qampy import signals, equalisation
@@ -43,3 +44,38 @@ class TestEqualisation(object):
         s2 = impairments.change_snr(s, 25)
         E, wx, err = equalisation.dual_mode_equalisation(s2, (1e-3, 1e-3), 11, apply=True, adaptive_stepsize=(True,True))
         assert np.mean(E.cal_ber() < 1e-3)
+
+
+class TestEqualiseSignalParameters(object):
+    @pytest.mark.parametrize( ("selected_modes", "sigmodes"),
+                              [ (None, 1),
+                                (None, 2),
+                                (np.arange(2), 2),
+                                (np.arange(2), 3),
+                                pytest.param(np.arange(2), 1, marks=pytest.mark.xfail(raises=AssertionError))
+                                ])
+    def test_selected_modes(self, selected_modes, sigmodes):
+        sig = signals.SignalQAMGrayCoded(4, 2**10, nmodes=sigmodes)
+        wx, e = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, selected_modes=selected_modes)
+
+    @pytest.mark.parametrize(("sigmodes", "symbolsmodes",),
+                             [ (1, None),
+                               (2, None),
+                               (1, 0),
+                               (2, 0),
+                               (1, 1),
+                               (2, 2),
+                               pytest.param(3, 2, marks=pytest.mark.xfail(raises=ValueError))])
+    def test_symbols(self, sigmodes, symbolsmodes):
+        selected_modes = np.arange(sigmodes)
+        sig = signals.SignalQAMGrayCoded(4, 2**10, nmodes=sigmodes)
+        if symbolsmodes is not None:
+            symbols = sig.coded_symbols
+            if symbolsmodes > 0:
+                symbols = np.tile(symbols, (symbolsmodes, 1))
+        else:
+            symbols = None
+        wx, e  = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, symbols=None, selected_modes=selected_modes)
+            
+            
+            
