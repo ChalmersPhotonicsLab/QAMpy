@@ -443,7 +443,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         wxy = wxy.astype(E.dtype)
         Ntaps = wxy.shape[-1]
     TrSyms = _cal_training_symbol_len(os, Ntaps, E.shape[-1])
-    if symbols is None or  method in NONDECISION_BASED:
+    if symbols is None or  method in NONDECISION_BASED: # This code currently prevents passing "symbol arrays for RDE or CMA algorithms
         symbols = generate_symbols_for_eq(method, M, E.dtype)
     else:
         symbols = symbols.astype(E.dtype)
