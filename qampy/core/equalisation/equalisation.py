@@ -58,12 +58,12 @@ from qampy.theory import cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.equalisation import pythran_equalisation
 
-TRAINING_FCTS = ["cma", "mcma",
-                 "rde", "mrde",
-                 "sbd", "mddma",
-                 "dd"]
+DECISION_BASED = ["sbd", "mddma", "dd"]
+NONDECISION_BASED = ["cma", "mcma", "rde", "mrde"]
 
-def generate_symbols_for_eq(method, M, symbols, dtype, **kwargs):
+TRAINING_FCTS =  DECISION_BASED + NONDECISION_BASED
+
+def generate_symbols_for_eq(method, M, dtype):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma"]:
         return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
@@ -76,16 +76,13 @@ def generate_symbols_for_eq(method, M, symbols, dtype, **kwargs):
         p, c = generate_partition_codes_complex(M)
         return  np.atleast_2d(p).astype(dtype)
     if method in ["sbd"]:
-        if symbols is None:
-            symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+        symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
     if method in ["mddma"]:
-        if symbols is None:
-            symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+        symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return  symbols
     if method in ["dd"]:
-        if symbols is None:
-            symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
+        symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
     raise ValueError("%s is unknown method"%method)
 
@@ -446,8 +443,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         wxy = wxy.astype(E.dtype)
         Ntaps = wxy.shape[-1]
     TrSyms = _cal_training_symbol_len(os, Ntaps, E.shape[-1])
-    if symbols is None:
-        symbols = generate_symbols_for_eq(method, M, symbols, E.dtype)
+    if symbols is None or  method in NONDECISION_BASED:
+        symbols = generate_symbols_for_eq(method, M, E.dtype)
     else:
         symbols = symbols.astype(E.dtype)
     if symbols.ndim == 1 or symbols.shape[0] == 1:
