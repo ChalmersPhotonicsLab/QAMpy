@@ -206,8 +206,6 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
 
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, eq_shiftfctrs, os=signal.os, mu=mu,
                                                                     foe_comp=foe_comp, Ntaps = Ntaps, **eqkwargs)
-    taps_all = np.array(taps_all)
-    foe_all = np.array(foe_all)
     if foe_comp:
         out_sig = phaserec.comp_freq_offset(signal, foe_all)
     else:
@@ -216,8 +214,8 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
         if np.unique(signal.shiftfctrs).shape[0] > 1:
             eq_mode_sig = []
             for l in range(signal.shape[0]):
-                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,eq_shiftfctrs[l]:int(eq_shiftfctrs[l]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all[l])[l])
-            eq_mode_sig = signal.recreate_from_np_array(np.array(eq_mode_sig),fs=signal.fb)
+                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,eq_shiftfctrs[l]:int(eq_shiftfctrs[l]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all[l][None,:,:]))
+            eq_mode_sig = signal.recreate_from_np_array(np.squeeze(np.array(eq_mode_sig)),fs=signal.fb)
         else:
             eq_mode_sig = apply_filter(out_sig[:,eq_shiftfctrs[0]:int(eq_shiftfctrs[0]+signal.frame_len*signal.os + Ntaps - 1)], np.array(taps_all))
         if verbose:

@@ -21,8 +21,11 @@ from __future__ import division, print_function
 import numpy as np
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.signal_quality import cal_s0
-from qampy.core.dsp_cython import bps as _bps_idx_pyx
+#from qampy.core.dsp_cython import bps as _bps_idx_pyx
+from qampy.core.pythran_dsp import select_angles
 from qampy.core.pythran_dsp import bps as _bps_idx_pyt
+#from qampy.core.dsp_cython import select_angles
+
 from qampy.core.filter import moving_average
 try:
     import arrayfire as af

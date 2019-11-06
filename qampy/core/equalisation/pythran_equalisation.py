@@ -44,7 +44,7 @@ def apply_filter_to_signal(E, os, wx):
     """
     Ntaps = wx.shape[2]
     L = E.shape[1]
-    modes = E.shape[0]
+    modes = wx.shape[0]
     N = (L-Ntaps+os)//os
     output  = np.zeros((modes, N), dtype=E.dtype)
     #omp parallel for
@@ -55,8 +55,8 @@ def apply_filter_to_signal(E, os, wx):
         output[j, i] = Xest
     return output
 
-#pythran export train_equaliser(complex128[][], int, int, int, float64, complex128[][][], int[] or int64[], bool, complex128[][], str)
-def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  method):
+#pythran export train_equaliser(complex128[][], int, int, int, float64, complex128[][][], int, bool, complex128[][], str)
+def train_equaliser(E, TrSyms, Niter, os, mu, wx, nmodes, adaptive, symbols,  method):
     if method == "mcma":
         errorfct = mcma_error
     elif method == "cma":
@@ -75,11 +75,11 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
         errorfct = sbd_data_error
     else:
         raise ValueError("Unknown method %s"%method)
-    assert symbols.shape[0] >= modes.size, "symbols must be at least size of modes"
+    assert symbols.shape[0] >= nmodes, "symbols must be at least size of modes"
     ntaps = wx.shape[-1]
-    err = np.zeros((modes.size, TrSyms*Niter), dtype=E.dtype)
+    err = np.zeros((nmodes, TrSyms*Niter), dtype=E.dtype)
     #omp parallel for
-    for mode in modes:
+    for mode in range(nmodes):
         for it in range(Niter):
             for i in range(TrSyms):
                 X = E[:, i * os:i * os + ntaps]

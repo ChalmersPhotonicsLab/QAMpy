@@ -83,7 +83,8 @@ class TestEqualiseSignalParameters(object):
                 symbols = np.tile(symbols, (symbolsmodes, 1))
         else:
             symbols = None
-        E, wx, e  = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, symbols=None, selected_modes=selected_modes, apply=True)
+        E, wx, e  = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, symbols=None, apply=True,
+                                                  nmodes=selected_modes)
         E = sig.recreate_from_np_array(E)
         ser = np.mean(E.cal_ser())
         assert ser < 1e-5
