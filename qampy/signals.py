@@ -243,6 +243,8 @@ class SignalBase(np.ndarray):
         return np.array(tx_out), np.array(rx_out)
 
     def _adjust_only(self, tx, rx, which="tx"):
+        if tx.shape[0] > rx.shape[0]: # if we only want to adjust we assume that modes are adjusted as well
+            tx = tx[:rx.shape[0]]
         if tx.shape == rx.shape:
             return tx, rx
         nm = tx.shape[0]
