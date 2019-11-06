@@ -441,14 +441,15 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     else:
         wxy = wxy.astype(E.dtype)
         Ntaps = wxy.shape[-1]
-    TrSyms = _cal_training_symbol_len(os, Ntaps, E.shape[-1])
+    if TrSyms is None:
+        TrSyms = _cal_training_symbol_len(os, Ntaps, E.shape[-1])
     if symbols is None or  method in NONDECISION_BASED: # This code currently prevents passing "symbol arrays for RDE or CMA algorithms
         symbols = generate_symbols_for_eq(method, M, E.dtype)
     else:
         symbols = symbols.astype(E.dtype)
     if symbols.ndim == 1 or symbols.shape[0] == 1:
         symbols = np.tile(symbols, (nmodes, 1))
-    elif symbols.shape[0] != nmodes:
+    elif symbols.shape[0] < nmodes:
         raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
     err, wxy, mu = pythran_equalisation.train_equaliser(E.copy(), TrSyms, Niter, os, mu, wxy.copy(), nmodes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
     if apply:

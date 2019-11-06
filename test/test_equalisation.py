@@ -104,4 +104,28 @@ class TestEqualiseSignalParameters(object):
         E, wx, e = equalisation.equalise_signal(sig,1e-3, Ntaps=19, adaptive_stepsize=True, apply=True)
         ser = np.mean(E.cal_ser())
         assert ser < 1e-5
+        
+    @pytest.mark.parametrize("ndim", [0, 1, np.arange(2)])
+    @pytest.mark.parametrize("nmodes", [1,2])
+    def test_data_aided(self, ndim, nmodes):
+        from qampy import helpers
+        ntaps = 21
+        sig = signals.SignalQAMGrayCoded(64, 10**5, nmodes=2, fb=25e9)
+        sig2 = sig.resample(2*sig.fb, beta=0.02)
+        sig2 = helpers.normalise_and_center(sig2)
+        sig2 = np.roll(sig2, ntaps//2)
+        sig3 = impairments.simulate_transmission(sig2, dgd=15e-12, theta=np.pi/3., snr=35)
+        sig3 = helpers.normalise_and_center(sig3)
+        if nmodes == 2:
+            N = np.arange(2)
+        else:
+            N = ndim
+        sigout, wxy, err = equalisation.equalise_signal(sig3, 1e-3, Ntaps=ntaps, adaptive_stepsize=True,
+                                                symbols=sig3.symbols[N], apply=True, method="sbd_data", TrSyms=10000, nmodes=nmodes)
+        sigout = helpers.normalise_and_center(sigout)
+        gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0])
+        assert gmi > 5.9
+        
+        
+
                         
