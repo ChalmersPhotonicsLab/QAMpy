@@ -794,6 +794,17 @@ class TestSignalQualityOnSignal(object):
         nbits = np.log2(M)
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
+        
+    def test_gmi_single_d(self):
+        s = signals.SignalQAMGrayCoded(4, 2**16, nmodes=2)
+        gmi = s[0].cal_gmi()[0]
+        npt.assert_almost_equal(gmi, 2)
+
+    @pytest.mark.parametrize("method", ["cal_ser", "cal_ber", "cal_evm"])
+    def test_err_single_de(self, method):
+        s = signals.SignalQAMGrayCoded(4, 2**16, nmodes=2)
+        err = getattr(s[0], method)()
+        assert err < 1e-5
 
 
 class TestPilotSignalQualityOnSignal(object):

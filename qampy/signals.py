@@ -185,7 +185,7 @@ class SignalBase(np.ndarray):
 
     def _signal_present(self, signal):
         if signal is None:
-            return self
+            return np.atleast_2d(self)
         else:
             return np.atleast_2d(signal)
 
@@ -224,7 +224,9 @@ class SignalBase(np.ndarray):
             return self._adjust_only(tx, rx)
         tx_out = []
         rx_out = []
-        idxx = list(range(rx.shape[0]))
+        txmodes = tx.shape[0]
+        rxmodes = rx.shape[0]
+        idxx = list(range(max(txmodes, rxmodes)))
         # TODO: check if it's possible to do this in a faster way. One option: only shift once.
         for j in range(rx.shape[0]):
             acm = -100.
