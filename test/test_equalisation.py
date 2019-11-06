@@ -126,6 +126,21 @@ class TestEqualiseSignalParameters(object):
         gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0])
         assert gmi > 5.9
         
+    @pytest.mark.parametrize("rollframe", [True, False])
+    @pytest.mark.parametrize("modal_delay", [(2000,2000), (3000, 2000)])
+    @pytest.mark.parametrize("ddmethod", ["sbd", "sbd_data"])
+    def test_pilot_based(self, rollframe, modal_delay, ddmethod):
+        from qampy import phaserec
+        mysig = signals.SignalWithPilots(64,2**16,2**10,32,nmodes=2,Mpilots=4,nframes=3,fb=24e9)
+        mysig2 = mysig.resample(mysig.fb*2,beta=0.01)
+        mysig3 = impairments.simulate_transmission(mysig2,snr=25,dgd=10e-12, freq_off=00e6,lwdth=000e3,roll_frame_sync=rollframe, modal_delay=modal_delay)
+        mysig3.sync2frame()
+        mysig3.corr_foe()
+        wxy, eq_sig = equalisation.pilot_equalizer(mysig3, (1e-3,1e-3), 45, foe_comp=False, methods=("cma", ddmethod))
+        cpe_sig, ph = phaserec.pilot_cpe(eq_sig,N=5,use_seq=False) 
+        gmi = np.mean(cpe_sig.cal_gmi()[0])
+        assert gmi > 5.5
+        
         
 
                         

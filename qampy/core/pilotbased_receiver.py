@@ -489,6 +489,10 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
         out_taps, err = equalisation.dual_mode_equalisation(rx_sig_mode, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
-                                                            methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), symbols=ref_symbs, apply=False)
+                                                            methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize),
+                                                            symbols=np.tile(ref_symbs, (2,1,1)), apply=False)
+                                                            # we need to tile the reference symbols because the dual-mode
+                                                            # equaliser passes the first dimension of the symbols to the first method
+                                                            # and the second one to the second.
     return np.array(out_taps), np.array(foePerMode)
 
