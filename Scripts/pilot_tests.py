@@ -4,7 +4,7 @@ from qampy import signals, impairments, equalisation, phaserec
 
 mysig = signals.SignalWithPilots(64,2**16,2**10,32,nmodes=2,Mpilots=4,nframes=3,fb=24e9)
 mysig2 = mysig.resample(mysig.fb*2,beta=0.01)
-mysig3 = impairments.simulate_transmission(mysig2,snr=20,dgd=10e-12, freq_off=00e6,lwdth=000e3,roll_frame_sync=True)#, modal_delay=[2000, 3000])
+mysig3 = impairments.simulate_transmission(mysig2,snr=20,dgd=10e-12, freq_off=00e6,lwdth=000e3,roll_frame_sync=True, modal_delay=[2000, 3000])
 mysig3.sync2frame()
 print(mysig3.shiftfctrs)
 mysig3.corr_foe()

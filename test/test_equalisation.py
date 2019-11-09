@@ -46,21 +46,21 @@ class TestEqualisation(object):
 
 
 class TestEqualiseSignalParameters(object):
-    @pytest.mark.parametrize( ("selected_modes", "sigmodes"),
+    @pytest.mark.parametrize( ("modes", "sigmodes"),
                               [ (None, 1),
                                 (None, 2),
                                 (np.arange(2), 2),
                                 (np.arange(2), 3),
                                 pytest.param(np.arange(2), 1, marks=pytest.mark.xfail(raises=AssertionError))
                                 ])
-    def test_selected_modes(self, selected_modes, sigmodes):
+    def test_selected_modes(self, modes, sigmodes):
         sig = signals.SignalQAMGrayCoded(4, 2**15, nmodes=sigmodes)
         sig = impairments.change_snr(sig, 15)
         sig = sig.resample(sig.fb*2, beta=0.1)
-        E, wx, e = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, selected_modes=selected_modes, apply=True)
-        if selected_modes is None:
-            selected_modes = np.arange(sigmodes)
-        E = sig.recreate_from_np_array(E[selected_modes])
+        E, wx, e = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, modes=modes, apply=True)
+        if modes is None:
+            modes = np.arange(sigmodes)
+        E = sig.recreate_from_np_array(E[modes])
         ser = np.mean(E.cal_ser())
         assert ser < 1e-5
 
@@ -84,7 +84,7 @@ class TestEqualiseSignalParameters(object):
         else:
             symbols = None
         E, wx, e  = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, symbols=None, apply=True,
-                                                  nmodes=selected_modes)
+                                                  modes=selected_modes)
         E = sig.recreate_from_np_array(E)
         ser = np.mean(E.cal_ser())
         assert ser < 1e-5
@@ -106,8 +106,8 @@ class TestEqualiseSignalParameters(object):
         assert ser < 1e-5
         
     @pytest.mark.parametrize("ndim", [0, 1, np.arange(2)])
-    @pytest.mark.parametrize("nmodes", [1,2])
-    def test_data_aided(self, ndim, nmodes):
+    @pytest.mark.parametrize("modes", [[0],[1], np.arange(2)])
+    def test_data_aided(self, ndim, modes):
         from qampy import helpers
         ntaps = 21
         sig = signals.SignalQAMGrayCoded(64, 10**5, nmodes=2, fb=25e9)
@@ -116,14 +116,14 @@ class TestEqualiseSignalParameters(object):
         sig2 = np.roll(sig2, ntaps//2)
         sig3 = impairments.simulate_transmission(sig2, dgd=15e-12, theta=np.pi/3., snr=35)
         sig3 = helpers.normalise_and_center(sig3)
-        if nmodes == 2:
-            N = np.arange(2)
-        else:
-            N = ndim
+        #if modes == 2:
+            #N = np.arange(2)
+        #else:
+            #N = ndim
         sigout, wxy, err = equalisation.equalise_signal(sig3, 1e-3, Ntaps=ntaps, adaptive_stepsize=True,
-                                                symbols=sig3.symbols[N], apply=True, method="sbd_data", TrSyms=10000, nmodes=nmodes)
+                                                symbols=sig3.symbols, apply=True, method="sbd_data", TrSyms=10000, modes=modes)
         sigout = helpers.normalise_and_center(sigout)
-        gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0])
+        gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0][modes])
         assert gmi > 5.9
         
     @pytest.mark.parametrize("rollframe", [True, False])
