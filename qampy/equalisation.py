@@ -110,13 +110,12 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     if apply:
         sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                                  adaptive_stepsize=adaptive_stepsize,  symbols=symbols,
-                                                 avoid_cma_sing=avoid_cma_sing, apply=True, 
-                                                              modes=modes, **kwargs)
+                                                 apply=True, modes=modes, **kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wxy, err
     else:
         return core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize,  symbols=symbols, modes=modes,
-                                             avoid_cma_sing=avoid_cma_sing, apply=False, **kwargs)
+                                             apply=False, **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
                            adaptive_stepsize=(False, False), symbols=None, modes=None, apply=True, **kwargs):
@@ -184,12 +183,12 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
     else:
         return core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                         Niter=Niter, 
-                                                       adaptive_stepsize=adaptive_stepsize, symbols=syms,
+                                                       adaptive_stepsize=adaptive_stepsize, symbols=symbols,
                                                                 modes=modes, apply=False,**kwargs)
 
 
 
-def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False, **eqkwargs):
+def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False, **eqkwargs):
     """
     Pilot based equalisation 
     

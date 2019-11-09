@@ -22,7 +22,7 @@ sig4 = sig3[:, 20000:]
 #sig4[1,:] = sig3[0, 20000:]
 
 sig4.sync2frame(Ntaps=ntaps)
-wx, s1 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True)
+wx, s1 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True)
 s2, ph = phaserec.pilot_cpe(s1, nframes=1)
 gmi = s2.cal_gmi()
 evm = s2.cal_evm()

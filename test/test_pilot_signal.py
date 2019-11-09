@@ -15,7 +15,7 @@ class TestPilotSignalRecovery(object):
         sig3 = core.impairments.rotate_field(sig3, np.pi*theta)
         sig4 = sig3[:, 20000:]
         sig4.sync2frame(corr_coarse_foe=False)
-        s1, s2 = equalisation.pilot_equalizer(sig4, [5e-3, 5e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
+        s1, s2 = equalisation.pilot_equaliser(sig4, [5e-3, 5e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
         ph = phaserec.find_pilot_const_phase(s2.extract_pilots()[:,:s2._pilot_seq_len], s2.pilot_seq)
         s2 = phaserec.correct_pilot_const_phase(s2, ph)
         ser = s2.cal_ser()
@@ -32,7 +32,7 @@ class TestPilotSignalRecovery(object):
         sig3 = impairments.apply_PMD(sig3, theta*np.pi, dgd)
         sig4 = sig3[:, 20000:]
         sig4.sync2frame(corr_coarse_foe=False)
-        s1, s2 = equalisation.pilot_equalizer(sig4, [5e-3, 5e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
+        s1, s2 = equalisation.pilot_equaliser(sig4, [5e-3, 5e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
         ph = phaserec.find_pilot_const_phase(s2.extract_pilots()[:,:s2._pilot_seq_len], s2.pilot_seq)
         s2 = phaserec.correct_pilot_const_phase(s2, ph)
         ser = s2.cal_ser(synced=False)
@@ -48,7 +48,7 @@ class TestPilotSignalRecovery(object):
         sig3 = sig2[::-1]
         sig4 = sig3[:, 20000:]
         sig4.sync2frame(corr_coarse_foe=False)
-        s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], 17, True, adaptive_stepsize=True, foe_comp=False)
+        s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], 17, True, adaptive_stepsize=True, foe_comp=False)
         ph = phaserec.find_pilot_const_phase(s2.extract_pilots()[:,:s2._pilot_seq_len], s2.pilot_seq)
         s2 = phaserec.correct_pilot_const_phase(s2, ph)
         ser = s2.cal_ser(synced=True)
@@ -64,7 +64,7 @@ class TestPilotSignalRecovery(object):
         sig3 = impairments.change_snr(sig2, snr)
         sig4 = sig3[:, 20000:]
         sig4.sync2frame(corr_coarse_foe=False)
-        s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
+        s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
         

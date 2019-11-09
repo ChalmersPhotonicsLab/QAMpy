@@ -136,7 +136,7 @@ class TestEqualiseSignalParameters(object):
         mysig3 = impairments.simulate_transmission(mysig2,snr=25,dgd=10e-12, freq_off=00e6,lwdth=000e3,roll_frame_sync=rollframe, modal_delay=modal_delay)
         mysig3.sync2frame()
         mysig3.corr_foe()
-        wxy, eq_sig = equalisation.pilot_equalizer(mysig3, (1e-3,1e-3), 45, foe_comp=False, methods=("cma", ddmethod))
+        wxy, eq_sig = equalisation.pilot_equaliser(mysig3, (1e-3, 1e-3), 45, foe_comp=False, methods=("cma", ddmethod))
         cpe_sig, ph = phaserec.pilot_cpe(eq_sig,N=5,use_seq=False) 
         gmi = np.mean(cpe_sig.cal_gmi()[0])
         assert gmi > 5.5

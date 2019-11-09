@@ -2,7 +2,7 @@ import numpy as np
 from qampy.core import equalisation,  phaserecovery, pilotbased_receiver,pilotbased_transmitter,filter,\
     resample
 from qampy import signals, impairments, helpers, phaserec
-from qampy.equalisation import pilot_equalizer
+from qampy.equalisation import pilot_equaliser
 import matplotlib.pylab as plt
 
 def run_pilot_receiver2(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=128, Numtaps=(17, 45),
@@ -14,7 +14,7 @@ def run_pilot_receiver2(rec_signal, process_frame_id=0, foe_comp=True, os=2, M=1
     #signal = np.roll(signal, -shift_factor[shift_factor>=0].min(), axis=-1)
     #shift_factors -= shift_factors[shift_factors>=0].min()
     #signal.shiftfctrs = shift_factors
-    taps_all, eq_mode_sig = pilot_equalizer(rec_signal, mu, Numtaps[1], apply=True, foe_comp=foe_comp, adaptive_stepsize=adap_step[1],
+    taps_all, eq_mode_sig = pilot_equaliser(rec_signal, mu, Numtaps[1], apply=True, foe_comp=foe_comp, adaptive_stepsize=adap_step[1],
                                             Niter=Niter[1], methods=method)
     #symbs, trace = pilotbased_receiver.pilot_based_cpe(eq_mode_sig[:, eq_mode_sig._pilot_seq_len:eq_mode_sig.frame_len],
                                                            #eq_mode_sig.ph_pilots, eq_mode_sig._pilot_ins_rat,

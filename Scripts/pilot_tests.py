@@ -8,7 +8,7 @@ mysig3 = impairments.simulate_transmission(mysig2,snr=20,dgd=10e-12, freq_off=00
 mysig3.sync2frame()
 print(mysig3.shiftfctrs)
 mysig3.corr_foe()
-wxy, eq_sig = equalisation.pilot_equalizer(mysig3, (1e-3,1e-3), 45, foe_comp=False, methods=("cma", "sbd_data"))
+wxy, eq_sig = equalisation.pilot_equaliser(mysig3, (1e-3, 1e-3), 45, foe_comp=False, methods=("cma", "sbd_data"))
 cpe_sig, ph = phaserec.pilot_cpe(eq_sig,N=5,use_seq=False)
 #cpe_sig = eq_sig
 print(cpe_sig.cal_gmi())

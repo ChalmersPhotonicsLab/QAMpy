@@ -370,8 +370,8 @@ def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None
     symbols = np.atleast_1d(symbols)
     if symbols.ndim < 3:
         symbols = np.tile(symbols, (2,1,1))
-    wxy, err1 = equalise_signal(E, os, mu[0], M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[0], modes=modes,**kwargs)
-    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[1], modes=modes, **kwargs)
+    wxy, err1 = equalise_signal(E, os, mu[0], M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols[0],  modes=modes,**kwargs)
+    wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[1],  modes=modes, **kwargs)
     if apply:
         Eest = apply_filter(E, os, wxy2)
         return Eest, wxy2, (err1, err2)
