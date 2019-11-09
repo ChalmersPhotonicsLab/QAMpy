@@ -48,8 +48,7 @@ def apply_filter(sig, wxy, method="pyt"):
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
-                    avoid_cma_sing=False, apply=False, symbols=None, modes=None,
-                    **kwargs):
+                    symbols=None, modes=None, apply=False, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary.
 
@@ -79,9 +78,8 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
     adaptive_stepsize : bool, optional
         whether to use an adaptive stepsize or a fixed
 
-    avoid_cma_sing : bool, optional
-        for dual pol signals make y taps orthogonal to x taps after first convergence. Helps to avoid
-        singularity problems when demulitplexing dual pol
+    modes: array_like, optional
+        array or list  of modes to  equalise over (default=None  equalise over all modes of the input signal)
 
     apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
@@ -121,8 +119,7 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
                                              avoid_cma_sing=avoid_cma_sing, apply=False, **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
-                           adaptive_stepsize=(False, False), avoid_cma_sing=(False, False), apply=True, symbols=None,
-                           modes=None, **kwargs):
+                           adaptive_stepsize=(False, False), symbols=None, modes=None, apply=True, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE.
 
@@ -149,10 +146,9 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
 
     adaptive_stepsize : tuple(bool, bool), optional
         whether to adapt the step size upon training for each of the equaliser modes
-
-    avoid_cma_sing : bool, optional
-        for dual pol signals make y taps orthogonal to x taps after first convergence. Helps to avoid
-        singularity problems when demulitplexing dual pol
+        
+    modes: array_like, optional
+        array or list  of modes to  equalise over (default=None  equalise over all modes of the input signal)
 
     apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
@@ -182,19 +178,51 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
             symbols = None
     if apply:
         sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
-                                                       adaptive_stepsize=adaptive_stepsize, symbols=syms,
-                                                                avoid_cma_sing=avoid_cma_sing,
+                                                       adaptive_stepsize=adaptive_stepsize, symbols=symbols, Niter=Niter,
                                                                     modes=modes, apply=True,**kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
     else:
         return core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
+                                                        Niter=Niter, 
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
-                                                                avoid_cma_sing=avoid_cma_sing,
                                                                 modes=modes, apply=False,**kwargs)
 
 
 
 def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False, **eqkwargs):
+    """
+    Pilot based equalisation 
+    
+    Parameters
+    ----------
+    signal : SignalObject
+        Pilot-based signal object, has to be synced already
+    mu : float
+        Step size parameter
+    Ntaps : int
+        Number of equaliser taps
+    apply : bool, optional
+        Apply the filter to the signal
+    foe_comp : bool, optional
+        Do frequency offset compensation
+    verbose : bool, optional
+        Return verbose output
+    **eqkwargs 
+        Dictionary of values to pass to the equaliser functions
+
+    Returns
+    -------
+    taps : array_like
+        filter taps
+    if apply also return
+        out_sig : SignalObject
+            equalised signal
+    if verbose  also return
+        foe_all : array_like
+            estimated  frequency offset
+        ntaps : tuple
+            Tuple of equaliser and synchronization taps
+    """
 
     if signal.shiftfctrs is None:
         raise ValueError("Stupid student, sync first")

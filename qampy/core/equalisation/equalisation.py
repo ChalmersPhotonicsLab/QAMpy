@@ -310,7 +310,7 @@ def _lms_init(E, os, wxy, Ntaps, TrSyms, mu):
     Eout = E[:, :(TrSyms-1)*os+Ntaps].copy()
     return Eout, wxy, TrSyms, Ntaps, mu, pols
 
-def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  avoid_cma_sing=(False, False), modes=None, apply=True, **kwargs):
+def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None), Niter=(1,1), methods=("mcma", "sbd"), adaptive_stepsize=(False, False), symbols=None,  modes=None, apply=True, **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, with a dual mode approach. Typically this is done using a CMA type initial equaliser for pre-convergence and a decision directed equaliser as a second to improve MSE. 
 
@@ -345,7 +345,11 @@ def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None
         whether to adapt the step size upon training for each of the equaliser modes
 
     symbols : array_like, optional
-        array of symbol arrays. If only a single array is given they are used for both dimensions
+        array of symbol arrays. If only a single array is given they are used for both dimensions (default=None, use the 
+        symbols generated for the QAM format)
+    
+    modes : array_like, optional
+        array or list  of modes to  equalise over (default=None  equalise over all modes of the input signal)
 
     apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
@@ -374,7 +378,7 @@ def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None
     else:
         return wxy2, (err1, err2)
 
-def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None, avoid_cma_sing=False, apply=False,  modes=None, **kwargs):
+def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,  symbols=None,  modes=None, apply=False,  **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary. 
     
@@ -405,14 +409,18 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         number of iterations. Default is one single iteration
 
     method  : string, optional
-        equaliser method has to be one of cma, rde, mrde, mcma, sbd, mddma, sca, dd_adaptive, sbd_adaptive, mcma_adaptive
+        equaliser method has to be one of cma, mcma, rde, mrde, sbd, sbd_data, mddma, dd
 
     adaptive_stepsize : bool, optional
         whether to use an adaptive stepsize or a fixed
-    symbols : array_like
-        array of coded symbols to decide on for dd-based equalisation functions
-    avoid_cma_sing : bool
-        avoid the CMA polarization demux singularity by orthogonallizing taps after first pol convergence
+        
+    symbols : array_like, optional
+        array of coded symbols to decide on for dd-based equalisation functions (default=None, generate symbols for this
+        QAM format)
+        
+    modes: array_like, optional
+        array or list  of modes to  equalise over (default=None  equalise over all modes of the input signal)
+
     apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
 
