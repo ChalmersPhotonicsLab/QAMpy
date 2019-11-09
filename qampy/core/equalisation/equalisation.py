@@ -345,7 +345,7 @@ def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None
         whether to adapt the step size upon training for each of the equaliser modes
 
     symbols : array_like, optional
-        tuple of symbol arrays. If only a single array is given they are used for both dimensions
+        array of symbol arrays. If only a single array is given they are used for both dimensions
 
     apply: Bool, optional
         whether to apply the filter taps and return the equalised signal
@@ -363,8 +363,9 @@ def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None
 
     if apply is False do not return E
     """
-    if len(symbols) == 1 or symbols.ndim == 1:
-        symbols = [symbols, symbols]
+    symbols = np.atleast_1d(symbols)
+    if symbols.ndim < 3:
+        symbols = np.tile(symbols, (2,1,1))
     wxy, err1 = equalise_signal(E, os, mu[0], M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[0], modes=modes,**kwargs)
     wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[0], avoid_cma_sing=avoid_cma_sing[1], modes=modes, **kwargs)
     if apply:
