@@ -102,9 +102,10 @@ class TestEqualiseSignalParameters(object):
         sig = impairments.change_snr(sig, 30)
         sig = sig.resample(sig.fb*2, beta=0.1)
         E, wx, e = equalisation.equalise_signal(sig,1e-3, Ntaps=19, adaptive_stepsize=True, apply=True)
-        ser = np.mean(E.cal_ser())
-        assert ser < 1e-5
-        
+        serx,sery = E.cal_ser()
+        assert serx < 1e-4
+        assert sery < 1e-4
+
     @pytest.mark.parametrize("ndim", [0, 1, np.arange(2)])
     @pytest.mark.parametrize("modes", [[0],[1], np.arange(2)])
     def test_data_aided(self, ndim, modes):
