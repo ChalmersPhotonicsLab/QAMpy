@@ -87,7 +87,7 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
             for i in range(TrSyms):
                 X = E[:, i * os:i * os + ntaps]
                 Xest = apply_filter(X,  wx[mode])
-                err[mode, it*Niter+i], symb, d = errorfct(Xest, symbols[mode], i)
+                err[mode, it*Niter+i] = errorfct(Xest, symbols[mode], i)
                 wx[mode] += mu * np.conj(err[mode, it*Niter+i]) * X
                 if adaptive and i > 0:
                     mu = adapt_step(mu, err[mode, it*Niter+i], err[mode, it*Niter+i-1])
