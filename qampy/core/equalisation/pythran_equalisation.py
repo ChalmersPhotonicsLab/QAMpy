@@ -160,7 +160,7 @@ def det_symbol(X, symbs):
         distance of X from s
     """
     d0 = 1000.
-    s = 1.+1.j
+    s = symbs.dtype.type(1)
     for j in range(symbs.shape[0]):
         d = abs(X-symbs[j])**2
         if d < d0:
@@ -190,7 +190,7 @@ def det_symbol_parallel(X, symbs): # this version can be much faster if not in a
          distance of X from s
     """
     d0 = 1000.
-    s = 1.+1.j
+    s = symbs.dtype.type(1)
     d0_priv = d0
     s_priv = s
     ##omp parallel for
