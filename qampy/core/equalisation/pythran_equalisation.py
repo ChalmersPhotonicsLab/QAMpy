@@ -16,7 +16,7 @@ def adapt_step(mu, err_p, err):
 def apply_filter(E, wx):
     pols = E.shape[0]
     Ntaps = wx.shape[1]
-    Xest = 0+0j
+    Xest = E.dtype.type(0)
     for k in range(pols):
         for i in range(Ntaps):
             Xest += E[k, i]*np.conj(wx[k,i])
