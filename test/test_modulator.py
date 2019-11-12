@@ -747,7 +747,7 @@ class TestSignalQualityOnSignal(object):
         ser = s.cal_ser()
         assert ser[0] == 0
 
-    @pytest.mark.p        #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
+    @pytest.mark.parametrize("nmodes", np.arange(1,5))       #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
     def test_evm_shape(self, nmodes):
         s = signals.ResampledQAM(16, 2 ** 16, nmodes=nmodes)
         evm = s.cal_evm()
