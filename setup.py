@@ -37,6 +37,14 @@ if sys.platform.startswith("win"):
                            language="c++",
                            extra_compile_args=WIN_COMPILER_ARGS,
                            extra_link_args=WIN_LINK_ARGS)
+    dsp_pythran = PythranExtension(name="qampy.core.pythran_dsp",
+                                   sources = ["qampy/core/pythran_dsp.py"],
+                                   extra_compile_args=WIN_COMPILER_ARGS,
+                                   extra_link_args=WIN_LINK_ARGS)
+    pythran_equalisation = PythranExtension(name="qampy.core.equalisation.pythran_equalisation",
+                                            sources = ["qampy/core/equalisation/pythran_equalisation.py"],
+                                            extra_compile_args=WIN_COMPILER_ARGS,
+                                            extra_link_args=WIN_LINK_ARGS)
 else:
     cython_equalisation = Extension(name="qampy.core.equalisation.cython_equalisation",
                                     sources=["qampy/core/equalisation/cython_equalisation.pyx"],
