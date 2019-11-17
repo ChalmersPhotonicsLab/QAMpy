@@ -103,7 +103,7 @@ def cma_error(Xest, s1, i):
 def mcma_error(Xest, s1, i):
     dr = (s1[0].real - Xest.real**2)
     di = (s1[0].imag - Xest.imag**2)
-    return dr*Xest.real + di*Xest.imag*1.j
+    return dr*Xest.real + di*Xest.imag*1.j # note currently this generates complex128 because of 1j see pythran issue #1408
 
 def rde_error(Xest, symbs, i):
     partition, codebook = np.split(symbs, 2)
