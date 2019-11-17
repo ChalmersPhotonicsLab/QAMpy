@@ -70,10 +70,10 @@ def generate_symbols_for_eq(method, M, dtype):
     if method in ["mcma"]:
         return np.atleast_2d(_cal_Rconstant_complex(M)).astype(dtype)
     if method in ["rde"]:
-        p, c= generate_partition_codes_radius(M)
+        p = generate_partition_codes_radius(M)
         return np.atleast_2d(p+0j).astype(dtype)
     if method in ["mrde"]:
-        p, c = generate_partition_codes_complex(M)
+        p = generate_partition_codes_complex(M)
         return  np.atleast_2d(p).astype(dtype)
     if method in ["sbd"]:
         symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
@@ -440,7 +440,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     method = method.lower()
     #E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu, selected_modes)
     if E.itemsize == 8:
-        mu = np.float3(mu)
+        mu = np.float32(mu)
     else:
         mu = np.float64(mu)
     nmodes = E.shape[0]
