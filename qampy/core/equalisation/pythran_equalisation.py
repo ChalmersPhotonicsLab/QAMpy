@@ -101,9 +101,10 @@ def cma_error(Xest, s1, i):
     return d*Xest
 
 def mcma_error(Xest, s1, i):
+    J = Xest.dtype.type(1j)
     dr = (s1[0].real - Xest.real**2)
     di = (s1[0].imag - Xest.imag**2)
-    return dr*Xest.real + di*Xest.imag*1.j # note currently this generates complex128 because of 1j see pythran issue #1408
+    return dr*Xest.real + di*Xest.imag*J
 
 def rde_error(Xest, symbs, i):
     partition, codebook = np.split(symbs, 2)
@@ -112,23 +113,27 @@ def rde_error(Xest, symbs, i):
     return Xest*(r-sq)
 
 def mrde_error(Xest, symbs, i):
+    J = Xest.dtype.type(1j)
     partition, codebook = np.split(symbs, 2)
-    sq = Xest.real**2 + 1j*Xest.imag**2
-    r = partition_value(sq.real, partition.real, codebook.real) + 1j * partition_value(sq.imag, partition.imag, codebook.imag)
-    return (r.real - sq.real)*Xest.real + 1j*(r.imag - sq.imag)*Xest.imag
+    sq = Xest.real**2 + J*Xest.imag**2
+    r = partition_value(sq.real, partition.real, codebook.real) + J * partition_value(sq.imag, partition.imag, codebook.imag)
+    return (r.real - sq.real)*Xest.real + J*(r.imag - sq.imag)*Xest.imag
 
 def sbd_error(Xest, symbs, i):
+    J = Xest.dtype.type(1j)
     symbol, dist = det_symbol(Xest, symbs)
-    return (symbol.real - Xest.real)*abs(symbol.real) + (symbol.imag - Xest.imag)*1.j*abs(symbol.imag)
+    return (symbol.real - Xest.real)*abs(symbol.real) + (symbol.imag - Xest.imag)*J*abs(symbol.imag)
 
 def sbd_data_error(Xest, symbs, i):
+    J = Xest.dtype.type(1j)
     symbol = symbs[i]
     dist = symbol - Xest
-    return dist.real*abs(symbol.real) + dist.imag*1.j*abs(symbol.imag)
+    return dist.real*abs(symbol.real) + dist.imag*J*abs(symbol.imag)
 
 def mddma_error(Xest, symbs, i):
+    J = Xest.dtype.type(1j)
     symbol, dist = det_symbol(Xest, symbs)
-    return (symbol.real**2 - Xest.real**2)*Xest.real + 1.j*(symbol.imag**2 - Xest.imag**2)*Xest.imag
+    return (symbol.real**2 - Xest.real**2)*Xest.real + J*(symbol.imag**2 - Xest.imag**2)*Xest.imag
 
 def ddlms_error(Xest, symbs, i):
     symbol, dist = det_symbol(Xest, symbs)
