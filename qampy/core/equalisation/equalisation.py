@@ -118,9 +118,7 @@ def _select_errorfct(method, M, symbols, dtype, **kwargs):
     elif method in ['mddma']:
         return ErrorFctMDDMA((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
     elif method in ['dd']:
-        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))    
-    elif method in ['data']:
-        return ErrorFctSBDDataAided(symbols.astype(dtype))
+        return ErrorFctDD((cal_symbols_qam(M) / np.sqrt(cal_scaling_factor_qam(M))).astype(dtype))
     else:
         raise ValueError("%s is unknown method"%method)
 
@@ -475,12 +473,12 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     # scale signal
     Et, wxy, TrSyms, Ntaps, err, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, Niter)
     wxy = wxy.astype(E.dtype)
-    
+
     if selected_modes is None:
         pols = np.arange(E.shape[0])
     else:
         pols = selected_modes
-    
+
     for l in pols:
         if method == "data":
             eqfct.mode = l
@@ -491,10 +489,10 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
                                                                        adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
             wxy[l + 1] = orthogonalizetaps(wxy[l])
-
     if apply:
+        # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)
-        return Eest, wxy, err
+        return np.squeeze(Eest[selected_modes]), np.squeeze(wxy[selected_modes]), err
     else:
         return wxy, err
 

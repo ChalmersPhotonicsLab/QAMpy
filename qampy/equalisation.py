@@ -48,7 +48,7 @@ def apply_filter(sig, wxy, method="pyx"):
     return sig.recreate_from_np_array(sig_out, fs=sig.fb)
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
-                    avoid_cma_sing=False, apply=False, symbols=None, 
+                    avoid_cma_sing=False, apply=False, symbols=None,
                     **kwargs):
     """
     Blind equalisation of PMD and residual dispersion, using a chosen equalisation method. The method can be any of the keys in the TRAINING_FCTS dictionary.
@@ -107,16 +107,16 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
         syms = sig.coded_symbols
     except AttributeError:
         syms = None
-        
+
     if apply:
         sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                                  adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                                 avoid_cma_sing=avoid_cma_sing, apply=False, **kwargs)
+                                                 avoid_cma_sing=avoid_cma_sing, apply=True, **kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wxy, err
     else:
         return core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                 adaptive_stepsize=adaptive_stepsize,  symbols=syms,
-                                             avoid_cma_sing=avoid_cma_sing, apply=apply,**kwargs)
+                                             avoid_cma_sing=avoid_cma_sing, apply=False, **kwargs)
 
 def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), methods=("mcma", "sbd"),
                            adaptive_stepsize=(False, False), avoid_cma_sing=(False, False), apply=True, symbols=None,
@@ -161,7 +161,7 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
 
     if apply:
         sig_out   : SignalObject
-            equalised signal X and Y polarisation5920855
+            equalised signal X and Y polarisation
 
     (wx, wy)  : tuple(array_like, array_like)
        equaliser taps for the x and y polarisation
@@ -172,7 +172,7 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
     if apply is False do not return sig_out
 
     """
-    
+
     try:
         syms = sig.coded_symbols
     except AttributeError:
@@ -181,13 +181,13 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
         sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
-                                                                apply=apply,**kwargs)
+                                                                apply=True,**kwargs)
         return sig.recreate_from_np_array(sig_out, fs=sig.fb), wx, err
     else:
         return core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=syms,
                                                                 avoid_cma_sing=avoid_cma_sing,
-                                                                apply=apply,**kwargs)
+                                                                apply=False,**kwargs)
 
 
 
@@ -197,13 +197,13 @@ def pilot_equalizer(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
         raise ValueError("Stupid student, sync first")
     else:
         eq_shiftfctrs = np.array(signal.shiftfctrs,dtype=int)
-        
+
     if (abs(Ntaps-signal.synctaps) % signal.os) != 0:
         raise ValueError("Tap difference need to be an integer of the oversampling")
     elif Ntaps != signal.synctaps:
         eq_shiftfctrs -= (Ntaps - signal.synctaps)//2
-            
-    
+
+
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, eq_shiftfctrs, os=signal.os, mu=mu,
                                                                     foe_comp=foe_comp, Ntaps = Ntaps, **eqkwargs)
     taps_all = np.array(taps_all)
