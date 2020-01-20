@@ -462,7 +462,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
                                                                  Niter=Niter, method=methods[0],
                                                                  adaptive_stepsize=adaptive_stepsize, apply=True,
                                                                  modes=[i])
-            syms_out.append(syms_out)
+            syms_out.append(syms_out_tmp)
 
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
