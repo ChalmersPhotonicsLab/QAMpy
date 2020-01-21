@@ -457,7 +457,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
         wx=None
         for i in range(npols):
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
-            
+            # ERROR: the below returns a too large number of modes (some of them are unequalized
             syms_out_tmp, wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=wx, Ntaps=Ntaps,
                                                                  Niter=Niter, method=methods[0],
                                                                  adaptive_stepsize=adaptive_stepsize, apply=True,
