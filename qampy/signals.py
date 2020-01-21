@@ -185,7 +185,7 @@ class SignalBase(np.ndarray):
 
     def _signal_present(self, signal):
         if signal is None:
-            return self
+            return np.atleast_2d(self)
         else:
             return np.atleast_2d(signal)
 
@@ -224,7 +224,9 @@ class SignalBase(np.ndarray):
             return self._adjust_only(tx, rx)
         tx_out = []
         rx_out = []
-        idxx = list(range(rx.shape[0]))
+        txmodes = tx.shape[0]
+        rxmodes = rx.shape[0]
+        idxx = list(range(max(txmodes, rxmodes)))
         # TODO: check if it's possible to do this in a faster way. One option: only shift once.
         for j in range(rx.shape[0]):
             acm = -100.
@@ -241,6 +243,8 @@ class SignalBase(np.ndarray):
         return np.array(tx_out), np.array(rx_out)
 
     def _adjust_only(self, tx, rx, which="tx"):
+        if tx.shape[0] > rx.shape[0]: # if we only want to adjust we assume that modes are adjusted as well
+            tx = tx[:rx.shape[0]]
         if tx.shape == rx.shape:
             return tx, rx
         nm = tx.shape[0]
@@ -1433,13 +1437,16 @@ class SignalWithPilots(SignalBase):
         return idx, idx_dat, idx_pil
 
     @classmethod
-    def from_symbol_array(cls, payload, frame_len, pilot_seq_len, pilot_ins_rat, pilots=None, nframes=1, pilot_scale=1, Mpilots=4, **pilot_kwargs):
+    def from_symbol_array(cls, payload, frame_len, pilot_seq_len, pilot_ins_rat, pilots=None, nframes=1, pilot_scale=1, payload_is_frame=False,
+                          pilot_class = SignalQAMGrayCoded, pilot_kwargs={"M":4},
+                          payload_class=SignalQAMGrayCoded, payload_kwargs={}, **kwargs
+                          ):
         """
         Generate a pilot-bases signal from a provided payload symbol signal object.
 
         Parameters
         ----------
-        payload : SignalBase object
+        payload : SignalBase subclasss or ndarray
             The payload symbols needs to be long enough to fill one frame. If it is longer than required the data will be truncated
         frame_length : int
             overall length of the signal comprised of the pilot sequence, the phase pilots and the data payload.
@@ -1447,17 +1454,26 @@ class SignalWithPilots(SignalBase):
             number of pilots at the beginning of the frame
         pilot_ins_rat : int
             phase pilots are spaced every pilot_ins_symbol starting at the first symbol after the pilot sequence
-        pilots : SignalBase object, optional
+        pilots : SignalBase subclass or ndarray, optional
             use pilot signal object if given, otherwise generate pilots. If given the number of modes for the pilots needs
             to be one or the same as that of the data. If it is one pilots we extend along that dimension.
         nframes : int, optional
             how often to repeat the overall frame
         pilot_scale : float, optional
             factor by which to multiply the pilots for power scaling
-        Mpilots : int, optional
-            QAM order of the pilots in the sequence and the phase pilots    frame_len : int
-        pilot_kwargs
-            keyword arguments to pass to the pilot generation
+        payload_is_frame: bool, optional
+            if True this indicates that the payload contains payload data and pilots
+        pilot_class : signal_object_class, optional
+            class of the pilot object. This needs to be subclass of the SignalBase. This will only have an effect if the given pilots
+            are not given or are a numpy array
+        pilot_args: dict, optional
+            arguments to generate pilot object if they are arrays
+        payload_class : signal_object_class, optional
+            class of the payload object. This needs to be a subclass of SignalBase
+        payload_args: dict, optional
+            argument to generate payload object if they are arrays
+        kwargs
+            keyword arguments passed to both payload and pilot objects
         Returns
         -------
         signal :
@@ -1468,15 +1484,26 @@ class SignalWithPilots(SignalBase):
         assert np.count_nonzero(idx_dat) <= N, "data frame is to short for the given frame length"
         if np.count_nonzero(idx_dat) > N:
             warnings.warn("Data for frame is shorter than length of data array, truncating")
+        if payload_is_frame:
+            pilots = pilot_class.from_symbol_array(payload[:, idx_pil], **pilot_kwargs, **kwargs)
+            payload = payload_class.from_symbol_array(payload[:, idx_dat], **payload_kwargs, **kwargs)
         out_symbs = np.empty((nmodes, frame_len), dtype=payload.dtype)
         Ndat = np.count_nonzero(idx_dat)
         if pilots is None:
-            pilots = SignalQAMGrayCoded(Mpilots, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=data.dtype, **pilot_kwargs) / np.sqrt(
-            pilot_scale)
+            pilots = pilot_class(pilot_kwargs["M"],  np.count_nonzero(idx_pil), nmodes=nmodes, dtype=payload.dtype, **pilot_args, **kwargs) / np.sqrt(
+                pilot_scale) # this is still not super general
         else:
             assert (nmodes == pilots.shape[0]) or (pilots.shape[0] == 1), "Pilots need to have the same number of modes as data or be one mode"
-            if pilots.shape[0] == 1:
-                pilots = np.vstack[[pilots]*nmodes]
+            if pilots.shape[0] == nmodes:
+                pass
+            elif pilots.shape[0] == 1:
+                pilots = np.array(np.vstack([pilots]*nmodes)) # this is necessary because np.vstack does not inherit attributes see issue #5
+            else:
+                raise ValueError("Pilots need to have the same number of modes as data or be one mode")
+            if not issubclass(pilots.__class__, SignalBase):
+                pilots = pilot_class.from_symbol_array(pilots, **pilot_kwargs, **kwargs)
+        if not issubclass(payload.__class__, SignalBase):
+            payload = payload_class.from_symbol_array(payload, **payload_kwargs, **kwargs)
         out_symbs[:, idx_pil] = pilots
         out_symbs[:, idx_dat] = payload[:, :Ndat]
         out_symbs = np.tile(out_symbs, nframes)

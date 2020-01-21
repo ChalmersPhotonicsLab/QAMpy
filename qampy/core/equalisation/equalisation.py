@@ -491,10 +491,10 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
                                                                        adaptive=adaptive_stepsize)
         if (l < 1) and avoid_cma_sing:
             wxy[l + 1] = orthogonalizetaps(wxy[l])
-
     if apply:
+        # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)
-        return Eest, wxy, err
+        return np.squeeze(Eest[selected_modes]), np.squeeze(wxy[selected_modes]), err
     else:
         return wxy, err
 
