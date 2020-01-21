@@ -47,12 +47,11 @@ def apply_filter_to_signal(E, os, wx):
     modes = wx.shape[0]
     N = (L-Ntaps+os)//os
     output  = np.zeros((modes, N), dtype=E.dtype)
-    #omp parallel for
-    for idx in range(modes*N): # manual collapse of loop
-        j = idx//N
-        i = idx%N
-        Xest = apply_filter(E[:, i*os:i*os+Ntaps], wx[j])
-        output[j, i] = Xest
+    #omp parallel for collapse(2)
+    for j in range(modes):
+        for i in range(N):
+            Xest = apply_filter(E[:, i*os:i*os+Ntaps], wx[j])
+            output[j, i] = Xest
     return output
 
 #pythran export train_equaliser(complex128[][], int, int, int, float64, complex128[][][], int[], bool, complex128[][], str)
