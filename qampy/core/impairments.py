@@ -357,3 +357,32 @@ def quantize_signal(sig, nbits=6, rescale=True, re_normalize=True):
         sig_out = normalise_and_center(sig_out)
 
     return sig_out
+
+def Modulator_response(rfsig_i,rfsig_q,dcsig_i=3.5,dcsig_q=3.5,dcsig_p=3.5/2,vpi_i=3.5,vpi_q=3.5,vpi_p=3.5,gi=1,gq=1,gp=1,ai=0,aq=0):
+    """
+    Simulate IQ modulator response
+
+    Parameters
+    ----------
+    rfsig_i : array_like
+        input RF signal in I path
+    rfsig_q : array_like
+        input RF signal in Q path
+    dcsig_i : array_like
+        input DC bias signal in I path
+    dcsig_q : array_like
+        input DC bias signal in Q path
+
+
+    Returns
+    -------
+
+    """
+    # Use the minus sign (-) to modulate lower level RF signal to corresponding Low-level optical field, if Vbias = Vpi
+    volt_i = rfsig_i + dcsig_i
+    volt_q = rfsig_q + dcsig_q
+    volt_p = dcsig_p
+    e_i = -(np.exp(1j*volt_i*(1+ai)/(2*vpi_i)) + gi*np.exp(-1j*volt_i*(1-ai)/(2*vpi_i)))/(1+gi)
+    e_q = -(np.exp(1j*volt_q*(1+aq)/(2*vpi_q)) + gq*np.exp(-1j*volt_q*(1-aq)/(2*vpi_q)))/(1+gq)
+    e_out = np.exp(1j*np.pi/4)*(e_i*np.exp(-1j*np.pi*volt_p/(2*vpi_p)) + gp*e_q*np.exp(-1j*np.pi*volt_p/(2*vpi_p)))/(1+gp)
+    return e_out
