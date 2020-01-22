@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
-from qampy import signals, equalisation, impairments, core, phaserec, theory
+from qampy import signals, equalisation, impairments, core, phaserec, theory, helpers
 
 
 class TestPilotSignalRecovery(object):
@@ -65,6 +65,19 @@ class TestPilotSignalRecovery(object):
         sig4 = sig3[:, 20000:]
         sig4.sync2frame(corr_coarse_foe=False)
         s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
+        d, ph = phaserec.pilot_cpe(s2, nframes=1)
+        assert np.mean(d.cal_ber()) < 1e-5
+        
+    @pytest.mark.parametrize("fo", [20e3, 100e3, 1e4])
+    def test_freq_offset(self, fo):
+        snr = 37
+        ntaps = 17
+        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
+        sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
+        sig3 = impairments.simulate_transmission(sig, snr, freq_off=fo)
+        sig4 = helpers.normalise_and_center(sig3)
+        sig4.sync2frame(corr_coarse_foe=True)
+        s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
 #
