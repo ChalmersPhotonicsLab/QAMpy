@@ -76,8 +76,8 @@ class TestPilotSignalRecovery(object):
         sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
         sig3 = impairments.simulate_transmission(sig, snr, freq_off=fo)
         sig4 = helpers.normalise_and_center(sig3)
-        sig4.sync2frame(corr_coarse_foe=False)
-        s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
+        sig4.sync2frame(corr_coarse_foe=True)
+        s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
 #
