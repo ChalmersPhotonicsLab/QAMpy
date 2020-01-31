@@ -104,7 +104,7 @@ class TestQAMSymbolsGray(object):
     @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def testfromarray_avgpow(self, M):
         a = np.random.choice(theory.cal_symbols_qam(M), 1000)
-        s = signals.SignalQAMGrayCoded.from_symbol_array(a)
+        s = signals.SignalQAMGrayCoded.from_symbol_array(a, M=M)
         npt.assert_almost_equal((abs(s) ** 2).mean(), (abs(s) ** 2).mean())
 
     @pytest.mark.parametrize("N", [1024, 12423, 100000, 2 ** 18])
@@ -747,7 +747,7 @@ class TestSignalQualityOnSignal(object):
         ser = s.cal_ser()
         assert ser[0] == 0
 
-    @pytest.mark.p        #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
+    @pytest.mark.parametrize("nmodes", np.arange(1,5))       #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
     def test_evm_shape(self, nmodes):
         s = signals.ResampledQAM(16, 2 ** 16, nmodes=nmodes)
         evm = s.cal_evm()
@@ -795,6 +795,30 @@ class TestSignalQualityOnSignal(object):
         gmi, gmi_pb = s.cal_gmi()
         npt.assert_almost_equal(gmi[0], nbits)
 
+    @pytest.mark.parametrize("dim", [0,1])
+    def test_gmi_single_d(self, dim):
+        s = signals.SignalQAMGrayCoded(4, 2**16, nmodes=2)
+        gmi = s[dim].cal_gmi()[0]
+        npt.assert_almost_equal(gmi, 2)
+        
+    def test_gmi_single_d_synced(self):
+        s = signals.SignalQAMGrayCoded(4, 2**16, nmodes=2)
+        gmi = s[0].cal_gmi(synced=True)[0]
+        npt.assert_almost_equal(gmi, 2)
+
+    @pytest.mark.parametrize("method", ["cal_ser", "cal_ber", "cal_evm"])
+    @pytest.mark.parametrize("dim", [0,1])
+    def test_err_single_de(self, method, dim):
+        s = signals.SignalQAMGrayCoded(4, 2**16, nmodes=2)
+        err = getattr(s[dim], method)()
+        assert err < 1e-5
+        
+    @pytest.mark.parametrize("method", ["cal_ser", "cal_ber", "cal_evm"])
+    def test_err_single_d_synced(self, method):
+        s = signals.SignalQAMGrayCoded(4, 2**16, nmodes=2)
+        err = getattr(s[0], method)(synced=True)
+        assert err < 1e-5
+ 
 
 class TestPilotSignalQualityOnSignal(object):
 

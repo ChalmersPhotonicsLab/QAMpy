@@ -100,7 +100,30 @@ def add_carrier_offset(sig, fo):
     """
     return core.impairments.add_carrier_offset(sig, fo, sig.fs)
 
-def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None,roll_frame_sync=False):
+def add_dispersion(sig, D, L, wl0=1550e-9):
+    """
+    Add dispersion to a signal
+    
+    Parameters
+    ----------
+    sig : signal_object
+        signal to operate on
+    D : float
+        Dispersion parameter in s/m/m
+    L : float
+        Length of the dispersion in m
+    wl0 : float, optional
+        Centre wavelength in m
+
+    Returns
+    -------
+    sig_out : signal_object
+        output signal with added dispersion
+    """
+    so = core.impairments.add_dispersion(sig, sig.fs, D, L, wl0=wl0)
+    return sig.recreate_from_nparray(so)
+
+def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, theta=np.pi/3.731, modal_delay=None, dispersion=None, roll_frame_sync=False):
     """
     Convenience function to simulate impairments on signal at once
 
@@ -120,6 +143,9 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         rotation angle to principle states of polarization
     modal_delay : array_like, optional
         add a delay given in N samples to the signal (default: None, do not add delay)
+    dispersion: float, optional
+        dispersion in s/m
+
     Returns
     -------
     signal : array_like
@@ -137,6 +163,8 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         sig = change_snr(sig, snr)
     if modal_delay is not None:
         sig = add_modal_delay(sig, modal_delay)
+    if dispersion is not None:
+        sig = add_dispersion(sig, D, 1)
     if dgd is not None:
         sig = apply_PMD(sig, theta, dgd)
     return sig

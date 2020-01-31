@@ -60,7 +60,7 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1] * 1j ** i, sig2)
+        offset, syms2, ii, acm = ber_functions.find_sequence_offset_complex(syms[:N1] * 1j ** i, sig2)
         assert (shiftN == -offset) or (shiftN+offset == 2*(2**15-1))
 
     @pytest.mark.parametrize("shiftN", [np.random.randint(l*(2**15-1)//2+1, (l+1)*(2**15-1)//2) for l in range(4)]+[48630])
@@ -70,7 +70,7 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]*1j**i
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms[:N1], sig2)
+        offset, syms2, ii, acm = ber_functions.find_sequence_offset_complex(syms[:N1], sig2)
         sig2 = np.roll(syms2, offset)
         npt.assert_allclose(syms[:N1], sig2[:N1], atol=self.d/4)
 
@@ -80,7 +80,7 @@ class TestFindSequenceOffsetComplex(object):
         sig = self.s[0]
         syms = self.s.symbols[0]
         sig2 = np.roll(sig, shift=shiftN)
-        offset, syms2, ii = ber_functions.find_sequence_offset_complex(syms, sig2 * 1j ** i)
+        offset, syms2, ii, acm = ber_functions.find_sequence_offset_complex(syms, sig2 * 1j ** i)
         assert (4-ii)%4 == i
 
 class TestSyncAndAdjust(object):
@@ -92,7 +92,7 @@ class TestSyncAndAdjust(object):
         sig = self.s[0]
         N = self.s.shape[1]
         syms = self.s.symbols[0]
-        tx, rx = ber_functions.sync_and_adjust(sig[:N1], sig[:N2], adjust=adjust)
+        (tx, rx), acm = ber_functions.sync_and_adjust(sig[:N1], sig[:N2], adjust=adjust)
         if N1 is None and adjust == "tx":
             assert (tx.shape[0] == N2) and (rx.shape[0] == N2)
         elif N2 is None and adjust == "rx":
@@ -137,7 +137,7 @@ class TestSyncAndAdjust(object):
                 else:
                     rx = x
                     tx = y
-        tx, rx = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
+        (tx, rx), acm = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
         npt.assert_array_almost_equal(tx, rx)
 
     @pytest.mark.parametrize("N", [234, 1000, 2001])
@@ -151,7 +151,7 @@ class TestSyncAndAdjust(object):
             y = ss[N:2**16+2*N]
         else:
             y = ss[N:2**16-2*N]
-        tx, rx = ber_functions.sync_and_adjust(s, y, adjust="tx")
+        (tx, rx), acm = ber_functions.sync_and_adjust(s, y, adjust="tx")
         npt.assert_array_almost_equal(tx,rx)
 
     @pytest.mark.parametrize("N", [234, 1000, 2001])
@@ -165,7 +165,7 @@ class TestSyncAndAdjust(object):
             y = ss[N:2**16+2*N]
         else:
             y = ss[N:2**16-2*N]
-        tx, rx = ber_functions.sync_and_adjust(y, s, adjust="rx")
+        (tx, rx), acm = ber_functions.sync_and_adjust(y, s, adjust="rx")
         npt.assert_array_almost_equal(tx,rx)
 
 
@@ -194,7 +194,7 @@ class TestSyncAndAdjust(object):
                 else:
                     rx = x
                     tx = y
-        tx, rx = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
+        (tx, rx), acm = ber_functions.sync_and_adjust(tx, rx, adjust=adjust)
         assert tx.shape == rx.shape
 
     @pytest.mark.parametrize("N0", [(None, 1000), (1000, None)])
@@ -205,7 +205,7 @@ class TestSyncAndAdjust(object):
         N = self.s.shape[1]
         N1, N2 = N0
         sign = np.roll(sig, shiftN)
-        tx, rx = ber_functions.sync_and_adjust(sig[:N1], sign[:N2], adjust=adjust)
+        (tx, rx), acm = ber_functions.sync_and_adjust(sig[:N1], sign[:N2], adjust=adjust)
         if N1 is None and adjust is "tx":
             assert (tx.shape[0] == N2) and (rx.shape[0] == N2)
         elif N2 is None and adjust is "rx":
@@ -222,9 +222,9 @@ class TestSyncAndAdjust(object):
         sig = s[0]
         syms = s.symbols[0]
         syms2 = np.roll(syms, shift=shiftN)
-        tx, rx = ber_functions.sync_and_adjust(syms, syms2, adjust=adjust)
+        (tx, rx), acm = ber_functions.sync_and_adjust(syms, syms2, adjust=adjust)
         npt.assert_allclose(tx, rx)
-        tx, rx = ber_functions.sync_and_adjust(syms2, syms, adjust=adjust)
+        (tx, rx), acm = ber_functions.sync_and_adjust(syms2, syms, adjust=adjust)
         npt.assert_allclose(tx, rx)
 
     @pytest.mark.parametrize("adjust", ["tx", "rx"])
@@ -238,7 +238,7 @@ class TestSyncAndAdjust(object):
         sig = s[0]
         syms = s.symbols[0]
         syms2 = np.roll(syms, shift=shiftN)
-        tx, rx = ber_functions.sync_and_adjust(syms[:N1]*1j**tx_i, syms2[:N2]*1j**rx_i, adjust=adjust)
+        (tx, rx), acm = ber_functions.sync_and_adjust(syms[:N1]*1j**tx_i, syms2[:N2]*1j**rx_i, adjust=adjust)
         npt.assert_allclose(tx, rx)
 
     @pytest.mark.parametrize("N", [12342])

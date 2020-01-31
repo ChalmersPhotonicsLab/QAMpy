@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
-from qampy import signals, equalisation, impairments, core, phaserec
+from qampy import signals, equalisation, impairments, core, phaserec, theory
 
 
 class TestPilotSignalRecovery(object):
@@ -68,3 +68,41 @@ class TestPilotSignalRecovery(object):
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
 #
+class TestSignalGeneration(object):
+    @pytest.mark.parametrize("nmodes", [1,2])
+    def test_from_numpy(self, nmodes):
+       c1 = theory.cal_symbols_qam(4)
+       cdat = theory.cal_symbols_qam(128)
+       c1 = c1/np.sqrt(np.mean(abs(c1)**2))
+       cdat = cdat/np.sqrt(np.mean(abs(cdat)**2))
+       ph = np.random.choice(c1, 1024).reshape(1,-1)
+       dat = np.random.choice(cdat, 2**16*nmodes).reshape(nmodes,-1)
+       ss = signals.SignalWithPilots.from_symbol_array(dat, 2**16, 1024, 0, pilots=ph, payload_kwargs={"M":128})
+       assert ss.pilots.M == 4
+       assert ss.pilots.size == 1024*nmodes
+       assert ss.size == 2**16*nmodes
+       assert ss.symbols.M == 128
+
+    def test_from_numpy_isframe(self):
+       c1 = theory.cal_symbols_qam(4)
+       cdat = theory.cal_symbols_qam(128)
+       c1 = c1/np.sqrt(np.mean(abs(c1)**2))
+       cdat = cdat/np.sqrt(np.mean(abs(cdat)**2))
+       ph = np.random.choice(c1, 1024).reshape(1,-1)
+       dat = np.random.choice(cdat, 2**16).reshape(1,-1)
+       s = np.hstack([ph,dat])
+       ss = signals.SignalWithPilots.from_symbol_array(dat, 2**16, 1024, 0,  payload_kwargs={"M":128}, payload_is_frame=True)
+       assert ss.pilots.M == 4
+       assert ss.pilots.size == 1024
+       assert ss.size == 2**16
+       assert ss.symbols.M == 128
+
+    @pytest.mark.parametrize("nmodes", [1,2])
+    def test_from_signal_object(self, nmodes):
+        ph = signals.SignalQAMGrayCoded(4, 1024, nmodes=1)
+        dat = signals.SignalQAMGrayCoded(128, 2**16, nmodes=nmodes)
+        ss = signals.SignalWithPilots.from_symbol_array(dat, 2**16, 1024, 0,  pilots=ph)
+        assert ss.pilots.M == 4
+        assert ss.pilots.size == 1024*nmodes
+        assert ss.size == 2**16*nmodes
+        assert ss.symbols.M == 128
