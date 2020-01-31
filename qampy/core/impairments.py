@@ -574,5 +574,5 @@ def ideal_amplifier_response(sig,out_volt):
     -------
 
     """
-    current_volt = abs(sig).max()
+    current_volt = max(abs(sig.real).max(), abs(sig.imag).max())
     return sig / current_volt * out_volt
