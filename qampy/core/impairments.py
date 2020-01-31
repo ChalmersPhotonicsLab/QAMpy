@@ -546,7 +546,7 @@ def Simulate_transmitter_response(sig, enob=6, cutoff=16e9, target_voltage=3.5, 
 
     """
     # Apply signal to DAC model
-    [sig_dac_out, snr_enob] = DAC_response(sig, enob, cutoff, quantizer_model=True)
+    [sig_dac_out, sig_enob_noise, snr_enob] = DAC_response(sig, enob, cutoff, quantizer_model=False)
 
     # Amplify the signal to target voltage(V)
     sig_amp = ideal_amplifier_response(sig_dac_out, target_voltage)
