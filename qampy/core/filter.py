@@ -78,14 +78,7 @@ def pre_filter_wdm(signal, bw, os,center_freq = 0):
     s = (np.fft.ifft(np.fft.fft(signal) * h))
     return s
 
-def filter_signal(signal, fs, cutoff, ftype="bessel", order=2):
-    nyq = 0.5*fs
-    cutoff_norm = cutoff/nyq
-    b, a = scisig.bessel(order, cutoff_norm, 'low', norm='mag', analog=False)
-    y = scisig.lfilter(b, a, signal)
-    return y
-
-def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
+def filter_signal(signal, fs, cutoff, ftype="bessel", order=2, analog=False):
     """
     Apply an analog filter to a signal for simulating e.g. electrical bandwidth limitation
 
@@ -128,15 +121,21 @@ def filter_signal_analog(signal, fs, cutoff, ftype="bessel", order=2):
             return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal))).flatten()
         else:
             return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+    Wn = cutoff*2*np.pi if analog else cutoff
+    frmt = "ba" if analog else "sos"
+    fs_in = None if analog else fs
     if ftype == "bessel":
-        system = scisig.bessel(order, cutoff*2*np.pi, 'low', norm='mag', analog=True)
+        system = scisig.bessel(order, Wn,  'low', norm='mag', analog=analog, output=frmt, fs=fs_in)
     elif ftype == "butter":
-        system = scisig.butter(order, cutoff*2*np.pi, 'low',  analog=True)
-    t = np.arange(0, sig.shape[1])*1/fs
-    sig2 = np.zeros_like(sig)
-    for i in range(sig.shape[0]):
-        to, yo, xo = scisig.lsim(system, sig[i], t)
-        sig2[i] = yo
+        system = scisig.butter(order, Wn, 'low',  analog=analog, output=frmt, fs=fs_in)
+    if analog:
+        t = np.arange(0, sig.shape[1])*1/fs
+        sig2 = np.zeros_like(sig)
+        for i in range(sig.shape[0]):
+            to, yo, xo = scisig.lsim(system, sig[i], t)
+            sig2[i] = yo
+    else:
+        sig2 = scisig.sosfilt(system, sig, axis=-1)
     if signal.ndim == 1:
         return sig2.flatten()
     else:

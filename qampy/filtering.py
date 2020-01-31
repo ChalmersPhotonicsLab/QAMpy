@@ -19,9 +19,9 @@
 from qampy import core
 from qampy.core.filter import moving_average
 
-def filter_signal_analog(signal, cutoff, ftype="bessel", order=2):
+def filter_signal(signal, cutoff, ftype="bessel", order=2, analog=False):
     """
-    Apply an analog filter to a signal for simulating e.g. electrical bandwidth limitation
+    Apply a filter to a signal for simulating e.g. electrical bandwidth limitation
 
     Parameters
     ----------
@@ -32,15 +32,44 @@ def filter_signal_analog(signal, cutoff, ftype="bessel", order=2):
         3 dB cutoff frequency of the filter
     ftype   : string, optional
         filter type can be either a bessel, butter, exp or gauss filter (default=bessel)
-    order   : int
-        order of the filter
+    order   : int, optional
+        order of the filter (default = 2)
+    analog : bool, optional
+        whether to use analog filtering with lsim, much slower, but could give sligthly more accurate
+        results for bessel and butter filters does not have an effect for other filters  (default=False)
+
 
     Returns
     -------
     signalout : SignalObject
         filtered output signal
     """
-    return core.filter.filter_signal_analog(signal, signal.fs, cutoff, ftype="bessel", order=2)
+    return core.filter.filter_signal(signal, signal.fs, cutoff, ftype=ftype, order=order, analog=analog)
+
+def filter_signal_analog(signal, cutoff, ftype="bessel", order=2):
+    """
+    Legacy function will be deprecated
+    Apply an analog filter to a signal for simulating e.g. electrical bandwidth limitation
+    
+    
+    Parameters
+    ----------
+
+    signal  : SignalObject
+        input signal
+    cutoff  : float
+        3 dB cutoff frequency of the filter
+    ftype   : string, optional
+        filter type can be either a bessel, butter, exp or gauss filter (default=bessel)
+    order   : int, optional
+        order of the filter (default = 2)
+
+    Returns
+    -------
+    signalout : SignalObject
+        filtered output signal    
+    """
+    return filter_signal(signal, signal.fs, cutoff, ftype=ftype, order=order, analog=True)
 
 def pre_filter(signal, bw):
     """
