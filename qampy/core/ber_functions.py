@@ -90,7 +90,8 @@ def find_sequence_offset_complex(x, y):
     """
     acm = 0.
     if not np.iscomplexobj(x) and not np.iscomplexobj(y):
-        return find_sequence_offset(x, y), y, 0
+        idx, acm = find_sequence_offset(x, y, show_cc=True)
+        return idx, y, 0, acm
     for i in range(4):
         rx = y * 1.j ** i
         idx, ac = find_sequence_offset(x, rx, show_cc=True)

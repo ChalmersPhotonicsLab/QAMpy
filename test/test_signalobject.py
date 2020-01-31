@@ -104,7 +104,7 @@ class TestQAMSymbolsGray(object):
     @pytest.mark.parametrize("M", [2 ** i for i in range(2, 8)])
     def testfromarray_avgpow(self, M):
         a = np.random.choice(theory.cal_symbols_qam(M), 1000)
-        s = signals.SignalQAMGrayCoded.from_symbol_array(a)
+        s = signals.SignalQAMGrayCoded.from_symbol_array(a, M=M)
         npt.assert_almost_equal((abs(s) ** 2).mean(), (abs(s) ** 2).mean())
 
     @pytest.mark.parametrize("N", [1024, 12423, 100000, 2 ** 18])
@@ -747,7 +747,7 @@ class TestSignalQualityOnSignal(object):
         ser = s.cal_ser()
         assert ser[0] == 0
 
-    @pytest.mark.p        #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
+    @pytest.mark.parametrize("nmodes", np.arange(1,5))       #sub_vars[:,i] = np.var(err_out[:,int(-step/os+Ntaps):])arametrize("nmodes", np.arange(1, 4))
     def test_evm_shape(self, nmodes):
         s = signals.ResampledQAM(16, 2 ** 16, nmodes=nmodes)
         evm = s.cal_evm()
