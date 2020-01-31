@@ -711,6 +711,7 @@ class SignalQAMGrayCoded(SignalBase):
         obj._bits = bits
         obj._encoding = encoding
         obj._code = graycode
+        obj._bitmap_mtx = bitmap_mtx
         obj._coded_symbols = coded_symbols
         obj._bitmap_mtx = bitmap_mtx
         obj._symbols = obj.copy()

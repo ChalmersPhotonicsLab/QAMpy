@@ -62,3 +62,36 @@ def dump_edges(E, N):
         return E[:,N:-N]
     else:
         return E[N:-N]
+
+def set_mid_point(E,mid_pos=0):
+    """
+    Move the (1-pol) signal's mid-position to given value
+    """
+    if np.iscomplexobj(E):
+        ori_mid_pos = (E.real.max() + E.real.min())/2 + 1j*(E.imag.max() + E.imag.min())/2
+        return E - ori_mid_pos + mid_pos
+    if not np.iscomplexobj(E):
+        ori_mid_pos = (E.max() + E.min())/2
+        return E - ori_mid_pos + mid_pos
+
+
+def rescale_signal(E,swing=1):
+    """
+    Rescale the (1-pol) signal to (-swing, swing).
+    """
+    if np.iscomplexobj(E):
+        scale_factor = np.maximum(abs(E.real).max(), abs(E.imag).max())
+        return E / scale_factor * swing
+
+    if not np.iscomplexobj(E):
+        scale_factor = abs(E).max()
+        return E / scale_factor * swing
+
+def set_mid_and_resale(E,mid_pos=0,swing=1):
+    """
+    Change (1-pol) signal mid-position to given value and rescale the real signal to (-swing, swing).
+    """
+    sig_out = set_mid_point(E, mid_pos)
+    sig_out = rescale_signal(sig_out, swing)
+
+    return sig_out
