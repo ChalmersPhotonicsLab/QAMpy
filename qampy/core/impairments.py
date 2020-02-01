@@ -17,8 +17,8 @@
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 import numpy as np
 import warnings
-from ..helpers import normalise_and_center, rescale_signal
-from ..filtering import filter_signal
+from qampy.helpers import normalise_and_center, rescale_signal
+from qampy.core.filter import filter_signal
 
 def H_PMD(theta, t_dgd, omega):
     """
@@ -420,11 +420,11 @@ def modulator_response(rfsig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_oute
             Vpi of the MZM (zero-power point) in I (real)  and Q (imaginary) channel. If vpi is real use the  same Vpi
             for both.
     gfactr: complex or float, optional
-            Split imbalance and path dependent loss of I (real) and Q (imaginary) MZM.
+            Split imbalance and path dependent loss of I (real) and Q (imaginary) MZM. 
             An ideal MZM with infinite extinction ratio has gfactor=1. If gfactr is real use the same value for both I
             and Q.
     cfactr:  complex or float, optional
-           Chirp factors of I (real) and (Q) channel MZMs, caused by the asymmetry in the electrode design of the MZM.
+           Chirp factors of I (real) and (Q) channel MZMs, caused by the asymmetry in the electrode design of the MZM. 
            cfactr = 0 for ideal MZM.
     prms_outer: array_like, optional
             DCBias, Vpi and gain factor of the outer MZM.
@@ -470,13 +470,13 @@ def er_to_g(ext_rat):
     g = (10**(ext_rat/20)-1)/(10**(ext_rat/20)+1)
     return g
 
-def sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=True, clipping=False, clip_rat=1, quan_and_enob=False):
+def sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=True):
     """
     Function to simulate DAC response, including quantization noise (ENOB) and frequency response.
     Parameters
     ----------
     sig:  array_like
-        Input signal
+        Input signal 
     fs: float
         Sampling frequency of the signal
     enob: float
@@ -484,13 +484,9 @@ def sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=True, clipping=False
     cutoff: float
         3-dB cutoff frequency of DAC. (i.e. 16 GHz.)
     quantizer_model:  Bool, optional
-        if quantizer_model='True', use quantizer model to simulate quantization noise, else
-        if quantizer_model='False', use AWGN model to simulate quantization noise.
-    clipping: Bool, optional
-        if clipping='True', clips the signal based on clip_rat, else
-        if clipping='False', no clipping operation.
-    clip_rat: float, optional
-        Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipping)
+        if quantizer_model='true', use quantizer model to simulate quantization noise, else 
+         if quantizer_model='False', use AWGN model to simulate quantization noise.
+
     Returns
     -------
     filter_sig:  array_like
@@ -500,58 +496,7 @@ def sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=True, clipping=False
     snr_enob:    float
         signal-to-noise-ratio induced by ENOB.
     """
-    powsig_mean = (abs(sig) ** 2).mean()  # mean power of the signal
-
-    if clipping:
-        sig_res = rescale_signal(sig, 1/clip_rat)
-        sig_clip = clipper(sig_res, 1)
-    else:
-        sig_clip = sig
-
-    if quan_and_enob:
-        sig_clip = quantize_signal_New(sig_clip, nbits=8, rescale_in=True, rescale_out=True)
-
-    powsig_mean = (abs(sig_clip) ** 2).mean()  # mean power of the real signal
-    # Apply dac model to real signal
-    if not np.iscomplexobj(sig_clip):
-        if quantizer_model:
-            sig_enob_noise = quantize_signal_New(sig_clip, nbits=enob, rescale_in=True, rescale_out=True)
-            pownoise_mean = (abs(sig_enob_noise-sig_clip)**2).mean()
-            snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
-        else:
-            # Add AWGN noise due to ENOB
-            x_max = abs(sig_clip).max()           # maximum amplitude of the signal
-            delta = x_max / 2**(enob-1)
-            pownoise_mean = delta ** 2 / 12
-            sig_enob_noise = add_awgn(sig_clip, np.sqrt(pownoise_mean))
-            snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
-        # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig = filter_signal(sig_enob_noise, fs, cutoff, ftype="bessel", order=2)
-    # Apply dac model to complex signal
-    else:
-        if quantizer_model:
-            sig_enob_noise = quantize_signal_New(sig_clip, nbits=enob, rescale_in=True, rescale_out=True)
-            pownoise_mean = (abs(sig_enob_noise-sig_clip)**2).mean()  # include noise in real part and imag part
-            snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
-        else:
-            # Add AWGN noise due to ENOB
-            x_max = np.maximum(abs(sig_clip.real).max(), abs(sig_clip.imag).max())    # maximum amplitude in real or imag part
-            delta = x_max / 2**(enob-1)
-            pownoise_mean = delta ** 2 / 12
-            sig_enob_noise = add_awgn(sig_clip, np.sqrt(2*pownoise_mean))  # add two-time noise power to complex signal
-            snr_enob = 10*np.log10(powsig_mean/2/pownoise_mean)  # Use half of the signal power to calculate snr
-        # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig_re = filter_signal(sig_enob_noise.real, fs, cutoff, ftype="bessel", order=2)
-        filter_sig_im = filter_signal(sig_enob_noise.imag, fs, cutoff, ftype="bessel", order=2)
-        filter_sig = filter_sig_re + 1j * filter_sig_im
-    return filter_sig, sig_enob_noise, snr_enob
-
-def sim_AWG_dac_response(sig, enob, quantizer_model=True, ch=1, dac_volt=0.4):
-
-    sig = np.atleast_2d(sig)
     powsig_mean = (abs(sig) ** 2).mean()  # mean power of the real signal
-    # Load dac response
-    dacf = load_dac_response(sig.fs, sig.shape[1], ch=ch, dac_volt=dac_volt)
     # Apply dac model to real signal
     if not np.iscomplexobj(sig):
         if quantizer_model:
@@ -565,10 +510,8 @@ def sim_AWG_dac_response(sig, enob, quantizer_model=True, ch=1, dac_volt=0.4):
             pownoise_mean = delta ** 2 / 12
             sig_enob_noise = add_awgn(sig, np.sqrt(pownoise_mean))
             snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
-
         # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig = filter_signal(sig_enob_noise, cutoff, ftype="bessel", order=2, analog=False)
-
+        filter_sig = filter_signal(sig_enob_noise, fs, cutoff, ftype="bessel", order=2)
     # Apply dac model to complex signal
     else:
         if quantizer_model:
@@ -583,33 +526,12 @@ def sim_AWG_dac_response(sig, enob, quantizer_model=True, ch=1, dac_volt=0.4):
             sig_enob_noise = add_awgn(sig, np.sqrt(2*pownoise_mean))  # add two-time noise power to complex signal
             snr_enob = 10*np.log10(powsig_mean/2/pownoise_mean)  # Use half of the signal power to calculate snr
         # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig_re = filter_signal(sig_enob_noise.real, cutoff, ftype="bessel", order=2, analog=False)
-        filter_sig_im = filter_signal(sig_enob_noise.imag, cutoff, ftype="bessel", order=2, analog=False)
-        filter_sig = filter_sig_re + 1j * filter_sig_im
+        filter_sig_re = filter_signal(sig_enob_noise.real, fs, cutoff, ftype="bessel", order=2)
+        filter_sig_im = filter_signal(sig_enob_noise.imag, fs, cutoff, ftype="bessel", order=2)
+        filter_sig = filter_sig_re + 1j* filter_sig_im
+    return filter_sig, sig_enob_noise, snr_enob
 
-def load_dac_response(fs, freq_len, ch = 1, dac_volt = 0.40):
-    """
-    Load the measured dac response and adjust it to target sampling frequency.
-    """
-    main_path = 'C:/Users/Zonglong/PycharmProjects/EXP received data/Tx impairment/DAC frequency response/'
-    fn = main_path + ('dac_frequency_response_vpp_%.2f'%dac_volt).replace('.', 'p') + '.npz'
-    npzfile = np.load(fn)
-    dac_f = npzfile['dac_res_ch%d' % ch]
-
-    # Copy spectrum to the negative frequency side
-    dacf_complex = np.atleast_2d(dac_f[:, 1] * np.exp(1j * dac_f[:, 2]))
-    dacf = np.concatenate((np.fliplr(np.conj(dacf_complex[:, 1:])), dacf_complex), axis=1)
-    dac_freq = np.concatenate((np.fliplr(-np.atleast_2d(dac_f[1:, 0])), np.atleast_2d(dac_f[:, 0])), axis=1)
-
-    freq_sig_fft = np.fft.fftfreq(freq_len) * fs
-    # Interpolate the dac response, do zero-padding if fs/2 > 32 GHz
-    polyfit = interpolate.interp1d(dac_freq.flatten(), dacf.flatten(), kind='linear', bounds_error=False, fill_value=dac_f[320, 1])
-    dacf_interp = polyfit(freq_sig_fft)
-    dacf_interp = np.atleast_2d(dacf_interp)
-    return dacf_interp
-
-
-def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, dac_filter=True, clipping=False, clip_rat=1, quan_and_enob=False, **mod_prms):
+def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, **mod_prms):
     """
 
     Parameters
@@ -626,8 +548,6 @@ def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, dac_filter=
         target Voltage
     p_in: float, optional
         Laser power input to IQ modulator in dBm. Default is set to 0 dBm.
-    clipping: bool, optional
-        Operate clipping in DAC or not. Default is False.
     Returns
     -------
     e_out: array_like
@@ -635,18 +555,11 @@ def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, dac_filter=
 
     """
     # Apply signal to DAC model
-    sig_dac_out, sig_enob_noise, snr_enob = sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=False, clipping=clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob)
+    sig_dac_out, sig_enob_noise, snr_enob = sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=False)
     # Amplify the signal to target voltage(V)
-    sig_amp = ideal_amplifier_response(sig_dac_out, target_voltage)
-
-    # Input quantized signal to IQ modulator
-    rfsig_i = sig_amp.real
-    rfsig_q = sig_amp.imag
-
-    e_out = modulator_response(rfsig_i, rfsig_q, dcsig_i=3.5, dcsig_q=3.5, dcsig_p=3.5 / 2, vpi_i=3.5, vpi_q=3.5, vpi_p=3.5,
-                       gi=1, gq=1, gp=1, ai=0, aq=0)
-    power_out = 10 * np.log10(abs(e_out*np.conj(e_out)).mean() * (10 ** (power_in / 10)))
-
+    sig_amp = ideal_amplifier_response(sig_dac_out, tgt_v)
+    e_out = modulator_response(sig_amp, **mod_prms)
+    power_out = 10 * np.log10(abs(e_out*np.conj(e_out)).mean() * (10 ** (p_in / 10)))
     # return e_out, power_out, snr_enob_i, snr_enob_q
     return e_out
 
