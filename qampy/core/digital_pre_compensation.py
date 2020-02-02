@@ -17,53 +17,30 @@
 # Copyright 2018 Jochen Schröder, Zonglong
 
 import numpy as np
-from qampy.core.special_fcts import rrcos_freq
-from scipy import signal,interpolate
 
 def clipper(sig, clipping_level):
     """
     Clip the signal out of the range (-clipping_level, clipping_level).
     """
-    sig_2d = np.atleast_2d(sig)
-    sig_clip_re = np.sign(sig.real) * np.minimum(abs(sig_2d.real), clipping_level*np.ones((1, sig_2d.shape[1])))
-    sig_clip_im = np.sign(sig.imag) * np.minimum(abs(sig_2d.imag), clipping_level*np.ones((1, sig_2d.shape[1])))
+    sig_clip_re = np.sign(sig.real) * np.minimum(abs(sig.real), clipping_level*np.ones((1, sig.shape[1])))
+    sig_clip_im = np.sign(sig.imag) * np.minimum(abs(sig.imag), clipping_level*np.ones((1, sig.shape[1])))
 
     return sig_clip_re + 1j* sig_clip_im
 
-def modulator_arsin(sig, vpi=3.5):
+def modulator_arsin(sig, vpi_i, vpi_q):
     """
     Use arcsin() function to compensate modulator nonlinear sin() response.
     Input signal range should be (-1,1), which is required by the arcsin() function.
     """
-    if not np.iscomplexobj(vpi):
-        vpi = vpi + 1j*vpi
-    sig_out_re = 2 * vpi.real / np.pi * np.arcsin(sig.real)
-    sig__out_im = 2 * vpi.imag / np.pi * np.arcsin(sig.imag)
+    sig_out_re = 2 * vpi_i / np.pi * np.arcsin(sig.real)
+    sig__out_im = 2 * vpi_q / np.pi * np.arcsin(sig.imag)
     sig_out = sig_out_re + 1j*sig__out_im
 
     return sig_out
 
-def dac_freq_comp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6)):
+def DAC_freq_comp():
     """
-    Compensate frequency response of simulated digital-to-analog converter(DAC).
+    Compensate frequency response of digital-to-analog converter(DAC).
     """
-    dpe_fs = dpe_fb * 2
-    # Derive RRC filter frequency response np.sqrt(n_f)
-    T_rrc = 1/dpe_fb
-    fre_rrc = np.fft.fftfreq(sim_len) * dpe_fs
-    rrc_f = rrcos_freq(fre_rrc, rrc_beta, T_rrc)
-    rrc_f /= rrc_f.max()
-    n_f = rrc_f ** 2
 
-    # Derive bessel filter (DAC) frequency response d_f
-    cutoff, order, frmt, enob = prms_dac
-    system_dig = signal.bessel(order, cutoff, 'low', analog=False, output=frmt, norm='mag', fs=dpe_fs)
-    # w_bes=np.linspace(0,fs-fs/worN,worN)
-    w_bes, d_f = signal.sosfreqz(system_dig, worN=sim_len, whole=True, fs=dpe_fs)
-
-    # Calculate dpe filter p_f
-    df = dpe_fs/sim_len
-    alpha = 10 ** (PAPR / 10) / (6 * dpe_fb * 2 ** (2 * enob)) * np.sum(abs(d_f) ** 2 * n_f * df)
-    p_f = n_f * np.conj(d_f) / (n_f * abs(d_f) ** 2 + alpha)
-    return p_f
-
+    return

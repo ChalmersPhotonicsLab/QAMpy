@@ -17,10 +17,8 @@
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 import numpy as np
 import warnings
-from qampy.helpers import normalise_and_center, rescale_signal
-from qampy.core.filter import filter_signal
-from scipy import interpolate
-from qampy.core.digital_pre_compensation import clipper
+from ..helpers import normalise_and_center, rescale_signal
+from ..filtering import filter_signal
 
 def H_PMD(theta, t_dgd, omega):
     """
@@ -463,7 +461,7 @@ def er_to_g(ext_rat):
 
     Parameters
     ----------
-    ext_rat
+    ext_rat:
 
     Returns
     -------
@@ -502,6 +500,7 @@ def sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=True, clipping=False
     snr_enob:    float
         signal-to-noise-ratio induced by ENOB.
     """
+    powsig_mean = (abs(sig) ** 2).mean()  # mean power of the signal
 
     if clipping:
         sig_res = rescale_signal(sig, 1/clip_rat)
@@ -566,9 +565,10 @@ def sim_AWG_dac_response(sig, enob, quantizer_model=True, ch=1, dac_volt=0.4):
             pownoise_mean = delta ** 2 / 12
             sig_enob_noise = add_awgn(sig, np.sqrt(pownoise_mean))
             snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
-        # Apply AWG dac response to simulate frequency response of DAC
-        sigf = np.fft.fft(sig_enob_noise)
-        filter_sig = np.fft.ifft(sigf * dacf)
+
+        # Apply 2-order bessel filter to simulate frequency response of DAC
+        filter_sig = filter_signal(sig_enob_noise, cutoff, ftype="bessel", order=2, analog=False)
+
     # Apply dac model to complex signal
     else:
         if quantizer_model:
@@ -583,12 +583,9 @@ def sim_AWG_dac_response(sig, enob, quantizer_model=True, ch=1, dac_volt=0.4):
             sig_enob_noise = add_awgn(sig, np.sqrt(2*pownoise_mean))  # add two-time noise power to complex signal
             snr_enob = 10*np.log10(powsig_mean/2/pownoise_mean)  # Use half of the signal power to calculate snr
         # Apply 2-order bessel filter to simulate frequency response of DAC
-        sigf_re = np.fft.fft(sig_enob_noise.real)
-        sigf_im = np.fft.fft(sig_enob_noise.imag)
-        filter_sig_re = np.fft.ifft(sigf_re * dacf)
-        filter_sig_im = np.fft.ifft(sigf_im * dacf)
+        filter_sig_re = filter_signal(sig_enob_noise.real, cutoff, ftype="bessel", order=2, analog=False)
+        filter_sig_im = filter_signal(sig_enob_noise.imag, cutoff, ftype="bessel", order=2, analog=False)
         filter_sig = filter_sig_re + 1j * filter_sig_im
-    return filter_sig, sig_enob_noise, snr_enob, dacf
 
 def load_dac_response(fs, freq_len, ch = 1, dac_volt = 0.40):
     """
@@ -640,16 +637,20 @@ def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, dac_filter=
     # Apply signal to DAC model
     sig_dac_out, sig_enob_noise, snr_enob = sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=False, clipping=clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob)
     # Amplify the signal to target voltage(V)
-    if dac_filter:
-        sig_amp = ideal_amplifier_response(sig_dac_out, tgt_v)
-    else:
-        sig_amp = ideal_amplifier_response(sig_enob_noise, tgt_v)
-    e_out = modulator_response(sig_amp, **mod_prms)
-    power_out = 10 * np.log10(abs(e_out*np.conj(e_out)).mean() * (10 ** (p_in / 10)))
+    sig_amp = ideal_amplifier_response(sig_dac_out, target_voltage)
+
+    # Input quantized signal to IQ modulator
+    rfsig_i = sig_amp.real
+    rfsig_q = sig_amp.imag
+
+    e_out = modulator_response(rfsig_i, rfsig_q, dcsig_i=3.5, dcsig_q=3.5, dcsig_p=3.5 / 2, vpi_i=3.5, vpi_q=3.5, vpi_p=3.5,
+                       gi=1, gq=1, gp=1, ai=0, aq=0)
+    power_out = 10 * np.log10(abs(e_out*np.conj(e_out)).mean() * (10 ** (power_in / 10)))
+
     # return e_out, power_out, snr_enob_i, snr_enob_q
     return e_out
 
-def ideal_amplifier_response(sig,out_volt):
+def ideal_amplifier_response(sig, out_volt):
     """
     Simulate a ideal amplifier, which just scale RF signal to out_volt.
     Parameters
