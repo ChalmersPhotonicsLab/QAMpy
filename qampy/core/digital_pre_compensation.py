@@ -16,10 +16,31 @@
 #
 # Copyright 2018 Jochen Schröder, Zonglong
 
-def clipper():
+import numpy as np
 
-    return
+def clipper(sig, clipping_level):
+    """
+    Clip the signal out of the range (-clipping_level, clipping_level).
+    """
+    sig_clip_re = np.sign(sig.real) * np.minimum(abs(sig.real), clipping_level*np.ones((1, sig.shape[1])))
+    sig_clip_im = np.sign(sig.imag) * np.minimum(abs(sig.imag), clipping_level*np.ones((1, sig.shape[1])))
 
-def modulator_arsin():
+    return sig_clip_re + 1j* sig_clip_im
+
+def modulator_arsin(sig, vpi_i, vpi_q):
+    """
+    Use arcsin() function to compensate modulator nonlinear sin() response.
+    Input signal range should be (-1,1), which is required by the arcsin() function.
+    """
+    sig_out_re = 2 * vpi_i / np.pi * np.arcsin(sig.real)
+    sig__out_im = 2 * vpi_q / np.pi * np.arcsin(sig.imag)
+    sig_out = sig_out_re + 1j*sig__out_im
+
+    return sig_out
+
+def DAC_freq_comp():
+    """
+    Compensate frequency response of digital-to-analog converter(DAC).
+    """
 
     return

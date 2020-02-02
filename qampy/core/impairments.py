@@ -18,7 +18,7 @@
 import numpy as np
 import warnings
 from ..helpers import normalise_and_center, rescale_signal
-from ..filtering import filter_signal_analog
+from ..filtering import filter_signal
 
 def H_PMD(theta, t_dgd, omega):
     """
@@ -461,7 +461,7 @@ def er_to_g(ext_rat):
 
     Parameters
     ----------
-    ext_rat
+    ext_rat:
 
     Returns
     -------
@@ -487,7 +487,7 @@ def DAC_response(sig, enob, cutoff, quantizer_model=True):
     filter_sig:     Quantized and filtered output signal
     snr_enob:       signal-to-noise-ratio induced by ENOB.
     """
-    powsig_mean = (abs(sig) ** 2).mean()  # mean power of the real signal
+    powsig_mean = (abs(sig) ** 2).mean()  # mean power of the signal
 
     # Apply dac model to real signal
     if not np.iscomplexobj(sig):
@@ -504,7 +504,7 @@ def DAC_response(sig, enob, cutoff, quantizer_model=True):
             snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
 
         # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig = filter_signal_analog(sig_enob_noise, cutoff, ftype="bessel", order=2)
+        filter_sig = filter_signal(sig_enob_noise, cutoff, ftype="bessel", order=2, analog=False)
 
     # Apply dac model to complex signal
     else:
@@ -514,7 +514,6 @@ def DAC_response(sig, enob, cutoff, quantizer_model=True):
             snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
         else:
             # Add AWGN noise due to ENOB
-
             x_max = np.maximum(abs(sig.real).max(), abs(sig.imag).max())    # maximum amplitude in real or imag part
             delta = x_max / 2**(enob-1)
             pownoise_mean = delta ** 2 / 12
@@ -522,9 +521,9 @@ def DAC_response(sig, enob, cutoff, quantizer_model=True):
             snr_enob = 10*np.log10(powsig_mean/2/pownoise_mean)  # Use half of the signal power to calculate snr
 
         # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig_re = filter_signal_analog(sig_enob_noise.real, cutoff, ftype="bessel", order=2)
-        filter_sig_im = filter_signal_analog(sig_enob_noise.imag, cutoff, ftype="bessel", order=2)
-        filter_sig = filter_sig_re + 1j* filter_sig_im
+        filter_sig_re = filter_signal(sig_enob_noise.real, cutoff, ftype="bessel", order=2, analog=False)
+        filter_sig_im = filter_signal(sig_enob_noise.imag, cutoff, ftype="bessel", order=2, analog=False)
+        filter_sig = filter_sig_re + 1j * filter_sig_im
 
     return filter_sig, sig_enob_noise, snr_enob
 
@@ -557,12 +556,12 @@ def Simulate_transmitter_response(sig, enob=6, cutoff=16e9, target_voltage=3.5, 
 
     e_out = modulator_response(rfsig_i, rfsig_q, dcsig_i=3.5, dcsig_q=3.5, dcsig_p=3.5 / 2, vpi_i=3.5, vpi_q=3.5, vpi_p=3.5,
                        gi=1, gq=1, gp=1, ai=0, aq=0)
-    power_out = 10 * np.log10( abs(e_out*np.conj(e_out)).mean() * (10 ** (power_in / 10)))
+    power_out = 10 * np.log10(abs(e_out*np.conj(e_out)).mean() * (10 ** (power_in / 10)))
 
     # return e_out, power_out, snr_enob_i, snr_enob_q
     return e_out
 
-def ideal_amplifier_response(sig,out_volt):
+def ideal_amplifier_response(sig, out_volt):
     """
     Simulate a ideal amplifier, which just scale RF signal to out_volt.
     Parameters

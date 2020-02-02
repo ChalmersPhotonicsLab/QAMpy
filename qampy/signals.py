@@ -1493,7 +1493,7 @@ class SignalWithPilots(SignalBase):
         out_symbs = np.empty((nmodes, frame_len), dtype=payload.dtype)
         Ndat = np.count_nonzero(idx_dat)
         if pilots is None:
-            pilots = pilot_class(pilot_kwargs["M"],  np.count_nonzero(idx_pil), nmodes=nmodes, dtype=payload.dtype, **pilot_args, **kwargs) / np.sqrt(
+            pilots = pilot_class(pilot_kwargs["M"],  np.count_nonzero(idx_pil), nmodes=nmodes, dtype=payload.dtype, **kwargs) / np.sqrt(
                 pilot_scale) # this is still not super general
         else:
             assert (nmodes == pilots.shape[0]) or (pilots.shape[0] == 1), "Pilots need to have the same number of modes as data or be one mode"
