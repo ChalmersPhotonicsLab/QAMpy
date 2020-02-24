@@ -38,3 +38,4 @@ equaliser_cython.c*
 ## File-based project format:
 *.iws
 
+/Scripts/Notebooks/Demo of transmitter impairment simulation - constant ASE noise model.ipynb
