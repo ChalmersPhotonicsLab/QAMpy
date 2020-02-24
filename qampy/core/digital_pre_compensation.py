@@ -18,14 +18,15 @@
 
 import numpy as np
 from qampy.core.special_fcts import rrcos_freq
-from scipy import signal
+from scipy import signal,interpolate
 
 def clipper(sig, clipping_level):
     """
     Clip the signal out of the range (-clipping_level, clipping_level).
     """
-    sig_clip_re = np.sign(sig.real) * np.minimum(abs(sig.real), clipping_level*np.ones((1, sig.shape[1])))
-    sig_clip_im = np.sign(sig.imag) * np.minimum(abs(sig.imag), clipping_level*np.ones((1, sig.shape[1])))
+    sig_2d = np.atleast_2d(sig)
+    sig_clip_re = np.sign(sig.real) * np.minimum(abs(sig_2d.real), clipping_level*np.ones((1, sig_2d.shape[1])))
+    sig_clip_im = np.sign(sig.imag) * np.minimum(abs(sig_2d.imag), clipping_level*np.ones((1, sig_2d.shape[1])))
 
     return sig_clip_re + 1j* sig_clip_im
 
@@ -44,7 +45,7 @@ def modulator_arsin(sig, vpi=3.5):
 
 def dac_freq_comp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6)):
     """
-    Compensate frequency response of digital-to-analog converter(DAC).
+    Compensate frequency response of simulated digital-to-analog converter(DAC).
     """
     dpe_fs = dpe_fb * 2
     # Derive RRC filter frequency response np.sqrt(n_f)
@@ -57,10 +58,12 @@ def dac_freq_comp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6
     # Derive bessel filter (DAC) frequency response d_f
     cutoff, order, frmt, enob = prms_dac
     system_dig = signal.bessel(order, cutoff, 'low', analog=False, output=frmt, norm='mag', fs=dpe_fs)
-    w_bes, d_f = signal.sosfreqz(system_dig, worN=sim_len, whole=True, fs=dpe_fs)   # w_bes=np.linspace(0,fs,worN)
+    # w_bes=np.linspace(0,fs-fs/worN,worN)
+    w_bes, d_f = signal.sosfreqz(system_dig, worN=sim_len, whole=True, fs=dpe_fs)
 
     # Calculate dpe filter p_f
     df = dpe_fs/sim_len
     alpha = 10 ** (PAPR / 10) / (6 * dpe_fb * 2 ** (2 * enob)) * np.sum(abs(d_f) ** 2 * n_f * df)
     p_f = n_f * np.conj(d_f) / (n_f * abs(d_f) ** 2 + alpha)
     return p_f
+
