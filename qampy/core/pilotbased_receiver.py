@@ -360,6 +360,9 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     mode_sync_order: array_like
         Synced descrambled reference pattern order
     """
+    # If synchronization fails, then change sync_bool to 'False'
+    sync_bool = True
+
     FRAME_SYNC_THRS = 120 # this is somewhat arbitrary but seems to work well
     rx_signal = np.atleast_2d(rx_signal)
     ref_symbs = np.atleast_2d(ref_symbs)
@@ -408,6 +411,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
         max_sync_pol = np.argmax(max_phase_rot)
         if max_phase_rot[max_sync_pol] < FRAME_SYNC_THRS: #
             warnings.warn("Very low autocorrelation, likely the frame-sync failed")
+            sync_bool = False
         mode_sync_order[l] = max_sync_pol
         symb_delay = found_delay[max_sync_pol]
         # Remove the found reference mode
@@ -417,7 +421,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     # Important: the shift factors are arranged in the order of the signal modes, but
     # the mode_sync_order specifies how the signal modes need to be rearranged to match the pilots
     # therefore shift factors also need to be "mode_aligned"
-    return shift_factor, foe_corse, mode_sync_order, wx1
+    return shift_factor, foe_corse, mode_sync_order, wx1, sync_bool
 
 def correct_shifts(shift_factors, ntaps, os):
     # TODO fix for syncing correctly

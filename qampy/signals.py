@@ -1605,7 +1605,7 @@ class SignalWithPilots(SignalBase):
         eqargs.update(kwargs)
         mu = eqargs.pop("mu")
         Ntaps = eqargs.pop("Ntaps")
-        shift_factors, coarse_foe, mode_alignment, wx1 = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
+        shift_factors, coarse_foe, mode_alignment, wx1, sync_bool = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
                                                                               mu=mu,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
@@ -1615,7 +1615,10 @@ class SignalWithPilots(SignalBase):
         self.synctaps = Ntaps
         self._foe = coarse_foe
         if returntaps:
-            return wx1
+            return wx1, sync_bool
+        else:
+            return sync_bool
+
 
     def corr_foe(self, additional_foe = 0):
         foe_off = np.ones(self._foe.shape)*(np.mean(self._foe) + additional_foe)
