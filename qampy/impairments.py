@@ -169,13 +169,13 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         sig = apply_PMD(sig, theta, dgd)
     return sig
 
-def sim_tx_response(sig, enob=6, cutoff=16e9, tgt_V=3.5, p_in=0, clipping=False, clip_rat=1, quan_and_enob=False, **mod_prms):
-    return sig.recreate_from_np_array(core.impairments.sim_tx_response(sig, sig.fs, enob, cutoff, tgt_V, p_in, clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob, **mod_prms))
+def sim_tx_response(sig, enob=6, cutoff=16e9, tgt_V=3.5, p_in=0, dac_filter=True, clipping=False, clip_rat=1, quan_and_enob=False, **mod_prms):
+    return sig.recreate_from_np_array(core.impairments.sim_tx_response(sig, sig.fs, enob, cutoff, tgt_V, p_in, dac_filter, clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob, **mod_prms))
 
 def sim_DAC_response(sig, enob, cutoff, quantizer_model=True, clipping=False, clip_rat=1, quan_and_enob=False):
-    sig_out, n_enob, snr_enob = core.impairments.sim_DAC_response(sig, sig.fs, enob, cutoff, quantizer_model, clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob)
+    sig_out, sig_enob, snr_enob = core.impairments.sim_DAC_response(sig, sig.fs, enob, cutoff, quantizer_model, clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob)
     sig_out = sig.recreate_from_np_array(sig_out)
-    return sig_out, n_enob, snr_enob
+    return sig_out, sig_enob, snr_enob
 
 def sim_mod_response(sig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_outer=(3.5/2, 3.5, 1)):
     return sig.recreate_from_np_array(core.impairments.modulator_response(sig, dcbias, vpi, gfactr, cfactr, prms_outer))
