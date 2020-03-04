@@ -612,7 +612,7 @@ def load_dac_response(fs, freq_len, ch = 1, dac_volt = 0.40):
     return dacf_interp
 
 
-def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, clipping=False, clip_rat=1, quan_and_enob=False, **mod_prms):
+def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, dac_filter=True, clipping=False, clip_rat=1, quan_and_enob=False, **mod_prms):
     """
 
     Parameters
@@ -640,7 +640,10 @@ def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, clipping=Fa
     # Apply signal to DAC model
     sig_dac_out, sig_enob_noise, snr_enob = sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=False, clipping=clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob)
     # Amplify the signal to target voltage(V)
-    sig_amp = ideal_amplifier_response(sig_dac_out, tgt_v)
+    if dac_filter:
+        sig_amp = ideal_amplifier_response(sig_dac_out, tgt_v)
+    else:
+        sig_amp = ideal_amplifier_response(sig_enob_noise, tgt_v)
     e_out = modulator_response(sig_amp, **mod_prms)
     power_out = 10 * np.log10(abs(e_out*np.conj(e_out)).mean() * (10 ** (p_in / 10)))
     # return e_out, power_out, snr_enob_i, snr_enob_q
