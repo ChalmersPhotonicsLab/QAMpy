@@ -53,6 +53,23 @@ def normalise_and_center(E):
         E /= P
     return E
 
+def normalise_and_center_pil(sig, idx_pil):
+    """
+    Normalise and center the input field only based on pilot symbols, by calculating the mean power for each polarisation separate and dividing by its square-root
+    """
+    sig_pil = sig[:, idx_pil]
+    if sig.ndim > 1:
+        ct_fac = - np.mean(sig_pil, axis=-1)[:, np.newaxis]
+        sig_pil = sig_pil + ct_fac
+        pil_p = np.sqrt(np.mean(abs(sig_pil)**2, axis=-1))
+        sig_out = (sig + ct_fac) / pil_p[:, np.newaxis]
+    else:
+        ct_fac = -(np.mean(sig_pil.real) + 1.j * np.mean(sig_pil.imag))
+        sig_pil = sig_pil + ct_fac
+        pil_p = np.sqrt(np.mean(abs(sig_pil)**2))
+        sig_out = (sig + ct_fac) / pil_p
+    return sig_out
+
 
 def dump_edges(E, N):
     """
@@ -63,7 +80,7 @@ def dump_edges(E, N):
     else:
         return E[N:-N]
 
-def set_mid_point(E,mid_pos=0):
+def set_mid_point(E, mid_pos=0):
     """
     Move the (1-pol) signal's mid-position to given value
     """
@@ -75,7 +92,7 @@ def set_mid_point(E,mid_pos=0):
         return E - ori_mid_pos + mid_pos
 
 
-def rescale_signal(E,swing=1):
+def rescale_signal(E, swing=1):
     """
     Rescale the (1-pol) signal to (-swing, swing).
     """
@@ -95,3 +112,31 @@ def set_mid_and_resale(E,mid_pos=0,swing=1):
     sig_out = rescale_signal(sig_out, swing)
 
     return sig_out
+
+def get_center_shift_fac(E):
+    """
+    Obtain shift factor (x_shift, y_shift) that is used to center the signal.
+    """
+    if E.ndim > 1:
+        shift_fac = - np.mean(E, axis=-1)[:, np.newaxis]
+    else:
+        shift_fac = -(np.mean(E.real) + 1.j * np.mean(E.imag))
+    return shift_fac
+
+def find_pilot_idx(nframe=2, frame_len = 2 ** 16, os_rate=2, pilot_seq_len=1024, pilot_ins_rat=32):
+    """
+    find pilot index for object with both pilot sequence (at the beginning) and phase pilot.
+    """
+    idx_os = np.arange(frame_len * nframe * os_rate)
+    idx_pil_seq = idx_os < 0  # generate array with All-False element
+    idx_pil_ph = idx_os < 0
+    for i in range(nframe):
+        idx_temp = frame_len * os_rate * i
+        idx_pil_seq = idx_pil_seq | ((idx_temp <= idx_os) & (idx_os < idx_temp + pilot_seq_len * os_rate))
+        idx_pil_ph = idx_pil_ph | ((((idx_os - pilot_seq_len * os_rate - idx_temp) % (pilot_ins_rat * os_rate) == 0) | (
+                    (idx_os - pilot_seq_len * os_rate - idx_temp) % (pilot_ins_rat * os_rate) == 1)) & (
+                                               idx_os - pilot_seq_len * os_rate - idx_temp >= 0) & (
+                                               idx_os < idx_temp + frame_len * os_rate))
+    idx_pil = idx_pil_seq | idx_pil_ph
+    idx_data = ~idx_pil
+    return idx_pil
