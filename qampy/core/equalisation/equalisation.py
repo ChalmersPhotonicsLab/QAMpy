@@ -86,7 +86,7 @@ def generate_symbols_for_eq(method, M, dtype):
         return symbols
     raise ValueError("%s is unknown method"%method)
 
-def apply_filter(E, os, wxy, method="pyt"):
+def apply_filter(E, os, wxy, method="pyt", modes=None):
     """
     Apply the equaliser filter taps to the input signal.
 
@@ -104,6 +104,9 @@ def apply_filter(E, os, wxy, method="pyt"):
 
     method : string
         use python ("py") based or pythran ("pyt") based function
+    
+    modes : array_like, optional
+        mode numbers over which to apply the filters
 
     Returns
     -------
@@ -114,11 +117,11 @@ def apply_filter(E, os, wxy, method="pyt"):
     if method == "py":
         return apply_filter_py(E, os, wxy)
     elif method == "pyt":
-        return pythran_equalisation.apply_filter_to_signal(E.copy(), os, wxy.copy())
+        return pythran_equalisation.apply_filter_to_signal(E.copy(), os, wxy.copy(), modes)
     else:
         raise NotImplementedError("Only py and pyx methods are implemented")
 
-def apply_filter_py(E, os, wxy):
+def apply_filter_py(E, os, wxy, modes=None):
     """
     Apply the equaliser filter taps to the input signal.
 
@@ -133,6 +136,9 @@ def apply_filter_py(E, os, wxy):
 
     wxy    : tuple(array_like, array_like,optional)
         filter taps for the x and y polarisation
+    
+    modes : array_like, optional
+        mode numbers over which to apply the filters
 
     Returns
     -------
@@ -142,27 +148,33 @@ def apply_filter_py(E, os, wxy):
     """
     # equalise data points. Reuse samples used for channel estimation
     # this seems significantly faster than the previous method using a segment axis
+    # TODO something fails still in this function
     E = np.atleast_2d(E)
-    pols = E.shape[0]
-    Ntaps = wxy[0].shape[1]
-    X1 = segment_axis(E[0], Ntaps, Ntaps-os)
-    X = X1
+    Ntaps = wxy.shape[-1]
+    nmodes_max = wxy.shape[0]
+    if modes is None:
+        modes = np.arange(nmodes_max)
+        nmodes = nmodes_max
+    else:
+        modes = np.atleast_1d(modes)
+        assert np.max(modes) < nmodes_max, "largest mode number is larger than shape of signal"
+        nmodes = modes.sizeX = X1
+    X = segment_axis(E[modes[0]], Ntaps, Ntaps-os)
     ww = wxy[0].flatten()
-
     # Case for a butterfly-configured EQ
-    if pols > 1:
-        for pol in range(1,pols):
-            X_P = segment_axis(E[pol], Ntaps,Ntaps-os)
+    if nmodes_max > 1:
+        for pol in range(1, nmodes):
+            X_P = segment_axis(E[modes[pol]], Ntaps,Ntaps-os)
             X = np.hstack([X,X_P])
-            ww = np.vstack([ww,wxy[pol].flatten()])
+            ww = np.vstack([ww,wxy[modes[pol]].flatten()])
 
         # Compute the output
         Eest = np.dot(X,ww.transpose())
 
         # Extract the error (per butterfly entry)
         Eest_tmp = Eest[:,0]
-        for pol in range(1,pols):
-            Eest_tmp = np.vstack([Eest_tmp,Eest[:,pol]])
+        for pol in range(1, nmodes):
+            Eest_tmp = np.vstack([Eest_tmp,Eest[:,modes[pol]]])
         Eest = Eest_tmp
 
     # Single mode EQ
@@ -373,8 +385,8 @@ def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None
     wxy, err1 = equalise_signal(E, os, mu[0], M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms[0], Niter=Niter[0], method=methods[0], adaptive_stepsize=adaptive_stepsize[0], symbols=symbols[0],  modes=modes,**kwargs)
     wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[1],  modes=modes, **kwargs)
     if apply:
-        Eest = apply_filter(E, os, wxy2)
-        return np.squeeze(Eest[modes]), wxy2, (err1, err2)
+        Eest = apply_filter(E, os, wxy2, modes=modes)
+        return Eest, wxy2, (err1, err2)
     else:
         return wxy2, (err1, err2)
 
@@ -469,8 +481,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     err, wxy, mu = pythran_equalisation.train_equaliser(E.copy(), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
-        Eest = apply_filter(E, os, wxy)
-        return np.squeeze(Eest[modes]), wxy, err # not clear if we should not return the full Eest instead
+        Eest = apply_filter(E, os, wxy, modes=modes)
+        return Eest, wxy, err
     else:
         return wxy, err
 

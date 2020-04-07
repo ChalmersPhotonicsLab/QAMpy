@@ -22,9 +22,9 @@ def apply_filter(E, wx):
             Xest += E[k, i]*np.conj(wx[k,i])
     return Xest
 
-#pythran export apply_filter_to_signal(complex128[:,:], int, complex128[:,:,:])
-#pythran export apply_filter_to_signal(complex64[:,:], int, complex64[:,:,:])
-def apply_filter_to_signal(E, os, wx):
+#pythran export apply_filter_to_signal(complex128[:,:], int, complex128[:,:,:], int[:] or None)
+#pythran export apply_filter_to_signal(complex64[:,:], int, complex64[:,:,:], int[:] or None)
+def apply_filter_to_signal(E, os, wx, modes=None):
     """
     Apply a filter to a signal 
     
@@ -36,21 +36,31 @@ def apply_filter_to_signal(E, os, wx):
         oversampling factor
     wx : array_like
         filter taps
+    modes : array_like, optional
+        mode numbers over which to apply the filters
+        
 
     Returns
     -------
     output : array_like
         filtered and downsampled signal
     """
-    Ntaps = wx.shape[2]
+    nmodes_max = wx.shape[0]
+    Ntaps = wx.shape[-1]
+    if modes is None:
+        modes = np.arange(nmodes_max)
+        nmodes = nmodes_max
+    else:
+        modes = np.atleast_1d(modes)
+        assert np.max(modes) < nmodes_max, "largest mode number is larger than shape of signal"
+        nmodes = modes.size
     L = E.shape[1]
-    modes = wx.shape[0]
     N = (L-Ntaps+os)//os
-    output  = np.zeros((modes, N), dtype=E.dtype)
+    output  = np.zeros((nmodes, N), dtype=E.dtype)
     #omp parallel for collapse(2)
-    for j in range(modes):
+    for j in range(nmodes):
         for i in range(N):
-            Xest = apply_filter(E[:, i*os:i*os+Ntaps], wx[j])
+            Xest = apply_filter(E[:, i*os:i*os+Ntaps], wx[modes[j]])
             output[j, i] = Xest
     return output
 

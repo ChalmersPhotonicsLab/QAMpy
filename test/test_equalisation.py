@@ -106,9 +106,8 @@ class TestEqualiseSignalParameters(object):
         assert serx < 1e-4
         assert sery < 1e-4
 
-    @pytest.mark.parametrize("ndim", [0, 1, np.arange(2)])
     @pytest.mark.parametrize("modes", [[0],[1], np.arange(2)])
-    def test_data_aided(self, ndim, modes):
+    def test_data_aided(self,  modes):
         from qampy import helpers
         ntaps = 21
         sig = signals.SignalQAMGrayCoded(64, 10**5, nmodes=2, fb=25e9)
@@ -117,10 +116,6 @@ class TestEqualiseSignalParameters(object):
         sig2 = np.roll(sig2, ntaps//2)
         sig3 = impairments.simulate_transmission(sig2, dgd=15e-12, theta=np.pi/3., snr=35)
         sig3 = helpers.normalise_and_center(sig3)
-        #if modes == 2:
-            #N = np.arange(2)
-        #else:
-            #N = ndim
         sigout, wxy, err = equalisation.equalise_signal(sig3, 1e-3, Ntaps=ntaps, adaptive_stepsize=True,
                                                 symbols=sig3.symbols, apply=True, method="sbd_data", TrSyms=10000, modes=modes)
         sigout = helpers.normalise_and_center(sigout)
