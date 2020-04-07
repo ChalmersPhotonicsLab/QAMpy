@@ -374,7 +374,7 @@ def dual_mode_equalisation(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=(None,None
     wxy2, err2 = equalise_signal(E, os, mu[1], M, wxy=wxy, TrSyms=TrSyms[1], Niter=Niter[1], method=methods[1], adaptive_stepsize=adaptive_stepsize[1],  symbols=symbols[1],  modes=modes, **kwargs)
     if apply:
         Eest = apply_filter(E, os, wxy2)
-        return Eest, wxy2, (err1, err2)
+        return np.squeeze(Eest[modes]), wxy2, (err1, err2)
     else:
         return wxy2, (err1, err2)
 
@@ -470,7 +470,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy)
-        return np.squeeze(Eest[selected_modes]), np.squeeze(wxy[selected_modes]), err
+        return np.squeeze(Eest[modes]), wxy, err # not clear if we should not return the full Eest instead
     else:
         return wxy, err
 

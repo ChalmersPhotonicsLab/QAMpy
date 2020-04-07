@@ -60,7 +60,7 @@ class TestEqualiseSignalParameters(object):
         E, wx, e = cequalisation.equalise_signal(sig, sig.os, 1e-3, sig.M, Ntaps=10, modes=modes, apply=True)
         if modes is None:
             modes = np.arange(sigmodes)
-        E = sig.recreate_from_np_array(E[modes])
+        E = sig.recreate_from_np_array(E)
         ser = np.mean(E.cal_ser())
         assert ser < 1e-5
 
@@ -94,7 +94,7 @@ class TestEqualiseSignalParameters(object):
         sig = impairments.change_snr(sig, 30)
         sig = sig.resample(sig.fb*2, beta=0.1)
         E, wx, e = equalisation.dual_mode_equalisation(sig, (1e-3, 1e-3), 19, adaptive_stepsize=(True, True))
-        ser = np.mean(E)
+        ser = np.mean(E.cal_ser())
         assert ser < 1e-5
             
     def test_single_mode_64(self):
@@ -124,7 +124,7 @@ class TestEqualiseSignalParameters(object):
         sigout, wxy, err = equalisation.equalise_signal(sig3, 1e-3, Ntaps=ntaps, adaptive_stepsize=True,
                                                 symbols=sig3.symbols, apply=True, method="sbd_data", TrSyms=10000, modes=modes)
         sigout = helpers.normalise_and_center(sigout)
-        gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0][modes])
+        gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0])
         assert gmi > 5.9
         
     @pytest.mark.parametrize("rollframe", [True, False])
