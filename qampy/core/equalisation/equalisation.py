@@ -60,6 +60,7 @@ from qampy.core.equalisation import pythran_equalisation
 
 DECISION_BASED = ["sbd", "mddma", "dd", "sbd_data"]
 NONDECISION_BASED = ["cma", "mcma", "rde", "mrde"]
+REAL_VALUED = ["cma_real", "dd_real", "dd_data_real"]
 
 TRAINING_FCTS =  DECISION_BASED + NONDECISION_BASED
 
@@ -84,6 +85,14 @@ def generate_symbols_for_eq(method, M, dtype):
     if method in ["dd"]:
         symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
+    if method in ["cma_real"]:
+        return np.atleast_2d(_cal_Rconstant_complex(M).real).astype(dtype)
+    if method in ["dd_real"]:
+        symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M)))
+        symbols_out = np.zeros(symbols.size*2, dtype=dtype)
+        symbols_out[::2] = symbols.real.astype(dtype)
+        symbols_out[1::2] = symbols.imag.astype(dtype)
+        return symbols_out
     raise ValueError("%s is unknown method"%method)
 
 def apply_filter(E, os, wxy, method="pyt", modes=None):
@@ -451,10 +460,18 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     """
     method = method.lower()
     #E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu, selected_modes)
-    if E.itemsize == 8:
-        mu = np.float32(mu)
+    if method in REAL_VALUED:
+        En = np.zeros((E.shape[0]*2, E.shape[1]), dtype=E.real.dtype)
+        En[::2] = E.real
+        En[1::2] = E.imag
+        E = En
+    if np.iscomplexobj(E):
+        if E.itemsize == 8:
+            mu = np.float32(mu)
+        else:
+            mu = np.float64(mu)
     else:
-        mu = np.float64(mu)
+        mu = E.dtype.type(mu)
     nmodes = E.shape[0]
     if modes is None:
         modes = np.arange(nmodes)
@@ -478,7 +495,10 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         symbols = np.tile(symbols, (nmodes, 1))
     elif symbols.shape[0] < nmodes:
         raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
-    err, wxy, mu = pythran_equalisation.train_equaliser(np.copy(E, order='A'), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
+    if method in REAL_VALUED:
+        err, wxy, mu = pythran_equalisation.train_equaliser_realvalued(np.copy(E, order='A'), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method[:-5]) # copies are needed because pythran has problems with reshaped arrays
+    else:
+        err, wxy, mu = pythran_equalisation.train_equaliser(np.copy(E, order='A'), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy, modes=modes)
