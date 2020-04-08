@@ -55,7 +55,7 @@ def apply_filter_to_signal(E, os, wx, modes=None):
         assert np.max(modes) < nmodes_max, "largest mode number is larger than shape of signal"
         nmodes = modes.size
     L = E.shape[1]
-    N = (L-Ntaps+os)//os
+    N = (L-Ntaps+1)//os
     output  = np.zeros((nmodes, N), dtype=E.dtype)
     #omp parallel for collapse(2)
     for j in range(nmodes):
