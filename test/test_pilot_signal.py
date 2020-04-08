@@ -71,29 +71,18 @@ class TestPilotSignalRecovery(object):
     @pytest.mark.parametrize("fo", [20e3, 100e3, 1e4])
     def test_freq_offset(self, fo):
         snr = 37
-        ntaps = 17
+        ntaps = 19
         sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
         sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
         sig3 = impairments.simulate_transmission(sig, snr, freq_off=fo)
         sig4 = helpers.normalise_and_center(sig3)
+        sig4 = sig4[:, 2000:]
         sig4.sync2frame(corr_coarse_foe=True)
         s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
-        
-    @pytest.mark.parametrize("fo", [20e3, 100e3, 1e4])
-    def test_freq_offset(self, fo):
-        snr = 37
-        ntaps = 17
-        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
-        sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
-        sig3 = impairments.simulate_transmission(sig, snr, freq_off=fo)
-        sig4 = helpers.normalise_and_center(sig3)
-        sig4.sync2frame(corr_coarse_foe=False)
-        s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
-        d, ph = phaserec.pilot_cpe(s2, nframes=1)
-        assert np.mean(d.cal_ber()) < 1e-5
-#
+
+
 class TestSignalGeneration(object):
     @pytest.mark.parametrize("nmodes", [1,2])
     def test_from_numpy(self, nmodes):

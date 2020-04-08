@@ -478,7 +478,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         symbols = np.tile(symbols, (nmodes, 1))
     elif symbols.shape[0] < nmodes:
         raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
-    err, wxy, mu = pythran_equalisation.train_equaliser(E.copy(), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
+    err, wxy, mu = pythran_equalisation.train_equaliser(np.copy(E, order='A'), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy, modes=modes)
