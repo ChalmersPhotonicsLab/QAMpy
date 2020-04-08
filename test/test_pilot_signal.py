@@ -69,12 +69,13 @@ class TestPilotSignalRecovery(object):
         assert np.mean(d.cal_ber()) < 1e-5
         
     @pytest.mark.parametrize("fo", [20e3, 100e3, 1e4])
-    def test_freq_offset(self, fo):
+    @pytest.mark.parametrize("mode_offset", [0, 3333])
+    def test_freq_offset(self, fo, mode_offset):
         snr = 37
         ntaps = 19
         sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
         sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
-        sig3 = impairments.simulate_transmission(sig, snr, freq_off=fo)
+        sig3 = impairments.simulate_transmission(sig2, snr, freq_off=fo, modal_delay=[0, mode_offset])
         sig4 = helpers.normalise_and_center(sig3)
         sig4 = sig4[:, 2000:]
         sig4.sync2frame(corr_coarse_foe=True)

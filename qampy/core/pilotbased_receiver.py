@@ -455,14 +455,13 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
         syms_out = []
         
         wx=None
+        syms_out = np.zeros_like(ref_symbs)
         for i in range(npols):
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
-            # ERROR: the below returns a too large number of modes (some of them are unequalized
-            syms_out_tmp, wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=wx, Ntaps=Ntaps,
+            syms_out[i], wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=wx, Ntaps=Ntaps,
                                                                  Niter=Niter, method=methods[0],
                                                                  adaptive_stepsize=adaptive_stepsize, apply=True,
                                                                  modes=[i])
-            syms_out.append(syms_out_tmp)
 
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
@@ -485,8 +484,6 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
             out_taps, err = equalisation.dual_mode_equalisation(rx_sig_mode, os, mu, 4, wxy=out_taps, Ntaps=Ntaps, Niter=(Niter, Niter),
                                                         methods=methods, adaptive_stepsize=(adaptive_stepsize, adaptive_stepsize), modes=[i], symbols=np.tile(ref_symbs, (2,1,1)), apply=False)
-            #out_taps.append(tmp_taps)
-            #out_taps[i] = tmp_taps
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
         out_taps, err = equalisation.dual_mode_equalisation(rx_sig_mode, os, mu, 4, Ntaps=Ntaps, Niter=(Niter, Niter),
