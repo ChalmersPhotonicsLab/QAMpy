@@ -378,7 +378,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     # Search based on equalizer error. Avoid one pilot_seq_len part in the beginning and
     # end to ensure that sufficient symbols can be used for the search
     sub_vars = np.ones((nmodes, num_steps)) * 1e2
-    wxys = np.zeros((num_steps, nmodes, nmodes, Ntaps), dtype=complex)
+    wxys = np.zeros((num_steps, nmodes, nmodes, Ntaps), dtype=rx_signal.dtype)
     for i in np.arange(search_overlap, num_steps): # we avoid one step at the beginning
         tmp = rx_signal[:, i*step:i*step+search_window]
         wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=Ntaps, **eqargs)
