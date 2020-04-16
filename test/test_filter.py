@@ -80,103 +80,134 @@ class Test2dcapability(object):
 class TestReturnObjectsAdv(object):
     s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
-    @pytest.mark.xfail(reason="core version does not preserve subclass")
-    def test_pre_filter(self):
-        s2 = cfilter.pre_filter(self.s, 0.01)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_pre_filter(self, dtype):
+        s = self.s.astype(dtype)
+        s2 = cfilter.pre_filter(s, 0.01)
+        assert s2.dtype is np.dtype(dtype)
 
-    @pytest.mark.xfail(reason="core version does not preserve subclass")
-    def test_filter_signal(self):
-        s2 = cfilter.filter_signal(self.s, self.s.fs, 0.001)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_filter_signal(self, dtype):
+        s = self.s.astype(dtype)
+        s2 = cfilter.filter_signal(s, s.fs, 0.001)
+        assert s2.dtype == np.dtype(dtype)
 
-    def test_filter_signal_analog(self):
-        s2 = cfilter.filter_signal_analog(self.s, self.s.fs, 0.001)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_filter_signal_analog(self, dtype):
+        s = self.s.astype(dtype)
+        s2 = cfilter.filter_signal(s, s.fs, 0.001, analog=True)
+        assert s2.dtype is np.dtype(dtype)
 
-    @pytest.mark.xfail(reason="core version does not preserve subclass")
-    def test_rrcos_pulseshaping(self):
-        s2 = cfilter.rrcos_pulseshaping(self.s, self.s.fs, 1 / self.s.fb, 0.1)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_rrcos_pulseshaping(self, dtype):
+        s = self.s.astype(dtype)
+        s2 = cfilter.rrcos_pulseshaping(s, s.fs, 1 / s.fb, 0.1)
+        assert s2.dtype is np.dtype(dtype)
 
-    def test_mvg_avg(self):
-        s2 = cfilter.moving_average(self.s)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_mvg_avg(self, dtype):
+        s = self.s.astype(dtype)
+        s2 = cfilter.moving_average(s)
         assert type(self.s) is type(s2)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     @pytest.mark.xfail(reason="core version does not preserve subclass")
     def test_pre_filter_attr(self, attr):
-        s2 = cfilter.pre_filter(self.s, 0.01)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = self.s
+        s2 = cfilter.pre_filter(s, 0.01)
+        assert getattr(s, attr) is getattr(s2, attr)
 
     @pytest.mark.xfail(reason="core version does not preserve subclass")
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_filter_signal_attr(self, attr):
-        s2 = cfilter.filter_signal(self.s, self.s.fs, 0.01)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = self.s
+        s2 = cfilter.filter_signal(s, s.fs, 0.01)
+        assert getattr(s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
+    @pytest.mark.xfail(reason="core version does not preserve subclass")
     def test_filter_signal_analog_attr(self, attr):
-        s2 = cfilter.filter_signal_analog(self.s, self.s.fs, 0.01)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = self.s
+        s2 = cfilter.filter_signal(s, s.fs, 0.01, analog=True)
+        assert getattr(s, attr) is getattr(s2, attr)
 
     @pytest.mark.xfail(reason="core version does not preserve subclass")
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_rrcos_pulseshaping_attr(self, attr):
-        s2 = cfilter.rrcos_pulseshaping(self.s, self.s.fs, 1 / self.s.fb, 0.1)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = self.s
+        s2 = cfilter.rrcos_pulseshaping(s, s.fs, 1 / s.fb, 0.1)
+        assert getattr(s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
+    @pytest.mark.xfail(reason="core version does not preserve subclass")
     def test_mvg_avg_attr(self, attr):
-        s2 = cfilter.moving_average(self.s)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = self.s
+        s2 = cfilter.moving_average(s)
+        assert getattr(s, attr) is getattr(s2, attr)
 
 class TestReturnObjectsBasic(object):
-    s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
-    def test_pre_filter(self):
-        s2 = filtering.pre_filter(self.s, 0.01)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_pre_filter(self, dtype):
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2, dtype=dtype)
+        s2 = filtering.pre_filter(s, 0.01)
+        assert type(s) is type(s2)
+        assert s.dtype is s2.dtype
 
-    @pytest.mark.xfail(reason="filter_signal is not exported to basic")
-    def test_filter_signal(self):
-        s2 = filtering.filter_signal(self.s, self.s.fs, 0.001)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_filter_signal(self, dtype):
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2, dtype=dtype)
+        s2 = filtering.filter_signal(s, 0.001)
+        assert type(s) is type(s2)
+        assert s.dtype is s2.dtype
 
-    def test_filter_signal_analog(self):
-        s2 = filtering.filter_signal_analog(self.s, 0.001)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_filter_signal_analog(self, dtype):
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2, dtype=dtype)
+        s2 = filtering.filter_signal_analog(s, 0.001)
+        assert type(s) is type(s2)
+        assert s.dtype is s2.dtype
 
-    def test_rrcos_pulseshaping(self):
-        s2 = filtering.rrcos_pulseshaping(self.s, 0.1)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_rrcos_pulseshaping(self, dtype):
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2, dtype=dtype)
+        s2 = filtering.rrcos_pulseshaping(s, 0.1)
+        assert type(s) is type(s2)
+        assert s.dtype is s2.dtype
 
-    def test_mvg_avg(self):
-        s2 = filtering.moving_average(self.s)
-        assert type(self.s) is type(s2)
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_mvg_avg(self, dtype):
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2, dtype=dtype)
+        s2 = filtering.moving_average(s)
+        assert type(s) is type(s2)
+        assert s.dtype is s2.dtype
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_pre_filter_attr(self, attr):
-        s2 = filtering.pre_filter(self.s, 0.01)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+        s2 = filtering.pre_filter(s, 0.01)
+        assert getattr(s, attr) is getattr(s2, attr)
 
-    @pytest.mark.xfail(reason="filter_signal is not exported to basic")
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_filter_signal_attr(self, attr):
-        s2 = filtering.filter_signal(self.s, 0.01)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+        s2 = filtering.filter_signal(s, 0.01)
+        assert getattr(s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_filter_signal_analog_attr(self, attr):
-        s2 = filtering.filter_signal_analog(self.s, 0.01)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+        s2 = filtering.filter_signal_analog(s, 0.01)
+        assert getattr(s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_rrcos_pulseshaping_attr(self, attr):
-        s2 = filtering.rrcos_pulseshaping(self.s, 0.1)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+        s2 = filtering.rrcos_pulseshaping(s, 0.1)
+        assert getattr(s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_mvg_avg_attr(self, attr):
-        s2 = filtering.moving_average(self.s)
-        assert getattr(self.s, attr) is getattr(s2, attr)
+        s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
+        s2 = filtering.moving_average(s)
+        assert getattr(s, attr) is getattr(s2, attr)

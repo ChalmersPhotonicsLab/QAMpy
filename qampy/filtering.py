@@ -44,7 +44,7 @@ def filter_signal(signal, cutoff, ftype="bessel", order=2, analog=False):
     signalout : SignalObject
         filtered output signal
     """
-    return core.filter.filter_signal(signal, signal.fs, cutoff, ftype=ftype, order=order, analog=analog)
+    return signal.recreate_from_np_array(core.filter.filter_signal(signal, signal.fs, cutoff, ftype=ftype, order=order, analog=analog))
 
 def filter_signal_analog(signal, cutoff, ftype="bessel", order=2):
     """

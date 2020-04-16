@@ -36,7 +36,7 @@ def pre_filter(signal, bw):
     """
     sig = np.atleast_2d(signal)
     N = sig.shape
-    h = np.zeros(N, dtype=np.float64)
+    h = np.zeros(N, dtype=sig.real.dtype)
     h[:,int(N[1]/(bw/2)):-int(N[1]/(bw/2))] = 1
     s = scifft.ifft(scifft.ifftshift(scifft.fftshift(scifft.fft(sig, axis=-1), axes=-1)*h, axes=-1), axis=-1)
     if signal.ndim < 2:
@@ -68,7 +68,7 @@ def pre_filter_wdm(signal, bw, os,center_freq = 0):
     """
     # Prepare signal
     N = len(signal)
-    h = np.zeros(N, dtype=np.float64)
+    h = np.zeros(N, dtype=sig.real.dtype)
     freq_axis = scifft.fftfreq(N, 1 / os)
 
     # Create filter window
@@ -226,7 +226,7 @@ def moving_average(sig, N=3):
         Average signal of length len(sig)-n+1
     """
     sign = np.atleast_2d(sig)
-    ret = np.cumsum(np.insert(sign, 0,0, axis=-1), dtype=float, axis=-1)
+    ret = np.cumsum(np.insert(sign, 0,0, axis=-1), dtype=sig.dtype, axis=-1)
     if sig.ndim == 1:
         return ((ret[:, N:] - ret[:,:-N])/N).flatten()
     else:
