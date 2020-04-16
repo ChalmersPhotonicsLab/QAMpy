@@ -123,12 +123,24 @@ def apply_filter(E, os, wxy, method="pyt", modes=None):
     Eest   : array_like
         equalised signal
     """
+    E = np.ascontiguousarray(E)
+    wxy = np.ascontiguousarray(wxy)
     if method == "py":
         return apply_filter_py(E, os, wxy)
     elif method == "pyt":
-        return pythran_equalisation.apply_filter_to_signal(E.copy(), os, wxy.copy(), modes)
+        if np.iscomplexobj(E):
+            return pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
+        else:
+            if E.itemsize == 8:
+                Etmp = pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
+                return Etmp[::2] + 1j * Etmp[1::2]
+            elif E.itemsize == 4:
+                Etmp =  pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes).view(dtype=np.complex64)
+                return Etmp[::2] + np.complex64(1j) * Etmp[1::2]
+            else:
+                raise ValueError("The field has an unknown data type")
     else:
-        raise NotImplementedError("Only py and pyx methods are implemented")
+        raise NotImplementedError("Only py and pythran methods are implemented")
 
 def apply_filter_py(E, os, wxy, modes=None):
     """
@@ -459,19 +471,15 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
 
     """
     method = method.lower()
-    #E, wxy, TrSyms, Ntaps, mu, pols = _lms_init(E, os, wxy, Ntaps, TrSyms, mu, selected_modes)
+    dtype_c = E.dtype
     if method in REAL_VALUED:
-        En = np.zeros((E.shape[0]*2, E.shape[1]), dtype=E.real.dtype)
-        En[::2] = E.real
-        En[1::2] = E.imag
-        E = En
-    if np.iscomplexobj(E):
-        if E.itemsize == 8:
-            mu = np.float32(mu)
-        else:
-            mu = np.float64(mu)
+        Etmp = np.zeros((2*E.shape[0], E.shape[1]), dtype=E.real.dtype)
+        Etmp[::2] = E.real
+        Etmp[1::2] = E.imag
+        E = np.ascontiguousarray(Etmp)
     else:
-        mu = E.dtype.type(mu)
+        E = np.ascontiguousarray(E)
+    mu = E.real.dtype.type(mu)
     nmodes = E.shape[0]
     if modes is None:
         modes = np.arange(nmodes)
@@ -481,7 +489,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     if wxy is None:
         wxy = _init_taps(Ntaps, nmodes, nmodes, E.dtype)
     else:
-        wxy = wxy.astype(E.dtype)
+        wxy = np.ascontiguousarray(wxy, dtype=E.dtype)
         Ntaps = wxy.shape[-1]
         assert wxy.ndim == 3, "wxy needs to be three dimensional"
         assert wxy.shape[:2] == (nmodes, nmodes), "The first 2 dimensions of wxy need to be the same shape as E"
@@ -496,13 +504,16 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     elif symbols.shape[0] < nmodes:
         raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
     if method in REAL_VALUED:
-        err, wxy, mu = pythran_equalisation.train_equaliser_realvalued(np.copy(E, order='A'), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method[:-5]) # copies are needed because pythran has problems with reshaped arrays
+        err, wxy, mu = pythran_equalisation.train_equaliser_realvalued(E, TrSyms, Niter, os, mu, wxy, modes, adaptive_stepsize, symbols.copy(), method[:-5]) # copies are needed because pythran has problems with reshaped arrays
     else:
-        err, wxy, mu = pythran_equalisation.train_equaliser(np.copy(E, order='A'), TrSyms, Niter, os, mu, wxy.copy(), modes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
+        err, wxy, mu = pythran_equalisation.train_equaliser(E, TrSyms, Niter, os, mu, wxy, modes, adaptive_stepsize, symbols.copy(), method) # copies are needed because pythran has problems with reshaped arrays
     if apply:
         # TODO: The below is suboptimal because we should really only apply to the selected modes for efficiency
         Eest = apply_filter(E, os, wxy, modes=modes)
-        return Eest, wxy, err
+        if method in REAL_VALUED:
+            return Eest, wxy, err
+        else:
+            return Eest, wxy, err
     else:
         return wxy, err
 
