@@ -69,7 +69,7 @@ def filter_signal_analog(signal, cutoff, ftype="bessel", order=2):
     signalout : SignalObject
         filtered output signal    
     """
-    return filter_signal(signal, signal.fs, cutoff, ftype=ftype, order=order, analog=True)
+    return filter_signal(signal, cutoff, ftype=ftype, order=order, analog=True)
 
 def pre_filter(signal, bw):
     """
