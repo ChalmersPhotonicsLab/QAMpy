@@ -37,10 +37,13 @@ class Test2dcapability(object):
     @pytest.mark.parametrize("ndim", [1, 2, 3])
     @pytest.mark.parametrize("ftype", ["gauss", "exp", "bessel", "butter"])
     @pytest.mark.parametrize("analog", [True, False])
-    def test_filter_signal_type(self, ndim, ftype, analog):
+    @pytest.mark.parametrize("dtype", [np.complex128, np.complex64])
+    def test_filter_signal_type(self, ndim, ftype, analog, dtype):
         x = np.random.randn(ndim, 2**15) + 0.j
+        x = x.astype(dtype)
         y = cfilter.filter_signal(x, 2, 0.01, ftype=ftype, analog=analog)
         assert x.shape == y.shape
+        assert x.dtype == y.dtype
 
     @pytest.mark.parametrize("ftype", ["gauss", "exp", "bessel", "butter"])
     @pytest.mark.parametrize("analog", [True, False])
