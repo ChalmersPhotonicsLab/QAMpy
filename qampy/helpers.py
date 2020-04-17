@@ -96,13 +96,13 @@ def rescale_signal(E, swing=1):
     """
     Rescale the (1-pol) signal to (-swing, swing).
     """
+    swing = np.atleast_1d(swing)
     if np.iscomplexobj(E):
-        scale_factor = np.maximum(abs(E.real).max(), abs(E.imag).max())
-        return E / scale_factor * swing
-
-    if not np.iscomplexobj(E):
-        scale_factor = abs(E).max()
-        return E / scale_factor * swing
+        scale_factor = np.maximum(np.max(abs(E.real), axis=-1), np.max(abs(E.imag), axis=-1))
+        return E / scale_factor[:, np.newaxis] * swing[:,np.newaxis]
+    else:
+        scale_factor = np.max(abs(E), axis=-1)
+        return E / scale_factor[:, np.newaxis] * swing[:,np.newaxis]
 
 def set_mid_and_resale(E,mid_pos=0,swing=1):
     """
