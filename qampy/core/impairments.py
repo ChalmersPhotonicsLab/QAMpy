@@ -316,7 +316,7 @@ def simulate_transmission(sig, fb, fs, snr=None, freq_off=None, lwdth=None, dgd=
     if snr is not None:
         sig = change_snr(sig, snr, fb, fs)
     if modal_delay is not None:
-        sig = add_modal_delay(sig, delay)
+        sig = add_modal_delay(sig, modal_delay)
     if dgd is not None:
         sig = apply_PMD_to_field(sig, theta, dgd, fs)
     return sig
