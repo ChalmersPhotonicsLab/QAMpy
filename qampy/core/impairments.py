@@ -472,7 +472,7 @@ def er_to_g(ext_rat):
     g = (10**(ext_rat/20)-1)/(10**(ext_rat/20)+1)
     return g
 
-def sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=True, clipping=False, clip_rat=1, quan_and_enob=False):
+def sim_DAC_response(sig, fs, enob, cutoff, clip_rat=1, quant_bits=0, fn=None):
     """
     Function to simulate DAC response, including quantization noise (ENOB) and frequency response.
     Parameters
@@ -482,71 +482,78 @@ def sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=True, clipping=False
     fs: float
         Sampling frequency of the signal
     enob: float
-        Effective number of bits of the DAC     (i.e. 6 bits.)
+        Effective number of bits of the DAC (i.e. 6 bits.) modelled as AWGN. If enob=0 only quantize. 
+        If both enob and quant_bits are given, quantize first and then add enob noise.
     cutoff: float
         3-dB cutoff frequency of DAC. (i.e. 16 GHz.)
-    quantizer_model:  Bool, optional
-        if quantizer_model='True', use quantizer model to simulate quantization noise, else
-        if quantizer_model='False', use AWGN model to simulate quantization noise.
-    clipping: Bool, optional
-        if clipping='True', clips the signal based on clip_rat, else
-        if clipping='False', no clipping operation.
     clip_rat: float, optional
-        Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipping)
+        Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
+    quant_bits: float, optional
+        Number of bits in the quantizer, only applied if not =0. (Default: don't qpply quantization)
     Returns
     -------
     filter_sig:  array_like
-        Quantized and filtered output signal
-    snr_enob_noise: array_like
-        noise caused by the limited ENOB
-    snr_enob:    float
-        signal-to-noise-ratio induced by ENOB.
+        Quantized, clipped and filtered output signal
     """
-
-    if clipping:
+    
+    if np.isclose(clip_rat, 1):
+        sig_clip = sig
+    else:
         sig_res = rescale_signal(sig, 1/clip_rat)
         sig_clip = clipper(sig_res, 1)
-    else:
-        sig_clip = sig
-
-    if quan_and_enob:
-        sig_clip = quantize_signal_New(sig_clip, nbits=8, rescale_in=True, rescale_out=True)
-
-    powsig_mean = (abs(sig_clip) ** 2).mean()  # mean power of the real signal
-    # Apply dac model to real signal
-    if not np.iscomplexobj(sig_clip):
-        if quantizer_model:
-            sig_enob_noise = quantize_signal_New(sig_clip, nbits=enob, rescale_in=True, rescale_out=True)
-            pownoise_mean = (abs(sig_enob_noise-sig_clip)**2).mean()
-            snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
+    if not np.isclose(quant_bits, 0):
+        sig_clip = quantize_signal_New(sig_clip, nbits=quant_bits, rescale_in=True, rescale_out=True)
+    if not np.isclose(enob, 0):
+        sig_clip = apply_enob_as_awgn(sig_clip, enob)
+    if fn is None:
+        if np.iscomplexobj(sig):
+            filter_sig_re = filter_signal(sig_clip.real, fs, cutoff, ftype="bessel", order=2)
+            filter_sig_im = filter_signal(sig_clip.imag, fs, cutoff, ftype="bessel", order=2)
+            filter_sig = filter_sig_re + sig.dtype.type(1j) * filter_sig_im 
         else:
-            # Add AWGN noise due to ENOB
-            x_max = abs(sig_clip).max()           # maximum amplitude of the signal
-            delta = x_max / 2**(enob-1)
-            pownoise_mean = delta ** 2 / 12
-            sig_enob_noise = add_awgn(sig_clip, np.sqrt(pownoise_mean))
-            snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
-        # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig = filter_signal(sig_enob_noise, fs, cutoff, ftype="bessel", order=2)
-    # Apply dac model to complex signal
+            filter_sig = filter_signal(sig_clip, fs, cutoff, ftype="bessel", order=2)
     else:
-        if quantizer_model:
-            sig_enob_noise = quantize_signal_New(sig_clip, nbits=enob, rescale_in=True, rescale_out=True)
-            pownoise_mean = (abs(sig_enob_noise-sig_clip)**2).mean()  # include noise in real part and imag part
-            snr_enob = 10*np.log10(powsig_mean/pownoise_mean)  # unit:dB
-        else:
-            # Add AWGN noise due to ENOB
-            x_max = np.maximum(abs(sig_clip.real).max(), abs(sig_clip.imag).max())    # maximum amplitude in real or imag part
-            delta = x_max / 2**(enob-1)
-            pownoise_mean = delta ** 2 / 12
-            sig_enob_noise = add_awgn(sig_clip, np.sqrt(2*pownoise_mean))  # add two-time noise power to complex signal
-            snr_enob = 10*np.log10(powsig_mean/2/pownoise_mean)  # Use half of the signal power to calculate snr
-        # Apply 2-order bessel filter to simulate frequency response of DAC
-        filter_sig_re = filter_signal(sig_enob_noise.real, fs, cutoff, ftype="bessel", order=2)
-        filter_sig_im = filter_signal(sig_enob_noise.imag, fs, cutoff, ftype="bessel", order=2)
-        filter_sig = filter_sig_re + 1j * filter_sig_im
-    return filter_sig, sig_enob_noise, snr_enob
+        dacf,
+    return filter_sig
 
+def apply_enob_as_awgn(sig, enob, verbose=False):
+    """
+    Add noise from limited ENOB as modelled as AWGN to signal.
+    
+    Parameters
+    ----------
+    sig : array_like
+        input signal
+    enob : float
+        Effective Number of Bits of the ADC or DAC
+    verbose : bool, optional
+        Wether to return additional information
+    Returns
+    -------
+    if verbose is True:
+        sig_enob_noise, snr_enob
+    else:
+        sig_enob_noise
+        
+    sig_enob_noise: array_like
+        signal with added noise
+    snr_enob: float
+        SNR corresponding to the ENOB in dB
+    """
+    powsig_mean = np.mean(abs(sig)**2) 
+    if np.iscomplexobj(sig):
+        x_max = np.maximum(abs(sig.real).max(), abs(sig.imag).max())    # maximum amplitude in real or imag part
+    else:
+        x_max = abs(sig).max()           # maximum amplitude of the signal
+    delta = x_max / 2**(enob-1)
+    pownoise_mean = delta ** 2 / 12
+    sig_enob_noise = add_awgn(sig, np.sqrt(2*pownoise_mean))  # add two-time noise power to complex signal
+    snr_enob = 10*np.log10(powsig_mean/2/pownoise_mean)  # Use half of the signal power to calculate snr
+    if verbose:
+        return sig_enob_noise, snr_enob
+    else:
+        return sig_enob
+    
 def sim_AWG_dac_response(sig, enob, quantizer_model=True, ch=1, dac_volt=0.4):
 
     sig = np.atleast_2d(sig)
@@ -612,7 +619,7 @@ def load_dac_response(fs, freq_len, ch = 1, dac_volt = 0.40):
     return dacf_interp
 
 
-def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, dac_filter=True, clipping=False, clip_rat=1, quan_and_enob=False, **mod_prms):
+def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, dac_filter=True, clip_rat=1, quant_bits=0, **mod_prms):
     """
 
     Parameters
@@ -622,31 +629,31 @@ def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, p_in=0, dac_filter=
     fs: float
         Sampling frequency of signal
     enob: float, optional
-        efficient number of bits for DAC. UnitL bits
+        efficient number of bits for DAC. If enob=0 only use quantizer. Unit: bits
     cutoff: float, optional
         3-dB cut-off frequency for DAC. Unit: GHz
     tgt_v : float, optional
         target Voltage
-    p_in: float, optional
-        Laser power input to IQ modulator in dBm. Default is set to 0 dBm.
-    clipping: bool, optional
-        Operate clipping in DAC or not. Default is False.
+    clip_rat: float, optional
+        Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
+    quant_bits: float, optional
+        Number of bits in the quantizer, only applied if not =0. (Default: don't qpply quantization)    
+    mod_prms: dict, optional
+        parameters to pass to the modulator
+    
     Returns
     -------
     e_out: array_like
         Signal with TX impairments
-
     """
     # Apply signal to DAC model
-    sig_dac_out, sig_enob_noise, snr_enob = sim_DAC_response(sig, fs, enob, cutoff, quantizer_model=False, clipping=clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob)
+    sig_dac_out = sim_DAC_response(sig, fs, enob, cutoff,  clip_rat=clip_rat, quant_bits=quant_bits)
     # Amplify the signal to target voltage(V)
     if dac_filter:
         sig_amp = ideal_amplifier_response(sig_dac_out, tgt_v)
     else:
         sig_amp = ideal_amplifier_response(sig_enob_noise, tgt_v)
     e_out = modulator_response(sig_amp, **mod_prms)
-    power_out = 10 * np.log10(abs(e_out*np.conj(e_out)).mean() * (10 ** (p_in / 10)))
-    # return e_out, power_out, snr_enob_i, snr_enob_q
     return e_out
 
 def ideal_amplifier_response(sig, out_volt):
