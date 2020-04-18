@@ -19,7 +19,7 @@ import numpy as np
 import warnings
 from qampy.helpers import normalise_and_center, rescale_signal
 from qampy.core.filter import filter_signal
-from scipy import interpolate
+from scipy import interpolate, fft
 from qampy.core.digital_pre_compensation import clipper
 
 def H_PMD(theta, t_dgd, omega):
@@ -78,9 +78,9 @@ def rotate_field(field, theta):
     return np.dot(h, field)
 
 def _applyPMD_einsum(field, H, h3):
-    Sf = np.fft.fftshift(np.fft.fft(np.fft.ifftshift(field, axes=1),axis=1), axes=1)
+    Sf = fft.fftshift(fft.fft(fft.ifftshift(field, axes=1),axis=1), axes=1)
     SSf = np.einsum('ijk,ik -> ik',H , Sf)
-    SS = np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(SSf, axes=1),axis=1), axes=1)
+    SS = fft.fftshift(fft.ifft(fft.ifftshift(SSf, axes=1),axis=1), axes=1)
     SS = np.dot(h3, SS)
     try:
         return field.recreate_from_np_array(SS.astype(field.dtype))
@@ -88,12 +88,12 @@ def _applyPMD_einsum(field, H, h3):
         return SS.astype(field.dtype)
 
 def _applyPMD_dot(field, theta, t_dgd, omega):
-    Sf = np.fft.fftshift(np.fft.fft(np.fft.ifftshift(field, axes=1),axis=1), axes=1)
+    Sf = fft.fftshift(fft.fft(fft.ifftshift(field, axes=1),axis=1), axes=1)
     Sff = rotate_field(Sf, theta)
     h2 = np.array([np.exp(-1.j*omega*t_dgd/2),  np.exp(1.j*omega*t_dgd/2)])
     Sn = Sff*h2
     Sf2 = rotate_field(Sn, -theta)
-    SS = np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(Sf2, axes=1), axis=1), axes=1)
+    SS = fft.fftshift(fft.ifft(fft.ifftshift(Sf2, axes=1), axis=1), axes=1)
     try:
         return field.recreate_from_np_array(SS.astype(field.dtype))
     except:
@@ -544,8 +544,8 @@ def apply_DAC_filter(sig, fs, cutoff=18e9, fn=None, ch=1):
         filter_sig = filter_signal(sig, fs, cutoff, ftype="bessel", order=2)
     else:
         H_dac = load_dac_response(fn, fs, sig.shape[-1], ch=ch)
-        sigf = np.fft.fft(sig)
-        filter_sig = np.fft.ifft(sigf * dacf)
+        sigf = fft.fft(sig)
+        filter_sig = fft.ifft(sigf * dacf)
     return filter_sig
 
 def apply_enob_as_awgn(sig, enob, verbose=False):
@@ -612,7 +612,7 @@ def load_dac_response(fn, fs, N, ch=1):
     dacf_complex = np.atleast_2d(dac_f[:, 1] * np.exp(1j * dac_f[:, 2]))
     dacf = np.concatenate((np.fliplr(np.conj(dacf_complex[:, 1:])), dacf_complex), axis=1)
     dac_freq = np.concatenate((np.fliplr(-np.atleast_2d(dac_f[1:, 0])), np.atleast_2d(dac_f[:, 0])), axis=1)
-    freq_sig_fft = np.fft.fftfreq(N)*fs
+    freq_sig_fft = fft.fftfreq(N)*fs
     # Interpolate the dac response, do zero-padding if fs/2 > 32 GHz
     polyfit = interpolate.interp1d(dac_freq.flatten(), dacf.flatten(), kind='linear', bounds_error=False, fill_value=dac_f[320, 1])
     dacf_interp = polyfit(freq_sig_fft)
@@ -694,10 +694,10 @@ def add_dispersion(sig, fs, D, L, wl0=1550e-9):
     """
     C = 2.99792458e8
     N = sig.shape[-1]
-    omega = np.fft.fftfreq(N, 1/fs)*np.pi*2
+    omega = fft.fftfreq(N, 1/fs)*np.pi*2
     beta2 = D * wl0**2 / (C*np.pi*2)
     H = np.exp(-0.5j * omega**2 * beta2 * L)
-    sff = np.fft.fft(np.fft.ifftshift(sig, axes=-1), axis=-1)
-    sig_out = np.fft.fftshift(np.fft.ifft(sff*H))
+    sff = fft.fft(fft.ifftshift(sig, axes=-1), axis=-1)
+    sig_out = fft.fftshift(fft.ifft(sff*H))
     return sig_out
 

@@ -91,6 +91,9 @@ class TestReturnObjects(object):
         assert getattr(self.s, attr) is getattr(s2, attr)
 
 
+class TestCoreReturnTypes(object):
+
+
 class TestCoreFcts(object):
     @pytest.mark.parametrize("z", np.linspace(0.2, 2, 4))
     def test_dispersion(self, z):
