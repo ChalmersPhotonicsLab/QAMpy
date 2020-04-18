@@ -383,9 +383,7 @@ def quantize_signal_New(sig_in, nbits=6, rescale_in=True, rescale_out=True):
     # Rescale to
     sig = np.zeros((npols, sig_in.shape[1]), dtype=sig_in.dtype)
     if rescale_in:
-        for pol in range(npols):
-            # notice: different pol may have different scale factor which cause power different between x and y -pol.
-            sig[pol] = rescale_signal(sig_in[pol], swing=1)
+        sig = rescale_signal(sig_in, swing=1)
 
     # Clipping exist if signal range is larger than (-1,1)
     swing = 2
