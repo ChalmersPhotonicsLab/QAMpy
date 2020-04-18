@@ -694,7 +694,7 @@ def add_dispersion(sig, fs, D, L, wl0=1550e-9):
     N = sig.shape[-1]
     omega = fft.fftfreq(N, 1/fs)*np.pi*2
     beta2 = D * wl0**2 / (C*np.pi*2)
-    H = np.exp(-0.5j * omega**2 * beta2 * L)
+    H = np.exp(-0.5j * omega**2 * beta2 * L).astype(sig.dtype)
     sff = fft.fft(fft.ifftshift(sig, axes=-1), axis=-1)
     sig_out = fft.fftshift(fft.ifft(sff*H))
     return sig_out
