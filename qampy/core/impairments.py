@@ -391,7 +391,7 @@ def quantize_signal_New(sig_in, nbits=6, rescale_in=True, rescale_out=True):
     levels_out = np.linspace(-1+delta/2, 1-delta/2, 2**nbits)
     levels_dec = levels_out + delta/2
 
-    sig_out = np.zeros(sig.shape, dtype="complex")
+    sig_out = np.zeros(sig.shape, dtype=sig_in.dtype)
     for pol in range(npols):
         sig_quant_re = levels_out[np.digitize(sig[pol].real, levels_dec[:-1], right=False)]
         sig_quant_im = levels_out[np.digitize(sig[pol].imag, levels_dec[:-1], right=False)]
