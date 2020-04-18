@@ -472,9 +472,10 @@ def er_to_g(ext_rat):
     g = (10**(ext_rat/20)-1)/(10**(ext_rat/20)+1)
     return g
 
-def sim_DAC_response(sig, fs, enob, cutoff, clip_rat=1, quant_bits=0, **dac_params):
+def sim_DAC_response(sig, fs, enob, clip_rat=1, quant_bits=0, **dac_params):
     """
     Function to simulate DAC response, including quantization noise (ENOB) and frequency response.
+    
     Parameters
     ----------
     sig:  array_like
@@ -491,8 +492,8 @@ def sim_DAC_response(sig, fs, enob, cutoff, clip_rat=1, quant_bits=0, **dac_para
     quant_bits: float, optional
         Number of bits in the quantizer, only applied if not =0. (Default: don't qpply quantization)
     dac_params: dict, optional
-        Parameters for loading the DAC response check apply_DAC_filter for the keyword parameters
-        
+        Parameters for the DAC response check apply_DAC_filter for the keyword parameters. If this is 
+        empty than do not apply the DAC response
     
     Returns
     -------
@@ -508,10 +509,13 @@ def sim_DAC_response(sig, fs, enob, cutoff, clip_rat=1, quant_bits=0, **dac_para
         sig_clip = quantize_signal_New(sig_clip, nbits=quant_bits, rescale_in=True, rescale_out=True)
     if not np.isclose(enob, 0):
         sig_clip = apply_enob_as_awgn(sig_clip, enob)
-    filter_sig = apply_DAC_filter(sig_clip, fs, cutoff, **dac_params)
+    if dac_params:
+        filter_sig = apply_DAC_filter(sig_clip, fs, **dac_params)
+    else:
+        filter_sig = sig_clip
     return filter_sig
 
-def apply_DAC_filter(sig, fs, cutoff, fn=None, ch=1):
+def apply_DAC_filter(sig, fs, cutoff=18e9, fn=None, ch=1):
     """
     Apply the frequency response filter of the DAC. This function
     uses either a 2nd order Bessel filter or a measured frequency response
@@ -523,8 +527,8 @@ def apply_DAC_filter(sig, fs, cutoff, fn=None, ch=1):
         signal to be filtered. Can be real or complex
     fs : float
         sampling rate of the signal
-    cutoff : float
-        Cutoff frequency only used with the Bessel filter.
+    cutoff : float, optional
+        Cutoff frequency used by only by Bessel filter
     fn : string, optional
         filename of a experimentally measured response, if None use a Bessel
         filter approximation
@@ -615,7 +619,7 @@ def load_dac_response(fn, fs, N, ch=1):
     dacf_interp = np.atleast_2d(dacf_interp)
     return dacf_interp
 
-def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, dac_filter=True, clip_rat=1, quant_bits=0, **mod_prms):
+def sim_tx_response(sig, fs, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
     """
 
     Parameters
@@ -634,6 +638,8 @@ def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, dac_filter=True, cl
         Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
     quant_bits: float, optional
         Number of bits in the quantizer, only applied if not =0. (Default: don't qpply quantization)    
+    dac_params: dict, optional
+        parameters to pass to the DAC filter
     mod_prms: dict, optional
         parameters to pass to the modulator
     
@@ -643,12 +649,9 @@ def sim_tx_response(sig, fs, enob=6, cutoff=16e9, tgt_v=3.5, dac_filter=True, cl
         Signal with TX impairments
     """
     # Apply signal to DAC model
-    sig_dac_out = sim_DAC_response(sig, fs, enob, cutoff,  clip_rat=clip_rat, quant_bits=quant_bits)
+    sig_dac_out = sim_DAC_response(sig, fs, enob,  clip_rat=clip_rat, quant_bits=quant_bits, **dac_params)
     # Amplify the signal to target voltage(V)
-    if dac_filter:
-        sig_amp = ideal_amplifier_response(sig_dac_out, tgt_v)
-    else:
-        sig_amp = ideal_amplifier_response(sig_enob_noise, tgt_v)
+    sig_amp = ideal_amplifier_response(sig_dac_out, tgt_v)
     e_out = modulator_response(sig_amp, **mod_prms)
     return e_out
 
