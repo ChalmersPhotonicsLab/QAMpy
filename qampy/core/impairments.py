@@ -541,9 +541,9 @@ def apply_DAC_filter(sig, fs, cutoff=18e9, fn=None, ch=1):
     if fn is None:
         filter_sig = filter_signal(sig, fs, cutoff, ftype="bessel", order=2)
     else:
-        H_dac = load_dac_response(fn, fs, sig.shape[-1], ch=ch)
+        H_dac = load_dac_response(fn, fs, sig.shape[-1], ch=ch).astype(sig) # should check if response is real
         sigf = fft.fft(sig)
-        filter_sig = fft.ifft(sigf * dacf)
+        filter_sig = fft.ifft(sigf * H_dac)
     return filter_sig
 
 def apply_enob_as_awgn(sig, enob, verbose=False):
