@@ -582,7 +582,7 @@ def apply_enob_as_awgn(sig, enob, verbose=False):
     if verbose:
         return sig_enob_noise, snr_enob
     else:
-        return sig_enob
+        return sig_enob_noise
 
 def load_dac_response(fn, fs, N, ch=1):
     """
