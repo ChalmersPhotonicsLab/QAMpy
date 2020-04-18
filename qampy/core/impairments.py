@@ -470,7 +470,7 @@ def er_to_g(ext_rat):
     g = (10**(ext_rat/20)-1)/(10**(ext_rat/20)+1)
     return g
 
-def sim_DAC_response(sig, fs, enob, clip_rat=1, quant_bits=0, **dac_params):
+def sim_DAC_response(sig, fs, enob=5, clip_rat=1, quant_bits=0, **dac_params):
     """
     Function to simulate DAC response, including quantization noise (ENOB) and frequency response.
     
@@ -480,7 +480,7 @@ def sim_DAC_response(sig, fs, enob, clip_rat=1, quant_bits=0, **dac_params):
         Input signal 
     fs: float
         Sampling frequency of the signal
-    enob: float
+    enob: float, optional
         Effective number of bits of the DAC (i.e. 6 bits.) modelled as AWGN. If enob=0 only quantize. 
         If both enob and quant_bits are given, quantize first and then add enob noise.
     cutoff: float
