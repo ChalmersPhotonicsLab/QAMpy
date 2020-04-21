@@ -36,7 +36,27 @@ class TestReturnDtype(object):
         s2 = impairments.add_carrier_offset(s, 1e-3)
         assert np.dtype(dtype) is s2.dtype
 
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_sim_tx_response(self, dtype):
+        s = signals.SignalQAMGrayCoded(16, 2**14,  nmodes=2, dtype=dtype, fb=20e9)
+        s = s.resample(s.fb*2, beta=0.1)
+        s2 = impairments.sim_tx_response(s)
+        assert np.dtype(dtype) is s2.dtype
 
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_sim_DAC_response(self, dtype):
+        s = signals.SignalQAMGrayCoded(16, 2**14,  nmodes=2, dtype=dtype, fb=20e9)
+        s = s.resample(s.fb*2, beta=0.1)
+        s2 = impairments.sim_DAC_response(s)
+        assert np.dtype(dtype) is s2.dtype
+
+    @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+    def test_sim_mod_response(self, dtype):
+        s = signals.SignalQAMGrayCoded(16, 2**14,  nmodes=2, dtype=dtype, fb=20e9)
+        s = s.resample(s.fb*2, beta=0.1)
+        s2 = impairments.sim_mod_response(s)
+        assert np.dtype(dtype) is s2.dtype
+        
 class TestReturnObjects(object):
     s = signals.ResampledQAM(16, 2 ** 14, fs=2, nmodes=2)
 
@@ -64,6 +84,39 @@ class TestReturnObjects(object):
         s2 = impairments.simulate_transmission(self.s, snr=20, freq_off=1e-4, lwdth=1e-4,
                                                dgd=1e-2)
         assert type(self.s) is type(s2)
+        
+    def test_sim_tx_response(self):
+        s = signals.SignalQAMGrayCoded(64, 2**15, fb=20e9, nmodes=1)
+        s2 = s.resample(s.fb*2, beta=0.1)
+        s3 = impairments.sim_tx_response(s2)
+        assert type(s) is type(s2)
+
+    def test_sim_DAC_response(self):
+        s = signals.SignalQAMGrayCoded(64, 2**15, fb=20e9, nmodes=1)
+        s2 = s.resample(s.fb*2, beta=0.1)
+        s3 = impairments.sim_DAC_response(s2)
+        assert type(s) is type(s2)
+
+    def test_sim_mod_response(self):
+        s = signals.SignalQAMGrayCoded(64, 2**15, fb=20e9, nmodes=1)
+        s2 = s.resample(s.fb*2, beta=0.1)
+        s3 = impairments.sim_mod_response(s2)
+        assert type(s) is type(s2)
+
+    @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
+    def test_sim_tx_response(self, attr):
+        s2 = impairments.sim_tx_response(self.s, dac_params={"cutoff":0.9})
+        assert getattr(self.s, attr) is getattr(s2, attr)
+
+    @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
+    def test_sim_DAC_response(self, attr):
+        s2 = impairments.sim_DAC_response(self.s, cutoff=0.9)
+        assert getattr(self.s, attr) is getattr(s2, attr)
+
+    @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
+    def test_sim_mod_response(self, attr):
+        s2 = impairments.sim_mod_response(self.s)
+        assert getattr(self.s, attr) is getattr(s2, attr)
 
     @pytest.mark.parametrize("attr", ["fs", "symbols", "fb"])
     def test_add_awgn(self, attr):
