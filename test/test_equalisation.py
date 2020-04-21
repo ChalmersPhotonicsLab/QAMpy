@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from qampy import signals, equalisation, impairments
+from qampy import signals, equalisation, impairments, helpers
 from qampy.core import impairments as cimpairments
 from qampy.core import equalisation as cequalisation
 
@@ -136,6 +136,16 @@ class TestEqualiseSignalParameters(object):
         cpe_sig, ph = phaserec.pilot_cpe(eq_sig,N=5,use_seq=False) 
         gmi = np.mean(cpe_sig.cal_gmi()[0])
         assert gmi > 5.5
+        
+    @pytest.mark.parametrize("method", ["cma_real", "dd_real", "dd_data_real" ])
+    def test_real_valued_single_mode(self, method):
+        s = signals.SignalQAMGrayCoded(4, 10**5, nmodes=1, fb=25e9)
+        s2 = s.resample(s.fb*2, beta=0.1)
+        s2 = impairments.sim_mod_response(s*0.2, dcbias=1.1)
+        s3 = helpers.normalise_and_center(s2)
+        s4 = impairments.change_snr(s3, 15)
+        s5, wx, err = equalisation.equalise_signal(s4, 1e-3, Ntaps=17, method="cma_real", adaptive_stepsize=True, apply=True)
+        assert s5.cal_ser() < 1e5
         
         
 

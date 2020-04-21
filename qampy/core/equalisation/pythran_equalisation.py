@@ -28,6 +28,8 @@ def apply_filter(E, wx):
             Xest += E[k, i]*np.conj(wx[k,i])
     return Xest
 
+#pythran export apply_filter_to_signal(float64[:,:], int, float64[:,:,:], int[:] or None)
+#pythran export apply_filter_to_signal(float32[:,:], int, float32[:,:,:], int[:] or None)
 #pythran export apply_filter_to_signal(complex128[:,:], int, complex128[:,:,:], int[:] or None)
 #pythran export apply_filter_to_signal(complex64[:,:], int, complex64[:,:,:], int[:] or None)
 def apply_filter_to_signal(E, os, wx, modes=None):

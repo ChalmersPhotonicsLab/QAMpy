@@ -58,8 +58,8 @@ from qampy.theory import cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.segmentaxis import segment_axis
 from qampy.core.equalisation import pythran_equalisation
 
-DECISION_BASED = ["sbd", "mddma", "dd", "sbd_data"]
-NONDECISION_BASED = ["cma", "mcma", "rde", "mrde"]
+DECISION_BASED = ["sbd", "mddma", "dd", "sbd_data", "dd_real", "dd_data_real"]
+NONDECISION_BASED = ["cma", "mcma", "rde", "mrde", "cma_real"]
 REAL_VALUED = ["cma_real", "dd_real", "dd_data_real"]
 
 TRAINING_FCTS =  DECISION_BASED + NONDECISION_BASED
@@ -86,13 +86,13 @@ def generate_symbols_for_eq(method, M, dtype):
         symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
     if method in ["cma_real"]:
-        return np.atleast_2d(_cal_Rconstant_complex(M).real).astype(dtype)
+        return np.repeat([np.atleast_1d(_cal_Rconstant_complex(M).real.astype(dtype))], 2, axis=0)
     if method in ["dd_real"]:
-        symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M)))
-        symbols_out = np.zeros(symbols.size*2, dtype=dtype)
-        symbols_out[::2] = symbols.real.astype(dtype)
-        symbols_out[1::2] = symbols.imag.astype(dtype)
+        symbols = cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))
+        symbols_out = np.vstack([symbols.real, symbols.imag]).astype(dtype)
         return symbols_out
+    if method in ["dd_data_real", "sbd_data"]:
+        raise ValueError("%s is a data-aided method and needs the symbols to be passed"%method)
     raise ValueError("%s is unknown method"%method)
 
 def apply_filter(E, os, wxy, method="pyt", modes=None):
@@ -133,10 +133,10 @@ def apply_filter(E, os, wxy, method="pyt", modes=None):
         else:
             if E.itemsize == 8:
                 Etmp = pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
-                return Etmp[::2] + 1j * Etmp[1::2]
+                return Etmp[::2,:] + 1j * Etmp[1::2,:]
             elif E.itemsize == 4:
-                Etmp =  pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes).view(dtype=np.complex64)
-                return Etmp[::2] + np.complex64(1j) * Etmp[1::2]
+                Etmp =  pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
+                return Etmp[::2,:] + np.complex64(1j) * Etmp[1::2,:]
             else:
                 raise ValueError("The field has an unknown data type")
     else:
@@ -474,8 +474,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     dtype_c = E.dtype
     if method in REAL_VALUED:
         Etmp = np.zeros((2*E.shape[0], E.shape[1]), dtype=E.real.dtype)
-        Etmp[::2] = E.real
-        Etmp[1::2] = E.imag
+        Etmp[:E.shape[0]] = E.real
+        Etmp[E.shape[0]:] = E.imag
         E = np.ascontiguousarray(Etmp)
     else:
         E = np.ascontiguousarray(E)
@@ -495,14 +495,28 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         assert wxy.shape[:2] == (nmodes, nmodes), "The first 2 dimensions of wxy need to be the same shape as E"
     if TrSyms is None:
         TrSyms = _cal_training_symbol_len(os, Ntaps, E.shape[-1])
-    if symbols is None or  method in NONDECISION_BASED: # This code currently prevents passing "symbol arrays for RDE or CMA algorithms
+    if symbols is None or method in NONDECISION_BASED: # This code currently prevents passing "symbol arrays for RDE or CMA algorithms
         symbols = generate_symbols_for_eq(method, M, E.dtype)
-    else:
+    if method not in REAL_VALUED:
+        if symbols.ndim == 1 or symbols.shape[0] == 1:
+            symbols = np.tile(symbols, (nmodes, 1))
+        elif symbols.shape[0] != nmodes:
+            raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
         symbols = symbols.astype(E.dtype)
-    if symbols.ndim == 1 or symbols.shape[0] == 1:
-        symbols = np.tile(symbols, (nmodes, 1))
-    elif symbols.shape[0] < nmodes:
-        raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
+    else:
+        if np.iscomplexobj(symbols):
+            if symbols.ndim == 1 or symbols.shape[0] == 1:
+                symbols = np.repeat([symbols.real, symbols.imag], nmodes//2, axis=0)
+            elif symbols.shape[0] == nmodes//2:
+                symbols = np.vstack([symbols.real, symbols.imag])
+            else:
+                raise ValueError("Symbols array is  complex and has {} modes, but needs to either have one mode or the same modes as the signal ({})".format(symbols.shape[0], E.shape[0]//2))
+        else:
+            if symbols.shape[0] == 2 and nmodes > 2:
+                symbols = np.repeat([symbols[0], symbols[1]], nmodes//2, axis=0)
+            elif symbols.shape[0] != nmodes:
+                raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
+        symbols = symbols.astype(E.dtype)
     if method in REAL_VALUED:
         err, wxy, mu = pythran_equalisation.train_equaliser_realvalued(E, TrSyms, Niter, os, mu, wxy, modes, adaptive_stepsize, symbols.copy(), method[:-5]) # copies are needed because pythran has problems with reshaped arrays
     else:
