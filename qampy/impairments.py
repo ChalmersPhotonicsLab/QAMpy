@@ -169,8 +169,8 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         sig = apply_PMD(sig, theta, dgd)
     return sig
 
-def sim_tx_response(sig, enob=6, tgt_V=3.5, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
-        """
+def sim_tx_response(sig, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
+    """
     Simulate a realistic transmitter possibly including quantization, noise due to limited ENOB,
     and DAC frequency response
 
@@ -196,7 +196,7 @@ def sim_tx_response(sig, enob=6, tgt_V=3.5, clip_rat=1, quant_bits=0, dac_params
     e_out: array_like
         Signal with TX impairments
     """
-    return sig.recreate_from_np_array(core.impairments.sim_tx_response(sig, sig.fs, enob=enob, tgt_V=tgt_V, clip_rat=clip_rat,
+    return sig.recreate_from_np_array(core.impairments.sim_tx_response(sig, sig.fs, enob=enob, tgt_v=tgt_v, clip_rat=clip_rat,
                                                                        quant_bits=quant_bits, dac_params=dac_params, **mod_prms))
 
 def sim_DAC_response(sig, enob=5, clip_rat=1, quant_bits=0, **dac_params):
