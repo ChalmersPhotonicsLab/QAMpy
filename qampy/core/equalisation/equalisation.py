@@ -61,6 +61,7 @@ from qampy.core.equalisation import pythran_equalisation
 DECISION_BASED = ["sbd", "mddma", "dd", "sbd_data", "dd_real", "dd_data_real"]
 NONDECISION_BASED = ["cma", "mcma", "rde", "mrde", "cma_real"]
 REAL_VALUED = ["cma_real", "dd_real", "dd_data_real"]
+DATA_AIDED = ["dd_data_real", "sbd_data"]
 
 TRAINING_FCTS =  DECISION_BASED + NONDECISION_BASED
 

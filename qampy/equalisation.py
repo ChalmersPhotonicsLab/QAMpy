@@ -102,11 +102,13 @@ def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method=
 #        syms = symbols
 #    else:
     if symbols is None:
-        try:
-            symbols = sig.coded_symbols
-        except AttributeError:
-            symbols = None
-        
+        if method in core.equalisation.DATA_AIDED:
+            symbols = sig.symbols
+        else:
+            try:
+                symbols = sig.coded_symbols
+            except AttributeError:
+                symbols = None
     if apply:
         sig_out, wxy, err = core.equalisation.equalise_signal(sig, sig.os, mu, sig.M, wxy=wxy, Ntaps=Ntaps, TrSyms=TrSyms, Niter=Niter, method=method,
                                                  adaptive_stepsize=adaptive_stepsize,  symbols=symbols,
@@ -169,12 +171,14 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
     if apply is False do not return sig_out
 
     """
-    
     if symbols is None:
-        try:
-            symbols = sig.coded_symbols
-        except AttributeError:
-            symbols = None
+        if method in core.equalisation.DATA_AIDED:
+            symbols = sig.symbols
+        else:
+            try:
+                symbols = sig.coded_symbols
+            except AttributeError:
+                symbols = None
     if apply:
         sig_out, wx, err = core.equalisation.dual_mode_equalisation(sig, sig.os, mu, sig.M, Ntaps=Ntaps, TrSyms=TrSyms, methods=methods,
                                                        adaptive_stepsize=adaptive_stepsize, symbols=symbols, Niter=Niter,
