@@ -169,13 +169,88 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         sig = apply_PMD(sig, theta, dgd)
     return sig
 
-def sim_tx_response(sig, enob=6, cutoff=16e9, tgt_V=3.5, p_in=0, dac_filter=True, clipping=False, clip_rat=1, quan_and_enob=False, **mod_prms):
-    return sig.recreate_from_np_array(core.impairments.sim_tx_response(sig, sig.fs, enob, cutoff, tgt_V, p_in, dac_filter, clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob, **mod_prms))
+def sim_tx_response(sig, enob=6, tgt_V=3.5, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
+        """
+    Simulate a realistic transmitter possibly including quantization, noise due to limited ENOB,
+    and DAC frequency response
 
-def sim_DAC_response(sig, enob, cutoff, quantizer_model=True, clipping=False, clip_rat=1, quan_and_enob=False):
-    sig_out, sig_enob, snr_enob = core.impairments.sim_DAC_response(sig, sig.fs, enob, cutoff, quantizer_model, clipping, clip_rat=clip_rat, quan_and_enob=quan_and_enob)
-    sig_out = sig.recreate_from_np_array(sig_out)
-    return sig_out, sig_enob, snr_enob
+    Parameters
+    ----------
+    sig: array_like
+        Input signal used for transmission
+    enob: float, optional
+        efficient number of bits for DAC. If enob=0 only use quantizer. Unit: bits
+    tgt_v : float, optional
+        target Voltage
+    clip_rat: float, optional
+        Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
+    quant_bits: float, optional
+        Number of bits in the quantizer, only applied if not =0. (Default: don't qpply quantization)
+    dac_params: dict, optional
+        parameters to pass to the DAC filter
+    mod_prms: dict, optional
+        parameters to pass to the modulator
+
+    Returns
+    -------
+    e_out: array_like
+        Signal with TX impairments
+    """
+    return sig.recreate_from_np_array(core.impairments.sim_tx_response(sig, sig.fs, enob=enob, tgt_V=tgt_V, clip_rat=clip_rat,
+                                                                       quant_bits=quant_bits, dac_params=dac_params, **mod_prms))
+
+def sim_DAC_response(sig, enob=5, clip_rat=1, quant_bits=0, **dac_params):
+    """
+    Function to simulate DAC response, including quantization noise (ENOB) and frequency response.
+
+    Parameters
+    ----------
+    sig:  array_like
+        Input signal
+    enob: float, optional
+        Effective number of bits of the DAC (i.e. 6 bits.) modelled as AWGN. If enob=0 only quantize.
+        If both enob and quant_bits are given, quantize first and then add enob noise.
+    clip_rat: float, optional
+        Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
+    quant_bits: float, optional
+        Number of bits in the quantizer, only applied if not =0. (Default: don't qpply quantization)
+    dac_params: dict, optional
+        Parameters for the DAC response check apply_DAC_filter for the keyword parameters. If this is
+        empty than do not apply the DAC response
+
+    Returns
+    -------
+    filter_sig:  array_like
+        Quantized, clipped and filtered output signal
+    """
+    return  sig.recreate_from_np_array(core.impairments.sim_DAC_response(sig, sig.fs, enob=enob, clip_rat=clip_rat, quant_bits=quant_bits, **dac_params))
 
 def sim_mod_response(sig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_outer=(3.5/2, 3.5, 1)):
-    return sig.recreate_from_np_array(core.impairments.modulator_response(sig, dcbias, vpi, gfactr, cfactr, prms_outer))
+    """
+    Simulate IQ modulator response.
+
+    Parameters
+    ----------
+    rfsig:  array_like
+        complex version of the I (real part) and Q (imaginary part) of the signal
+    dcsig:  complex or float, optional
+            DC bias for I (real) and Q (imaginary) channel. If dcsig is real use the same DC bias for I and Q
+    vpi:   complex or float, optional
+            Vpi of the MZM (zero-power point) in I (real)  and Q (imaginary) channel. If vpi is real use the  same Vpi
+            for both.
+    gfactr: complex or float, optional
+            Split imbalance and path dependent loss of I (real) and Q (imaginary) MZM.
+            An ideal MZM with infinite extinction ratio has gfactor=1. If gfactr is real use the same value for both I
+            and Q.
+    cfactr:  complex or float, optional
+           Chirp factors of I (real) and (Q) channel MZMs, caused by the asymmetry in the electrode design of the MZM.
+           cfactr = 0 for ideal MZM.
+    prms_outer: array_like, optional
+            DCBias, Vpi and gain factor of the outer MZM.
+
+    Returns
+    -------
+    e_out: array_like
+            Output signal of IQ modulator. (i.e. Here assume that input laser power is 0 dBm)
+    """
+    return sig.recreate_from_np_array(core.impairments.modulator_response(sig, dcbias=dcbias, vpi=vpi, gfactr=gfactr, cfactr=cfactr, prms_outer=prms_outer))
