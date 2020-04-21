@@ -169,7 +169,7 @@ def simulate_transmission(sig, snr=None, freq_off=None, lwdth=None, dgd=None, th
         sig = apply_PMD(sig, theta, dgd)
     return sig
 
-def sim_tx_response(sig, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
+def sim_tx_response(sig, enob=6, tgt_v=1, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
     """
     Simulate a realistic transmitter possibly including quantization, noise due to limited ENOB,
     and DAC frequency response
@@ -181,7 +181,7 @@ def sim_tx_response(sig, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_params
     enob: float, optional
         efficient number of bits for DAC. If enob=0 only use quantizer. Unit: bits
     tgt_v : float, optional
-        target Voltage
+        target Voltage as fraction of Vpi
     clip_rat: float, optional
         Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
     quant_bits: float, optional
@@ -225,7 +225,7 @@ def sim_DAC_response(sig, enob=5, clip_rat=1, quant_bits=0, **dac_params):
     """
     return  sig.recreate_from_np_array(core.impairments.sim_DAC_response(sig, sig.fs, enob=enob, clip_rat=clip_rat, quant_bits=quant_bits, **dac_params))
 
-def sim_mod_response(sig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_outer=(3.5/2, 3.5, 1)):
+def sim_mod_response(sig, dcbias=1, gfactr=1, cfactr=0, dcbias_out=1, gfactr_out=1):
     """
     Simulate IQ modulator response.
 
@@ -253,4 +253,5 @@ def sim_mod_response(sig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_outer=(3
     e_out: array_like
             Output signal of IQ modulator. (i.e. Here assume that input laser power is 0 dBm)
     """
-    return sig.recreate_from_np_array(core.impairments.modulator_response(sig, dcbias=dcbias, vpi=vpi, gfactr=gfactr, cfactr=cfactr, prms_outer=prms_outer))
+    return sig.recreate_from_np_array(core.impairments.modulator_response(sig, dcbias=dcbias, vpi=vpi, gfactr=gfactr, cfactr=cfactr, gfactr_out=gfactr_out,
+                                                                          dcbias_out=dcbias_out))

@@ -406,7 +406,7 @@ def quantize_signal_New(sig_in, nbits=6, rescale_in=True, rescale_out=True):
 
     return sig_in.recreate_from_np_array(sig_out)
 
-def modulator_response(rfsig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_outer=(3.5/2, 3.5, 1)):
+def modulator_response(rfsig, dcbias=1, gfactr=1, cfactr=0, dcbias_out=1, gfactr_out=1):
     """
     Function so simulate IQ modulator response.
 
@@ -426,8 +426,10 @@ def modulator_response(rfsig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_oute
     cfactr:  complex or float, optional
            Chirp factors of I (real) and (Q) channel MZMs, caused by the asymmetry in the electrode design of the MZM. 
            cfactr = 0 for ideal MZM.
-    prms_outer: array_like, optional
-            DCBias, Vpi and gain factor of the outer MZM.
+    dcbias_out : float, optional
+            DCBias of the outer MZM
+    gfactr_out : float, optional
+            gain factor of the outer MZM
 
     Returns
     -------
@@ -438,22 +440,18 @@ def modulator_response(rfsig, dcbias=3.5, vpi=3.5, gfactr=1, cfactr=0, prms_oute
 
     if not np.iscomplex(dcbias):
         dcbias = dcbias + 1j*dcbias
-    if not np.iscomplex(vpi):
-        vpi = vpi + 1j*vpi
     if not np.iscomplex(gfactr):
         gfactr = gfactr + 1j*gfactr
     if not np.iscomplex(cfactr):
         cfactr = cfactr + 1j*cfactr
     volt = rfsig.real + dcbias.real + 1j * (rfsig.imag + dcbias.imag)
-
-    dcbias_outer, vpi_outer, gfactr_outer = prms_outer
     # Use the minus sign (-) to modulate lower level RF signal to corresponding Low-level optical field, if V_bias = Vpi
-    e_i = -(np.exp(1j * np.pi * volt.real * (1 + cfactr.real) / (2 * vpi.real)) +
-            gfactr.real * np.exp(-1j * np.pi * volt.real * (1 - cfactr.real) / (2 * vpi.real))) / (1 + gfactr.real)
-    e_q = -(np.exp(1j * np.pi * volt.imag * (1 + cfactr.imag) / (2 * vpi.imag)) +
-            gfactr.imag * np.exp(-1j * np.pi * volt.imag * (1 - cfactr.imag) / (2 * vpi.imag))) / (1 + gfactr.imag)
-    e_out = np.exp(1j * np.pi / 4) * (e_i * np.exp(-1j * np.pi * dcbias_outer / (2 * vpi_outer)) +
-                                      gfactr_outer * e_q * np.exp(1j * np.pi * dcbias_outer / (2 * vpi_outer))) / (1 + gfactr_outer)
+    e_i = -(np.exp(1j * np.pi * volt.real * (1 + cfactr.real) / 2) +
+            gfactr.real * np.exp(-1j * np.pi * volt.real * (1 - cfactr.real) / 2)) / (1 + gfactr.real)
+    e_q = -(np.exp(1j * np.pi * volt.imag * (1 + cfactr.imag) / 2) +
+            gfactr.imag * np.exp(-1j * np.pi * volt.imag * (1 - cfactr.imag) / 2)) / (1 + gfactr.imag)
+    e_out = np.exp(1j * np.pi / 4) * (e_i * np.exp(-1j * np.pi * dcbias_out/2 ) +
+                                      gfactr_out * e_q * np.exp(1j * np.pi * dcbias_out / 2)) / (1 + gfactr_out)
     return e_out
 
 def er_to_g(ext_rat):
@@ -615,7 +613,7 @@ def load_dac_response(fn, fs, N, ch=1):
     dacf_interp = np.atleast_2d(dacf_interp)
     return dacf_interp
 
-def sim_tx_response(sig, fs, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
+def sim_tx_response(sig, fs, enob=6, tgt_v=1, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
     """
     Simulate a realistic transmitter possibly including quantization, noise due to limited ENOB, 
     and DAC frequency response
@@ -629,7 +627,7 @@ def sim_tx_response(sig, fs, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_pa
     enob: float, optional
         efficient number of bits for DAC. If enob=0 only use quantizer. Unit: bits
     tgt_v : float, optional
-        target Voltage
+        target Voltage in fraction of Vpi
     clip_rat: float, optional
         Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
     quant_bits: float, optional
@@ -637,7 +635,7 @@ def sim_tx_response(sig, fs, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_pa
     dac_params: dict, optional
         parameters to pass to the DAC filter
     mod_prms: dict, optional
-        parameters to pass to the modulator
+        parameters to pass to the modulator (see modulator response for details)
     
     Returns
     -------
