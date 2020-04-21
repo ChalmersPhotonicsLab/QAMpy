@@ -253,5 +253,5 @@ def sim_mod_response(sig, dcbias=1, gfactr=1, cfactr=0, dcbias_out=1, gfactr_out
     e_out: array_like
             Output signal of IQ modulator. (i.e. Here assume that input laser power is 0 dBm)
     """
-    return sig.recreate_from_np_array(core.impairments.modulator_response(sig, dcbias=dcbias, vpi=vpi, gfactr=gfactr, cfactr=cfactr, gfactr_out=gfactr_out,
+    return sig.recreate_from_np_array(core.impairments.modulator_response(sig, dcbias=dcbias, gfactr=gfactr, cfactr=cfactr, gfactr_out=gfactr_out,
                                                                           dcbias_out=dcbias_out))
