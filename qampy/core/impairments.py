@@ -630,8 +630,6 @@ def sim_tx_response(sig, fs, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_pa
         Sampling frequency of signal
     enob: float, optional
         efficient number of bits for DAC. If enob=0 only use quantizer. Unit: bits
-    cutoff: float, optional
-        3-dB cut-off frequency for DAC. Unit: GHz
     tgt_v : float, optional
         target Voltage
     clip_rat: float, optional
