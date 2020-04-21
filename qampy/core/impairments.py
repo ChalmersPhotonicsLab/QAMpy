@@ -483,8 +483,6 @@ def sim_DAC_response(sig, fs, enob=5, clip_rat=1, quant_bits=0, **dac_params):
     enob: float, optional
         Effective number of bits of the DAC (i.e. 6 bits.) modelled as AWGN. If enob=0 only quantize. 
         If both enob and quant_bits are given, quantize first and then add enob noise.
-    cutoff: float
-        3-dB cutoff frequency of DAC. (i.e. 16 GHz.)
     clip_rat: float, optional
         Ratio of signal left after clipping. (i.e. clip_rat=0.8 means 20% of the signal is clipped) (default 1: no clipping)
     quant_bits: float, optional
