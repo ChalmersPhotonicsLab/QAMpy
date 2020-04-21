@@ -225,7 +225,7 @@ def sim_DAC_response(sig, enob=5, clip_rat=1, quant_bits=0, **dac_params):
     """
     return  sig.recreate_from_np_array(core.impairments.sim_DAC_response(sig, sig.fs, enob=enob, clip_rat=clip_rat, quant_bits=quant_bits, **dac_params))
 
-def sim_mod_response(sig, dcbias=1, gfactr=1, cfactr=0, dcbias_out=1, gfactr_out=1):
+def sim_mod_response(sig, dcbias=1, gfactr=1, cfactr=0, dcbias_out=0.5, gfactr_out=1):
     """
     Simulate IQ modulator response.
 
