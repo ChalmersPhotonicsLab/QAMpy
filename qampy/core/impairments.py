@@ -619,6 +619,8 @@ def load_dac_response(fn, fs, N, ch=1):
 
 def sim_tx_response(sig, fs, enob=6, tgt_v=3.5, clip_rat=1, quant_bits=0, dac_params={"cutoff":18e9, "fn": None, "ch":None}, **mod_prms):
     """
+    Simulate a realistic transmitter possibly including quantization, noise due to limited ENOB, 
+    and DAC frequency response
 
     Parameters
     ----------
