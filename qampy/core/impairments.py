@@ -406,7 +406,7 @@ def quantize_signal_New(sig_in, nbits=6, rescale_in=True, rescale_out=True):
 
     return sig_in.recreate_from_np_array(sig_out)
 
-def modulator_response(rfsig, dcbias=1, gfactr=1, cfactr=0, dcbias_out=1, gfactr_out=1):
+def modulator_response(rfsig, dcbias=1, gfactr=1, cfactr=0, dcbias_out=0.5, gfactr_out=1):
     """
     Function so simulate IQ modulator response.
 
