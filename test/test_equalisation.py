@@ -97,27 +97,48 @@ class TestEqualiseSignalParameters(object):
         ser = np.mean(E.cal_ser())
         assert ser < 1e-5
             
-    def test_single_mode_64(self):
-        sig = signals.SignalQAMGrayCoded(64, 10**5, nmodes=2)
+    @pytest.mark.parametrize("M", [4, 64])
+    @pytest.mark.parametrize("nmodes", [1, 2, 4])
+    @pytest.mark.parametrize("rmodes", [None, 0, -1])
+    @pytest.mark.parametrize("method", cequalisation.NONDECISION_BASED + cequalisation.DECISION_BASED)
+    def test_single_mode(self, M, nmodes, rmodes, method):
+        Ntaps=19
+        sig = signals.SignalQAMGrayCoded(M, 10**5, nmodes=nmodes)
         sig = impairments.change_snr(sig, 30)
         sig = sig.resample(sig.fb*2, beta=0.1)
-        E, wx, e = equalisation.equalise_signal(sig,1e-3, Ntaps=19, adaptive_stepsize=True, apply=True)
-        serx,sery = E.cal_ser()
-        assert serx < 1e-4
-        assert sery < 1e-4
+        if method in cequalisation.DATA_AIDED:
+            sig = np.roll(sig, Ntaps//2, axis=-1)
+        if rmodes is None:
+            modes = None
+        else:
+            if nmodes == 1 and rmodes == -1:
+                modes = np.array([0])
+            else:
+                modes = np.arange(nmodes+rmodes)
+            if modes.size > 1:
+                np.random.shuffle(modes)
+        E, wx, e = equalisation.equalise_signal(sig,1e-2, Niter=2, Ntaps=Ntaps, adaptive_stepsize=True, apply=True, modes=modes)
+        ser =  E.cal_ser().min()
+        assert ser < 1e-4
 
     @pytest.mark.parametrize("modes", [[0],[1], np.arange(2)])
-    def test_data_aided(self,  modes):
+    @pytest.mark.parametrize("method", cequalisation.DATA_AIDED)
+    @pytest.mark.parametrize("ps_sym", [True, False])
+    def test_data_aided(self,  modes, method, ps_sym):
         from qampy import helpers
         ntaps = 21
         sig = signals.SignalQAMGrayCoded(64, 10**5, nmodes=2, fb=25e9)
         sig2 = sig.resample(2*sig.fb, beta=0.02)
         sig2 = helpers.normalise_and_center(sig2)
         sig2 = np.roll(sig2, ntaps//2)
-        sig3 = impairments.simulate_transmission(sig2, dgd=15e-12, theta=np.pi/3., snr=35)
+        sig3 = impairments.simulate_transmission(sig2, dgd=150e-12, theta=np.pi/3., snr=35)
         sig3 = helpers.normalise_and_center(sig3)
+        if ps_sym:
+            symbs = sig3.symbols
+        else:
+            symbs = None
         sigout, wxy, err = equalisation.equalise_signal(sig3, 1e-3, Ntaps=ntaps, adaptive_stepsize=True,
-                                                symbols=sig3.symbols, apply=True, method="sbd_data", TrSyms=10000, modes=modes)
+                                                symbols=symbs, apply=True, method="sbd_data", TrSyms=10000, modes=modes)
         sigout = helpers.normalise_and_center(sigout)
         gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0])
         assert gmi > 5.9
