@@ -129,17 +129,19 @@ def apply_filter(E, os, wxy, method="pyt", modes=None):
     if method == "py":
         return apply_filter_py(E, os, wxy)
     elif method == "pyt":
-        if np.iscomplexobj(E):
+        if np.iscomplexobj(E) and np.iscomplexobj(wxy):
             return pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
+        elif np.iscomplexobj(E):
+            E  = _convert_sig_to_real(E)
+        if E.itemsize == 8:
+            Etmp = pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
+            return Etmp[:E[modes].shape[0]//2,:] + 1j * Etmp[E[modes].shape[0]//2:,:]
+        elif E.itemsize == 4:
+            Etmp =  pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
+            return Etmp[:E.shape[0]//2,:] + np.complex64(1j) * Etmp[E.shape[0]//2:,:]
+            #return Etmp[::2,:] + np.complex64(1j) * Etmp[1::2,:]
         else:
-            if E.itemsize == 8:
-                Etmp = pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
-                return Etmp[::2,:] + 1j * Etmp[1::2,:]
-            elif E.itemsize == 4:
-                Etmp =  pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
-                return Etmp[::2,:] + np.complex64(1j) * Etmp[1::2,:]
-            else:
-                raise ValueError("The field has an unknown data type")
+            raise ValueError("The field has an unknown data type")
     else:
         raise NotImplementedError("Only py and pythran methods are implemented")
 
@@ -205,6 +207,12 @@ def apply_filter_py(E, os, wxy, modes=None):
         Eest = np.atleast_2d(Eest)
 
     return Eest
+
+def _convert_sig_to_real(E):
+    Etmp = np.zeros((2*E.shape[0], E.shape[1]), dtype=E.real.dtype)
+    Etmp[:E.shape[0]] = E.real
+    Etmp[E.shape[0]:] = E.imag
+    return np.ascontiguousarray(Etmp)
 
 def _cal_Rdash(syms):
      return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (np.sign(syms.real + syms.imag) + np.sign(syms.real-syms.imag) + 1.j*(np.sign(syms.real+syms.imag) - np.sign(syms.real-syms.imag)))*syms.conj()
@@ -474,10 +482,11 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     method = method.lower()
     dtype_c = E.dtype
     if method in REAL_VALUED:
-        Etmp = np.zeros((2*E.shape[0], E.shape[1]), dtype=E.real.dtype)
-        Etmp[:E.shape[0]] = E.real
-        Etmp[E.shape[0]:] = E.imag
-        E = np.ascontiguousarray(Etmp)
+        E = _convert_sig_to_real(E)
+        #Etmp = np.zeros((2*E.shape[0], E.shape[1]), dtype=E.real.dtype)
+        #Etmp[:E.shape[0]] = E.real
+        #Etmp[E.shape[0]:] = E.imag
+        #E = np.ascontiguousarray(Etmp)
     else:
         E = np.ascontiguousarray(E)
     mu = E.real.dtype.type(mu)
@@ -485,7 +494,11 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     if modes is None:
         modes = np.arange(nmodes)
     else:
-        modes = np.atleast_1d(modes)
+        if method in REAL_VALUED:
+            modes = np.atleast_1d(modes)
+            modes = np.hstack([modes, modes+nmodes//2])
+        else:
+            modes = np.atleast_1d(modes)
         assert np.max(modes) < nmodes, "largest mode number is larger than shape of signal"
     if wxy is None:
         wxy = _init_taps(Ntaps, nmodes, nmodes, E.dtype)
@@ -507,14 +520,14 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     else:
         if np.iscomplexobj(symbols):
             if symbols.ndim == 1 or symbols.shape[0] == 1:
-                symbols = np.repeat([symbols.real, symbols.imag], nmodes//2, axis=0)
+                symbols = np.repeat([symbols.real, symbols.imag], nmodes//2, axis=0).squeeze()
             elif symbols.shape[0] == nmodes//2:
                 symbols = np.vstack([symbols.real, symbols.imag])
             else:
                 raise ValueError("Symbols array is  complex and has {} modes, but needs to either have one mode or the same modes as the signal ({})".format(symbols.shape[0], E.shape[0]//2))
         else:
             if symbols.shape[0] == 2 and nmodes > 2:
-                symbols = np.repeat([symbols[0], symbols[1]], nmodes//2, axis=0)
+                symbols = np.repeat([symbols[0], symbols[1]], nmodes//2, axis=0).squeeze()
             elif symbols.shape[0] != nmodes:
                 raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
         symbols = symbols.astype(E.dtype)

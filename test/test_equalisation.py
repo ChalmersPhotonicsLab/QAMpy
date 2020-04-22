@@ -118,11 +118,16 @@ class TestEqualiseSignalParameters(object):
             if modes.size > 1:
                 np.random.shuffle(modes)
         E, wx, e = equalisation.equalise_signal(sig,1e-2, Niter=2, Ntaps=Ntaps, adaptive_stepsize=True, apply=True, modes=modes)
-        ser =  E.cal_ser().min()
-        assert ser < 1e-4
+        ser =  E.cal_ser()
+        if rmodes is None:
+            assert ser.size == nmodes
+        else:
+            assert ser.size == modes.size
+        assert np.all(ser < 1e-4)
 
     @pytest.mark.parametrize("modes", [[0],[1], np.arange(2)])
     @pytest.mark.parametrize("method", cequalisation.DATA_AIDED)
+    #@pytest.mark.parametrize("method", ["dd_data_real"])
     @pytest.mark.parametrize("ps_sym", [True, False])
     def test_data_aided(self,  modes, method, ps_sym):
         from qampy import helpers
@@ -138,26 +143,26 @@ class TestEqualiseSignalParameters(object):
         else:
             symbs = None
         sigout, wxy, err = equalisation.equalise_signal(sig3, 1e-3, Ntaps=ntaps, adaptive_stepsize=True,
-                                                symbols=symbs, apply=True, method="sbd_data", TrSyms=10000, modes=modes)
+                                                symbols=symbs, apply=True, method=method, TrSyms=20000, modes=modes)
         sigout = helpers.normalise_and_center(sigout)
         gmi = np.mean(sigout.cal_gmi(llr_minmax=True)[0])
         assert gmi > 5.9
         
     @pytest.mark.parametrize("rollframe", [True, False])
     @pytest.mark.parametrize("modal_delay", [(2000,2000), (3000, 2000)])
-    @pytest.mark.parametrize("ddmethod", ["sbd", "sbd_data"])
-    def test_pilot_based(self, rollframe, modal_delay, ddmethod):
+    @pytest.mark.parametrize("method", [("cma", "sbd"), ("cma", "sbd_data"), ("cma_real", "dd_real")])
+    def test_pilot_based(self, rollframe, modal_delay, method):
         from qampy import phaserec
         mysig = signals.SignalWithPilots(64,2**16,2**10,32,nmodes=2,Mpilots=4,nframes=3,fb=24e9)
         mysig2 = mysig.resample(mysig.fb*2,beta=0.01)
         mysig3 = impairments.simulate_transmission(mysig2,snr=25,dgd=10e-12, freq_off=00e6,lwdth=000e3,roll_frame_sync=rollframe, modal_delay=modal_delay)
         mysig3.sync2frame()
         mysig3.corr_foe()
-        wxy, eq_sig = equalisation.pilot_equaliser(mysig3, (1e-3, 1e-3), 45, foe_comp=False, methods=("cma", ddmethod))
-        cpe_sig, ph = phaserec.pilot_cpe(eq_sig,N=5,use_seq=False) 
+        wxy, eq_sig = equalisation.pilot_equaliser(mysig3, (1e-3, 1e-3), 45, foe_comp=False, methods=method)
+        cpe_sig, ph = phaserec.pilot_cpe(eq_sig,N=5,use_seq=False)
         gmi = np.mean(cpe_sig.cal_gmi()[0])
         assert gmi > 5.5
-        
+
     @pytest.mark.parametrize("method", ["cma_real", "dd_real", "dd_data_real" ])
     def test_real_valued_single_mode(self, method):
         s = signals.SignalQAMGrayCoded(4, 10**5, nmodes=1, fb=25e9)
@@ -165,9 +170,9 @@ class TestEqualiseSignalParameters(object):
         s2 = impairments.sim_mod_response(s*0.2, dcbias=1.1)
         s3 = helpers.normalise_and_center(s2)
         s4 = impairments.change_snr(s3, 15)
-        s5, wx, err = equalisation.equalise_signal(s4, 1e-3, Ntaps=17, method="cma_real", adaptive_stepsize=True, apply=True)
+        s5, wx, err = equalisation.equalise_signal(s4, 1e-3, Ntaps=17, method=method, adaptive_stepsize=True, apply=True)
         assert s5.cal_ser() < 1e5
-        
-        
+
+
 
                         
