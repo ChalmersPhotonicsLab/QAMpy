@@ -531,6 +531,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             elif symbols.shape[0] != nmodes:
                 raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
         symbols = symbols.astype(E.dtype)
+    symbols = np.atleast_2d(symbols)
     if method in REAL_VALUED:
         err, wxy, mu = pythran_equalisation.train_equaliser_realvalued(E, TrSyms, Niter, os, mu, wxy, modes, adaptive_stepsize, symbols.copy(), method[:-5]) # copies are needed because pythran has problems with reshaped arrays
     else:

@@ -100,7 +100,7 @@ class TestEqualiseSignalParameters(object):
     @pytest.mark.parametrize("M", [4, 64])
     @pytest.mark.parametrize("nmodes", [1, 2, 4])
     @pytest.mark.parametrize("rmodes", [None, 0, -1])
-    @pytest.mark.parametrize("method", cequalisation.NONDECISION_BASED + cequalisation.DECISION_BASED)
+    @pytest.mark.parametrize("method", cequalisation.TRAINING_FCTS)
     def test_single_mode(self, M, nmodes, rmodes, method):
         Ntaps=19
         sig = signals.SignalQAMGrayCoded(M, 10**5, nmodes=nmodes)
@@ -127,7 +127,6 @@ class TestEqualiseSignalParameters(object):
 
     @pytest.mark.parametrize("modes", [[0],[1], np.arange(2)])
     @pytest.mark.parametrize("method", cequalisation.DATA_AIDED)
-    #@pytest.mark.parametrize("method", ["dd_data_real"])
     @pytest.mark.parametrize("ps_sym", [True, False])
     def test_data_aided(self,  modes, method, ps_sym):
         from qampy import helpers
@@ -150,7 +149,8 @@ class TestEqualiseSignalParameters(object):
         
     @pytest.mark.parametrize("rollframe", [True, False])
     @pytest.mark.parametrize("modal_delay", [(2000,2000), (3000, 2000)])
-    @pytest.mark.parametrize("method", [("cma", "sbd"), ("cma", "sbd_data"), ("cma_real", "dd_real")])
+    @pytest.mark.parametrize("method", [("cma", "sbd"), ("cma", "sbd_data"), ("cma_real", "dd_data_real"),
+                                        ("cma_real", "dd_real")])
     def test_pilot_based(self, rollframe, modal_delay, method):
         from qampy import phaserec
         mysig = signals.SignalWithPilots(64,2**16,2**10,32,nmodes=2,Mpilots=4,nframes=3,fb=24e9)
