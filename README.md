@@ -47,14 +47,13 @@ You should in particular look at the *cma_equaliser.py* and *64_qam_equalisation
 
 ## Installation
 
-QAMpy should work for both Python versions 2 and 3, however we mainly test on Python 3, so your mileage might
-vary when using Python 2.
+QAMpy is developed on Python 3. As Python 2 is now end of life we will only support Python 3.
 
-QAMPy depends on the following python modules *numpy*, *scipy*, *cython*, *bitarray* and 
-*numba* (as a fall-back option). You will also need to have a working c/c++ compiler with open-mp support
-installed to compile the cython modules. 
+QAMPy depends on the following python modules *numpy*, *scipy*, *pythran*, *bitarray*. You will also need to have a 
+working c/c++ compiler with open-mp support installed to compile the pythran modules, on linux both gcc or clang work, for
+windows see the instructions below.
 
-We provide binaries for the latest 0.2 release for Windows and python 3.5-3.7. You can find them under github releases and can 
+We provide binaries for the latest 0.2 release for Windows and python 3.5-3.8. You can find them under github releases and can 
 install them with `pip [filename]`. Note that the builds assume a processor with `sse2` and `avx` extensions, however this should 
 be any recent CPU from Intel or AMD. 
 
@@ -69,9 +68,24 @@ On Linux installation works fine using the usual `python3 setup.py build` and `p
 
 ### Windows
 
-On Windows, cython modules need to be compiled with the same compiler as python was compiled with, which 
-is often a very old version of Visual Studio. If you do not use the correct Visual Studio version
-you will often encounter cryptic compile errors. We will try to include more specific instructions in the future. 
+On Windows, you will need to install clang, pythran from git (the last released version does has a bug in the boost libraries). 
+and pythran-openblas for blas support. Before compiling install the following software
+1. Install the lates clang release from the [llvm website](https://clang.llvm.org/get_started.html), 
+2. Install pythran from git with `pip install git+https://github.com/serge-sans-paille/pythran.git`. 
+3. Install pythran-openblas with `pip install pythran-openblas`.
+4. Create a .pythranrc file in your home directory (typically this is C:\Users\<username>). Note that to create a file 
+from file explorer you should name it `.pythranrc.` (note the trailing dot, otherwise windows things .pythranrc is the fileexstension).
+The file should contain (see the pythran documentation for more details):
+```
+[compiler]
+CC=clang-cl.exe
+CXX=clang-cl.exe
+blas=pythran-openblas
+```
+
+To compile use the same instructions as on linux. However, currently there is a minor bug in pythran which causes compilation
+to fail the first time. So you will have to rerun `python setup.py build` two times.
+
 More detailed instructions can be found on the [wiki](https://github.com/ChalmersPhotonicsLab/QAMpy/wiki/Installation).
 
 
