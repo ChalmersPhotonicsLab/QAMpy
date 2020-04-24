@@ -30,7 +30,7 @@ def clipper(sig, clipping_level):
 
     return sig_clip_re + 1j* sig_clip_im
 
-def modulator_arsin(sig, vpi=3.5):
+def comp_mod_sin(sig, vpi=3.5):
     """
     Use arcsin() function to compensate modulator nonlinear sin() response.
     Input signal range should be (-1,1), which is required by the arcsin() function.
@@ -43,7 +43,7 @@ def modulator_arsin(sig, vpi=3.5):
 
     return sig_out
 
-def dac_freq_comp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6)):
+def comp_dac_resp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6)):
     """
     Compensate frequency response of simulated digital-to-analog converter(DAC).
     """
