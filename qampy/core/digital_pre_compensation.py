@@ -22,7 +22,7 @@ from scipy import signal,interpolate
 
 def clipper(sig, clipping_level):
     """
-    Clip the signal out of the range (-clipping_level, clipping_level).
+    Clip signal to the range (-clipping_level, clipping_level).
     """
     sig_2d = np.atleast_2d(sig)
     sig_clip_re = np.sign(sig.real) * np.minimum(abs(sig_2d.real), clipping_level*np.ones((1, sig_2d.shape[1])))
@@ -33,14 +33,19 @@ def clipper(sig, clipping_level):
 def comp_mod_sin(sig, vpi=3.5):
     """
     Use arcsin() function to compensate modulator nonlinear sin() response.
-    Input signal range should be (-1,1), which is required by the arcsin() function.
+
+    Parameters
+    ----------
+    sig: array_like
+        Complex input signal should be in range (-1,1)
+    vpi : complex or float, optional
+        Vpi of the modulator if a float both Vpi of real and imaginary part are assumed to be the same
     """
     if not np.iscomplexobj(vpi):
         vpi = vpi + 1j*vpi
     sig_out_re = 2 * vpi.real / np.pi * np.arcsin(sig.real)
     sig__out_im = 2 * vpi.imag / np.pi * np.arcsin(sig.imag)
     sig_out = sig_out_re + 1j*sig__out_im
-
     return sig_out
 
 def comp_dac_resp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6)):
