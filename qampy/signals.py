@@ -1558,6 +1558,16 @@ class SignalWithPilots(SignalBase):
     @property
     def synctaps(self):
         return self._synctaps
+    
+    @property
+    def idx_payload(self):
+        idx = np.tile(self._idx_dat, self.nframes)[:self.shape[-1]]
+        return idx
+
+    @property
+    def idx_pilots(self):
+        idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
+        return idx
 
     @synctaps.setter
     def synctaps(self, value):
@@ -1629,8 +1639,10 @@ class SignalWithPilots(SignalBase):
         idx = np.nonzero(np.tile(self._idx_dat, nframes)[:self.shape[-1]])
         return self.symbols.recreate_from_np_array(self[:, idx[0]].copy()) # better save to make copy here
 
-    def extract_pilots(self):
-        idx = np.tile(np.bitwise_not(self._idx_dat), self.nframes)[:self.shape[-1]]
+    def extract_pilots(self, nframes=1):
+        assert nframes <= self.nframes, "Signal object only contains {} frames can't extract more".format(self.nframes)
+        idx = np.nonzero(np.tile(self._idx_dat, nframes)[:self.shape[-1]])
+        idx = np.tile(np.bitwise_not(self._idx_dat), nframes)[:self.shape[-1]]
         return self.pilots.recreate_from_np_array(self[:, idx])
 
     def __getattr__(self, attr):
@@ -1759,7 +1771,7 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             if use_pilots:
-                signal_rx = self.extract_pilots()
+                signal_rx = self.extract_pilots(nframes=self.nframes)
             else:
-                signal_rx = self.get_data()
+                signal_rx = self.get_data(nframes=self.nframes)
         return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)
