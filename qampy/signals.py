@@ -1786,9 +1786,9 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             if use_pilots:
-                signal_rx = self.extract_pilots(nframes=nframes)
+                signal_rx = self.extract_pilots(nframes=self.nframes)
             else:
-                signal_rx = self.get_data(nframes=nframes)
+                signal_rx = self.get_data(nframes=self.nframes)
         return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)
 
     def recreate_from_np_array(self, arr, **kwargs):
