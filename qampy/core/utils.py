@@ -151,7 +151,7 @@ def find_offset(sequence, data):
     return data.tostring().index(sequence.tostring()) // data.itemsize
 
 
-def rolling_window(data, size):
+def rolling_window(data, size, wrap=False):
     """
     Reshapes a 1D array into a 2D array with overlapping frames. Stops when the
     last value of data is reached.
@@ -180,7 +180,12 @@ def rolling_window(data, size):
             [6, 7, 8],
             [7, 8, 9]])
     """
-    shape = data.shape[:-1] + (data.shape[-1] - size + 1, size)
+    if wrap:
+        dt = size - 1
+        shape = data.shape[:-1] + (data.shape[-1], size)
+        data = np.hstack([data, data[:dt]])
+    else:
+        shape = data.shape[:-1] + (data.shape[-1] - size + 1, size)
     strides = data.strides + (data.strides[-1], )
     return np.lib.stride_tricks.as_strided(data, shape=shape, strides=strides)
 
