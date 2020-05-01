@@ -119,3 +119,12 @@ class TestSignalGeneration(object):
         assert ss.pilots.size == 1024*nmodes
         assert ss.size == 2**16*nmodes
         assert ss.symbols.M == 128
+    
+    @pytest.mark.parametrize("nmodes", [1,2])
+    @pytest.mark.parametrize("method", ["est_snr", "cal_gmi", "cal_ber", "cal_ser"])
+    @pytest.mark.parametrize("nframes", np.arange(1,4))
+    def test_nframes_calculation(selfself, nmodes, method, nframes):
+        ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=nmodes)
+        s2 = impairments.change_snr(ss, 20)
+        m = getattr(s2, method)(nframes=nframes)
+        print(m)

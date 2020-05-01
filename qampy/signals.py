@@ -1648,12 +1648,14 @@ class SignalWithPilots(SignalBase):
     def __getattr__(self, attr):
         return getattr(self._symbols, attr)
 
-    def cal_ser(self, synced=True, signal_rx=None, verbose=False):
+    def cal_ser(self, nframes=1, synced=True, signal_rx=None, verbose=False):
         """
         Calculate Symbol Error Rate on the data payload.
 
         Parameters
         ----------
+        nframes : int, optional
+            how many frames to calculate SER for
         synced : bool, optional
             if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
             it is possible that modes are rotated in the IQ-plane, which would result in errors
@@ -1668,15 +1670,17 @@ class SignalWithPilots(SignalBase):
             SER per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(nframes)
         return signal_rx.cal_ser(synced=synced, verbose=verbose)
 
-    def cal_ber(self, synced=True, signal_rx=None, verbose=False):
+    def cal_ber(self, nframes=1, synced=True, signal_rx=None, verbose=False):
         """
         Calculate Bit Error Rate on the data payload.
 
         Parameters
         ----------
+        nframes : int, optional
+            how many frames to calculate BER for
         synced : bool, optional
             if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
             it is possible that modes are rotated in the IQ-plane, which would result in errors
@@ -1691,15 +1695,17 @@ class SignalWithPilots(SignalBase):
             BER per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(nframes=nframes)
         return signal_rx.cal_ber(synced=synced, verbose=verbose)
 
-    def cal_evm(self, synced=True, signal_rx=None, blind=False):
+    def cal_evm(self, nframes=1, synced=True, signal_rx=None, blind=False):
         """
         Calculate Error Vector Magnitude on the data payload.
 
         Parameters
         ----------
+        nframes : int, optional
+            how many frames to calculate EVM for
         synced : bool, optional
             if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
             it is possible that modes are rotated in the IQ-plane, which would result in errors
@@ -1715,15 +1721,17 @@ class SignalWithPilots(SignalBase):
             EVM per mode
         """
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(nframes=nframes)
         return signal_rx.cal_evm(synced=synced, blind=blind)
 
-    def cal_gmi(self, synced=True, snr=None, signal_rx=None, use_pilot_snr=False):
+    def cal_gmi(self, nframes=1, synced=True, snr=None, signal_rx=None, use_pilot_snr=False):
         """
         Calculate Generalised Mutual Information on the data payload
 
         Parameters
         ----------
+        nframes : int, optional
+            how many frames to calculate GMI for
         synced : bool, optional
             if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
             it is possible that modes are rotated in the IQ-plane, which would result in errors
@@ -1743,17 +1751,19 @@ class SignalWithPilots(SignalBase):
         """
         assert not (use_pilot_snr and snr is not None), "use_pilot_snr must not be True if snr is not None"
         if signal_rx is None:
-            signal_rx = self.get_data()
+            signal_rx = self.get_data(nframes=nframes)
         if use_pilot_snr:
             snr = self.est_snr(use_pilots=True)
         return signal_rx.cal_gmi(synced=synced, snr=snr)
 
-    def est_snr(self, synced=True, signal_rx=None, symbols_tx=None, use_pilots=False):
+    def est_snr(self, nframes=1, synced=True, signal_rx=None, symbols_tx=None, use_pilots=False):
         """
         Estimate SNR using known symbols.
 
         Parameters
         ----------
+        nframes : int, optional
+            how many frames to estimate SNR for
         synced : bool, optional
             if the signal is synced or not by default this is true for pilot signals, however if no phase tracker is run
             it is possible that modes are rotated in the IQ-plane, which would result in errors
@@ -1771,7 +1781,7 @@ class SignalWithPilots(SignalBase):
         """
         if signal_rx is None:
             if use_pilots:
-                signal_rx = self.extract_pilots(nframes=self.nframes)
+                signal_rx = self.extract_pilots(nframes=nframes)
             else:
-                signal_rx = self.get_data(nframes=self.nframes)
+                signal_rx = self.get_data(nframes=nframes)
         return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)
