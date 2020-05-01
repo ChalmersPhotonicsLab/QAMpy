@@ -124,8 +124,8 @@ def apply_filter(E, os, wxy, method="pyt", modes=None):
     Eest   : array_like
         equalised signal
     """
-    E = np.ascontiguousarray(E)
-    wxy = np.ascontiguousarray(wxy)
+    E = np.copy(E) # pythran requires non-reshaped arrays, copy to make sure they are
+    wxy = np.copy(wxy)
     if method == "py":
         return apply_filter_py(E, os, wxy)
     elif method == "pyt":
@@ -483,12 +483,8 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
     dtype_c = E.dtype
     if method in REAL_VALUED:
         E = _convert_sig_to_real(E)
-        #Etmp = np.zeros((2*E.shape[0], E.shape[1]), dtype=E.real.dtype)
-        #Etmp[:E.shape[0]] = E.real
-        #Etmp[E.shape[0]:] = E.imag
-        #E = np.ascontiguousarray(Etmp)
     else:
-        E = np.ascontiguousarray(E)
+        E = np.copy(E) #  copy to make pythran happy
     mu = E.real.dtype.type(mu)
     nmodes = E.shape[0]
     if modes is None:
