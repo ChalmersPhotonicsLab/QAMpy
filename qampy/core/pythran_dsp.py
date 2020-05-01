@@ -192,3 +192,43 @@ def cal_gmi_mc_omp(symbols, snr, ns, bit_map):
                     denom = cal_exp_sum(sym, bit_map[k, :, b], z[l], snr)
                     gmi += np.log2(nom/denom)
     return nbits-gmi/(M*ns)
+
+#pythran export cal_lut_avg(complex128[], int[], int[], int)
+#pythran export cal_lut_avg(complex64[], int[], int[], int)
+def cal_lut_avg(err, idx_I, idx_Q,  N):
+    """
+    Calculate average pattern lookup tables. This looks at all the patterns for the In-phase and
+    Quadrature components of the field and calculates the average error for all patterns. Importantly 
+    the indices need to be aligned so that the error and the corresponding pattern have the same index
+    
+    Parameters
+    ----------
+    err : array_like
+        error per signal symbol 
+    idx_I : array_like
+        pattern index for the in-phase components
+    idx_Q : array_like
+        pattern index for the quadrature components
+    N : int
+        number of unique patterns
+
+    Returns
+    -------
+        err_avg : array_like
+            average error for all patterns. Patterns that do not appear in idx_I or idx_Q will be 0.
+    """
+    L = err.size
+    err_avg_I = np.zeros(N, dtype=err.real.dtype)
+    err_avg_Q = np.zeros(N, dtype=err.real.dtype)
+    nI = np.zeros(N, dtype=int)
+    nQ = np.zeros(N, dtype=int)
+    for i in range(L):
+        err_avg_I[idx_I[i]] += err[i].real
+        err_avg_Q[idx_Q[i]] += err[i].imag
+        nI[idx_I[i]] += 1
+        nQ[idx_Q[i]] += 1
+    nI[np.where(nI == 0)] = 1
+    nQ[np.where(nQ == 0)] = 1
+    return err_avg_I/nI + 1j* err_avg_Q/nQ
+
+
