@@ -128,3 +128,18 @@ class TestSignalGeneration(object):
         s2 = impairments.change_snr(ss, 20)
         m = getattr(s2, method)(nframes=nframes)
         print(m)
+
+    @pytest.mark.parametrize("nlen",[1, 2.2, 5.5])
+    def test_recreate_nframes(self, nlen):
+        ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3)
+        oo = np.copy(ss)
+        oo1 = np.tile(oo, (1, int((nlen*ss.frame_len)//ss.frame_len)))
+        oo2 = np.hstack([oo1, oo[:, :oo.shape[-1]*int(nlen%ss.frame_len)] ])
+        out = ss.recreate_from_np_array(oo2)
+    
+    def test_too_short_frame(self):
+        with pytest.raises(AssertionError):
+            ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3)
+            oo = np.copy(ss)
+            out = ss.recreate_from_np_array(oo[:,:int(ss.frame_len/2)])
+        
