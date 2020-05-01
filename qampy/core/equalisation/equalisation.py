@@ -24,29 +24,35 @@
 No decision based:
 -----------------
 Constant Modulus Algorithm (CMA) after _[1]
-Radius Directed Error (RDE) after _[2]
-Modfied Constant Modulus Algorithm (MCMA) after _[3]
-Modified Radius Directed Error (MRDA) after _[7]
-Constellation Matched Error Algorithm (CME) after _[5]
-Square Contour Algorithm (SCA)  after _[6]
+Radius Directed Error (RDE) after _[1]
+Modfied Constant Modulus Algorithm (MCMA) after _[2]
+Modified Radius Directed Error (MRDA) after _[3]
+Decision-directed LMS (DD) after _[1]
 
 Decision Directed
 -----------------
-Symbol Based Decision (SBD) after _[7]
-Modified Decision Directed Modulus Algorithm (MDDMA) after _[8]
+Symbol Based Decision (SBD) after _[3]
+Modified Decision Directed Modulus Algorithm (MDDMA) after _[4]
 
 Adaptive Step Size Algorithms
 -----------------------------
-based on the step size adoption in _[9]  it is possible to use an adaptive step for all equalisers using the adaptive_stepsize keyword parameter
+based on the step size adoption in _[5]  it is possible to use an adaptive step for all equalisers using the adaptive_stepsize keyword parameter
+
+Real Valued
+-----------
+There are also real-valued CMA and DD as well as a data-aided DD algorithm
+
+Data aided
+----------
+In addition there is a data aided SBD algorithm and real_valued DD algorithm
 
 References
 ----------
-...[3] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
-...[5] He, L., Amin, M. G., Reed, C., & Malkemes, R. C. (2004). A Hybrid Adaptive Blind Equalization Algorithm for QAM Signals in Wireless Communications, 52(7), 2058–2069.
-...[6] Sheikh, S. A., & Fan, P. (2008). New blind equalization techniques based on improved square contour algorithm ✩, 18, 680–693. http://doi.org/10.1016/j.dsp.2007.09.001
-...[7] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
+...[1] M. S. Faruk and S. J. Savory, ‘Digital Signal Processing for Coherent Transceivers Employing Multilevel Formats’, Journal of Lightwave Technology, vol. 35, no. 5, pp. 1125–1141, Mar. 2017, doi: 10.1109/JLT.2017.2662319.
+...[2] Oh, K. N., & Chin, Y. O. (1995). Modified constant modulus algorithm: blind equalization and carrier phase recovery algorithm. Proceedings IEEE International Conference on Communications ICC ’95, 1, 498–502. http://doi.org/10.1109/ICC.1995.525219
+...[3] Filho, M., Silva, M. T. M., & Miranda, M. D. (2008). A FAMILY OF ALGORITHMS FOR BLIND EQUALIZATION OF QAM SIGNALS. In 2011 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (pp. 6–9).
 ...[8] Fernandes, C. A. R., Favier, G., & Mota, J. C. M. (2007). Decision directed adaptive blind equalization based on the constant modulus algorithm. Signal, Image and Video Processing, 1(4), 333–346. http://doi.org/10.1007/s11760-007-0027-2
-...[9] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
+...[5] D. Ashmawy, K. Banovic, E. Abdel-Raheem, M. Youssif, H. Mansour, and M. Mohanna, “Joint MCMA and DD blind equalization algorithm with variable-step size,” Proc. 2009 IEEE Int. Conf. Electro/Information Technol. EIT 2009, no. 1, pp. 174–177, 2009.
 
 """
 
