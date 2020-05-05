@@ -97,6 +97,7 @@ def l_values(btx, rx, snr):
 #pythran export soft_l_value_demapper(complex64[], int, float32, complex64[][][])
 #pythran export soft_l_value_demapper(complex64[], int, float64, complex64[][][])
 def soft_l_value_demapper(rx_symbs, num_bits, snr, bits_map):
+    assert bits_map.shape[0] >= num_bits
     N = rx_symbs.shape[0]
     L_values = np.zeros((N, num_bits))
     k = bits_map.shape[1]
@@ -123,6 +124,7 @@ def find_minmax(btx, rx):
 #pythran export soft_l_value_demapper_minmax(complex128[], int, float64, complex128[][][])
 #pythran export soft_l_value_demapper_minmax(complex64[], int, float32, complex64[][][])
 def soft_l_value_demapper_minmax(rx_symbs, num_bits, snr, bits_map):
+    assert bits_map.shape[0] >= num_bits
     N = rx_symbs.shape[0]
     L_values = np.zeros((N, num_bits))
     k = bits_map.shape[1]
@@ -137,6 +139,8 @@ def soft_l_value_demapper_minmax(rx_symbs, num_bits, snr, bits_map):
 #pythran export select_angles(float32[][], int[])
 def select_angles(angles, idx):
     L = angles.shape[0]
+    assert idx.shape[0] >= L # this will be removed upon compilation but can yield a speedup
+    assert np.max(idx) < angles.shape[-1] # this will be removed upon compilation but can yield a speedup
     anglesn = np.zeros(L, dtype=angles.dtype)
     if angles.shape[0] > 1:
         #omp parallel for
@@ -218,6 +222,8 @@ def cal_lut_avg(err, idx_I, idx_Q,  N):
             average error for all patterns. Patterns that do not appear in idx_I or idx_Q will be 0.
     """
     L = err.size
+    assert idx_I.shape[0] > L
+    assert idx_Q.shape[0] > L
     err_avg_I = np.zeros(N, dtype=err.real.dtype)
     err_avg_Q = np.zeros(N, dtype=err.real.dtype)
     nI = np.zeros(N, dtype=int)
