@@ -87,7 +87,7 @@ def _bps_idx_py(E, angles, symbols, N):
     idx[N:-N] = mvg.argmin(1)
     return idx
 
-def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
+def bps(E, Mtestangles, symbols, N, method="pyt", **kwargs):
     """
     Perform a blind phase search after _[1]
 
@@ -144,7 +144,7 @@ def bps(E, Mtestangles, symbols, N, method="pyx", **kwargs):
     ph = []
     for i in range(Ew.shape[0]):
         idx =  bps_fct(Ew[i], angles, symbols, N)
-        ph.append(select_angles(angles, idx))
+        ph.append(select_angles(np.copy(angles), idx.astype(int)))
     ph = np.asarray(ph, dtype=dtype)
     # ignore the phases outside the averaging window
     # better to use normal unwrap instead of fancy tricks
