@@ -422,15 +422,13 @@ class SignalBase(np.ndarray):
             symbols_tx = self.symbols
         symbols_tx, signal_rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         snr = np.zeros(nmodes, dtype=np.float64)
+        s0 = np.zeros(nmodes, dtype=np.float64)
+        n0 = np.zeros(nmodes, dtype=np.float64)
+        for i in range(nmodes):
+            snr[i], s0[i], n0[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols)
         if verbose:
-            s0 = np.zeros(nmodes, dtype=np.float64)
-            n0 = np.zeros(nmodes, dtype=np.float64)
-            for i in range(nmodes):
-                snr[i], s0[i], n0[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
             return snr, s0, n0
         else:
-            for i in range(nmodes):
-                snr[i] = estimate_snr(signal_rx[i], symbols_tx[i], self.coded_symbols, verbose=verbose)
             return snr
         
     def cal_gmi(self, signal_rx=None, synced=False, llr_minmax=False):

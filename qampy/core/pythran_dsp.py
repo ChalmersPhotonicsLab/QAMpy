@@ -237,4 +237,48 @@ def cal_lut_avg(err, idx_I, idx_Q,  N):
     nQ[np.where(nQ == 0)] = 1
     return err_avg_I/nI + 1j* err_avg_Q/nQ
 
+#pythran export estimate_snr(complex128[], complex128[], complex128[])
+#pythran export estimate_snr(complex64[], complex64[], complex64[])
+def estimate_snr(signal_rx, symbols_tx, gray_symbols):
+    """
+    Estimate the signal-to-noise ratio from received and known transmitted symbols.
 
+    Parameters
+    ----------
+    signal_rx : array_like
+        received signal
+    symbols_tx : array_like
+        transmitted symbol sequence
+    gray_symbols : array_like
+        gray coded symbols
+
+    Note
+    ----
+    signal_rx and symbols_tx need to be synchronized and have the same length.
+
+    Returns
+    -------
+    snr : float
+        estimated linear signal-to-noise ratio
+    S0 : float
+        estimated linear signal power
+    N0 : float
+        estimated linear noise power
+    """
+    assert signal_rx.shape[0] >= symbols_tx.shape[0]
+    N = gray_symbols.shape[0]
+    L = signal_rx.shape[0]
+    in_pow = 0.
+    N0 = 0.
+    #omp parallel for reduction(+:N0,in_pow)
+    for ind in range(N):
+        sel_symbs = signal_rx[symbols_tx == gray_symbols[ind]]
+        K = sel_symbs.shape[0]
+        Px = K/L
+        mu = np.mean(sel_symbs)
+        #dif = sel_symbs-mu
+        sigma = np.sqrt(np.sum(abs(sel_symbs-mu)**2)/K)
+        N0 += abs(sigma)**2*Px
+        in_pow += abs(mu)**2*Px
+    snr = in_pow/N0
+    return snr, in_pow, N0

@@ -21,7 +21,7 @@ import numpy as np
 from qampy.helpers import cabssquared
 from qampy.theory import  cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.equalisation.pythran_equalisation import make_decision as _decision_pyt
-from qampy.core.pythran_dsp import soft_l_value_demapper
+from qampy.core.pythran_dsp import soft_l_value_demapper, estimate_snr
 from qampy.core.pythran_dsp import soft_l_value_demapper_minmax
 
 try:
@@ -318,7 +318,7 @@ def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
     Note
     ----
     signal_rx and symbols_tx need to be synchronized and have the same length.
-    
+
     Returns
     -------
     snr : float
