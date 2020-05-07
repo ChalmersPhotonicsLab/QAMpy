@@ -2,7 +2,6 @@ import numpy as np
 
 def partition_value(signal, partitions, codebook):
     L = partitions.shape[0]
-    assert codebook.shape[0] >= L
     index = 0
     while index < L and signal > partitions[index]:
         index += 1
