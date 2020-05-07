@@ -66,6 +66,7 @@ def bps(E, testangles, symbols, N):
     """
     L = E.shape[0]
     p = testangles.shape[0]
+    assert p == 0 or p == L, "p must be either 0 or the length of the input signal"
     M = symbols.shape[0]
     Ntestangles = testangles.shape[1]
     comp = np.exp(1j*testangles)
@@ -180,10 +181,12 @@ def prbs_int(seed, mask, nbits, N):
         out[i] = xor
     return out
 
-#pythran export cal_gmi_mc_omp(complex128[], float64, int, complex128[][][])
-def cal_gmi_mc_omp(symbols, snr, ns, bit_map):
+#pythran export cal_gmi_mc(complex128[], float64, int, complex128[][][])
+def cal_gmi_mc(symbols, snr, ns, bit_map):
     M = symbols.size
     nbits = int(np.log2(M))
+    assert bit_map.shape[0] >= nbits, "bit map must have entry for each bit"
+    assert bit_map.shape[2] == 2, "bit map must have 0 and 1 bit entry"
     gmi = 0
     z = np.sqrt(1/snr)*(np.random.randn(ns) +
                         1j*np.random.randn(ns))/np.sqrt(2)
