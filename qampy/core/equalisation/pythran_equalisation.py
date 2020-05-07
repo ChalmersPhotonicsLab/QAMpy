@@ -2,6 +2,7 @@ import numpy as np
 
 def partition_value(signal, partitions, codebook):
     L = partitions.shape[0]
+    assert codebook.shape[0] >= L
     index = 0
     while index < L and signal > partitions[index]:
         index += 1
@@ -53,6 +54,7 @@ def apply_filter_to_signal(E, os, wx, modes=None):
     output : array_like
         filtered and downsampled signal
     """
+    assert os > 0, "oversampling factor must be larger than 0"
     nmodes_max = wx.shape[0]
     Ntaps = wx.shape[-1]
     if modes is None:
@@ -84,9 +86,11 @@ def train_equaliser_realvalued(E, TrSyms, Niter, os, mu, wx, modes, adaptive, sy
     else:
         raise ValueError("Unknown method %s"%method)
     nmodes = E.shape[0]
+    ntaps = wx.shape[-1]
     assert symbols.shape[0] == nmodes, "symbols must be at least size of modes"
     assert wx.shape[0] == nmodes, "wx needs to have at least as many dimensions as the maximum mode"
-    ntaps = wx.shape[-1]
+    assert E.shape[1] > TrSyms*os+ntaps, "Field must be longer than the number of training symbols"
+    assert modes.max() < nmodes, "Maximum mode number must not be higher than number of modes"
     err = np.zeros((nmodes, TrSyms*Niter), dtype=E.dtype)
     #omp parallel for
     for mode in modes:
@@ -136,9 +140,11 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
     else:
         raise ValueError("Unknown method %s"%method)
     nmodes = E.shape[0]
+    ntaps = wx.shape[-1]
     assert symbols.shape[0] == nmodes, "symbols must be at least size of modes"
     assert wx.shape[0] == nmodes, "wx needs to have at least as many dimensions as the maximum mode"
-    ntaps = wx.shape[-1]
+    assert E.shape[1] > TrSyms*os+ntaps, "Field must be longer than the number of training symbols"
+    assert modes.max() < nmodes, "Maximum mode number must not be higher than number of modes"
     err = np.zeros((nmodes, TrSyms*Niter), dtype=E.dtype)
     #omp parallel for
     for mode in modes:
