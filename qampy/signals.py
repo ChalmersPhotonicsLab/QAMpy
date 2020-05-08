@@ -1609,6 +1609,7 @@ class SignalWithPilots(SignalBase):
                                                                               frame_len=self.frame_len,
                                                                               M_pilot=self.Mpilots, **eqargs)
         self[:,:] = self[mode_alignment,:]
+        shift_factorw[shift_factors<0] += self.frame_len*self.os # we don't really want negative shift factors
         self.shiftfctrs = shift_factors[mode_alignment]
         self.synctaps = Ntaps
         self._foe = coarse_foe
