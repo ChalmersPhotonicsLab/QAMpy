@@ -445,7 +445,7 @@ def shift_signal(sig, shift_factors):
 
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
-                            adaptive_stepsize=True, methods=('cma', 'cma')):
+                            adaptive_stepsize=True, methods=('cma', 'cma'), wxinit=None):
     # TODO fix for syncing correctly
     """
     
@@ -455,14 +455,14 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
     ref_symbs = np.atleast_2d(ref_symbs)
     npols = rx_signal.shape[0]    
     pilot_seq_len = ref_symbs.shape[-1]
+    wx = wxinit
     if np.unique(shift_fctrs).shape[0] > 1:
         syms_out = []
         
-        wx=None
         syms_out = np.zeros_like(ref_symbs)
         for i in range(npols):
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
-            syms_out[i], wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=wx, Ntaps=Ntaps,
+            syms_out[i], wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=wxinit, Ntaps=Ntaps,
                                                                  Niter=Niter, method=methods[0],
                                                                  adaptive_stepsize=adaptive_stepsize, apply=True,
                                                                  modes=[i])
@@ -470,6 +470,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
         syms_out, wx, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot,
+                                     wx=wxinit,
                                      Ntaps=Ntaps,
                                      Niter=Niter, method=methods[0],
                                      adaptive_stepsize=adaptive_stepsize,
@@ -481,9 +482,9 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
         rx_signal = phaserecovery.comp_freq_offset(rx_signal, np.ones(foePerMode.shape)*foe, os=os)
     else:
         foePerMode = np.zeros([npols,1])
-        
+
+    out_taps = wx
     if np.unique(shift_fctrs).shape[0] > 1:
-        out_taps = None
         for i in range(npols):
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
             out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], 4, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
@@ -492,7 +493,7 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
                                                          methods=methods[1], adaptive_stepsize=adaptive_stepsize, modes=[i], symbols=ref_symbs, apply=False)
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
-        out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], 4, Ntaps=Ntaps, Niter=Niter,
+        out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], 4, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
                                                             methods=methods[0], adaptive_stepsize=adaptive_stepsize,
                                                             symbols=ref_symbs, apply=False)
         out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[1], 4, wxy=out_taps, Niter=Niter ,
