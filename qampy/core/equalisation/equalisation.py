@@ -511,29 +511,7 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
         assert wxy.shape[:2] == (nmodes, nmodes), "The first 2 dimensions of wxy need to be the same shape as E"
     if TrSyms is None:
         TrSyms = _cal_training_symbol_len(os, Ntaps, E.shape[-1])
-    if symbols is None or method in NONDECISION_BASED: # This code currently prevents passing "symbol arrays for RDE or CMA algorithms
-        symbols = generate_symbols_for_eq(method, M, E.dtype)
-    if method not in REAL_VALUED:
-        if symbols.ndim == 1 or symbols.shape[0] == 1:
-            symbols = np.tile(symbols, (nmodes, 1))
-        elif symbols.shape[0] != nmodes:
-            raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
-        symbols = symbols.astype(E.dtype)
-    else:
-        if np.iscomplexobj(symbols):
-            if symbols.ndim == 1 or symbols.shape[0] == 1:
-                symbols = np.repeat([symbols.real, symbols.imag], nmodes//2, axis=0).squeeze()
-            elif symbols.shape[0] == nmodes//2:
-                symbols = np.vstack([symbols.real, symbols.imag])
-            else:
-                raise ValueError("Symbols array is  complex and has {} modes, but needs to either have one mode or the same modes as the signal ({})".format(symbols.shape[0], E.shape[0]//2))
-        else:
-            if symbols.shape[0] == 2 and nmodes > 2:
-                symbols = np.repeat([symbols[0], symbols[1]], nmodes//2, axis=0).squeeze()
-            elif symbols.shape[0] != nmodes:
-                raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, E.shape[0], E.shape[0]))
-        symbols = symbols.astype(E.dtype)
-    symbols = np.atleast_2d(symbols)
+    symbols = _reshape_symbols(symbols, method, M, E.dtype, nmodes)
     if method in REAL_VALUED:
         err, wxy, mu = pythran_equalisation.train_equaliser_realvalued(E, TrSyms, Niter, os, mu, wxy, modes, adaptive_stepsize, symbols.copy(), method[:-5]) # copies are needed because pythran has problems with reshaped arrays
     else:
@@ -547,6 +525,34 @@ def equalise_signal(E, os, mu, M, wxy=None, Ntaps=None, TrSyms=None, Niter=1, me
             return Eest, wxy, err
     else:
         return wxy, err
+    
+def _reshape_symbols(symbols, method, M, dtype, nmodes):
+    if symbols is None or method in NONDECISION_BASED: # This code currently prevents passing "symbol arrays for RDE or CMA algorithms
+        symbols = generate_symbols_for_eq(method, M, dtype)
+    if method not in REAL_VALUED:
+        if symbols.ndim == 1 or symbols.shape[0] == 1:
+            symbols = np.tile(symbols, (nmodes, 1))
+        elif symbols.shape[0] != nmodes:
+            raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, nmodes, nmodes))
+        symbols = symbols.astype(dtype)
+        symbols = np.atleast_2d(symbols)
+    else:
+        if np.iscomplexobj(symbols):
+            if symbols.ndim == 1 or symbols.shape[0] == 1:
+                symbols = np.repeat([symbols.real, symbols.imag], nmodes//2, axis=0).squeeze()
+                symbols = symbols.reshape(nmodes, -1)
+            elif symbols.shape[0] == nmodes//2:
+                symbols = np.vstack([symbols.real, symbols.imag])
+            else:
+                raise ValueError("Symbols array is  complex and has {} modes, but needs to either have one mode or the same modes as the signal ({})".format(symbols.shape[0], nmodes//2))
+        else:
+            if symbols.shape[0] == 2 and nmodes > 2:
+                symbols = np.repeat([symbols[0], symbols[1]], nmodes//2, axis=0).squeeze()
+                symbols = symbols.reshape(nmodes, -1)
+            elif symbols.shape[0] != nmodes:
+                raise ValueError("Symbols array is shape {} but signal has {} modes, symbols must be 1d or of shape (1, N) or ({}, N)".format(symbols.shape, nmodes, nmodes))
+        symbols = symbols.astype(dtype)
+    return symbols
 
 def CDcomp(E, fs, N, L, D, wl):
     """

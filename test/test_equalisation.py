@@ -173,6 +173,102 @@ class TestEqualiseSignalParameters(object):
         s5, wx, err = equalisation.equalise_signal(s4, 1e-3, Ntaps=17, method=method, adaptive_stepsize=True, apply=True)
         assert s5.cal_ser() < 1e5
 
+class TestUtilities(object):
+    @pytest.mark.parametrize("method", ["sbd", "mddma", "dd"])
+    @pytest.mark.parametrize("M", [4, 16])
+    @pytest.mark.parametrize("nmodes", [1, 3])
+    @pytest.mark.parametrize("pass_syms", [True, False])
+    def test_reshape_symbols_DD_cmplx(self, method, M, nmodes, pass_syms):
+        from qampy import theory
+        from qampy.core.equalisation.equalisation import _reshape_symbols
+        syms = theory.cal_symbols_qam(M)/np.sqrt(theory.cal_scaling_factor_qam(M))
+        if pass_syms:
+            s = _reshape_symbols(syms, method, M, np.complex128, nmodes)
+        else:
+            s = _reshape_symbols(None, method, M, np.complex128, nmodes)
+        assert s.shape[0] == nmodes
+        assert s.shape[1] == syms.shape[0]
+        for i in range(nmodes):
+            npt.assert_allclose(s[i], syms)
+                
+    @pytest.mark.parametrize("M", [4, 16])
+    @pytest.mark.parametrize("nmodes", [1, 3])
+    @pytest.mark.parametrize("pass_syms", [None, "cmplx", 'float'])
+    def test_reshape_symbols_DD_real(self, M, nmodes, pass_syms):
+        from qampy import theory
+        from qampy.core.equalisation.equalisation import _reshape_symbols
+        syms = theory.cal_symbols_qam(M)/np.sqrt(theory.cal_scaling_factor_qam(M))
+        if pass_syms is None:
+            s = _reshape_symbols(None, "dd_real", M, np.float64, nmodes*2)
+        elif pass_syms is "cmplx":
+            s = _reshape_symbols(syms, "dd_real", M, np.float64, nmodes*2)
+        elif pass_syms is "float":
+            s = _reshape_symbols(np.array([syms.real, syms.imag]), "dd_real", M, np.float64, nmodes*2)
+        assert s.shape[0] == nmodes*2
+        assert s.shape[1] == syms.shape[0]
+        for i in range(nmodes*2):
+            if i < nmodes:
+                npt.assert_allclose(s[i], syms.real)
+            else:
+                npt.assert_allclose(s[i], syms.imag)
 
+    @pytest.mark.parametrize("method", ["sbd_data", "dd_data_real"])
+    @pytest.mark.parametrize("M", [4, 16])
+    @pytest.mark.parametrize("nmodes", [1, 3])
+    def test_reshape_symbols_data(self, method, M, nmodes):
+        from qampy.core.equalisation.equalisation import _reshape_symbols
+        sig = signals.SignalQAMGrayCoded(M, 1000, nmodes=nmodes)
+        syms = sig.symbols
+        if method is "dd_data_real":
+            s = _reshape_symbols(syms, method, M, np.float64, nmodes*2)
+            assert s.shape[0] == nmodes*2
+            assert s.shape[1] == syms.shape[1]
+            for i in range(nmodes*2):
+                if i < nmodes:
+                    npt.assert_allclose(s[i], syms[i].real)
+                else:
+                    npt.assert_allclose(s[i], syms[i%nmodes].imag)
+        else:
+            s = _reshape_symbols(syms, method, M, np.complex128, nmodes)
+            assert s.shape[0] == nmodes
+            assert s.shape[1] == syms.shape[1]
+            for i in range(nmodes):
+                npt.assert_allclose(s[i], syms[i])
+
+    @pytest.mark.parametrize("method", ["cma", "mcma"])
+    @pytest.mark.parametrize("M", [4, 16])
+    @pytest.mark.parametrize("nmodes", [1, 3])
+    @pytest.mark.parametrize("pass_syms", [True, False])
+    def test_reshape_symbols_cma(self, method, M, nmodes, pass_syms):
+        from qampy.core.equalisation.equalisation import _reshape_symbols, generate_symbols_for_eq
+        syms = generate_symbols_for_eq(method, M, np.complex128)
+        if pass_syms:
+            s = _reshape_symbols(syms, method, M, np.complex128, nmodes)
+        else:
+            s = _reshape_symbols(None, method, M, np.complex128, nmodes)
+        assert s.shape[0] == nmodes
+        assert s.shape[1] == syms.shape[0]
+        for i in range(nmodes):
+            npt.assert_allclose(s[i], syms[0])
+            
+    @pytest.mark.parametrize("M", [4, 16])
+    @pytest.mark.parametrize("nmodes", [1, 3])
+    @pytest.mark.parametrize("pass_syms", [True, False])
+    def test_reshape_symbols_cma_real(self,  M, nmodes, pass_syms):
+        from qampy.core.equalisation.equalisation import _reshape_symbols, generate_symbols_for_eq
+        method = "cma_real"
+        syms = generate_symbols_for_eq(method, M, np.float64)
+        from qampy.core.equalisation.equalisation import _reshape_symbols, generate_symbols_for_eq
+        if pass_syms:
+            s = _reshape_symbols(None, "cma_real", M, np.float64, nmodes*2)
+        else:
+            s = _reshape_symbols(np.array([syms.real, syms.imag]), "cma_real", M, np.float64, nmodes*2)
+        assert s.shape[0] == 2*nmodes
+        assert s.shape[1] == 1
+        for i in range(nmodes*2):
+            if i < nmodes:
+                npt.assert_allclose(s[i], syms[0])
+            else:
+                npt.assert_allclose(s[i], syms[1])
 
                         
