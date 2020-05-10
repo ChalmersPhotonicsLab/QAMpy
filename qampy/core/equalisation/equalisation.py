@@ -132,6 +132,9 @@ def apply_filter(E, os, wxy, method="pyt", modes=None):
     """
     E = np.copy(E) # pythran requires non-reshaped arrays, copy to make sure they are
     wxy = np.copy(wxy)
+    if modes is None:
+        modes = np.arange(wxy.shape[0])
+    nmodes = modes.shape[0]
     if method == "py":
         return apply_filter_py(E, os, wxy)
     elif method == "pyt":
@@ -139,13 +142,11 @@ def apply_filter(E, os, wxy, method="pyt", modes=None):
             return pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
         elif np.iscomplexobj(E):
             E  = _convert_sig_to_real(E)
+        Etmp = pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
         if E.itemsize == 8:
-            Etmp = pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
-            return Etmp[:E[modes].shape[0]//2,:] + 1j * Etmp[E[modes].shape[0]//2:,:]
+            return _convert_sig_to_cmplx(Etmp, nmodes, np.complex128(1j))
         elif E.itemsize == 4:
-            Etmp =  pythran_equalisation.apply_filter_to_signal(E, os, wxy, modes)
-            return Etmp[:E.shape[0]//2,:] + np.complex64(1j) * Etmp[E.shape[0]//2:,:]
-            #return Etmp[::2,:] + np.complex64(1j) * Etmp[1::2,:]
+            return _convert_sig_to_cmplx(Etmp, nmodes, np.complex64(1j))
         else:
             raise ValueError("The field has an unknown data type")
     else:
@@ -219,6 +220,9 @@ def _convert_sig_to_real(E):
     Etmp[:E.shape[0]] = E.real
     Etmp[E.shape[0]:] = E.imag
     return np.ascontiguousarray(Etmp)
+
+def _convert_sig_to_cmplx(E, modes, Im=np.complex128(1j)):
+    return E[:modes//2,:] + Im * E[modes//2:,:]
 
 def _cal_Rdash(syms):
      return (abs(syms.real + syms.imag) + abs(syms.real - syms.imag)) * (np.sign(syms.real + syms.imag) + np.sign(syms.real-syms.imag) + 1.j*(np.sign(syms.real+syms.imag) - np.sign(syms.real-syms.imag)))*syms.conj()
