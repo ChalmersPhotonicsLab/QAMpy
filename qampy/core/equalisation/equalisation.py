@@ -134,6 +134,8 @@ def apply_filter(E, os, wxy, method="pyt", modes=None):
     wxy = np.copy(wxy)
     if modes is None:
         modes = np.arange(wxy.shape[0])
+    else:
+        modes = np.copy(np.atleast_1d(modes))
     nmodes = modes.shape[0]
     if method == "py":
         return apply_filter_py(E, os, wxy)

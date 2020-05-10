@@ -247,9 +247,12 @@ def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
         out_sig = signal
     if apply:
         if np.unique(signal.shiftfctrs).shape[0] > 1:
+            #nmodes_sig = signal.shape[0]
+            #nmodes_taps = wxy.shape[0]
+            smodes = np.arange(taps_all.shape[0]).reshape(-1, signal.shape[0]).T
             eq_mode_sig = []
-            for l in range(signal.shape[0]):
-                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,eq_shiftfctrs[l]:int(eq_shiftfctrs[l]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all[l][None,:,:]))
+            for mode in smodes:
+                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,eq_shiftfctrs[mode[0]]:int(eq_shiftfctrs[mode[0]]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all, modes=mode))
             eq_mode_sig = signal.recreate_from_np_array(np.squeeze(np.array(eq_mode_sig)),fs=signal.fb)
         else:
             eq_mode_sig = apply_filter(out_sig[:,eq_shiftfctrs[0]:int(eq_shiftfctrs[0]+signal.frame_len*signal.os + Ntaps - 1)], np.array(taps_all))
