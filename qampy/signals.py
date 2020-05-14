@@ -1643,7 +1643,6 @@ class SignalWithPilots(SignalBase):
             frames = np.atleast_1d(frames)
             nframes = np.max(frames)
             assert nframes <= self.nframes, "Signal object only contains {} frames can't extract more".format(self.nframes)
-        assert nframes <= self.nframes, "Signal object only contains {} frames can't extract more".format(self.nframes)
         idx = np.hstack([np.nonzero(self._idx_dat)[0] + i * self._frame_len for i in frames] )
         return self.symbols.recreate_from_np_array(self[:, idx].copy()) # better save to make copy here
 
