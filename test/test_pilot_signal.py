@@ -146,3 +146,74 @@ class TestSignalGeneration(object):
             oo = np.copy(ss)
             out = ss.recreate_from_np_array(oo[:,:int(ss.frame_len/2)])
         
+
+class TestSignalQuality(object):
+    @pytest.mark.parametrize("frame", [0,1,2])
+    def test_cal_ser_frames(self, frame):
+        sig = signals.SignalWithPilots(64, 10**4+1000, 1000, 0, nframes=3, nmodes=1)
+        sig[0, 1010+frame*sig.frame_len] *= 1j
+        for i in range(3):
+            ser = sig.cal_ser(frames=[i])
+            if i == frame:
+                assert np.isclose(ser, 1/10**4)
+            else:
+                assert np.isclose(ser, 0)
+        ser  = sig.cal_ser(frames=[0,1,2])
+        assert np.isclose(ser, 1/(3*10**4))
+
+    @pytest.mark.parametrize("frame", [0,1,2])
+    def test_cal_ber_frames(self, frame):
+        M = 64
+        sig = signals.SignalWithPilots(M, 10**4+1000, 1000, 0, nframes=3, nmodes=1)
+        dd = np.diff(np.unique(sig.coded_symbols.real)).min()
+        sig[0, 1010+frame*sig.frame_len] += dd*0.8
+        for i in range(3):
+            ber = sig.cal_ber(frames=[i])
+            if i == frame:
+                assert np.isclose(ber, 1/(np.log2(M)*10**4))
+            else:
+                assert np.isclose(ber, 0)
+        ber  = sig.cal_ber(frames=[0,1,2])
+        assert np.isclose(ber, 1/(3*np.log2(M)*10**4))
+
+    @pytest.mark.parametrize("frame", [0,1,2])
+    def test_cal_evm_frames(self, frame):
+        M = 64
+        sig = signals.SignalWithPilots(M, 10**4+1000, 1000, 0, nframes=3, nmodes=1)
+        dd = np.diff(np.unique(sig.coded_symbols.real)).min()
+        sig[0, 1010+frame*sig.frame_len] += dd*0.6
+        for i in range(3):
+            evm = sig.cal_evm(frames=[i])
+            if i == frame:
+                assert np.isclose(evm, 0.00185164) # calculated before
+            else:
+                assert np.isclose(evm, 0)
+        evm  = sig.cal_evm(frames=[0,1,2])
+        assert np.isclose(evm, 0.00106904)
+
+    @pytest.mark.parametrize("frame", [0,1,2])
+    def test_cal_gmi_frames(self, frame):
+        M = 64
+        sig = signals.SignalWithPilots(M, 10**4+1000, 1000, 0, nframes=3, nmodes=1)
+        sig2 = impairments.change_snr(sig[:,:sig.frame_len], 25)
+        sig[0, frame*sig.frame_len:(frame+1)*sig.frame_len] = sig2[:]
+        for i in range(3):
+            gmi = sig.cal_gmi(frames=[i])[0]
+            if i == frame:
+                assert np.isclose(gmi, sig2.cal_gmi()[0])
+            else:
+                assert np.isclose(gmi, np.log2(M))
+
+    @pytest.mark.parametrize("frame", [0,1,2])
+    def test_est_snr_frames(self, frame):
+        M = 64
+        snr_in = 25.
+        sig = signals.SignalWithPilots(M, 10**4+1000, 1000, 0, nframes=3, nmodes=1)
+        sig2 = impairments.change_snr(sig[:,:sig.frame_len], snr_in)
+        sig[0, frame*sig.frame_len:(frame+1)*sig.frame_len] = sig2[:]
+        for i in range(3):
+            snr = sig.est_snr(frames=[i])
+            if i == frame:
+                assert np.isclose(snr, 10**(snr_in/10), rtol=0.03)
+            else:
+                assert np.all(snr > 10e15)
