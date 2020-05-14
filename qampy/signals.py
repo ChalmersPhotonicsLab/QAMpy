@@ -1811,3 +1811,8 @@ class SignalWithPilots(SignalBase):
             else:
                 signal_rx = self.get_data(frames=frames)
         return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)
+    
+    def recreate_from_np_array(self, arr, **kwargs):
+        out =  super().recreate_from_np_array(arr, **kwargs)
+        assert out.nframes > 0, "input array needs to be at least frame_len * oversampling long"
+        return out
