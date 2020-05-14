@@ -1412,7 +1412,6 @@ class SignalWithPilots(SignalBase):
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
-        obj._nframes = nframes
         obj._symbols = symbs
         obj._pilots = pilots
         obj._idx_dat = idx_dat
@@ -1514,7 +1513,6 @@ class SignalWithPilots(SignalBase):
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
-        obj._nframes = nframes
         obj._symbols = payload[:, :Ndat].copy()
         obj._pilots = pilots
         obj._idx_dat = idx_dat
@@ -1549,7 +1547,7 @@ class SignalWithPilots(SignalBase):
 
     @property
     def nframes(self):
-        return self._nframes
+        return self.shape[-1]//(self.os*self.frame_len)
 
     @property
     def frame_len(self):
@@ -1814,8 +1812,3 @@ class SignalWithPilots(SignalBase):
             else:
                 signal_rx = self.get_data(frames=frames)
         return signal_rx.est_snr(synced=synced, symbols_tx=symbols_tx)
-
-    def recreate_from_np_array(self, arr, **kwargs):
-        nframes = arr.shape[-1]//self.frame_len
-        assert nframes > 0, "numpy array needs to be at least frame_len long"
-        super().recreate_from_np_array(arr, nframes=nframes, **kwargs)
