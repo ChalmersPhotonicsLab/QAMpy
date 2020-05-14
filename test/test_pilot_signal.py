@@ -125,11 +125,11 @@ class TestSignalGeneration(object):
     
     @pytest.mark.parametrize("nmodes", [1,2])
     @pytest.mark.parametrize("method", ["est_snr", "cal_gmi", "cal_ber", "cal_ser"])
-    @pytest.mark.parametrize("nframes", np.arange(1,4))
-    def test_nframes_calculation(selfself, nmodes, method, nframes):
+    @pytest.mark.parametrize("frames", np.arange(0,3))
+    def test_nframes_calculation(self, nmodes, method, frames):
         ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=nmodes)
         s2 = impairments.change_snr(ss, 20)
-        m = getattr(s2, method)(nframes=nframes)
+        m = getattr(s2, method)(frames=frames)
         print(m)
 
     @pytest.mark.parametrize("nlen",[1, 2.2, 5.5])
@@ -145,7 +145,6 @@ class TestSignalGeneration(object):
             ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3)
             oo = np.copy(ss)
             out = ss.recreate_from_np_array(oo[:,:int(ss.frame_len/2)])
-        
 
 class TestSignalQuality(object):
     @pytest.mark.parametrize("frame", [0,1,2])
