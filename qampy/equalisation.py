@@ -193,10 +193,10 @@ def dual_mode_equalisation(sig, mu, Ntaps, TrSyms=(None, None), Niter=(1, 1), me
 
 
 
-def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False, **eqkwargs):
+def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, wxinit=None, frame=0, verbose=False, **eqkwargs):
     """
-    Pilot based equalisation 
-    
+    Pilot based equalisation on a single frame
+
     Parameters
     ----------
     signal : SignalObject
@@ -209,6 +209,10 @@ def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
         Apply the filter to the signal
     foe_comp : bool, optional
         Do frequency offset compensation
+    wxinit : array_like, optional
+        Initialisation taps for the equaliser. If this is given Ntaps will not be used
+    frame : int, optional
+        Which frame to equalise, frame numbers start at 0
     verbose : bool, optional
         Return verbose output
     **eqkwargs 
@@ -232,15 +236,19 @@ def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
         raise ValueError("Stupid student, sync first")
     else:
         eq_shiftfctrs = np.array(signal.shiftfctrs,dtype=int)
-
+    mu = np.atleast_1d(mu)
+    if len(mu) == 1: # use the same mu for both equaliser steps
+        mu = np.repeat(mu, 2)
+    if wxinit is not None: # if we have init taps this determines the number of taps
+        Ntaps = wxinit.shape[-1]
     if (abs(Ntaps-signal.synctaps) % signal.os) != 0:
         raise ValueError("Tap difference need to be an integer of the oversampling")
     elif Ntaps != signal.synctaps:
-        eq_shiftfctrs -= (Ntaps - signal.synctaps)//2
-
-
+        eq_shiftfctrs = eq_shiftfctrs - (Ntaps - signal.synctaps)//signal.os  + signal.os*signal.frame_len*frame
+    assert signal.shape[-1] - eq_shiftfctrs.max() > signal.frame_len*signal.os, "You are trying to equalise an incomplete frame which does not work"
+    
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, eq_shiftfctrs, os=signal.os, mu=mu,
-                                                                    foe_comp=foe_comp, Ntaps = Ntaps, **eqkwargs)
+                                                                    foe_comp=foe_comp, Ntaps = Ntaps, wxinit=wxinit, **eqkwargs)
     if foe_comp:
         out_sig = phaserec.comp_freq_offset(signal, foe_all)
     else:
@@ -265,3 +273,62 @@ def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, verbose=False,
             taps_all, foe_all, (Ntaps, signal.synctaps)
         else:
             return taps_all
+        
+def pilot_equaliser_nframes(signal, mu, Ntaps, apply=True, foe_comp=True, frames=[0], wxinit=None, verbose=True, **eqkwargs):
+    """
+    Pilot based equalisation  over multiple frames
+
+    Parameters
+    ----------
+    signal : SignalObject
+        Pilot-based signal object, has to be synced already
+    mu : float
+        Step size parameter
+    Ntaps : int
+        Number of equaliser taps
+    apply : bool, optional
+        Apply the filter to the signal
+    foe_comp : bool, optional
+        Do frequency offset compensation
+    frames : array_like, optional
+        List of frames to process the first frame is frame 0
+    **eqkwargs
+        Dictionary of values to pass to the equaliser functions
+
+    Returns
+    -------
+    taps : array_like
+        filter taps for each frame
+    if apply also return
+        out_sig : SignalObject
+            equalised signal per frame
+    if verbose  also return
+        foe_all : array_like
+            estimated  frequency offset per frame
+        ntaps : tuple
+            Tuple of equaliser and synchronization taps per frame
+    """        
+    if signal.shiftfctrs is None:
+        raise ValueError("Stupid student, sync first")
+    if frames is None:
+        nframes = (signal.shape[-1] - np.max(signal.shiftfctrs))//(signal.os*signal.frame_len)
+        frames = np.arange(nframes)
+    frames = np.atleast_1d(frames)
+    nframes = np.max(frames)
+    assert signal.shape[-1] - (np.max(signal.shiftfctrs) + nframes*signal.frame_len*signal.os) > signal.frame_len*signal.os, "The last frame must be complete for equalisation"
+    if wxinit is not None: # if we have init taps this determines the number of taps
+        Ntaps = wxinit.shape[-1]
+    rets= []
+    for i in frames:
+        ret = pilot_equaliser(signal, mu, Ntaps, apply=apply, foe_comp=foe_comp, wxinit=wxinit, verbose=verbose, frame=i, **eqkwargs)
+        if i == 0:
+            wxinit = ret[0]
+        rets.append(ret)
+    out = tuple(zip(*rets)) # return lists for taps, signals, foe ...
+    if apply:
+        # if we applied the arrays we want to return a single signal object
+        sout = np.array(np.hstack(out[1])) # need to convert to array first to avoid an infinite recursion
+        sout = signal.recreate_from_np_array(sout) 
+        return out[0], sout, out[2:]
+    else:
+        return out

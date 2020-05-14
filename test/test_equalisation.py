@@ -172,6 +172,25 @@ class TestEqualiseSignalParameters(object):
         s4 = impairments.change_snr(s3, 15)
         s5, wx, err = equalisation.equalise_signal(s4, 1e-3, Ntaps=17, method=method, adaptive_stepsize=True, apply=True)
         assert s5.cal_ser() < 1e5
+        
+    @pytest.mark.parametrize("frames", [[0], [0,1], [0,1,2]])
+    def test_pilot_based_nframe_len(self, frames ):
+        mysig = signals.SignalWithPilots(64,2**16,2**10,32,nmodes=2,Mpilots=4,nframes=4,fb=24e9)
+        mysig2 = mysig.resample(mysig.fb*2,beta=0.01)
+        mysig3 = impairments.simulate_transmission(mysig2,snr=25)
+        mysig3.sync2frame()
+        wxy, eq_sig,_ = equalisation.pilot_equaliser_nframes(mysig3, (1e-3, 1e-3), 45, foe_comp=False, frames=frames)
+        assert eq_sig.shape[-1] == eq_sig.frame_len*len(frames)
+        
+    @pytest.mark.parametrize("frames", [[0], [0,1], [0,1,2]])
+    def test_pilot_based_nframe_ber(self, frames ):
+        mysig = signals.SignalWithPilots(64,2**16,2**10,32,nmodes=2,Mpilots=4,nframes=4,fb=24e9)
+        mysig2 = mysig.resample(mysig.fb*2,beta=0.1)
+        mysig3 = impairments.simulate_transmission(mysig2,snr=25, modal_delay=(4000, 4000))
+        mysig3.sync2frame()
+        wxy, eq_sig,_ = equalisation.pilot_equaliser_nframes(mysig3, (1e-3, 1e-3), 45, foe_comp=False, frames=frames)
+        assert np.all(eq_sig.cal_ber(nframes=len(frames)) < 5e-3)
+         
 
 class TestUtilities(object):
     @pytest.mark.parametrize("method", ["sbd", "mddma", "dd"])
