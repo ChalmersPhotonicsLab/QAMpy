@@ -328,7 +328,7 @@ def pilot_equaliser_nframes(signal, mu, Ntaps, apply=True, foe_comp=True, frames
     if apply:
         # if we applied the arrays we want to return a single signal object
         sout = np.array(np.hstack(out[1])) # need to convert to array first to avoid an infinite recursion
-        sout = signal.recreate_from_np_array(sout) 
+        sout = signal.recreate_from_np_array(sout, fs=signal.fb)
         return out[0], sout, out[2:]
     else:
         return out
