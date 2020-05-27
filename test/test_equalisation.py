@@ -189,7 +189,7 @@ class TestEqualiseSignalParameters(object):
         mysig3 = impairments.simulate_transmission(mysig2,snr=25, modal_delay=(4000, 4000))
         mysig3.sync2frame()
         wxy, eq_sig,_ = equalisation.pilot_equaliser_nframes(mysig3, (1e-3, 1e-3), 45, foe_comp=False, frames=frames)
-        assert np.all(eq_sig.cal_ber(nframes=len(frames)) < 5e-3)
+        assert np.all(eq_sig.cal_ber(frames=frames) < 5e-3)
          
 
 class TestUtilities(object):
