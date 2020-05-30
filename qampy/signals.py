@@ -627,7 +627,7 @@ class SignalQAMGrayCoded(SignalBase):
         outbits   : array_like
             array of booleans representing bits with same number of dimensions as symbols
         """
-        if symbols.ndim is 1:
+        if symbols.ndim == 1:
             bt = bitarray()
             bt.encode(encoding, symbols)
             return np.fromstring(bt.unpack(zero=b'\x00', one=b'\x01'), dtype=np.bool)
