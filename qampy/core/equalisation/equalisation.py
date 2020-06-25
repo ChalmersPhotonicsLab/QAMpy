@@ -68,7 +68,7 @@ try:
 except:
     ##use python code if cython code is not available
     warnings.warn("can not use cython training functions")
-    from qampy.core.equalisation.equaliser_numba import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
+    from qampy.core.equalisation.numba_equalisation import ErrorFctMCMA, ErrorFctMRDE, ErrorFctSBD, ErrorFctMDDMA, ErrorFctDD,\
         ErrorFctCMA, ErrorFctRDE, ErrorFctSCA, ErrorFctCME, train_eq
 
 TRAINING_FCTS = ["cma", "mcma",

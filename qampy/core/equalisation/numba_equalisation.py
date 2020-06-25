@@ -128,7 +128,7 @@ def train_eq(E, TrSyms, os, mu, wx, errfct,  adaptive=False):
         wx += mu * np.conj(err[i]) * X
         if adaptive and i > 0:
             mu = adapt_step(mu, err[i], err[i-1])
-    return err, wx
+    return err, wx, mu
 
 def ErrorFctCMA(R):
     """
