@@ -7,10 +7,11 @@ import numpy as np
 from pythran.dist import PythranExtension, PythranBuildExt
 
 COMPILER_ARGS_PYT = ["-O3", "-ffast-math", "-mfpmath=sse", "-march=native",
-                     "-funroll-loops",
+                     "-funroll-loops", "-fwhole-program",
                       "-fopenmp", "-std=c++11", "-fno-math-errno", "-w",
-                      "-fvisibility=hidden", "-fno-wrapv", "-DUSE_XSIMD"]
-LINK_ARGS = ["-fopenmp", "-lm"]
+                      "-fvisibility=hidden", "-fno-wrapv", "-DUSE_XSIMD",
+                     "-DNDEBUG", "-finline-limit=100000"]
+LINK_ARGS = ["-fopenmp", "-lm", "-Wl,-strip-all"]
 
 WIN_LINK_ARGS = ["/openmp"]
 
