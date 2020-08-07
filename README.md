@@ -53,7 +53,7 @@ QAMPy depends on the following python modules *numpy*, *scipy*, *pythran*, *bita
 working c/c++ compiler with open-mp support installed to compile the pythran modules, on linux both gcc or clang work, for
 windows see the instructions below.
 
-We provide binaries for the latest 0.2 release for Windows and python 3.5-3.8. You can find them under github releases and can 
+We provide binaries for the latest 0.3 release for Windows and python 3.5-3.8. You can find them under github releases and can 
 install them with `pip [filename]`. Note that the builds assume a processor with `sse2` and `avx` extensions, however this should 
 be any recent CPU from Intel or AMD. 
 
@@ -68,13 +68,13 @@ On Linux installation works fine using the usual `python3 setup.py build` and `p
 
 ### Windows
 
-On Windows, you will need to install clang, pythran from git (the last released version does has a bug in the boost libraries). 
+On Windows, you will need to install clang, and pythran version 0.9.6 or newer. 
 and pythran-openblas for blas support. Before compiling install the following software
-1. Install the lates clang release from the [llvm website](https://clang.llvm.org/get_started.html), 
-2. Install pythran from git with `pip install git+https://github.com/serge-sans-paille/pythran.git`. 
+1. Install the latest clang release from the [llvm website](https://clang.llvm.org/get_started.html), 
+2. Install pythran from git with `pip install pythran`.
 3. Install pythran-openblas with `pip install pythran-openblas`.
 4. Create a .pythranrc file in your home directory (typically this is C:\Users\<username>). Note that to create a file 
-from file explorer you should name it `.pythranrc.` (note the trailing dot, otherwise windows things .pythranrc is the fileexstension).
+from file explorer you should name it `.pythranrc.` (there is a trailing dot, otherwise windows things .pythranrc is the fileexstension).
 The file should contain (see the pythran documentation for more details):
 ```
 [compiler]
