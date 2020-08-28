@@ -145,7 +145,7 @@ def sync_and_adjust(data_tx, data_rx, adjust="tx"):
             offset, tx, ii, acm = find_sequence_offset_complex(data_rx, data_tx)
             tx, rx = adjust_data_length(tx, data_rx, method="extend", offset=offset)
             return (tx, rx), acm
-        elif adjust is "rx":
+        elif adjust == "rx":
             offset, rx, ii, acm  = find_sequence_offset_complex(data_tx, data_rx)
             rx = np.roll(rx, offset)
             return adjust_data_length(data_tx, rx, method="truncate"), acm
@@ -266,7 +266,7 @@ def adjust_data_length(data_tx, data_rx, method=None, offset=0):
         if len(data_tx) > len(data_rx):
             return data_tx[:len(data_rx)], data_rx
         elif len(data_tx) < len(data_rx):
-            if offset is 0:
+            if offset == 0:
                 data_tx = _adjust_to(data_tx, data_rx.shape[0])
             else:
                 data_tx1 = _adjust_to(data_tx, offset, back=False)

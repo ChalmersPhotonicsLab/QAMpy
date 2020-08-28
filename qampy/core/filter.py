@@ -19,6 +19,7 @@
 import numpy as np
 from qampy.core.special_fcts import rrcos_freq, rrcos_time
 import scipy.signal as scisig
+import scipy.fft as scifft
 
 def pre_filter(signal, bw):
     """
@@ -35,9 +36,9 @@ def pre_filter(signal, bw):
     """
     sig = np.atleast_2d(signal)
     N = sig.shape
-    h = np.zeros(N, dtype=np.float64)
+    h = np.zeros(N, dtype=sig.real.dtype)
     h[:,int(N[1]/(bw/2)):-int(N[1]/(bw/2))] = 1
-    s = np.fft.ifft(np.fft.ifftshift(np.fft.fftshift(np.fft.fft(sig, axis=-1), axes=-1)*h, axes=-1), axis=-1)
+    s = scifft.ifft(scifft.ifftshift(scifft.fftshift(scifft.fft(sig, axis=-1), axes=-1)*h, axes=-1), axis=-1)
     if signal.ndim < 2:
         return s.flatten()
     else:
@@ -67,15 +68,15 @@ def pre_filter_wdm(signal, bw, os,center_freq = 0):
     """
     # Prepare signal
     N = len(signal)
-    h = np.zeros(N, dtype=np.float64)
-    freq_axis = np.fft.fftfreq(N, 1 / os)
+    h = np.zeros(N, dtype=sig.real.dtype)
+    freq_axis = scifft.fftfreq(N, 1 / os)
 
     # Create filter window
     idx = np.where(abs(freq_axis-center_freq) < bw / 2)
     h[idx] = 1
     
     # Filter and output
-    s = (np.fft.ifft(np.fft.fft(signal) * h))
+    s = (scifft.ifft(scifft.fft(signal) * h))
     return s
 
 def filter_signal(signal, fs, cutoff, ftype="bessel", order=2, analog=False):
@@ -103,24 +104,24 @@ def filter_signal(signal, fs, cutoff, ftype="bessel", order=2, analog=False):
     """
     sig = np.atleast_2d(signal)
     if ftype == "gauss":
-        f = np.linspace(-fs/2, fs/2, sig.shape[1], endpoint=False)
+        f = np.linspace(-fs/2, fs/2, sig.shape[1], endpoint=False, dtype=sig.dtype)
         w = cutoff/(2*np.sqrt(2*np.log(2))) # might need to add a factor of 2 here do we want FWHM or HWHM?
         g = np.exp(-f**2/(2*w**2))
-        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(sig, axes=-1), axis=-1), axes=-1) * g
+        fsignal = scifft.fftshift(scifft.fft(scifft.fftshift(sig, axes=-1), axis=-1), axes=-1) * g
         if signal.ndim == 1:
-            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal))).flatten()
+            return scifft.fftshift(scifft.ifft(scifft.fftshift(fsignal))).flatten()
         else:
-            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+            return scifft.fftshift(scifft.ifft(scifft.fftshift(fsignal)))
     if ftype == "exp":
-        f = np.linspace(-fs/2, fs/2, sig.shape[1], endpoint=False)
+        f = np.linspace(-fs/2, fs/2, sig.shape[1], endpoint=False, dtype=sig.dtype)
         w = cutoff/(np.sqrt(2*np.log(2)**2)) # might need to add a factor of 2 here do we want FWHM or HWHM?
         g = np.exp(-np.sqrt((f**2/(2*w**2))))
         g /= g.max()
-        fsignal = np.fft.fftshift(np.fft.fft(np.fft.fftshift(signal))) * g
+        fsignal = scifft.fftshift(scifft.fft(scifft.fftshift(signal))) * g
         if signal.ndim == 1:
-            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal))).flatten()
+            return scifft.fftshift(scifft.ifft(scifft.fftshift(fsignal))).flatten()
         else:
-            return np.fft.fftshift(np.fft.ifft(np.fft.fftshift(fsignal)))
+            return scifft.fftshift(scifft.ifft(scifft.fftshift(fsignal)))
     Wn = cutoff*2*np.pi if analog else cutoff
     frmt = "ba" if analog else "sos"
     fs_in = None if analog else fs
@@ -133,9 +134,9 @@ def filter_signal(signal, fs, cutoff, ftype="bessel", order=2, analog=False):
         sig2 = np.zeros_like(sig)
         for i in range(sig.shape[0]):
             to, yo, xo = scisig.lsim(system, sig[i], t)
-            sig2[i] = yo
+            sig2[i] = yo.astype(sig.dtype)
     else:
-        sig2 = scisig.sosfilt(system, sig, axis=-1)
+        sig2 = scisig.sosfilt(system.astype(sig.dtype), sig, axis=-1)
     if signal.ndim == 1:
         return sig2.flatten()
     else:
@@ -162,11 +163,11 @@ def _rrcos_pulseshaping_freq(sig, fs, T, beta):
     sign_out : array_like
         filtered signal in time domain
     """
-    f = np.fft.fftfreq(sig.shape[0])*fs
+    f = scifft.fftfreq(sig.shape[0])*fs
     nyq_fil = rrcos_freq(f, beta, T)
     nyq_fil /= nyq_fil.max()
-    sig_f = np.fft.fft(sig)
-    sig_out = np.fft.ifft(sig_f*nyq_fil)
+    sig_f = scifft.fft(sig)
+    sig_out = scifft.ifft(sig_f*nyq_fil)
     return sig_out
 
 def rrcos_pulseshaping(sig, fs, T, beta, taps=1001):
@@ -225,7 +226,7 @@ def moving_average(sig, N=3):
         Average signal of length len(sig)-n+1
     """
     sign = np.atleast_2d(sig)
-    ret = np.cumsum(np.insert(sign, 0,0, axis=-1), dtype=float, axis=-1)
+    ret = np.cumsum(np.insert(sign, 0,0, axis=-1), dtype=sig.dtype, axis=-1)
     if sig.ndim == 1:
         return ((ret[:, N:] - ret[:,:-N])/N).flatten()
     else:

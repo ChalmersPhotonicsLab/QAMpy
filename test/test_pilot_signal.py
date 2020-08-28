@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
-from qampy import signals, equalisation, impairments, core, phaserec, theory
+from qampy import signals, equalisation, impairments, core, phaserec, theory, helpers
 
 
 class TestPilotSignalRecovery(object):
@@ -67,6 +67,19 @@ class TestPilotSignalRecovery(object):
         s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=False)
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
+        
+    @pytest.mark.parametrize("fo", [20e3, 100e3, 1e4])
+    def test_freq_offset(self, fo):
+        snr = 37
+        ntaps = 17
+        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
+        sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
+        sig3 = impairments.simulate_transmission(sig, snr, freq_off=fo)
+        sig4 = helpers.normalise_and_center(sig3)
+        sig4.sync2frame(corr_coarse_foe=False)
+        s1, s2 = equalisation.pilot_equalizer(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
+        d, ph = phaserec.pilot_cpe(s2, nframes=1)
+        assert np.mean(d.cal_ber()) < 1e-5
 #
 class TestSignalGeneration(object):
     @pytest.mark.parametrize("nmodes", [1,2])
@@ -106,3 +119,27 @@ class TestSignalGeneration(object):
         assert ss.pilots.size == 1024*nmodes
         assert ss.size == 2**16*nmodes
         assert ss.symbols.M == 128
+    
+    @pytest.mark.parametrize("nmodes", [1,2])
+    @pytest.mark.parametrize("method", ["est_snr", "cal_gmi", "cal_ber", "cal_ser"])
+    @pytest.mark.parametrize("nframes", np.arange(1,4))
+    def test_nframes_calculation(selfself, nmodes, method, nframes):
+        ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=nmodes)
+        s2 = impairments.change_snr(ss, 20)
+        m = getattr(s2, method)(nframes=nframes)
+        print(m)
+
+    @pytest.mark.parametrize("nlen",[1, 2.2, 5.5])
+    def test_recreate_nframes(self, nlen):
+        ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3)
+        oo = np.copy(ss)
+        oo1 = np.tile(oo, (1, int((nlen*ss.frame_len)//ss.frame_len)))
+        oo2 = np.hstack([oo1, oo[:, :oo.shape[-1]*int(nlen%ss.frame_len)] ])
+        out = ss.recreate_from_np_array(oo2)
+    
+    def test_too_short_frame(self):
+        with pytest.raises(AssertionError):
+            ss = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3)
+            oo = np.copy(ss)
+            out = ss.recreate_from_np_array(oo[:,:int(ss.frame_len/2)])
+        
