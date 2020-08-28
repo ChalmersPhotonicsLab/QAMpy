@@ -391,7 +391,10 @@ class SignalBase(np.ndarray):
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
-        symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx, synced)
+        if blind:
+            symbols_tx = self.make_decision(signal_rx) 
+        else:
+            symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx, synced)
         return np.asarray(
             np.sqrt(np.mean(helpers.cabssquared(symbols_tx - signal_rx), axis=-1)))  # /np.mean(abs(self.symbols)**2))
 
