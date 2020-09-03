@@ -477,7 +477,40 @@ class SignalBase(np.ndarray):
             GMI_per_bit[mode, :] = 1 - np.mean(np.log2(1 + np.exp(((-1)**bits[mode]) * l_values)), axis=0)
         GMI = np.sum(GMI_per_bit, axis=-1)
         return GMI, GMI_per_bit
+    
+    def cal_mi(self, signal_rx=None, synced=False, snr=None):
+        """
+        Calculate the mutual information for the received signal.
 
+        Parameters
+        ----------
+        signal_rx : array_like
+            equalised input signal
+        symbols_tx : array_like
+            transmitted symbols (default:None use self.symbols_tx of the modulator)
+        synced : bool, optional
+            wether input and outputs are synchronized
+        snr : float, optional
+            estimate of SNR in dB, if not given use the signal to estimate
+
+        Returns
+        -------
+        mi : array_like
+            generalized mutual information per mode
+        """
+        signal_rx = self._signal_present(signal_rx)
+        symbols_tx = self.symbols
+        nmodes = signal_rx.shape[0]
+        MI = np.zeros(nmodes, dtype=np.float64)
+        tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
+        if snr is None:
+            snr = self.est_snr(rx, synced=True, symbols_tx=tx)
+        else:
+            snr = 10**(snr/10)
+        for mode in range(nmodes):
+            MI[mode] = signal_quality.cal_mi(rx, tx, self.coded_symbols, snr)
+        return MI
+    
     def normalize_and_center(self, symbol_based=False, synced=False):
         """
         Normalize and center the signal

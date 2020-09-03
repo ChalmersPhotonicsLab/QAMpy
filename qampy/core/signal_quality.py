@@ -23,6 +23,7 @@ from qampy.theory import  cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.equalisation.pythran_equalisation import make_decision as _decision_pyt
 from qampy.core.pythran_dsp import soft_l_value_demapper, estimate_snr
 from qampy.core.pythran_dsp import soft_l_value_demapper_minmax
+from qampy.core.pythran_dsp import cal_mi_mc
 
 try:
     import arrayfire as af
@@ -299,3 +300,76 @@ def generate_bitmapping_mtx(coded_symbs, coded_bits, M, dtype=np.complex128):
         bit_map[bit,:,0] = coded_symbs[~out_mtx[:,bit]]
         bit_map[bit,:,1] = coded_symbs[out_mtx[:,bit]]
     return bit_map
+
+def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
+    """
+    Estimate the signal-to-noise ratio from received and known transmitted symbols.
+
+    Parameters
+    ----------
+    signal_rx : array_like
+        received signal
+    symbols_tx : array_like
+        transmitted symbol sequence
+    gray_symbols : array_like
+        gray coded symbols
+    verbose : bool, optional
+        return verbose output
+
+    Note
+    ----
+    signal_rx and symbols_tx need to be synchronized and have the same length.
+    
+    Returns
+    -------
+    snr : float
+        estimated linear signal-to-noise ratio
+    if verbose is True also return:
+    S0 : float
+        estimated linear signal power
+    N0 : float
+        estimated linear noise power
+    """
+
+    N = gray_symbols.shape[0]
+    Px = np.zeros(N, dtype=np.float64)
+    N0 = 0.
+    mus = np.zeros(N, dtype=np.complex128)
+    sigmas = np.zeros(N, dtype=np.complex128)
+    in_pow = 0.
+    for ind in range(N):
+        sel_symbs = signal_rx[np.bool_(symbols_tx == gray_symbols[ind])]
+        Px[ind] = sel_symbs.shape[0] / signal_rx.shape[0]
+        mus[ind] = np.mean(sel_symbs)
+        sigmas[ind] = np.std(sel_symbs)
+        N0 += np.abs(sigmas[ind])**2*Px[ind]
+        in_pow += np.abs(mus[ind])**2*Px[ind]
+    snr = in_pow/N0
+    if verbose:
+        return snr, in_pow, N0
+    else:
+        return snr
+
+def cal_mi(signal, symbols_tx, alphabet, snr):
+    """
+    Calculate the mutual information for a given (noisy) signal array and the
+    transmitted symbol array.
+
+    Parameters
+    ----------
+    signal : array_like
+        The signal after transmission to calculate the MI for
+    symbols_tx : array_like
+        The original symbols that were transmitted
+    alphabet: array_like
+        The symbol alphabet
+    snr : float
+        The SNR of the signal in linear units
+
+    Returns
+    -------
+        mi: float
+            The calculated mutual information
+    """
+    noise = signal-symbols_tx
+    return cal_mi_mc(noise, alphabet, snr)
