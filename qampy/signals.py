@@ -448,7 +448,7 @@ class SignalBase(np.ndarray):
         synced : bool, optional
             wether input and outputs are synchronized
         snr : float, optional
-            estimate of SNR, if not given use the signal to estimate
+            estimate of SNR in dB, if not given use the signal to estimate
         llr_minmax : bool, optional
             use minmax method for log-likelyhood ratio calculation, much faster but more unaccurate (we do not minimize over s)
 
@@ -467,6 +467,8 @@ class SignalBase(np.ndarray):
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         if snr is None:
             snr = self.est_snr(rx, synced=True, symbols_tx=tx)
+        else:
+            snr = 10**(snr/10)
         bits = self.demodulate(self.make_decision(tx)).astype(np.int)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
