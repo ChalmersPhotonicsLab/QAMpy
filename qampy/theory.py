@@ -21,6 +21,7 @@ import numpy as np
 from scipy.special import erfc
 
 from qampy.core.special_fcts import q_function
+from qampy.core import pythran_dsp
 from qampy.core.utils import bin2gray
 from qampy.helpers import dB2lin
 
@@ -285,3 +286,27 @@ def cal_gmi(M, snr, N=10**3):
     for i in range(snr.size):
         gmi[i] = cal_gmi_mc(syms, snr_lin[i], N, btx)
     return gmi
+
+def sim_mi_mc(symbols, snr, N):
+    """
+    Perform Monte-Carlo simulations of AWGN Mutual Information.
+
+    Parameters
+    ----------
+    symbols : array_like
+        symbol alphabet to calculate the MI for
+    snr : float
+        The signal to noise ratio that should be simulated (in dB)
+    N : int
+        The size of the noise array to average over
+
+    Returns
+    -------
+        mi : float
+            Mutual information of the symbol alphabet at the given SNR
+    """
+    symbols /= np.sqrt(np.mean(abs(symbols)**2))
+    N0 = 10**(-snr/10)
+    sigma = np.sqrt(N0/2)
+    noise = (np.random.randn(N) + 1j*np.random.randn(N))*sigma
+    return pythran_dsp.cal_mi_mc(noise, symbols, N0)
