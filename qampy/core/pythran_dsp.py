@@ -285,3 +285,16 @@ def estimate_snr(signal_rx, symbols_tx, gray_symbols):
         in_pow += abs(mu)**2*Px
     snr = in_pow/N0
     return snr, in_pow, N0
+
+#pythran export cal_mi_mc(complex128[], complex128[], float64):
+def cal_mi_mc(noise, symbols, N0):
+    M = symbols.size
+    L = noise.size
+    mi_out = 0
+    for i in range(M):
+        for l in range(L):
+            tmp = 0
+            for j in range(M):
+                tmp += np.exp(-(abs(symbols[i] - symbols[j])**2 + 2*np.real((symbols[i]-symbols[j])*noise[l]))/N0)
+            mi_out += np.log2(tmp)
+    return np.log2(M) - mi_out/M/L
