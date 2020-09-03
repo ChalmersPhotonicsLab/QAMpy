@@ -28,7 +28,9 @@ from qampy.core import resample
 from qampy import theory, phaserec
 from qampy.core import ber_functions, pilotbased_receiver
 from qampy.core.prbs import make_prbs_extXOR
-from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper, soft_l_value_demapper_minmax
+from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper, cal_mi
+from qampy.core.io import save_signal
+
 
 
 class RandomBits(np.ndarray):
@@ -508,7 +510,7 @@ class SignalBase(np.ndarray):
         else:
             snr = 10**(snr/10)
         for mode in range(nmodes):
-            MI[mode] = signal_quality.cal_mi(rx, tx, self.coded_symbols, snr)
+            MI[mode] = cal_mi(rx, tx, self.coded_symbols, snr)
         return MI
     
     def normalize_and_center(self, symbol_based=False, synced=False):
