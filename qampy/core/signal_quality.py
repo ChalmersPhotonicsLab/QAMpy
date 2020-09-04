@@ -373,6 +373,8 @@ def cal_mi(signal, symbols_tx, alphabet, N0, fast=True):
         mi: float
             The calculated mutual information
     """
+    nmodes = signal.shape[0]
+    mi = np.zeros(nmodes, dtype=np.float64)
     if fast:
         return cal_mi_mc_fast(signal, symbols_tx, alphabet, N0)
     else:

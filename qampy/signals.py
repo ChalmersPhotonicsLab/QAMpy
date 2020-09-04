@@ -466,7 +466,11 @@ class SignalBase(np.ndarray):
         if snr is None:
             snr = self.est_snr(rx, synced=True, symbols_tx=tx)
         else:
-            snr = 10**(snr/10)
+            snr = np.atleast_1d(snr)
+            if snr.size != nmodes:
+                snr = np.ones(nmodes)*10**(snr/10)
+            else:
+                snr = 10**(snr/10)
         bits = self.demodulate(self.make_decision(tx)).astype(np.int)
         bits = bits.reshape(nmodes, -1, self.Nbits)
         # For every mode present, calculate GMI based on SD-demapping
@@ -505,15 +509,20 @@ class SignalBase(np.ndarray):
         signal_rx = self._signal_present(signal_rx)
         symbols_tx = self.symbols
         nmodes = signal_rx.shape[0]
-        MI = np.zeros(nmodes, dtype=np.float64)
+        mi = np.zeros(nmodes, dtype=np.float64)
         tx, rx = self._sync_and_adjust(symbols_tx, signal_rx, synced)
         if snr is None:
             snr = self.est_snr(rx, synced=True, symbols_tx=tx)
+            N0 = 1/snr
         else:
-            snr = 10**(-snr/10)
+            snr = np.atleast_1d(snr)
+            if snr.size != nmodes:
+                N0 = np.ones(nmodes)*10**(-snr/10)
+            else:
+                N0 = 10**(-snr/10)
         for mode in range(nmodes):
-            MI[mode] = cal_mi(rx, tx, self.coded_symbols, snr, fast)
-        return MI
+            mi[mode] = cal_mi(rx[mode], tx[mode], self.coded_symbols, N0[mode], fast)
+        return mi
     
     def normalize_and_center(self, symbol_based=False, synced=False):
         """

@@ -304,6 +304,7 @@ def cal_mi_mc_fast(sig, sig_tx, symbols, N0):
     M = symbols.size
     L = sig.size
     mi_out = 0
+    #omp parallel for reduction(+:mi_out)
     for l in range(L):
         tmp = 0
         for j in range(M):
