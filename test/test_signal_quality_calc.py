@@ -151,7 +151,41 @@ class TestVerboseReturn(object):
         ser, errs, syms = s2.cal_ber(synced=True, verbose=True)
         assert syms.shape == s2.bits.shape
 
+class TestMI(object):
+    @pytest.mark.parametrize("nmodes", np.arange(1,4))
+    @pytest.mark.parametrize("snr_nmodes", [True, False])
+    @pytest.mark.parametrize("fast", [True, False])
+    def test_nmodes(self, nmodes, snr_nmodes, fast):
+        snr = 12.
+        s = signals.SignalQAMGrayCoded(4, 10**3, nmodes=nmodes)
+        s2 = impairments.change_snr(s, snr)
+        if snr_nmodes:
+            mi = s2.cal_mi(snr=np.ones(nmodes)*snr, fast=fast)
+        else:
+            mi = s2.cal_mi(snr=snr, fast=fast)
+        assert mi.size == nmodes
 
-
-
+    @pytest.mark.parametrize("snr", np.linspace(5, 15))
+    @pytest.mark.parametrize("fast", [True, False])
+    def test_with_est_snr(self, snr, fast):
+        s = signals.SignalQAMGrayCoded(4, 10**3, nmodes=1)
+        s2 = impairments.change_snr(s, snr)
+        mi1 = s2.cal_mi(snr=snr, fast=fast)
+        mi2 = s2.cal_mi(fast=fast)
+        npt.assert_allclose(mi1, mi2, rtol=0.05)
+        
+    @pytest.mark.parametrize("snr", np.linspace(5, 15))
+    @pytest.mark.parametrize("fast", [True, False])
+    @pytest.mark.parametrize("with_snr", [True, False])
+    def test_vs_gmi(self, snr, fast, with_snr):
+        s = signals.SignalQAMGrayCoded(4, 10**3, nmodes=1)
+        s2 = impairments.change_snr(s, snr)
+        if with_snr:
+            mi = s2.cal_mi(snr=snr, fast=fast)
+            gmi = s2.cal_gmi(snr=snr)[0]
+        else:
+            mi = s2.cal_mi(fast=fast)
+            gmi = s2.cal_gmi()[0]
+        npt.assert_allclose(gmi, mi, rtol=0.05)
+        
 
