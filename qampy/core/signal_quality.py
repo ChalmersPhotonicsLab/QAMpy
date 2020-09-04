@@ -23,7 +23,7 @@ from qampy.theory import  cal_symbols_qam, cal_scaling_factor_qam
 from qampy.core.equalisation.pythran_equalisation import make_decision as _decision_pyt
 from qampy.core.pythran_dsp import soft_l_value_demapper, estimate_snr
 from qampy.core.pythran_dsp import soft_l_value_demapper_minmax
-from qampy.core.pythran_dsp import cal_mi_mc
+from qampy.core.pythran_dsp import cal_mi_mc, cal_mi_mc_fast
 
 try:
     import arrayfire as af
@@ -350,7 +350,7 @@ def estimate_snr(signal_rx, symbols_tx, gray_symbols, verbose=False):
     else:
         return snr
 
-def cal_mi(signal, symbols_tx, alphabet, snr):
+def cal_mi(signal, symbols_tx, alphabet, N0, fast=True):
     """
     Calculate the mutual information for a given (noisy) signal array and the
     transmitted symbol array.
@@ -363,13 +363,18 @@ def cal_mi(signal, symbols_tx, alphabet, snr):
         The original symbols that were transmitted
     alphabet: array_like
         The symbol alphabet
-    snr : float
-        The SNR of the signal in linear units
+    N0 : float
+        The noise strength of the signal in linear units
+    fast : bool
+        Use fast calculation
 
     Returns
     -------
         mi: float
             The calculated mutual information
     """
-    noise = signal-symbols_tx
-    return cal_mi_mc(noise, alphabet, snr)
+    if fast:
+        return cal_mi_mc_fast(signal, symbols_tx, alphabet, N0)
+    else:
+        noise = signal-symbols_tx
+        return cal_mi_mc(noise, alphabet, N0)

@@ -298,3 +298,15 @@ def cal_mi_mc(noise, symbols, N0):
                 tmp += np.exp(-(abs(symbols[i] - symbols[j])**2 + 2*np.real((symbols[i]-symbols[j])*noise[l]))/N0)
             mi_out += np.log2(tmp)
     return np.log2(M) - mi_out/M/L
+
+#pythran export cal_mi_mc_fast(complex128[], complex128[], complex128[], float64):
+def cal_mi_mc_fast(sig, sig_tx, symbols, N0):
+    M = symbols.size
+    L = sig.size
+    mi_out = 0
+    for l in range(L):
+        tmp = 0
+        for j in range(M):
+            tmp += np.exp(-(abs(sig[l]-symbols[j])**2 - abs(sig[l]-sig_tx[l])**2)/N0)
+        mi_out += np.log2(tmp)
+    return np.log2(M) - mi_out/L

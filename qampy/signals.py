@@ -480,7 +480,7 @@ class SignalBase(np.ndarray):
         GMI = np.sum(GMI_per_bit, axis=-1)
         return GMI, GMI_per_bit
     
-    def cal_mi(self, signal_rx=None, synced=False, snr=None):
+    def cal_mi(self, signal_rx=None, synced=False, snr=None, fast=True):
         """
         Calculate the mutual information for the received signal.
 
@@ -494,6 +494,8 @@ class SignalBase(np.ndarray):
             wether input and outputs are synchronized
         snr : float, optional
             estimate of SNR in dB, if not given use the signal to estimate
+        fast : bool, optional
+            use fast calculation method
 
         Returns
         -------
@@ -508,9 +510,9 @@ class SignalBase(np.ndarray):
         if snr is None:
             snr = self.est_snr(rx, synced=True, symbols_tx=tx)
         else:
-            snr = 10**(snr/10)
+            snr = 10**(-snr/10)
         for mode in range(nmodes):
-            MI[mode] = cal_mi(rx, tx, self.coded_symbols, snr)
+            MI[mode] = cal_mi(rx, tx, self.coded_symbols, snr, fast)
         return MI
     
     def normalize_and_center(self, symbol_based=False, synced=False):
