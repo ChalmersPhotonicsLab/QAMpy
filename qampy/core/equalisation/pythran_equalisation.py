@@ -108,7 +108,7 @@ def cma_error_real(Xest, s1, i):
     return d*Xest
 
 def dd_error_real(Xest, symbs, i):
-    symbol, dist = det_symbol_argmin(Xest, symbs)
+    symbol, dist, i = det_symbol_argmin(Xest, symbs)
     return (symbol - Xest)*abs(symbol) 
 
 def dd_data_error_real(Xest, symbs, i):
@@ -206,7 +206,7 @@ def ddlms_error(Xest, symbs, i):
 def det_symbol_argmin(X, symbs): # this version is about 1.5 times slower than the one below
     dist = np.abs(X-symbs)
     idx = np.argmin(dist)
-    return symbs[idx], dist[idx]
+    return symbs[idx], dist[idx], idx
 
 #pythran export det_symbol(complex128, complex128[])
 #pythran export det_symbol(complex64, complex64[])
@@ -292,10 +292,16 @@ def make_decision(E, symbols):
     det_symbs : array_like
         decided symbols decision
     """
+    # TODO we might want to make this work for ND symbols (would require to use a manual collapse)
     L = E.shape[0]
     M = symbols.shape[0]
     det_symbs = np.zeros_like(E)
+    dist = np.zeros(E.shape, dtype=E.real.dtype)
+    idx = np.zeros(E.shape, dtype=np.int32)
     #omp parallel for
     for i in range(L):
-        det_symbs[i] = det_symbol(E[i], symbols)[0]
-    return det_symbs
+        s, d, ix = det_symbol_argmin(E[i], symbols)
+        dist[i] = d
+        det_symbs[i] = s
+        idx[i] = ix
+    return det_symbs, dist, idx
