@@ -28,7 +28,8 @@ from qampy.core import resample
 from qampy import theory, phaserec
 from qampy.core import ber_functions, pilotbased_receiver
 from qampy.core.prbs import make_prbs_extXOR
-from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx, estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper, cal_mi
+from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx,\
+    estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper
 from qampy.core.io import save_signal
 
 
@@ -483,7 +484,7 @@ class SignalBase(np.ndarray):
             GMI_per_bit[mode, :] = 1 - np.mean(np.log2(1 + np.exp(((-1)**bits[mode]) * l_values)), axis=0)
         GMI = np.sum(GMI_per_bit, axis=-1)
         return GMI, GMI_per_bit
-    
+
     def cal_mi(self, signal_rx=None, synced=False, snr=None, fast=True):
         """
         Calculate the mutual information for the received signal.
@@ -523,7 +524,7 @@ class SignalBase(np.ndarray):
         for mode in range(nmodes):
             mi[mode] = cal_mi(rx[mode], tx[mode], self.coded_symbols, N0[mode], fast)
         return mi
-    
+
     def normalize_and_center(self, symbol_based=False, synced=False):
         """
         Normalize and center the signal
@@ -825,7 +826,7 @@ class SignalQAMGrayCoded(SignalBase):
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(coded_symbols, encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
-    def make_decision(self, signal=None):
+    def make_decision(self, signal=None, verbose=False):
         """
         Make symbol decisions based on the input field. Decision is made based on difference from constellation points
 
@@ -841,9 +842,14 @@ class SignalQAMGrayCoded(SignalBase):
         """
         signal = self._signal_present(signal)
         outsyms = np.zeros_like(signal)
+        dist = np.zeros(signal.shape, dtype=signal.real.dtype)
+        idx = np.zeros(signal.shape, dtype=np.uint16)
         for i in range(signal.shape[0]):
-            outsyms[i] = make_decision(signal[i], self.coded_symbols)
-        return outsyms
+            outsyms[i], dist[i], idx[i] = make_decision(signal[i], self.coded_symbols)
+        if verbose:
+            return outsyms, dist, idx
+        else:
+            return outsyms
 
     @property
     def symbols(self):
