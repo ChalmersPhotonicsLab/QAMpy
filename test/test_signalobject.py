@@ -676,9 +676,11 @@ class TestSignal(object):
 
 class TestSignalQualityCorrectnes(object):
     @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
-    def test_ser_calculation(self, err_syms):
+    @pytest.mark.parametrize("shift", np.random.randint(-200, 200, 10))
+    def test_ser_calculation(self, err_syms, shift):
         N = 1000
         s = signals.SignalQAMGrayCoded(64, N, nmodes=1)
+        s = np.roll(s, shift, axis=-1)
         d = np.diff(np.unique(s.coded_symbols.real))
         dmin = d[np.where(d>0)].min()
         ii = np.arange(1,err_syms+1)
@@ -696,6 +698,21 @@ class TestSignalQualityCorrectnes(object):
         s2 = _flip_symbols(s, ii, 2*dmin)
         ser = s.cal_ser()
         npt.assert_almost_equal(ser.flatten(), err_syms/N)
+        
+    @pytest.mark.parametrize("M", [4,32,64,256])
+    @pytest.mark.parametrize("shift", np.random.randint(-1000,1000, 2))
+    @pytest.mark.parametrize("snr", np.linspace(-20, 40, 20))
+    def test_ser_vs_theory(self, shift, M, snr):
+        from qampy import theory, impairments
+        s = signals.SignalQAMGrayCoded(M, 10**5, nmodes=1)
+        ser_t = theory.ser_vs_es_over_n0_qam(10**(snr/10), M)
+        if ser_t < 1e-4:
+            assert True
+            return
+        s2 = impairments.change_snr(s, snr)
+        s2 = np.roll(s2, shift, axis=-1)
+        ser = s2.cal_ser()
+        npt.assert_allclose(ser, ser_t, rtol=0.4)
 
     @pytest.mark.parametrize("err_syms", np.arange(1, 100, 10))
     def test_ber_calculation(self, err_syms):
