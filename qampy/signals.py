@@ -300,8 +300,8 @@ class SignalBase(np.ndarray):
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
+        symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx, synced)
         data_demod = self.make_decision(signal_rx)
-        symbols_tx, data_demod = self._sync_and_adjust(self.symbols, data_demod, synced)
         #errs = np.count_nonzero(data_demod - symbols_tx, axis=-1)
         errs = data_demod - symbols_tx
         if verbose:
@@ -344,8 +344,8 @@ class SignalBase(np.ndarray):
         """
         signal_rx = self._signal_present(signal_rx)
         nmodes = signal_rx.shape[0]
+        symbols_tx, signal_rx = self._sync_and_adjust(self.symbols, signal_rx, synced)
         syms_demod = self.make_decision(signal_rx)
-        symbols_tx, syms_demod = self._sync_and_adjust(self.symbols, syms_demod, synced)
         bits_demod = self.demodulate(syms_demod)
         tx_synced = self.demodulate(symbols_tx)
         errs = tx_synced ^ bits_demod
