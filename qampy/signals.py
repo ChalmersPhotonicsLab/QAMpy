@@ -1033,7 +1033,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         signal = self._signal_present(signal)
         outsyms = np.zeros_like(signal)
         for i in range(signal.shape[0]):
-            outsyms[i] = make_decision(signal[i], self.coded_symbols)
+            outsyms[i] = make_decision(signal[i], self.coded_symbols)[0]
         return outsyms
 
     @classmethod
@@ -1061,7 +1061,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         # not sure if this is really necessary, but avoids numerical error issues
         out = np.empty_like(symbs)
         for i in range(symbs.shape[0]):
-            out[i] = make_decision(symbs[i], coded_symbols)
+            out[i] = make_decision(symbs[i], coded_symbols)[0]
         obj = np.asarray(out).view(cls)
         M = coded_symbols.size
         obj._M = M
