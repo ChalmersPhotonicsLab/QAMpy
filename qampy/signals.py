@@ -743,8 +743,8 @@ class SignalQAMGrayCoded(SignalBase):
         coded_symbols, graycode, encoding, bitmap_mtx = cls._generate_mapping(M, scale, dtype=dtype)
         out = np.empty_like(symbs).astype(dtype)
         for i in range(symbs.shape[0]):
-            out[i] = make_decision(symbs[i], coded_symbols)[0]
-        bits = cls._demodulate(out, encoding)
+            out[i], _, idx = make_decision(symbs[i], coded_symbols)
+        bits = cls._demodulate(idx, encoding)
         obj = np.asarray(out).view(cls)
         obj._M = M
         obj._fb = fb
