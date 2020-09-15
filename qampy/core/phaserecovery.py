@@ -216,7 +216,7 @@ def bps_pyx(E, testangles, symbols, N, **kwargs):
     return bps(E, testangles, symbols, N, method="pyx", **kwargs)
 
 
-def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
+def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyt", **kwargs):
     """
     Perform a blind phase search phase recovery using two stages after _[1]
 
@@ -240,7 +240,7 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
 
     method      : string, optional
         implementation method to use has to be "af" for arrayfire (uses OpenCL) or
-        "pyx" for a Cython-OpenMP based parallel search or "py" for a slower python based search
+        "pyx" for a Cython-OpenMP based parallel search, "pyt" for pythran  or "py" for a slower python based search
 
     **kwargs    :
         arguments to be passed to the search function
@@ -260,26 +260,24 @@ def bps_twostage(E, Mtestangles, symbols, N , B=4, method="pyx", **kwargs):
         bps_fct = _bps_idx_pyx
     elif method.lower() == "af":
         bps_fct = _bps_idx_af
+    elif method.lower() == "pyt":
+        bps_fct = _bps_idx_pyt
     elif method.lower() == "py":
         bps_fct = _bps_idx_py
     else:
         raise ValueError("Method needs to be 'pyx', 'py' or 'af'")
-    if E.dtype is np.dtype(np.complex64):
-        dtype = np.float32
-    else:
-        dtype = np.float64
-    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False, dtype=dtype).reshape(1,-1)
+    angles = np.linspace(-np.pi/4, np.pi/4, Mtestangles, endpoint=False, dtype=E.real.dtype).reshape(1,-1)
     Ew = np.atleast_2d(E)
     ph_out = []
     for i in range(Ew.shape[0]):
-        idx =  bps_fct(Ew[i], angles, symbols, N, **kwargs)
-        ph = select_angles(angles, idx)
+        idx =  bps_fct(np.copy(Ew[i]), angles, symbols, N, **kwargs)
+        ph = select_angles(np.copy(angles), idx)
         b = np.linspace(-B/2, B/2, B)
-        phn = ph[:,np.newaxis] + b[np.newaxis,:]/(B*Mtestangles)*np.pi/2
-        idx2 = bps_fct(Ew[i], phn, symbols, N, **kwargs)
-        phf = select_angles(phn, idx2)
+        phn = (ph[:,np.newaxis] + b[np.newaxis,:]/(B*Mtestangles)*np.pi/2).astype(E.real.dtype)
+        idx2 = bps_fct(np.copy(Ew[i]), phn, symbols, N, **kwargs)
+        phf = select_angles(np.copy(phn), idx2)
         ph_out.append(np.unwrap(phf*4, discont=np.pi*4/4)/4)
-    ph_out = np.asarray(ph_out, dtype=dtype)
+    ph_out = np.asarray(ph_out, dtype=E.real.dtype)
     En = Ew*np.exp(1.j*ph_out)
     if E.ndim == 1:
         return En.flatten(), ph_out.flatten()
