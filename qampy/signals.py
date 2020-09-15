@@ -28,7 +28,7 @@ from qampy import theory, phaserec
 from qampy.core import ber_functions, pilotbased_receiver
 from qampy.core.prbs import make_prbs_extXOR
 from qampy.core.signal_quality import make_decision, generate_bitmapping_mtx,\
-    estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper
+    estimate_snr, soft_l_value_demapper_minmax, soft_l_value_demapper, cal_mi
 from qampy.core.io import save_signal
 
 
