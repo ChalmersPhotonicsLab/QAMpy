@@ -138,6 +138,8 @@ def soft_l_value_demapper_minmax(rx_symbs, num_bits, snr, bits_map):
 
 #pythran export select_angles(float64[][], int[])
 #pythran export select_angles(float32[][], int[])
+#pythran export select_angles(float64[][], int32[])
+#pythran export select_angles(float32[][], int32[])
 def select_angles(angles, idx):
     L = angles.shape[0]
     assert idx.shape[0] >= L # this will be removed upon compilation but can yield a speedup
