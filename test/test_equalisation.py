@@ -117,7 +117,7 @@ class TestEqualiseSignalParameters(object):
                 modes = np.arange(nmodes+rmodes)
             if modes.size > 1:
                 np.random.shuffle(modes)
-        E, wx, e = equalisation.equalise_signal(sig,1e-2, Niter=2, Ntaps=Ntaps, adaptive_stepsize=True, apply=True, modes=modes)
+        E, wx, e = equalisation.equalise_signal(sig, 0.5e-2, Niter=3, Ntaps=Ntaps, adaptive_stepsize=True, apply=True, modes=modes)
         ser =  E.cal_ser()
         if rmodes is None:
             assert ser.size == nmodes
