@@ -112,14 +112,14 @@ class TestDualMode(object):
         N = 2**16
         snr = 15
         beta = 0.9
-        mu1 = 4e-5
-        mu2 = 4e-5
+        mu1 = 4e-3
+        mu2 = 4e-3
         M = 32
         ntaps = 21
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.apply_PMD(s, theta, dgd)
-        sout, wxy, err = equalisation.dual_mode_equalisation(s, (mu1, mu2), Ntaps=ntaps, methods=(method1, method2),
+        sout, wxy, err = equalisation.dual_mode_equalisation(s, (mu1, mu2), Niter=(3,3), Ntaps=ntaps, methods=(method1, method2),
                                                              adaptive_stepsize=(True, True))
         sout = helpers.normalise_and_center(sout)
         ser = sout.cal_ser()
@@ -137,11 +137,11 @@ class TestDualMode(object):
         N = 2**16
         snr = 15
         beta = 0.9
-        mu1 = 2e-5
+        mu1 = 2e-3
         if method2 == "mddma":
-            mu2 = 1.0e-6
+            mu2 = 1.0e-3
         else:
-            mu2 = 2e-5
+            mu2 = 2e-3
         M = 32
         ntaps = 21
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
@@ -149,7 +149,7 @@ class TestDualMode(object):
         s = impairments.apply_phase_noise(s, lw)
         s = impairments.apply_PMD(s, theta, dgd)
         sout, wxy, err = equalisation.dual_mode_equalisation(s, (mu1, mu2), Ntaps=ntaps, methods=(method1, method2),
-                                                             adaptive_stepsize=(False, False))
+                                                             adaptive_stepsize=(True, True))
         sout, ph = phaserec.bps(sout, M, 21)
         sout = helpers.normalise_and_center(sout)
         sout = helpers.dump_edges(sout, 50)
