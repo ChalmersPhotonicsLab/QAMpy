@@ -40,7 +40,7 @@ def test_phaserec_bps_2stage(lw, M):
     s = impairments.change_snr(s, snr)
     s = np.roll(s, shiftN, axis=1)
     pp = impairments.apply_phase_noise(s, lw)
-    recoverd, ph1 = phaserec.bps_twostage(pp, max(4, M/2), 14, method='pyt')
+    recoverd, ph1 = phaserec.bps_twostage(pp, max(4, M//2), 14, method='pyt')
     recoverd = helpers.dump_edges(recoverd, 20)
     ser = recoverd.cal_ser()
     npt.assert_allclose(ser, 0)
