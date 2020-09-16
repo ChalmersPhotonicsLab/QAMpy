@@ -161,21 +161,21 @@ class TestDualMode(object):
 
 class TestLMS(object):
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-    @pytest.mark.parametrize("method", ["sbd", "mddma", "dd", "sca", "cme"])
+    @pytest.mark.parametrize("method", ["sbd", "mddma", "dd", "dd_real", "dd_data_real", "sbd_data"])
     def test_method(self, dtype, method):
         fb = 40.e9
         os = 2
         fs = os*fb
         N = 2**13
         beta = 0.1
-        mu = 0.2e-1
+        mu = 0.2e-2
         M = 16
-        taps = 7
+        taps = 13
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb, dtype=dtype)
         s = s.resample(fs, beta=beta, renormalise=True)
         #s = impairments.change_snr(s, 20)
         #wxy, err = equalisation.equalise_signal(s, mu, Ntaps=taps, method=method, adaptive_stepsize=True)
-        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=taps, method=method, adaptive_stepsize=True)
+        wxy, err = equalisation.equalise_signal(s, mu, Niter=3, Ntaps=taps, method=method, adaptive_stepsize=True)
         sout = equalisation.apply_filter(s, wxy)
         ser = sout.cal_ser()
         #plt.plot(sout[0].real, sout[0].imag, 'r.')
