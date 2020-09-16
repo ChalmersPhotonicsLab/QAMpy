@@ -186,7 +186,7 @@ class TestLMS(object):
 
 
 class TestCMA(object):
-    @pytest.mark.parametrize("method", ["cma", "mcma"])
+    @pytest.mark.parametrize("method", ["cma", "mcma", "cma_real"])
     @pytest.mark.parametrize("phi", np.linspace(4.3, 8, 5))
     def test_pol_rot(self, method, phi):
         phi = np.pi/phi
@@ -197,11 +197,11 @@ class TestCMA(object):
         beta = 0.1
         mu = 0.1e-2
         M = 4
-        ntaps = 3
+        ntaps = 5
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.rotate_field(s, phi)
-        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=ntaps, method=method,
+        wxy, err = equalisation.equalise_signal(s, mu, Niter=3, Ntaps=ntaps, method=method,
                                                 adaptive_stepsize=True , avoid_cma_sing=False)
         sout = equalisation.apply_filter(s, wxy)
         #plt.plot(sout[0].real, sout[0].imag, '.r')
