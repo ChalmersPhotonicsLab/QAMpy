@@ -161,7 +161,7 @@ class TestDualMode(object):
 
 class TestLMS(object):
     @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-    @pytest.mark.parametrize("method", ["sbd", "mddma", "dd", "dd_real", "dd_data_real", "sbd_data"])
+    @pytest.mark.parametrize("method", ["sbd", "mddma", "dd", "dd_real", "dd_data_real", "sbd_data", "rde", "mrde"])
     def test_method(self, dtype, method):
         fb = 40.e9
         os = 2
