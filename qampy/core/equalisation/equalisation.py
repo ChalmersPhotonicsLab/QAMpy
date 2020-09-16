@@ -89,7 +89,7 @@ def generate_symbols_for_eq(method, M, dtype):
     if method in ["mddma"]:
         symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return  symbols
-    if method in ["dd"]:
+    if method in ["ddlms"]:
         symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
     if method in ["cma_real"]:

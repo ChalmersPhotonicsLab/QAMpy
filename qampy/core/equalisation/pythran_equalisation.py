@@ -132,7 +132,7 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
         errorfct = mrde_error
     elif method == "mddma":
         errorfct = mddma_error
-    elif method == "ddlms":
+    elif method == "dd":
         errorfct = ddlms_error
     elif method == "sbd_data":
         errorfct = sbd_data_error
