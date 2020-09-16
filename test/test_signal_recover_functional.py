@@ -62,7 +62,7 @@ class TestDualMode(object):
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.rotate_field(s, phi)
-        sout, wxy, err = equalisation.dual_mode_equalisation(s, (mu1, mu2), Ntaps=3, methods=(method1, method2),
+        sout, wxy, err = equalisation.dual_mode_equalisation(s, (mu1, mu2), Ntaps=5, Niter=(3,3), methods=(method1, method2),
                                                              adaptive_stepsize=(True, True))
         sout = helpers.normalise_and_center(sout)
         ser = sout.cal_ser()
