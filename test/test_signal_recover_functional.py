@@ -211,7 +211,7 @@ class TestCMA(object):
            #ser = sout[::-1].cal_ser
         npt.assert_allclose(ser, 0)
 
-    @pytest.mark.parametrize("method", ["cma", "mcma"])
+    @pytest.mark.parametrize("method", ["cma", "mcma", "cma_real"])
     @pytest.mark.parametrize("phi", np.linspace(4.3, 5.8, 3))
     @pytest.mark.parametrize("dgd", np.linspace(10, 300, 4)*1e-12)
     def test_pmd(self, method, phi, dgd):
@@ -222,13 +222,13 @@ class TestCMA(object):
         N = 2**16
         snr = 15
         beta = 0.1
-        mu = 0.8e-3
+        mu = 4e-3
         M = 4
-        ntaps = 11
+        ntaps = 21
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.apply_PMD(s, theta, dgd)
-        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=ntaps, method=method,
+        wxy, err = equalisation.equalise_signal(s, mu, Niter=5, Ntaps=ntaps, method=method,
                                                 adaptive_stepsize=True, avoid_cma_sing=False)
         sout = equalisation.apply_filter(s, wxy)
         sout = helpers.normalise_and_center(sout)
@@ -294,14 +294,14 @@ class TestCMA(object):
         N = 2**16
         snr = 15
         beta = 0.3
-        mu = 4e-5
+        mu = 1e-2
         M = 4
         ntaps = 21
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.apply_phase_noise(s, lw)
         s = impairments.apply_PMD(s, theta, dgd)
-        wxy, err = equalisation.equalise_signal(s, mu, Ntaps=ntaps, method=method, adaptive_stepsize=False)
+        wxy, err = equalisation.equalise_signal(s, mu, Niter=3, Ntaps=ntaps, method=method, adaptive_stepsize=True)
         sout = equalisation.apply_filter(s, wxy)
         sout, ph = phaserec.viterbiviterbi(sout,11)
         sout = helpers.normalise_and_center(sout)
@@ -324,7 +324,7 @@ class TestCMA(object):
         beta = 0.3
         mu = 2e-4
         M = 4
-        ntaps = 21
+        ntaps = 15
         s = signals.SignalQAMGrayCoded(M, N, nmodes=2, fb=fb)
         s = s.resample(fs, beta=beta, renormalise=True)
         s = impairments.apply_phase_noise(s, lw)
