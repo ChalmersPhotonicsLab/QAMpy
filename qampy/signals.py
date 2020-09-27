@@ -206,9 +206,13 @@ class SignalBase(np.ndarray):
         Nnew = int(np.round(os*arr.shape[1]))
         if np.isclose(os, 1):
             return arr.copy().view(cls)
+        if "Ts" in kwargs:
+            Ts = kwargs.pop("Ts")
+        else:
+            Ts = 1/fb
         onew = []
         for i in range(arr.shape[0]):
-            onew.append(resample.rrcos_resample(arr[i], fold, fnew, Ts=1 / fb, **kwargs))
+            onew.append(resample.rrcos_resample(arr[i], fold, fnew, Ts=Ts, **kwargs))
         onew = np.asarray(onew, dtype=arr.dtype).view(cls)
         cls._copy_inherits(arr, onew)
         return onew
