@@ -71,7 +71,7 @@ On Linux installation works fine using the usual `python3 setup.py build` and `p
 On Windows, you will need to install clang, and pythran version 0.9.6 or newer. 
 and pythran-openblas for blas support. Before compiling install the following software
 1. Install the latest clang release from the [llvm website](https://clang.llvm.org/get_started.html), 
-2. Install pythran from git with `pip install pythran`.
+2. Install pythran version 0.9.7 or newer with `pip install pythran`.
 3. Install pythran-openblas with `pip install pythran-openblas`.
 4. Create a .pythranrc file in your home directory (typically this is C:\Users\<username>). Note that to create a file 
 from file explorer you should name it `.pythranrc.` (there is a trailing dot, otherwise windows things .pythranrc is the fileexstension).
@@ -83,8 +83,7 @@ CXX=clang-cl.exe
 blas=pythran-openblas
 ```
 
-To compile use the same instructions as on linux. However, currently there is a minor bug in pythran which causes compilation
-to fail the first time. So you will have to rerun `python setup.py build` two times.
+To compile use the same instructions as on linux. 
 
 More detailed instructions can be found on the [wiki](https://github.com/ChalmersPhotonicsLab/QAMpy/wiki/Installation).
 
