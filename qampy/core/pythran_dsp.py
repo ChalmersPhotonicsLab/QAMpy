@@ -238,8 +238,11 @@ def cal_lut_avg(err, idx_I, idx_Q,  N):
         err_avg_Q[idx_Q[i]] += err[i].imag
         nI[idx_I[i]] += 1
         nQ[idx_Q[i]] += 1
-    nI[np.where(nI == 0)] = 1
-    nQ[np.where(nQ == 0)] = 1
+    for i in range(N):
+        if nI[i] == 0:
+            nI[i] = 1
+        if nQ[i] == 0:
+            nQ[i] = 1
     return err_avg_I/nI + 1j* err_avg_Q/nQ
 
 #pythran export estimate_snr(complex128[], complex128[], complex128[])
