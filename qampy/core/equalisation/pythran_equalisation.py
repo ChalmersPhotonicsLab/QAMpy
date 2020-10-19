@@ -97,10 +97,10 @@ def train_equaliser_realvalued(E, TrSyms, Niter, os, mu, wx, modes, adaptive, sy
             for i in range(TrSyms):
                 X = E[:, i * os:i * os + ntaps]
                 Xest = apply_filter(X,  wx[mode])
-                err[mode, it*Niter+i] = errorfct(Xest, symbols[mode], i)
-                wx[mode] += mu * err[mode, it*Niter+i] * X
+                err[mode, it*TrSyms+i] = errorfct(Xest, symbols[mode], i)
+                wx[mode] += mu * err[mode, it*TrSyms+i] * X
                 if adaptive and i > 0:
-                    mu = adapt_step_real(mu, err[mode, it*Niter+i], err[mode, it*Niter+i-1])
+                    mu = adapt_step_real(mu, err[mode, it*TrSyms+i], err[mode, it*TrSyms+i-1])
     return err, wx, mu
 
 def cma_error_real(Xest, s1, i):
@@ -151,10 +151,10 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
             for i in range(TrSyms):
                 X = E[:, i * os:i * os + ntaps]
                 Xest = apply_filter(X,  wx[mode])
-                err[mode, it*Niter+i] = errorfct(Xest, symbols[mode], i)
-                wx[mode] += mu * np.conj(err[mode, it*Niter+i]) * X
+                err[mode, it*TrSyms+i] = errorfct(Xest, symbols[mode], i)
+                wx[mode] += mu * np.conj(err[mode, it*TrSyms+i]) * X
                 if adaptive and i > 0:
-                    mu = adapt_step(mu, err[mode, it*Niter+i], err[mode, it*Niter+i-1])
+                    mu = adapt_step(mu, err[mode, it*TrSyms+i], err[mode, it*TrSyms+i-1])
     return err, wx, mu
 
 ######################################################
