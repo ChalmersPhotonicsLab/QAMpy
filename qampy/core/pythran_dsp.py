@@ -296,6 +296,7 @@ def cal_mi_mc(noise, symbols, N0):
     M = symbols.size
     L = noise.size
     mi_out = 0
+    #omp parallel for reduction(+:mi_out) collaps(2)
     for i in range(M):
         for l in range(L):
             tmp = 0
