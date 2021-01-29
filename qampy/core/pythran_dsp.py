@@ -84,14 +84,9 @@ def bps(E, testangles, symbols, N):
                 dists[i, j] = dtmp
     return select_angle_index(dists, 2*N)
 
-def l_values(btx, rx, snr):
-    tmp = 0
-    tmp2 = 0
-    k = btx.shape[0]
-    for l in range(k):
-        tmp += np.exp(-snr*abs(btx[l,1] - rx)**2)
-        tmp2 += np.exp(-snr*abs(btx[l,0] - rx)**2)
-    return tmp, tmp2
+def cal_l_values(btx, rx, snr):
+    tmp = np.sum(np.exp(-snr*abs(btx - rx)**2), axis=0)
+    return np.log(tmp[1]) - np.log(tmp[0])
 
 #pythran export soft_l_value_demapper(complex128[], int, float64, complex128[][][])
 #pythran export soft_l_value_demapper(complex128[], int, float32, complex128[][][])
@@ -105,8 +100,7 @@ def soft_l_value_demapper(rx_symbs, num_bits, snr, bits_map):
     #omp parallel for collapse(2)
     for symb in range(N):
         for bit in range(num_bits):
-            tmp, tmp2 = l_values(bits_map[bit,:,:], rx_symbs[symb], snr)
-            L_values[symb, bit] = np.log(tmp) - np.log(tmp2)
+            L_values[symb, bit] = cal_l_values(bits_map[bit,:,:], rx_symbs[symb], snr)
     return L_values
 
 def find_minmax(btx, rx):
@@ -296,7 +290,7 @@ def cal_mi_mc(noise, symbols, N0):
     M = symbols.size
     L = noise.size
     mi_out = 0
-    #omp parallel for reduction(+:mi_out) collaps(2)
+    #omp parallel for reduction(+:mi_out) collapse(2)
     for i in range(M):
         for l in range(L):
             tmp = 0
