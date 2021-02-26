@@ -192,6 +192,8 @@ class SignalBase(np.ndarray):
     def recreate_from_np_array(self, arr, **kwargs):
         obj = arr.view(self.__class__)
         self._copy_inherits(self, obj)
+        if "fb" in kwargs and not "fs" in kwargs:
+            kwargs["fs"] = self.os * kwargs['fb']
         for k, v in kwargs.items():
             if "_"+k in self._inheritattr_:
                 k = "_" + k
@@ -1464,6 +1466,7 @@ class SignalWithPilots(SignalBase):
         out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
         obj._fs = symbs.fb
+        obj._fb = symbs.fb
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
@@ -1602,6 +1605,8 @@ class SignalWithPilots(SignalBase):
 
     @property
     def nframes(self):
+        print(self.os)
+        print(self.frame_len)
         return self.shape[-1]//(self.os*self.frame_len)
 
     @property
