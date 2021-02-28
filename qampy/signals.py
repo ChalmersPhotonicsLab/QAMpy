@@ -1566,6 +1566,7 @@ class SignalWithPilots(SignalBase):
         out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
         obj._fs = payload.fb
+        obj._fb = payload.fb
         obj._pilot_scale = pilot_scale
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
