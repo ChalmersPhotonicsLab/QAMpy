@@ -438,7 +438,7 @@ class SignalBase(np.ndarray):
         else:
             return snr
         
-    def cal_gmi(self, signal_rx=None, synced=False, llr_minmax=False):
+    def cal_gmi(self, signal_rx=None, synced=False, snr=None, llr_minmax=False):
         """
         Calculate the generalized mutual information for the received signal.
 
