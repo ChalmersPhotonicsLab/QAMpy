@@ -730,7 +730,7 @@ class TestPilotCalcs(object):
         s = s.resample(2*s.fs, beta=0.1)
         s = impairments.change_snr(s, 40)
         s = np.roll(s, shift, axis=-1)
-        wx1 = s.sync2frame(Ntaps=ntaps, returntaps=True, adaptive_stepsize=True, mu=1e-2, method="cma", Niter=10)
+        wx1, ret = s.sync2frame(Ntaps=ntaps, returntaps=True, adaptive_stepsize=True, mu=1e-2, method="cma", Niter=10)
         ss = np.roll(s, -s.shiftfctrs[0], axis=-1)
         so = core.equalisation.apply_filter(ss, ss.os, wx1)
         npt.assert_array_equal(np.sign(so[0,:512].imag), np.sign(s.pilot_seq[0].imag))
