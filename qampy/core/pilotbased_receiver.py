@@ -369,7 +369,14 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     pilot_seq_len = ref_symbs.shape[-1]
     nmodes = rx_signal.shape[0]
     assert rx_signal.shape[-1] >= (frame_len + 2*pilot_seq_len)*os, "Signal must be at least as long as frame"
-    
+    if "method" in eqargs.keys():
+        if eqargs["method"] in equalisation.REAL_VALUED:
+            if np.iscomplexobj(rx_signal):
+                raise ValueError("Equaliser method is {}, but using a real-valued equaliser in frame sync is unsupported"\
+                                 .format(eqargs["method"]))
+        elif eqargs["method"] in equalisation.DATA_AIDED:
+            raise ValueError("Equaliser method is {}, but using a data-aided equaliser in frame sync is unsupported"\
+                             .format(eqargs["method"]))
     mode_sync_order = np.zeros(nmodes, dtype=int)
     not_found_modes = np.arange(0, nmodes)
     search_overlap = 2 # fraction of pilot_sequence to overlap
@@ -383,9 +390,6 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     # end to ensure that sufficient symbols can be used for the search
     sub_vars = np.ones((nmodes, num_steps)) * 1e2
     wxys = np.zeros((num_steps, nmodes, nmodes, Ntaps), dtype=rx_signal.dtype)
-    if "method" in eqargs.keys() and eqargs["method"] in equalisation.REAL_VALUED:
-        if np.iscomplexobj(rx_signal):
-            raise ValueError("Can not use real-valued equaliser and complex signals in sync2frame")
     for i in np.arange(search_overlap, num_steps): # we avoid one step at the beginning
         tmp = rx_signal[:, i*step:i*step+search_window]
         wxy, err_out = equalisation.equalise_signal(tmp, os, mu, M_pilot, Ntaps=Ntaps, **eqargs)
