@@ -412,7 +412,7 @@ class TestPilotSignal(object):
     def test_from_data_phpilots(self, N):
         QPSK = signals.SignalQAMGrayCoded(4, 200)
         data = signals.SignalQAMGrayCoded(128, 2 ** 12)
-        s = signals.SignalWithPilots.from_data_array(data, 2 ** 12, 0, N, 1)
+        s = signals.SignalWithPilots.from_symbol_array(data, 2 ** 12, 0, N, 1)
         dist = abs(s[0, ::N, np.newaxis] - QPSK.coded_symbols)
         npt.assert_array_almost_equal(np.min(dist, axis=1), 0)
 
