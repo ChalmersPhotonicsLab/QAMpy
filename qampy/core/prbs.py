@@ -41,8 +41,8 @@ def make_prbs_extXOR(order, nbits, seed=None):
     prbs : array_like
         Array of nbits, dtype=bool, len=nbits
     """
-    assert order in [7, 15, 23, 31], """Only orders 7, 15, 23, 31 are
-    implemented"""
+    assert order in [7, 15, 23, 31], """Only orders 7, 15, 23, 31 are implemented"""
+    nbits = int(nbits) # need to make sure it is integer for pythran
     tapdict = {7: [7, 6], 15: [15, 14], 23: [23, 18], 31: [31, 28]}
     if seed is None:
         seed = utils.bool2bin(np.ones(order))
