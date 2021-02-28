@@ -16,6 +16,7 @@ LINK_ARGS = ["-fopenmp", "-lm", "-Wl,-strip-all"]
 WIN_LINK_ARGS = ["/openmp"]
 
 if sys.platform.startswith("win"):
+    COMPILER_ARGS_PYT.remove("-DUSE_XSIMD") # windows fails with XSIMD
     dsp_pythran = PythranExtension(name="qampy.core.pythran_dsp",
                                    sources = ["qampy/core/pythran_dsp.py"],
                                    extra_compile_args=COMPILER_ARGS_PYT,
