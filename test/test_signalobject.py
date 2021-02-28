@@ -1016,14 +1016,9 @@ class TestDtype(object):
         assert np.dtype(dt) is s.pilots.dtype
 
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
-    @pytest.mark.parametrize("shift", [None, 120, 223])
-    def test_pilot_signal(self, dt, shift):
+    def test_pilot_signal(self, dt):
         s = signals.SignalWithPilots(32,2**12, 256, 32, dtype=dt )
-        if shift is not None:
-            s1 = np.roll(s, 120, axis=-1)
-            s3 = s1.get_data(np.array([shift]))
-        else:
-            s3 = s.get_data()
+        s3 = s.get_data()
         assert np.dtype(dt) is s3.dtype
         assert np.dtype(dt) is s3.symbols.dtype
 
