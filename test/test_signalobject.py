@@ -438,7 +438,7 @@ class TestPilotSignal(object):
         N = 2 ** 12 - 128
         Nn = os * N
         s = signals.SignalQAMGrayCoded(128, N)
-        sn = signals.SignalWithPilots.from_data_array(s, 2 ** 12, 128, None, 1)
+        sn = signals.SignalWithPilots.from_symbol_array(s, 2 ** 12, 128, None)
         si = sn.resample(2, beta=0.2, renormalise=False)
         assert si.shape[0] == sn.shape[0]
         assert si.shape[1] == 2 * sn.shape[1]
@@ -452,29 +452,14 @@ class TestPilotSignal(object):
         s = signals.SignalWithPilots(64, N, Nseq, ph_i, nframes=nframes)
         npt.assert_array_almost_equal(s.get_data(), np.tile(s.symbols, nframes))
 
-
-    @pytest.mark.parametrize("nmodes", [1, 2, 3])
-    @pytest.mark.parametrize("nframes", [1, 2, 3])
-    def test_get_data2(self, nmodes, nframes):
-        N = 2 ** 16
-        Nseq = 256
-        ph_i = 32
-        s = signals.SignalWithPilots(64, N, Nseq, ph_i, nframes=nframes, nmodes=nmodes)
-        shifts = []
-        for i in range(nmodes):
-            sf = np.random.randint(0, 2**12)
-            shifts.append(sf)
-            s[i] = np.roll(s[i], sf)
-        npt.assert_array_almost_equal(s.get_data(shifts), np.tile(s.symbols, nframes))
-
     def test_symbol_inherit(self):
         s = signals.SignalQAMGrayCoded(128, 2 ** 16, nmodes=2)
-        sp = signals.SignalWithPilots.from_data_array(s, 2 ** 16, 256, 32)
+        sp = signals.SignalWithPilots.from_symbol_array(s, 2 ** 16, 256, 32)
         npt.assert_array_almost_equal(sp.symbols, sp.get_data())
 
     def test_symbol_inherit_shape(self):
         s = signals.SignalQAMGrayCoded(128, 2 ** 16, nmodes=2)
-        sp = signals.SignalWithPilots.from_data_array(s, 2 ** 16, 256, 32)
+        sp = signals.SignalWithPilots.from_symbol_array(s, 2 ** 16, 256, 32)
         N = 2**16-256
         ph = N//32
         NN = N-ph
@@ -1025,7 +1010,7 @@ class TestDtype(object):
     @pytest.mark.parametrize("nframes", [1, 2])
     def test_pilot_signal_from_data(self, dt, nframes):
         s1 = signals.SignalQAMGrayCoded(32, 2**12, dtype=dt)
-        s = signals.SignalWithPilots.from_data_array(s1, 2**12, 256, 32, nframes=nframes)
+        s = signals.SignalWithPilots.from_symbol_array(s1, 2**12, 256, 32, nframes=nframes)
         assert np.dtype(dt) is s.dtype
         assert np.dtype(dt) is s.symbols.dtype
         assert np.dtype(dt) is s.pilots.dtype
