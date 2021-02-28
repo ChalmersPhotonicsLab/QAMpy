@@ -18,11 +18,11 @@ install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
   - "%PYTHON%\\python.exe -m pip install pythran"
-  - "%PYTHON%\\python.exe -m pip install pythran-openblas
+  - "%PYTHON%\\python.exe -m pip install pythran-openblas"
   # currently pythran build fails with numpy 1.20
-  - "%PYTHON%\\python.exe -m pip install numpy=1.19"
+  - "%PYTHON%\\python.exe -m pip install numpy==1.19"
   - "%PYTHON%\\python.exe -m pip install scipy"
-  - cmd: echo [compiler] > %HOMEDRIVE%%HOMEPATH%/.pythranrc.
+  - cmd: echo [compiler] > %HOMEDRIVE%%HOMEPATH%/.pythranrc."
   - cmd: echo CC=clang-cl.exe >> %HOMEDRIVE%%HOMEPATH%/.pythranrc.
   - cmd: echo CXX=clang-cl.exe >> %HOMEDRIVE%%HOMEPATH%/.pythranrc.
   - cmd: echo blas=pythran-openblas >> %HOMEDRIVE%%HOMEPATH%/.pythranrc.
