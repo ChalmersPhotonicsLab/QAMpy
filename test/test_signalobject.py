@@ -357,7 +357,7 @@ class TestPilotSignal(object):
                                       "ph_pilots", "nframes", "frame_len", "pilot_scale"])
     def test_attr_present_from_data(self, attr):
         si = signals.SignalQAMGrayCoded(128, 2**12)
-        s = signals.SignalWithPilots.from_data_array(si, 2**12, 256, 32, 1)
+        s = signals.SignalWithPilots.from_symbol_array(si, 2**12, 256, 32)
         assert getattr(s, attr) is not None
 
     @pytest.mark.parametrize("N", [2 ** 18, 2 ** 12, 2 ** 14])
