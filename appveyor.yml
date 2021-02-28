@@ -7,19 +7,25 @@ environment:
     # The list here is complete (excluding Python 2.6, which
     # isn't covered by this document) at the time of writing.
 
-    - PYTHON: "C:\\Python35"
     - PYTHON: "C:\\Python36"
     - PYTHON: "C:\\Python37"
-    - PYTHON: "C:\\Python35-x64"
+    - PYTHON: "C:\\Python38"
     - PYTHON: "C:\\Python36-x64"
     - PYTHON: "C:\\Python37-x64"
+    - PYTHON: "C:\\Python38-x64"
 
 install:
   # We need wheel installed to build wheels
   - "%PYTHON%\\python.exe -m pip install wheel"
-  - "%PYTHON%\\python.exe -m pip install cython"
-  - "%PYTHON%\\python.exe -m pip install numpy"
+  - "%PYTHON%\\python.exe -m pip install pythran"
+  - "%PYTHON%\\python.exe -m pip install pythran-openblas
+  # currently pythran build fails with numpy 1.20
+  - "%PYTHON%\\python.exe -m pip install numpy=1.19"
   - "%PYTHON%\\python.exe -m pip install scipy"
+  - cmd: echo [compiler] > %HOMEDRIVE%%HOMEPATH%/.pythranrc.
+  - cmd: echo CC=clang-cl.exe >> %HOMEDRIVE%%HOMEPATH%/.pythranrc.
+  - cmd: echo CXX=clang-cl.exe >> %HOMEDRIVE%%HOMEPATH%/.pythranrc.
+  - cmd: echo blas=pythran-openblas >> %HOMEDRIVE%%HOMEPATH%/.pythranrc.
 
 build: off
 
