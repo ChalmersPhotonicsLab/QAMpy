@@ -21,7 +21,17 @@ class TestPilotSignalRecovery(object):
         s2 = sig.resample(sig.fb*2, beta=0.1)
         with pytest.raises(ValueError):
             s2.sync2frame(method=method)
-             
+            
+    @pytest.mark.parametrize("method", REAL_VALUED)
+    def test_data_aided_framesync(self, method):
+        # currently we do not support real-valued equalisers for frame-sync
+        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=2, nmodes=2, fb=20e9)
+        s2 = sig.resample(sig.fb*2, beta=0.1)
+        s3 = impairments.simulate_transmission(s2, 25, modal_delay=[10000,10000])
+        s3.sync2frame()
+        with pytest.raises(ValueError):
+            equalisation.pilot_equaliser(s3, (1e-3, 1e-3), 11, methods=(method, "sbd"))
+        
     @pytest.mark.parametrize("theta", np.linspace(0.1, 1, 5))
     def test_recovery_with_rotation(self, theta):
         snr = 30.

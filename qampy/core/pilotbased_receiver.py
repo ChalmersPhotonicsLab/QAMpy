@@ -463,6 +463,11 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
     npols = rx_signal.shape[0]    
     pilot_seq_len = ref_symbs.shape[-1]
     wx = wxinit
+    if methods[0] in equalisation.REAL_VALUED:
+       if methods[1] not in equalisation.REAL_VALUED:
+           raise ValueError("Using a complex and real-valued equalisation method is not supported")
+    elif methods[1] in equalisation.REAL_VALUED:
+        raise ValueError("Using a complex and real-valued equalisation method is not supported")
     if np.unique(shift_fctrs).shape[0] > 1:
         syms_out = []
         
