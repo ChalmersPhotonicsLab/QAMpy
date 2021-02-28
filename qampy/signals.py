@@ -1583,6 +1583,10 @@ class SignalWithPilots(SignalBase):
         return self.pilots.M
 
     @property
+    def M(self):
+        return self._symbols.M
+
+    @property
     def pilot_scale(self):
         return self._pilot_scale
 
