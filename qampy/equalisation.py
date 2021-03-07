@@ -22,7 +22,54 @@ from qampy.core import equalisation, pilotbased_receiver
 from qampy import phaserec
 __doc__= equalisation.equalisation.__doc__
 
-def apply_filter(sig, wxy, method="pyt"):
+def _apply_to_pilotsignal(sig, wxy, frames):
+    Ntaps = wxy.shape[-1]
+    shiftfctrs = sig.shiftfctrs
+    if Ntaps != sig.synctaps:
+        shiftfctrs = shiftfctrs - (Ntaps - sig.synctaps)//sig.os 
+    if np.min(shiftfctrs) < 0:
+        shiftfctrs += sig.os*sig.frame_len
+    assert shiftfctrs.max() + sig.os*sig.frame_len*(max(frames)+1) < sig.shape[-1] - (Ntaps - 1), \
+        "Trying to equalise frame {}, but signal is not long enough".format(max(frames))
+    if np.all(np.diff(frames) == 1):
+        nframes = frames[-1] - frames[0] + 1
+        if np.unique(shiftfctrs).shape[0] > 1:
+            modes = np.arange(wxy.shape[0]).reshape(-1, sig.shape[0]).T #needed for real valued eqn
+            eq_mode_sig = []
+            for mode in modes:
+                idx_0 = shiftfctrs[mode[0]] + frames[0]*sig.os*sig.frame_len
+                idx_end = idx_0 + nframes*sig.frame_len*sig.os + Ntaps -1
+                eq_mode_sig.append(core.equalisation.apply_filter(
+                    sig[:, idx_0:idx_end], sig.os, wxy, modes=mode))
+            return sig.recreate_from_np_array(np.squeeze(np.array(eq_mode_sig)), fs=sig.fb)
+        else:
+            idx_0 = shiftfctrs[0] + frames[0]*sig.os*sig.frame_len
+            idx_end = idx_0 + nframes*sig.frame_len*sig.os + Ntaps -1
+            return sig.recreate_from_np_array(core.equalisation.apply_filter(
+                                    sig[:,idx_0:idx_end], sig.os, wxy), fs=sig.fb)
+    else:
+        if np.unique(shiftfctrs).shape[0] > 1:
+            modes = np.arange(wxy.shape[0]).reshape(-1, sig.shape[0]).T #needed for real valued eqn
+            all_mode_sig = []
+            for frame in frames:
+                eq_mode_sig = []
+                for mode in modes:
+                    idx_0 = shiftfctrs[mode[0]] + frame*sig.os*sig.frame_len
+                    idx_end = idx_0 + sig.frame_len*sig.os + Ntaps -1
+                    eq_mode_sig.append(core.equalisation.apply_filter(
+                        sig[:, idx_0:idx_end], sig.os, wxy, modes=mode))
+                all_mode_sig.append(np.squeeze(np.array(eq_mode_sig)))
+            return sig.recreate_from_np_array(np.hstack(all_mode_sig), fs=sig.fb)
+        else:
+            all_mode_sig = []
+            for frame in frames:
+                idx_0 = shiftfctrs[0] + frame*sig.os*sig.frame_len
+                idx_end = idx_0 + sig.frame_len*sig.os + Ntaps -1 
+                all_mode_sig.append(core.equalisation.apply_filter(
+                    sig[:,idx_0:idx_end], sig.os, wxy))
+            return sig.recreate_from_np_array(np.hstack(all_mode_sig), fs=sig.fb)
+   
+def apply_filter(sig, wxy, method="pyt", frames=[0]):
     """
     Apply the equaliser filter taps to the input signal.
 
@@ -37,6 +84,10 @@ def apply_filter(sig, wxy, method="pyt"):
 
     method : basestring
         which apply filter method to use (pyx=cython, py=python)
+        
+    frames : list(int), optional
+        if signal object is a pilot signal the frames to be equalised. If False,
+        empty or None, do not perform a frame sync and apply filter to the whole signal.
 
     Returns
     -------
@@ -44,8 +95,12 @@ def apply_filter(sig, wxy, method="pyt"):
     sig_out   : SignalObject
         equalised signal
     """
-    sig_out = core.equalisation.apply_filter(sig, sig.os, wxy, method=method)
-    return sig.recreate_from_np_array(sig_out, fs=sig.fb)
+    if hasattr(sig, "pilots") and frames: # pilot equaliser needs to be applied to the frame
+        return _apply_to_pilotsignal(sig, wxy, frames)
+    else:
+        sig_out = core.equalisation.apply_filter(sig, sig.os, wxy, method=method)
+        return sig.recreate_from_np_array(sig_out, fs=sig.fb)
+    
 
 def equalise_signal(sig, mu, wxy=None, Ntaps=None, TrSyms=None, Niter=1, method="mcma", adaptive_stepsize=False,
                     symbols=None, modes=None, apply=False, **kwargs):
@@ -254,16 +309,7 @@ def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, wxinit=None, f
     else:
         out_sig = signal
     if apply:
-        if np.unique(signal.shiftfctrs).shape[0] > 1:
-            #nmodes_sig = signal.shape[0]
-            #nmodes_taps = wxy.shape[0]
-            smodes = np.arange(taps_all.shape[0]).reshape(-1, signal.shape[0]).T
-            eq_mode_sig = []
-            for mode in smodes:
-                eq_mode_sig.append(core.equalisation.apply_filter(out_sig[:,eq_shiftfctrs[mode[0]]:int(eq_shiftfctrs[mode[0]]+signal.frame_len*signal.os + Ntaps - 1)], signal.os, taps_all, modes=mode))
-            eq_mode_sig = signal.recreate_from_np_array(np.squeeze(np.array(eq_mode_sig)),fs=signal.fb)
-        else:
-            eq_mode_sig = apply_filter(out_sig[:,eq_shiftfctrs[0]:int(eq_shiftfctrs[0]+signal.frame_len*signal.os + Ntaps - 1)], np.array(taps_all))
+        eq_mode_sig = apply_filter(out_sig, taps_all, frames=[frame])
         if verbose:
             return taps_all, eq_mode_sig, foe_all, (Ntaps, signal.synctaps)
         else:

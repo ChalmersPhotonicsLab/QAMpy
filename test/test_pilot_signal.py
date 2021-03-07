@@ -110,6 +110,20 @@ class TestPilotSignalRecovery(object):
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
 
+    @pytest.mark.parametrize("frames", [[0], [0,1], [2], [0,2]])
+    @pytest.mark.parametrize("modal_delay", [0, 500])
+    def test_apply_filter_frames(self, frames, modal_delay):
+        Ntaps = 45
+        s = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=4, nmodes=2, fb=24e9)
+        s2 = s.resample(2*s.fb, beta=0.1, renormalise=True)
+        s3 = impairments.simulate_transmission(s2, 30, modal_delay=[2000, 2000+modal_delay])
+        s3.sync2frame(Ntaps=Ntaps-14*2)
+        wx = equalisation.pilot_equaliser(s3, 1e-3, Ntaps, apply=False, foe_comp=False)
+        sout = equalisation.apply_filter(s3, wx, frames=frames)
+        assert sout.shape[-1] == s.frame_len*len(frames)
+        for ber in sout.cal_ber():
+            assert ber < 1e-3
+
 
 class TestSignalGeneration(object):
     @pytest.mark.parametrize("nmodes", [1,2])
