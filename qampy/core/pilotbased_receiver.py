@@ -382,8 +382,8 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     search_overlap = 2 # fraction of pilot_sequence to overlap
     search_window = pilot_seq_len * os
     step = search_window // search_overlap
-    # we only need to search the length of one frame*os plus some buffer
-    num_steps = (frame_len*os)//step - search_overlap + 1
+    # we only need to search the length of one frame*os plus some buffer (the constant 3)
+    num_steps = (frame_len*os)//step - search_overlap + 3
     # Now search for every mode independent
     shift_factor = np.zeros(nmodes, dtype=int)
     # Search based on equalizer error. Avoid one pilot_seq_len part in the beginning and

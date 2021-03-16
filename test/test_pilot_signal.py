@@ -32,6 +32,13 @@ class TestPilotSignalRecovery(object):
         with pytest.raises(ValueError):
             equalisation.pilot_equaliser(s3, (1e-3, 1e-3), 11, methods=(method, "sbd"))
         
+    @pytest.mark.parametrize("snr", [10, 15, 20, 25])
+    def test_framesync_noshift(self, snr):
+        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=2, nmodes=2, fb=20e9)
+        s2 = sig.resample(sig.fb*2, beta=0.1)
+        s3 = impairments.simulate_transmission(s2, snr)
+        assert s3.sync2frame()
+        
     @pytest.mark.parametrize("theta", np.linspace(0.1, 1, 5))
     def test_recovery_with_rotation(self, theta):
         snr = 30.
