@@ -451,7 +451,44 @@ def shift_signal(sig, shift_factors):
 def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
                             adaptive_stepsize=True, methods=('cma', 'cma'), wxinit=None):
     """
-    
+    Equalise a pilot signal using the pilot sequence, with a two step equalisation.
+    Parameters
+    ----------
+    rx_signal : array_like 
+        The received signal containing the pilots
+    ref_symbs : array_like
+        The reference symbols or pilot sequence
+    shift_fctrs : array_like
+        The indices where the pilot_sequence starts, typically this would come from the framesync.
+    os : int
+        Oversampling ratio
+    foe_comp : bool, optional
+        Whether to perform a foe inside the pilot equalisation. If yes we will first perform equalisation
+        using methods[0], then do a pilot frequency recovery and then perform equalisation again. This can
+        yield slightly higher performance. Currently this uses the average offset frequency of all modes. 
+    mu : tuple(float,float), optional
+        Equalisaer steps sizes for methods[0] and methods[1]
+    M_pilot : int, optional
+        The QAM order of the pilots. By default we assume QPSK symbols
+    Ntaps : int, optional
+        The number of equalisation taps
+    Niter : int, optional
+        The number of iterations to do over the pilot sequence when training the filter
+    adaptive_stepsize : bool, optional
+        Whether to use an adapative step-size algorithm in the equaliser. Generally, you want to leave
+        this one, because it allows for much shorter sequences.
+    methods : tuple(string,string)
+        The two methods to use in the equaliser
+    wxinit : array_like, optional
+        Filtertaps for initialisation of the filter. By default we generate typical filter taps.
+
+    Returns
+    -------
+    out_taps : array_like
+        Trained filter taps
+    foe : array_like
+        Offset frequency. Has the same number of modes as the signal, however is a single value only. If
+        foe_comp was false, this are simply ones.
     """
     # Inital settings
     rx_signal = np.atleast_2d(rx_signal)
