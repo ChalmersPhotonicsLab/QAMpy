@@ -23,8 +23,8 @@ class TestPilotSignalRecovery(object):
             s2.sync2frame(method=method)
             
     @pytest.mark.parametrize("method", REAL_VALUED)
-    def test_data_aided_framesync(self, method):
-        # currently we do not support real-valued equalisers for frame-sync
+    def test_data_mix_realandcomplexmethods(self, method):
+        # currently we do not support to mix real-valued and complex equaliser methods
         sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=2, nmodes=2, fb=20e9)
         s2 = sig.resample(sig.fb*2, beta=0.1)
         s3 = impairments.simulate_transmission(s2, 25, modal_delay=[10000,10000])
