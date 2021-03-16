@@ -160,6 +160,7 @@ def pilot_based_cpe2(rec_symbs, pilot_symbs,  num_average = 1, use_pilot_ratio =
         data_symbs = np.delete(data_symbs,pilot_pos, axis = 1)
 
     return data_symbs, phase_trace
+
 def pilot_based_cpe(rec_symbs, pilot_symbs, pilot_ins_ratio, num_average = 1, use_pilot_ratio = 1, max_num_blocks = None, remove_phase_pilots = True):
     """
     Carrier phase recovery using periodically inserted symbols.
@@ -446,7 +447,6 @@ def shift_signal(sig, shift_factors):
     else:
         sig = np.roll(sig, shift_factors, axis=-1)
     return sig
-
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
                             adaptive_stepsize=True, methods=('cma', 'cma'), wxinit=None):
