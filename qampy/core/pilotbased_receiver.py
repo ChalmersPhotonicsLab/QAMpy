@@ -324,7 +324,6 @@ def pilot_based_cpe_new(signal, pilot_symbs,  pilot_idx, frame_len, seq_len=None
     
 def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
                mu=1e-3, Ntaps=17, **eqargs):
-    # TODO fix for syncing correctly
     """
     Locate the pilot sequence frame
     
@@ -431,7 +430,6 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
     return shift_factor, foe_corse, mode_sync_order, wx1, sync_bool
 
 def correct_shifts(shift_factors, ntaps, os):
-    # TODO fix for syncing correctly
     # taps cause offset on shift factors
     shift_factors = np.asarray(shift_factors)
     if not((ntaps[1]-ntaps[0])%os  ==  0):
@@ -441,7 +439,6 @@ def correct_shifts(shift_factors, ntaps, os):
     return shift_factors
 
 def shift_signal(sig, shift_factors):
-    # TODO fix for syncing correctly
     k = len(shift_factors)
     if k > 1:
         for i in range(k):
@@ -453,7 +450,6 @@ def shift_signal(sig, shift_factors):
 
 def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=False, mu=(1e-4, 1e-4), M_pilot=4, Ntaps=45, Niter=30,
                             adaptive_stepsize=True, methods=('cma', 'cma'), wxinit=None):
-    # TODO fix for syncing correctly
     """
     
     """
