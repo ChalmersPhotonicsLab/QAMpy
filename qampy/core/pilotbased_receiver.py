@@ -499,16 +499,16 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
     if np.unique(shift_fctrs).shape[0] > 1:
         for i in range(npols):
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
-            out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], 4, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
+            out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
                                                                 method=methods[0], adaptive_stepsize=adaptive_stepsize, modes=[i], symbols=ref_symbs, apply=False)
             out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[1], 4, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
                                                          method=methods[1], adaptive_stepsize=adaptive_stepsize, modes=[i], symbols=ref_symbs, apply=False)
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
-        out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], 4, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
+        out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
                                                             method=methods[0], adaptive_stepsize=adaptive_stepsize,
                                                             symbols=ref_symbs, apply=False)
-        out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[1], 4, wxy=out_taps, Niter=Niter ,
+        out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[1], M_pilot, wxy=out_taps, Niter=Niter ,
                                                      method=methods[1], adaptive_stepsize=adaptive_stepsize,
                                                      symbols=ref_symbs, apply=False)
     return np.array(out_taps), np.array(foePerMode)
