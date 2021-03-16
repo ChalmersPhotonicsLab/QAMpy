@@ -1464,8 +1464,14 @@ class SignalWithPilots(SignalBase):
         out_symbs[:, idx_dat] = symbs
         out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
-        obj._fs = symbs.fb
-        obj._fb = symbs.fb
+        if "fb" in kwargs:
+            obj._fb = kwargs.pop("fb")
+        else:
+            obj._fb = symbs.fb
+        if "fs" in kwargs:
+            obj._fs = kwargs.pop("fs")
+        else:
+            obj._fs = symbs.fb
         obj._frame_len = frame_len
         obj._pilot_seq_len = pilot_seq_len
         obj._pilot_ins_rat = pilot_ins_rat
@@ -1539,6 +1545,10 @@ class SignalWithPilots(SignalBase):
         nmodes, N = payload.shape
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
         assert np.count_nonzero(idx_dat) <= N, "data frame is to short for the given frame length"
+        if "M" in kwargs:
+            assert "M" not in payload_kwargs, "M can not be provided as a argument for payload and signal"
+            M = kwargs.pop("M")
+            payload_kwargs["M"] = M
         if np.count_nonzero(idx_dat) > N:
             warnings.warn("Data for frame is shorter than length of data array, truncating")
         if payload_is_frame:
@@ -1609,8 +1619,6 @@ class SignalWithPilots(SignalBase):
 
     @property
     def nframes(self):
-        print(self.os)
-        print(self.frame_len)
         return self.shape[-1]//(self.os*self.frame_len)
 
     @property
