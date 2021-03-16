@@ -104,7 +104,7 @@ class TestPilotSignalRecovery(object):
         
     @pytest.mark.parametrize("fo", [20e3, 100e3, 1e4])
     @pytest.mark.parametrize("mode_offset", [0, 3333])
-    def test_freq_offset(self, fo, mode_offset):
+    def test_coarse_freq_offset(self, fo, mode_offset):
         snr = 37
         ntaps = 19
         sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
@@ -116,7 +116,24 @@ class TestPilotSignalRecovery(object):
         s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
         d, ph = phaserec.pilot_cpe(s2, nframes=1)
         assert np.mean(d.cal_ber()) < 1e-5
-
+        
+    @pytest.mark.parametrize("fo", np.arange(5, 10))
+    @pytest.mark.parametrize("apply_coarse", [False, True])
+    def test_eqn_freq_offset(self, fo, apply_coarse):
+        snr = 37
+        ntaps = 19
+        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
+        sig2 = sig.resample(2*sig.fb, beta=0.01, renormalise=True)
+        sig3 = impairments.simulate_transmission(sig2, snr, freq_off=10**fo)
+        sig4 = helpers.normalise_and_center(sig3)
+        sig4 = sig4[:, 2000:]
+        sig4.sync2frame()
+        if apply_coarse:
+            sig4.corr_foe()
+        s1, s2 = equalisation.pilot_equaliser(sig4, [1e-3, 1e-3], ntaps, True, adaptive_stepsize=True, foe_comp=True)
+        d, ph = phaserec.pilot_cpe(s2, nframes=1)
+        assert np.mean(d.cal_ber()) < 1e-5
+            
     @pytest.mark.parametrize("frames", [[0], [0,1], [2], [0,2]])
     @pytest.mark.parametrize("modal_delay", [0, 500])
     def test_apply_filter_frames(self, frames, modal_delay):

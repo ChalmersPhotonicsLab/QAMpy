@@ -491,25 +491,29 @@ def equalize_pilot_sequence(rx_signal, ref_symbs, shift_fctrs, os, foe_comp=Fals
     # Run FOE and shift spectrum
     if foe_comp:
         foe, foePerMode, cond = pilot_based_foe(syms_out, ref_symbs)
-        rx_signal = phaserecovery.comp_freq_offset(rx_signal, np.ones(foePerMode.shape)*foe, os=os)
+        foe_all = np.ones(foePerMode.shape)*foe
     else:
-        foePerMode = np.zeros([npols,1])
+        foe_all = np.zeros([npols,1])
 
-    out_taps = wx
+    out_taps = wx.copy()
     if np.unique(shift_fctrs).shape[0] > 1:
         for i in range(npols):
             rx_sig_mode = rx_signal[:, shift_fctrs[i] : shift_fctrs[i] + pilot_seq_len * os + Ntaps - 1]
+            if foe_comp: # it's much faster to do the foe just on the extracted part
+                rx_sig_mode = phaserecovery.comp_freq_offset(rx_sig_mode, np.ones(foePerMode.shape)*foe, os=os)
             out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
                                                                 method=methods[0], adaptive_stepsize=adaptive_stepsize, modes=[i], symbols=ref_symbs, apply=False)
             out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[1], 4, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
                                                          method=methods[1], adaptive_stepsize=adaptive_stepsize, modes=[i], symbols=ref_symbs, apply=False)
     else:
         rx_sig_mode = rx_signal[:, shift_fctrs[0] : shift_fctrs[0] + pilot_seq_len * os + Ntaps - 1]
+        if foe_comp:
+            rx_sig_mode = phaserecovery.comp_freq_offset(rx_sig_mode, np.ones(foePerMode.shape)*foe, os=os)
         out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[0], M_pilot, wxy=out_taps, Ntaps=Ntaps, Niter=Niter,
                                                             method=methods[0], adaptive_stepsize=adaptive_stepsize,
                                                             symbols=ref_symbs, apply=False)
         out_taps, err = equalisation.equalise_signal(rx_sig_mode, os, mu[1], M_pilot, wxy=out_taps, Niter=Niter ,
                                                      method=methods[1], adaptive_stepsize=adaptive_stepsize,
                                                      symbols=ref_symbs, apply=False)
-    return np.array(out_taps), np.array(foePerMode)
+    return np.array(out_taps), foe_all
 
