@@ -26,7 +26,7 @@ def _apply_to_pilotsignal(sig, wxy, frames):
     Ntaps = wxy.shape[-1]
     shiftfctrs = sig.shiftfctrs
     if Ntaps != sig.synctaps:
-        shiftfctrs = shiftfctrs - (Ntaps - sig.synctaps)//sig.os 
+        shiftfctrs = shiftfctrs - (Ntaps - sig.synctaps)//2
     if np.min(shiftfctrs) < 0:
         shiftfctrs += sig.os*sig.frame_len
     assert shiftfctrs.max() + sig.os*sig.frame_len*(max(frames)+1) < sig.shape[-1] - (Ntaps - 1), \
@@ -296,10 +296,10 @@ def pilot_equaliser(signal, mu, Ntaps, apply=True, foe_comp=True, wxinit=None, f
         mu = np.repeat(mu, 2)
     if wxinit is not None: # if we have init taps this determines the number of taps
         Ntaps = wxinit.shape[-1]
-    if (abs(Ntaps-signal.synctaps) % signal.os) != 0:
+    if (abs(Ntaps-signal.synctaps) % 2) != 0:
         raise ValueError("Tap difference need to be an integer of the oversampling")
     elif Ntaps != signal.synctaps:
-        eq_shiftfctrs = eq_shiftfctrs - (Ntaps - signal.synctaps)//signal.os  + signal.os*signal.frame_len*frame
+        eq_shiftfctrs = eq_shiftfctrs - (Ntaps - signal.synctaps)//2 + signal.os*signal.frame_len*frame
     assert signal.shape[-1] - eq_shiftfctrs.max() > signal.frame_len*signal.os, "You are trying to equalise an incomplete frame which does not work"
     
     taps_all, foe_all = pilotbased_receiver.equalize_pilot_sequence(signal, signal.pilot_seq, eq_shiftfctrs, os=signal.os, mu=mu,

@@ -148,6 +148,22 @@ class TestPilotSignalRecovery(object):
         for ber in sout.cal_ber():
             assert ber < 1e-3
 
+    @pytest.mark.parametrize("os", [2, 3, 4])
+    @pytest.mark.parametrize("taps", [5, 11, 17])
+    def test_oversampling_ratios(self, os, taps):
+        snr = 30.
+        sig = signals.SignalWithPilots(64, 2**16, 1024, 32, nframes=3, nmodes=2, fb=24e9)
+        sig2 = sig.resample(os*sig.fb, beta=0.1, renormalise=True)
+        sig2 = impairments.change_snr(sig2, snr)
+        #sig3 = sig2[::-1]
+        #sig4 = sig3[:, 20000:]
+        sig2.sync2frame(corr_coarse_foe=False)
+        s1, s2 = equalisation.pilot_equaliser(sig2, [1e-3, 1e-3], 17+taps*2, True, adaptive_stepsize=True, foe_comp=False)
+        #ph = phaserec.find_pilot_const_phase(s2.extract_pilots()[:,:s2._pilot_seq_len], s2.pilot_seq)
+        #s2 = phaserec.correct_pilot_const_phase(s2, ph)
+        ser = s2.cal_ber(synced=True)
+        assert np.mean(ser) < 1e-3
+
 
 class TestSignalGeneration(object):
     @pytest.mark.parametrize("nmodes", [1,2])
