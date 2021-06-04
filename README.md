@@ -73,6 +73,10 @@ and pythran-openblas for blas support. Before compiling install the following so
 1. Install the latest clang release from the [llvm website](https://clang.llvm.org/get_started.html), 
 2. Install pythran version 0.9.7 or newer with `pip install pythran`.
 3. Install pythran-openblas with `pip install pythran-openblas`.
+   __Note:__ Currently there are no python-3.8 and 3.9 packages on pypi. You can instead install the packages we provide in our 
+   [fork](https://github.com/ChalmersPhotonicsLab/pythran-openblas). You can either download the build whl files find under the lates release or 
+   install with `pip install https://github.com/ChalmersPhotonicsLab/pythran-openblas/releases/download/0.3.6/pythran_openblas-0.3.6-cp38-cp38-win_amd64.whl` for Python-3.8
+   or `pip install https://github.com/ChalmersPhotonicsLab/pythran-openblas/releases/download/0.3.6/pythran_openblas-0.3.6-cp39-cp39-win_amd64.whl` for Python-3.9
 4. Create a .pythranrc file in your home directory (typically this is C:\Users\<username>). Note that to create a file 
 from file explorer you should name it `.pythranrc.` (there is a trailing dot, otherwise windows things .pythranrc is the fileexstension).
 The file should contain (see the pythran documentation for more details):
