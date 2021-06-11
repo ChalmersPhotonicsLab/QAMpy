@@ -174,7 +174,7 @@ def cma_error(Xest, s1, i):
 
 def sgncma_error(Xest, s1, i):
     d = np.sign(s1[0] - abs(Xest)**2)
-    return d*np.sign(Xest)
+    return d*(np.sign(Xest.real)+1j*np.sign(Xest.imag))
 
 def mcma_error(Xest, s1, i):
     J = Xest.dtype.type(1j)
