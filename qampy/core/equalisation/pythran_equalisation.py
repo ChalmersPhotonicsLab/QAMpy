@@ -82,6 +82,8 @@ def train_equaliser_realvalued(E, TrSyms, Niter, os, mu, wx, modes, adaptive, sy
         errorfct = dd_error_real
     elif method == "dd_data":
         errorfct = dd_data_error_real
+    elif method == "sgncma":
+        errorfct = sgncma_error_real
     else:
         raise ValueError("Unknown method %s"%method)
     nmodes = E.shape[0]
@@ -107,6 +109,10 @@ def cma_error_real(Xest, s1, i):
     d = s1[0] - abs(Xest)**2
     return d*Xest
 
+def sgncma_error_real(Xest, s1, i):
+    d = np.sign(s1[0] - abs(Xest)**2)
+    return d*np.sign(Xest)
+
 def dd_error_real(Xest, symbs, i):
     symbol, dist, i = det_symbol_argmin(Xest, symbs)
     return (symbol - Xest)*abs(symbol) 
@@ -122,6 +128,8 @@ def dd_data_error_real(Xest, symbs, i):
 def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  method):
     if method == "mcma":
         errorfct = mcma_error
+    elif method == "sgncma":
+        errorfct = cma_error
     elif method == "cma":
         errorfct = cma_error
     elif method == "sbd":
@@ -163,6 +171,10 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
 def cma_error(Xest, s1, i):
     d = s1[0].real - abs(Xest)**2
     return d*Xest
+
+def sgncma_error(Xest, s1, i):
+    d = np.sign(s1[0] - abs(Xest)**2)
+    return d*(np.sign(Xest.real)+1j*np.sign(Xest.imag))
 
 def mcma_error(Xest, s1, i):
     J = Xest.dtype.type(1j)

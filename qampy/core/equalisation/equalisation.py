@@ -65,8 +65,8 @@ from qampy.core.segmentaxis import segment_axis
 from qampy.core.equalisation import pythran_equalisation
 
 DECISION_BASED = ["sbd", "mddma", "dd", "sbd_data", "dd_real", "dd_data_real"]
-NONDECISION_BASED = ["cma", "mcma", "rde", "mrde", "cma_real"]
-REAL_VALUED = ["cma_real", "dd_real", "dd_data_real"]
+NONDECISION_BASED = ["cma", "mcma", "rde", "mrde", "cma_real", "sgncma_real", "sgncma"]
+REAL_VALUED = ["cma_real", "dd_real", "dd_data_real" , "sgncma_real"]
 DATA_AIDED = ["dd_data_real", "sbd_data"]
 
 TRAINING_FCTS =  DECISION_BASED + NONDECISION_BASED
@@ -74,6 +74,8 @@ TRAINING_FCTS =  DECISION_BASED + NONDECISION_BASED
 def generate_symbols_for_eq(method, M, dtype):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma"]:
+        return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
+    if method in ["sgncma"]:
         return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
     if method in ["mcma"]:
         return np.atleast_2d(_cal_Rconstant_complex(M)).astype(dtype)
@@ -92,6 +94,8 @@ def generate_symbols_for_eq(method, M, dtype):
     if method in ["dd"]:
         symbols = np.atleast_2d(cal_symbols_qam(M)/np.sqrt(cal_scaling_factor_qam(M))).astype(dtype)
         return symbols
+    if method in ["sgncma_real"]:
+        return np.repeat([np.atleast_1d(_cal_Rconstant_complex(M).real.astype(dtype))], 2, axis=0)
     if method in ["cma_real"]:
         return np.repeat([np.atleast_1d(_cal_Rconstant_complex(M).real.astype(dtype))], 2, axis=0)
     if method in ["dd_real"]:
