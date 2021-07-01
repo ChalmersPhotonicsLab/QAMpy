@@ -24,10 +24,8 @@ Adaptive equaliser functions
 
 The following adaptive equaliser methods are provided:
 
-The available methods are given in the `NONDECISION_BASED`, `DECISION_BASED`, `REAL_VALUED` and `DATA_AIDED` lists.
-In particular the algorithms are:
 
-**Non-decision based (given in NONDECISION_BASED):**
+**Non-decision based:**
 
 - Constant Modulus Algorithm (CMA) after [1]_
 - Radius Directed Error (RDE) [1]_
@@ -35,7 +33,7 @@ In particular the algorithms are:
 - Modified Radius Directed Error (MRDA) after [3]_
 - Signed based CMA [1]_
 
-**Decision based (given in DECISION_BASED):**
+**Decision based:**
 
 - Symbol Based Decision (SBD) after [3]_
 - Modified Decision Directed Modulus Algorithm (MDDMA) after [4]_
@@ -46,13 +44,25 @@ In particular the algorithms are:
 In addition algorithms can use a adaptive stepsize  based on the step size adoption in [5]_
 It is possible to use an adaptive step for all equalisers using the adaptive_stepsize keyword parameter
 
-**Real-valued equalisers (given in REAL_VALUED):**
+**Real-valued equalisers:**
 
 A subset of the equalisers can be run as real-valued equalisers.
 
-**Data aided (given in DATA_AIDED):**
+**Data aided:**
 
 In addition there is a data aided SBD algorithm and real_valued DD algorithm
+
+**The available methods are specified in the following sets**
+
+.. autodata:: DATA_AIDED
+
+.. autodata:: TRAINING_FCTS
+
+.. autodata:: NONDECISION_BASED
+
+.. autodata:: DECISION_BASED
+
+.. autodata:: REAL_VALUED
 
 References
 ----------
@@ -73,17 +83,18 @@ from qampy.core.segmentaxis import segment_axis
 from qampy.core.equalisation import pythran_equalisation
 
 #: Decision based equalisation methods
-DECISION_BASED = ["sbd", "mddma", "dd", "sbd_data", "dd_real", "dd_data_real"]
+DECISION_BASED = ("sbd", "mddma", "dd", "sbd_data", "dd_real", "dd_data_real")
 
 #: Non-decision based equalisation methods
-NONDECISION_BASED = ["cma", "mcma", "rde", "mrde", "cma_real", "sgncma_real", "sgncma"]
+NONDECISION_BASED = ("cma", "mcma", "rde", "mrde", "cma_real", "sgncma_real", "sgncma")
 
 #: Real-valued equalisation methods
-REAL_VALUED = ["cma_real", "dd_real", "dd_data_real" , "sgncma_real"]
+REAL_VALUED = ("cma_real", "dd_real", "dd_data_real" , "sgncma_real")
 
 #: Data-aided equalisation methods
-DATA_AIDED = ["dd_data_real", "sbd_data"]
+DATA_AIDED = ("dd_data_real", "sbd_data")
 
+#: All available adaptive equaliser methods
 TRAINING_FCTS =  DECISION_BASED + NONDECISION_BASED
 
 def generate_symbols_for_eq(method, M, dtype):
