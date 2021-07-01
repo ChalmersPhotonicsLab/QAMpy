@@ -15,6 +15,9 @@
 #  along with QAMpy.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
+"""
+Functions for fast creation of pseudo random bit sequences  (PRBS) patterns
+"""
 
 from __future__ import division, print_function
 import numpy as np

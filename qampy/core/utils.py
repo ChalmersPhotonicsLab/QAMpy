@@ -16,11 +16,13 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+Various convenient utility functions.
+"""
+
 from __future__ import division, print_function
 
 import numpy as np
-
-""" a number of convenience functions"""
 
 
 def factorial(n):

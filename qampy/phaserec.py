@@ -19,6 +19,7 @@
 import numpy as np
 from qampy import core
 from qampy.core.phaserecovery import bps_twostage, phase_partition_16qam
+__doc__ = core.qampy.phaserecovery.__doc__
 
 def bps_twostage(E, Mtestangles, N, B=4, **kwargs):
     """

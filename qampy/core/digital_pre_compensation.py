@@ -14,7 +14,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with QAMpy.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2018 Jochen Schröder, Zonglong
+# Copyright 2018 Jochen Schröder, Zonglong He
+
+"""
+Digital pre-distortion and compensation of transceiver impairments
+"""
 
 import numpy as np
 from qampy.core.special_fcts import rrcos_freq
@@ -51,11 +55,27 @@ def comp_mod_sin(sig, vpi=1.14):
     sig_out = sig_out_re + 1j*sig__out_im
     return sig_out
 
-def comp_dac_resp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6)):
+def comp_dac_resp(dpe_fb, sim_len, rrc_beta, PAPR=9, prms_dac=(16e9, 2, 'sos', 6), os=2):
     """
-    Compensate frequency response of simulated digital-to-analog converter(DAC).
+    Compensate frequency response of a simulated digital-to-analog converter(DAC).
+
+    Parameters
+    ----------
+
+    dpe_fb : int
+        symbol rate to compensate for
+    sim_len : int
+        length of the oversampled signal array
+    rrc_beta : float
+        root-raised cosine roll-off factor of the simulated signal
+    PAPR: int (optional)
+        peak to average power ratio of the signal
+    prms_dac: tuple(float, int, str, int)
+        DAC filer parameters for calculating the filter response using scipy.signal
+    os: int (optional)
+        oversampling factor of the signal
     """
-    dpe_fs = dpe_fb * 2
+    dpe_fs = dpe_fb * os
     # Derive RRC filter frequency response np.sqrt(n_f)
     T_rrc = 1/dpe_fb
     fre_rrc = np.fft.fftfreq(sim_len) * dpe_fs

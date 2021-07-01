@@ -15,6 +15,10 @@
 #  along with QAMpy.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
+
+"""
+Functions for the simulation of transmission and transceiver impairments.
+"""
 import numpy as np
 import warnings
 from qampy.helpers import normalise_and_center, rescale_signal

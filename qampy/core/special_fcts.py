@@ -16,6 +16,11 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+Convenience module for calculation of special mathematical functions useful for
+communications.
+"""
+
 from __future__ import division, print_function
 
 import numpy as np

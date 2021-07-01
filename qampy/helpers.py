@@ -16,6 +16,9 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+Convenient helper functions
+"""
 from __future__ import division, print_function
 import numpy as np
 

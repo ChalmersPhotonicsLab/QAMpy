@@ -16,6 +16,10 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+Signal resampling functions with different filter methods
+"""
+
 import fractions
 import numpy as np
 from scipy import signal as scisig

@@ -16,6 +16,10 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+Filter functions for matched filtering, pulse-shaping and impairment simulation.
+"""
+
 import numpy as np
 from qampy.core.special_fcts import rrcos_freq, rrcos_time
 import scipy.signal as scisig

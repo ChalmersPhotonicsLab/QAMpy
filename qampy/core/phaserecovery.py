@@ -16,7 +16,10 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
-#vim:fileencoding=utf-8
+"""
+Functions for carrier offset and phase estimation and correction functions
+"""
+
 from __future__ import division, print_function
 import numpy as np
 from qampy.core.segmentaxis import segment_axis

@@ -19,6 +19,7 @@ import numpy as np
 from qampy import core
 from qampy.core.impairments import rotate_field, add_awgn, add_modal_delay
 import warnings
+__doc__ = core.impairments.__doc__
 
 def apply_PMD(field, theta, t_dgd):
     """

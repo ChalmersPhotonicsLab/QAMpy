@@ -16,6 +16,9 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+BER and bit and symbol stream calculation methods.
+"""
 from __future__ import division, print_function
 import numpy as np
 from scipy.signal import fftconvolve

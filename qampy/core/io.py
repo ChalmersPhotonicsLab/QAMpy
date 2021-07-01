@@ -16,6 +16,10 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+IO helper functions
+"""
+
 import zlib
 import pickle
 import numpy as np

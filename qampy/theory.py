@@ -16,6 +16,9 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+Functions for calculating analytic properties of communication signals.
+"""
 from __future__ import division
 import numpy as np
 from scipy.special import erfc

@@ -18,6 +18,7 @@
 
 from qampy import core
 from qampy.core.filter import moving_average
+__doc__  = core.filter.__doc__
 
 def filter_signal(signal, cutoff, ftype="bessel", order=2, analog=False):
     """

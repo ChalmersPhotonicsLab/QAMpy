@@ -16,6 +16,9 @@
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
 
+"""
+Basic pilot equalisation methods
+"""
 
 import warnings
 import numpy as np
