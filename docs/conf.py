@@ -22,6 +22,7 @@ copyright = '2021, Jochen Schröder, Mikael Mazur, Zonglong He'
 author = 'Jochen Schröder, Mikael Mazur, Zonglong He'
 
 # The full version, including alpha/beta/rc tags
+#dd, DATA_AIDED, TRAINING_FCTS, NONDECISION_BASED, DECISION_BASED, REAL_VALUED, DATA_AIDED
 release = '0.2'
 
 
@@ -30,9 +31,11 @@ release = '0.2'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "myst_parser"
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "myst_parser", "sphinx.ext.autosummary", "sphinx_autodoc_typehints"
 ]
-
+autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autosummary_imported_members = True
+#autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -47,7 +50,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'furo'
+html_theme = 'sphinx_book_theme'
 
 # theme otions
 #html_theme_options = {
