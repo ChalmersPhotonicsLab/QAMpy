@@ -22,8 +22,9 @@
 Adaptive equaliser functions
 ----------------------------
 
-The following adaptive equaliser methods are provided:
+Functions for adaptive equalisation and filer application.
 
+The following adaptive equaliser methods are provided:
 
 **Non-decision based:**
 
