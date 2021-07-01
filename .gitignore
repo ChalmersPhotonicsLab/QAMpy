@@ -10,6 +10,8 @@ __pycache__
 *.egg-info
 dsp_cython.c
 equaliser_cython.c*
+*.cpp
+*.c
 
 # Pycharm specific files
 .cache/
