@@ -20,7 +20,7 @@
 # -*- coding: utf-8 -*-
 
 """
-DSP-based compensation functions to overcome analog impairment
+DSP-based compensation functions to overcome analog impairments
 prior to the ADC in the receiver. 
 """
 
