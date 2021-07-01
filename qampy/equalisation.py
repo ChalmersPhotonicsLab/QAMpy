@@ -20,7 +20,24 @@ import numpy as np
 from qampy import core
 from qampy.core import equalisation, pilotbased_receiver
 from qampy import phaserec
-__doc__= equalisation.equalisation.__doc__
+from qampy.core.equalisation import TRAINING_FCTS, NONDECISION_BASED, DECISION_BASED, REAL_VALUED, DATA_AIDED
+__doc__= equalisation.equalisation.__doc__ # hack to have the same docstring as the core module
+
+# the below is a hack to make sphinx pick up the documentation
+#: Decision based equalisation methods
+DECISION_BASED = DECISION_BASED
+
+#: Non-decision based equalisation methods
+NONDECISION_BASED = NONDECISION_BASED
+
+#: Real-valued equalisation methods
+REAL_VALUED = REAL_VALUED
+
+#: Data-aided equalisation methods
+DATA_AIDED = DATA_AIDED
+
+#: All available equaliser method#:
+TRAINING_FCTS = TRAINING_FCTS
 
 def _apply_to_pilotsignal(sig, wxy, frames):
     Ntaps = wxy.shape[-1]
