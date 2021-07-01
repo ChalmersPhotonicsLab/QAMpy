@@ -18,6 +18,7 @@
 
 from . import core
 from qampy.core.analog_frontend import comp_IQ_inbalance
+from qampy.core.analog_frontend import __doc__
 
 
 def comp_rf_delay(signal, delay):
