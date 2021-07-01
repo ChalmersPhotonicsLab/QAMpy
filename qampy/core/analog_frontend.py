@@ -18,13 +18,10 @@
 
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """
-File to contain DSP-based compensation functions to overcome analog impairment
+DSP-based compensation functions to overcome analog impairment
 prior to the ADC in the receiver. 
-
-Created on Thu May 25 17:22:49 2017
-
-@author: mazurm
 """
 
 import numpy as np
@@ -34,7 +31,6 @@ def comp_IQ_inbalance(signal):
     """
     Compensate for imbalance between I and Q from an optical hybrid. Takes I 
     as the real part and orthogonalize Q with respect to it. 
-    
     """
     
     # Center signal around a mean of 0
@@ -63,17 +59,17 @@ def comp_rf_delay(signal, delay, sampling_rate=50e9 ):
 
     Parameters
     ----------
-        signal : array_like
-            Real-valued input signal
-        delay : float
-            Delay  in s
-        sampling_rate : scalar, optional
-            ADC sampling rate
+    signal : array_like
+        Real-valued input signal
+    delay : float
+        Delay  in s
+    sampling_rate : scalar, optional
+        ADC sampling rate
 
     Returns
     -------
-        sig_out : array_like
-            Signal after compensating for delay
+    sig_out : array_like
+        Signal after compensating for delay
     
     """
 
