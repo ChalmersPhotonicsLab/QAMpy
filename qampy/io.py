@@ -15,13 +15,14 @@
 #  along with QAMpy.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2018 Jochen Schröder, Mikael Mazur
-
+"""
+Module for reading/writing and generating signal objects from and to other formats
+"""
 import numpy as np
 from qampy.core.io import load_signal, save_signal, ndarray_from_matlab
 from qampy import signals
 from qampy import helpers
 from scipy.io import loadmat
-
 
 
 def load_symbols_from_matlab_file(fn, M, keys, fb=10e9, fake_polmux=False, fake_pm_delay=0,
