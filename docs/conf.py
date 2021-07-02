@@ -23,7 +23,7 @@ author = 'Jochen Schröder, Mikael Mazur, Zonglong He'
 
 # The full version, including alpha/beta/rc tags
 #dd, DATA_AIDED, TRAINING_FCTS, NONDECISION_BASED, DECISION_BASED, REAL_VALUED, DATA_AIDED
-release = '0.2'
+release = '0.3'
 
 
 # -- General configuration ---------------------------------------------------
@@ -31,7 +31,7 @@ release = '0.2'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "myst_parser", "sphinx.ext.autosummary", "sphinx_autodoc_typehints"
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "myst_parser", "sphinx.ext.autosummary", #"sphinx_autodoc_typehints"
 ]
 autosummary_generate = True  # Turn on sphinx.ext.autosummary
 autosummary_imported_members = True
@@ -51,19 +51,10 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # a list of builtin themes.
 #
 html_theme = 'sphinx_book_theme'
-
 # theme otions
-#html_theme_options = {
-#    "icon_links": [
-#    {
-#            "name": "Github",
-#            "url": "https://github.com/ChalmersPhotonicsLab/QAMpy",
-#            "icon": "fab fa-github-square",
-#            }
-#    ]
-#}
-
-#html_theme_options = {"stickysidebar":True}
+html_theme_options = {
+"repository_url": "https://github.com/ChalmersPhotonicsLab/QAMpy"
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
