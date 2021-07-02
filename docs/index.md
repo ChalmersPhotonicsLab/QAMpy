@@ -12,7 +12,7 @@ hide-toc: true
 ```{toctree}
 :hidden:
 
-installation
+installation/index
 user/index
 reference/index
 ```
