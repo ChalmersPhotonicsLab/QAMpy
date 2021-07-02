@@ -1,8 +1,11 @@
 image: python:3.8
 pages: 
   script:
-    - apt-get update -qy && apt-get install python3-sphinx -qy
+    - apt-get update -qy 
+    - apt-get install python3-sphinx -qy
+    - apt-get install python3-numpy -qy
     - pip install myst-parser
+    - pip install pythran
     - pip install sphinx-book-theme
     - python setup.py build_docs
   artifacts:
