@@ -1,0 +1,10 @@
+image: python:3.8
+pages: 
+  script:
+    - apt-get update -qy && apt-get install python3-sphinx
+    - pip install myst-parser
+    - pip install sphinx-book-theme
+    - python setup.py build_docs
+  artifacts:
+    paths:
+      - build/docs/html
