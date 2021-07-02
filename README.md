@@ -5,7 +5,7 @@
 <!-- start description -->
 QAMPy is a dsp chain for simulation and equalisation of signals from optical communication transmissions.
 It is written in Python, but has been designed for high performance and most performance critical 
-functions are written with [pythran](https://github.com/serge-sans-paille/pythran) to run at spead of compiled c or c++
+functions are written with [pythran](https://github.com/serge-sans-paille/pythran) to run at speed of compiled c or c++
 code.
 
 QAMPy can equalise BPSK, QPSK and higher-order QAM signals as well as simulate signal impairments. 
