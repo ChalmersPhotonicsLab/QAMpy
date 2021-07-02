@@ -5,7 +5,8 @@
 <!-- start description -->
 QAMPy is a dsp chain for simulation and equalisation of signals from optical communication transmissions.
 It is written in Python, but has been designed for high performance and most performance critical 
-functions are writen in Cython and run at C-speeds. 
+functions are written with [pythran](https://github.com/serge-sans-paille/pythran) to run at spead of compiled c or c++
+code.
 
 QAMPy can equalise BPSK, QPSK and higher-order QAM signals as well as simulate signal impairments. 
 
@@ -18,6 +19,9 @@ For signal equalisation it contains:
  * several decision directed equaliser implementations 
  * phase recovery using blind phase search (BPS) and ViterbiViterbi algorithms
  * frequency offset compensation
+ * a complete set of pilot-based equalisation routines, including frame synchronization, frequency offset 
+estimation, adaptive equalisation and phase recovery
+ * additional data-aided and real-valued adaptive equaliser routines
  
 ## Impairments
  
@@ -27,6 +31,7 @@ It can simulate the following impairments:
  * SNR
  * PMD
  * phase noise
+ * transceiver impairments such as modulator nonlinearity, DAC frequency response and limited ENOB
  
 ## Signal Quality Metrics
 
