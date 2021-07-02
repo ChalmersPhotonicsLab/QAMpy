@@ -8,6 +8,8 @@ pages:
     - pip install pythran
     - pip install sphinx-book-theme
     - python setup.py build_docs
+    - mkdir public
+    - mv build/docs/html/* public
   artifacts:
     paths:
-      - build/docs/html
+      - public
