@@ -53,7 +53,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'sphinx_book_theme'
 # theme otions
 html_theme_options = {
-"repository_url": "https://github.com/ChalmersPhotonicsLab/QAMpy"
+"repository_url": "https://github.com/ChalmersPhotonicsLab/QAMpy",
+    "use_repository_button": True
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
