@@ -7,6 +7,19 @@ import sys
 import numpy as np
 from pythran.dist import PythranExtension, PythranBuildExt
 
+def read(rel_path):
+    here = path.abspath(path.dirname(__file__))
+    with open(path.join(here, rel_path), 'r') as fp:
+        return fp.read()
+
+def get_version(rel_path):
+    for line in read(rel_path).splitlines():
+        if line.startswith('__version__'):
+            delim = '"' if '"' in line else "'"
+            return line.split(delim)[1]
+    else:
+        raise RuntimeError("Unable to find version string.")
+
 COMPILER_ARGS_PYT = ["-O3", "-ffast-math", "-mfpmath=sse", "-march=native",
                      "-funroll-loops", "-fwhole-program",
                       "-fopenmp", "-std=c++11", "-fno-math-errno", "-w",
@@ -38,7 +51,7 @@ else:
 here = path.abspath(path.dirname(__file__))
 
 name = "qampy"
-version = "0.3"
+version = get_version("qampy/__init__.py")
 
 setup(
     name=name,
