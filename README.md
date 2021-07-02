@@ -2,6 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/124787512.svg)](https://zenodo.org/badge/latestdoi/124787512)
 
+<!-- start description -->
 QAMPy is a dsp chain for simulation and equalisation of signals from optical communication transmissions.
 It is written in Python, but has been designed for high performance and most performance critical 
 functions are writen in Cython and run at C-speeds. 
@@ -37,6 +38,8 @@ performance metrics:
  * Error Vector Magnitude (EVM)
  * Generalized Mututal Information (GMI)
  
+<!-- end description -->
+
 ## Documentation
 
 We put a strong focus on documenting our functions and most public functions should be well documented. 
