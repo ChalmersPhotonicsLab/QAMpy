@@ -931,6 +931,12 @@ class TestSymbolOnlySignal(object):
         s = signals.SymbolOnlySignal.from_symbol_array(symsN, coded_symbols=syms)
         npt.assert_array_almost_equal(s.coded_symbols, syms)
 
+    def test_for_noncontiguous_symbols(self):
+        # test for bug #41
+        s = signals.SignalQAMGrayCoded(4, 2**10, nmodes=4)
+        s2 = s.reshape(1,-1,4)
+        ss = signals.SymbolOnlySignal.from_symbol_array(s2[0,:,4:1:-1].T)
+
 class TestDtype(object):
     @pytest.mark.parametrize("dt", [np.complex64, np.complex128])
     def test_SignalQAMGray_dtype(self, dt):
