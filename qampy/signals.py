@@ -1084,7 +1084,7 @@ class SymbolOnlySignal(SignalQAMGrayCoded):
         # not sure if this is really necessary, but avoids numerical error issues
         out = np.empty_like(symbs)
         for i in range(symbs.shape[0]):
-            out[i] = make_decision(symbs[i], coded_symbols)[0]
+            out[i] = make_decision(np.ascontiguousarray(symbs[i]), coded_symbols)[0]
         obj = np.asarray(out).view(cls)
         M = coded_symbols.size
         obj._M = M
