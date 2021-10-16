@@ -202,7 +202,9 @@ def add_awgn(sig, strgth):
        output signal with added noise
 
     """
-    return sig + (strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2)).astype(sig.dtype) # sqrt(2) because of var vs std
+    return sig + (strgth * (np.random.randn(*sig.shape) + 1.j*np.random.randn(*sig.shape))/np.sqrt(2)).astype(sig.dtype)
+    # sqrt(2) because of var vs std <- this is probably incorrect, it's because I add I and Q noise
+    # if we do np.random.randn(*sig.shape)*np.exp(2j*np.pi*np.random.rand(*sig.shape)) we do not need the sqrt(2)
 
 #TODO: we should check that this is correct both when the signal is oversampled or not
 def change_snr(sig, snr, fb, fs):
