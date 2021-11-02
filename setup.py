@@ -21,7 +21,7 @@ def get_version(rel_path):
         raise RuntimeError("Unable to find version string.")
 
 COMPILER_ARGS_PYT = ["-O3", "-ffast-math", "-mfpmath=sse", "-march=native",
-                     "-funroll-loops", "-fwhole-program",
+                     "-funroll-loops",
                       "-fopenmp", "-std=c++11", "-fno-math-errno", "-w",
                       "-fvisibility=hidden", "-fno-wrapv", "-DUSE_XSIMD",
                      "-DNDEBUG", "-finline-limit=100000"]
