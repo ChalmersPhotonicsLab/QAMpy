@@ -6,3 +6,5 @@ dependencies:
   - numpy
   - scipy
   - pythran
+  - pip:
+      - .
