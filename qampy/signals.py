@@ -929,6 +929,24 @@ class SignalQAMGrayCoded(SignalBase):
             symbs, d, ix = self.make_decision(symbols, verbose=True)
             return self._demodulate(ix, self._encoding)
 
+class SignalPSKGrayCoded(SignalQAMGrayCoded):
+    @classmethod
+    def _generate_mapping(cls, M, scale, dtype=np.complex128):
+        Nbits = int(np.log2(M))
+        symbols = theory.cal_symbols_psk(M).astype(dtype)
+
+        _graycode = theory.bin2gray(np.arange(M))
+        u = np.zeros_like(_graycode)
+        u[_graycode] = np.arange(u.size)
+        coded_symbols = symbols[u]
+        encoding = np.zeros((_graycode.size, Nbits), np.bool)
+        for i in range(_graycode.size):
+            encoding[i] = np.fromstring(np.binary_repr(i, width=Nbits), dtype="S1").astype(np.bool)
+        bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(np.arange(_graycode.size), encoding), M, dtype=dtype)
+        return coded_symbols, _graycode, encoding, bitmap_mtx
+
+
+
 class QPSKfromBERT(SignalQAMGrayCoded):
     """
     QPSKfromBERT(N, nmodes=1, fb=1, prbsorders=((15,),(15,)), prbsshifts=(0,0), prbsinvert=(False, False), dtype=np.complex128)

@@ -117,6 +117,25 @@ def cal_symbols_qam(M):
     else:
         return cal_symbols_square_qam(M)
 
+def cal_symbols_psk(M):
+    """
+    Generate M-PSK symbols
+
+    Parameters
+    ----------
+    M : int
+        PSK order
+
+    Returns
+    -------
+    symbols: array_like
+        PSK symbols  normalised  to power of 1
+    """
+    if M == 4: # QPSK is rotated by pi/4 in contrast to others
+        return np.exp(1j*(np.arange(M)*2*np.pi/M + np.pi/M))
+    else:
+        return np.exp(2j*np.arange(M)*np.pi/M)
+
 def cal_scaling_factor_qam(M):
     """
     Calculate the scaling factor for normalising MQAM symbols to 1 average Power
