@@ -1,3 +1,8 @@
-voila
-numpy
-scipy
+name: demo-notebooks
+channels:
+  - conda-forge
+dependencies:
+  - voila
+  - numpy
+  - scipy
+  - pythran
