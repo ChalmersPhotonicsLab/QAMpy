@@ -1,0 +1,57 @@
+[build-system]
+requires = [
+    "wheel",
+    "setuptools",
+    "pythran>=0.9.11",
+    "numpy>=0.12",
+    "sphinx"]
+
+[project]
+    name = "qampy"
+    dependencies = ["numpy>=0.12", "scipy>=1.8"]
+    authors = [{name = "Jochen Schröder", email = "jochen.schroeder@chalmers.se"},
+               {name = "Mikael Mazur", email = "mik.mazur@gmail.com"},
+               {name = "Zonglong He", email = "zonglong.he@chalmers.se"}]
+    maintainers = [{name = "Jochen Schröder", email="jochen.schroeder@chalmers.se"}]
+    requires-python = ">=3.7"
+    license = {text="GPLv3"}
+    version = "0.4.0"
+    classifiers=[
+        # How mature is this project? Common values are
+        #   3 - Alpha
+        #   4 - Beta
+        #   5 - Production/Stable
+        'Development Status :: 4 - Beta',
+
+        'Intended Audience :: Developers',
+        "Intended Audience :: Science/Research",
+
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Scientific/Engineering",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: POSIX",
+        "Operating System :: Unix",
+        "Operating System :: MacOS",
+
+        # Pick your license as you wish (should match "license" above)
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+
+        # Specify the Python versions you support here. In particular, ensure
+        # that you indicate whether you support Python 2, Python 3 or both.
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+    ]
+    keywords = ["digital signal processing", "communications", "photonics", "science"]
+    description='A python based package of communications qampy tools'
+    readme = "README.md"
+[project.urls]
+homepage = "https://qampy.org"
+repository = "https://github.com/ChalmersPhotonicsLab/QAMpy"
+
+[project.optional-dependencies]
+    test = ["pytest",
+            ]
