@@ -28,27 +28,68 @@ LINK_ARGS = ["-fopenmp", "-lm", "-Wl,-strip-all"]
 
 WIN_LINK_ARGS = ["/openmp"]
 
-if sys.platform.startswith("win"):
-    COMPILER_ARGS_PYT.remove("-DUSE_XSIMD") # windows fails with XSIMD
-    dsp_pythran = PythranExtension(name="qampy.core.pythran_dsp",
+def make_compile_modules():
+    if sys.platform.startswith("win"):
+        COMPILER_ARGS_PYT.remove("-DUSE_XSIMD") # windows fails with XSIMD
+        dsp_pythran = PythranExtension(name="qampy.core.pythran_dsp",
                                    sources = ["qampy/core/pythran_dsp.py"],
                                    extra_compile_args=COMPILER_ARGS_PYT,
                                    extra_link_args=WIN_LINK_ARGS)
-    pythran_equalisation = PythranExtension(name="qampy.core.equalisation.pythran_equalisation",
+        pythran_equalisation = PythranExtension(name="qampy.core.equalisation.pythran_equalisation",
                                             sources = ["qampy/core/equalisation/pythran_equalisation.py"],
                                             extra_compile_args=COMPILER_ARGS_PYT,
                                             extra_link_args=WIN_LINK_ARGS)
-else:
-    dsp_pythran = PythranExtension(name="qampy.core.pythran_dsp",
+    else:
+        dsp_pythran = PythranExtension(name="qampy.core.pythran_dsp",
                                    sources = ["qampy/core/pythran_dsp.py"],
                                    extra_compile_args=COMPILER_ARGS_PYT,
                                    extra_link_args=LINK_ARGS)
-    pythran_equalisation = PythranExtension(name="qampy.core.equalisation.pythran_equalisation",
+        pythran_equalisation = PythranExtension(name="qampy.core.equalisation.pythran_equalisation",
                                             sources = ["qampy/core/equalisation/pythran_equalisation.py"],
                                             extra_compile_args=COMPILER_ARGS_PYT,
                                             extra_link_args=LINK_ARGS)
-here = path.abspath(path.dirname(__file__))
+    return [dsp_pythran, pythran_equalisation]
 
+
+def check_compile():
+    # check if compiling pythran code works if not raise a warning. Modelled after code in pythran toolchain
+    from numpy.distutils.core import setup
+    from tempfile import mkdtemp, NamedTemporaryFile
+    from pythran.dist import PythranExtension, PythranBuildExt
+    import warnings
+    code = '''
+        #include <pythonic/core.hpp>
+    '''
+    with NamedTemporaryFile(mode="w", suffix=".cpp", delete=False, dir=mkdtemp()) as out:
+        out.write(code)
+    bdir = mkdtemp()
+    btmp = mkdtemp()
+    ext = PythranExtension("test", [out.name])
+    try:
+        setup(name="test",
+        packages=[], #this is needed because setuptools otherwise gets confused by the nested setup
+        ext_modules=[ext],
+        cmdclass={"build_ext": PythranBuildExt},
+        script_name='setup.py',
+        script_args=['--quiet',
+                   'build_ext',
+                   '--build-lib', bdir,
+                   '--build-temp', btmp]
+        )
+        return True
+    except SystemExit as e:
+        warnings.warn("""Test pythran compile failed: {}.
+        Do you have a working CLANG++ or GCC compiler installed?
+        I will proceed with the installation without compilation. Some functions will be much slower""".format(e))
+        return False
+
+#if check_compile():
+if True:
+    ext_modules = make_compile_modules()
+else:
+    ext_modules = []
+
+here = path.abspath(path.dirname(__file__))
 name = "qampy"
 version = get_version("qampy/__init__.py")
 
@@ -104,7 +145,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['contrib', 'docs', 'test', 'ExampleCode']),
+    packages=find_packages(exclude=['contrib', 'docs', 'test', 'ExampleCode', 'Scripts', 'dist', 'build']),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -115,7 +156,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['numpy', 'scipy'],
-    ext_modules = [dsp_pythran, pythran_equalisation],
+    ext_modules = ext_modules,
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
