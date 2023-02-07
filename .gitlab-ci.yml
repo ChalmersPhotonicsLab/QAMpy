@@ -7,7 +7,7 @@ pages:
     - pip install myst-parser
     - pip install pythran
     - pip install sphinx-book-theme
-    - python setup.py build_docs
+    - make docs-html
     - mkdir public
     - mv build/docs/html/* public
   artifacts:
