@@ -4,7 +4,7 @@ pages:
     - apt-get update -qy 
     - apt-get install python3-sphinx -qy
     - apt-get install python3-numpy -qy
-    - apt-get install python3-scipy -qy
+    - pip install scipy
     - pip install myst-parser
     - pip install pythran
     - pip install sphinx-book-theme
