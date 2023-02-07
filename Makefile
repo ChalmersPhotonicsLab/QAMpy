@@ -28,4 +28,6 @@ uninstall:
 
 clean:
 	rm -rf build/
+	rm -f qampy/core/*so
+	rm -f qampy/core/equalisation/*so
 
