@@ -12,18 +12,20 @@
 #
 import os
 import sys
+from datetime import date
 sys.path.insert(0, os.path.abspath('..'))
+import qampy
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'QAMPy'
-copyright = '2021, Jochen Schröder, Mikael Mazur, Zonglong He'
+copyright = '{}, Jochen Schröder, Mikael Mazur, Zonglong He'.format(date.today().year)
 author = 'Jochen Schröder, Mikael Mazur, Zonglong He'
 
 # The full version, including alpha/beta/rc tags
 #dd, DATA_AIDED, TRAINING_FCTS, NONDECISION_BASED, DECISION_BASED, REAL_VALUED, DATA_AIDED
-release = '0.3'
+release = qampy.__version__
 
 
 # -- General configuration ---------------------------------------------------

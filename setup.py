@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-from sphinx.setup_command import BuildDoc
 # To use a consistent encoding
 from codecs import open
 from os import path
@@ -121,7 +120,7 @@ setup(
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
-    setup_requires=["pythran>=0.9.7"],
+    setup_requires=["pythran>=0.9.7", "sphinx"],
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
@@ -135,15 +134,7 @@ setup(
     data_files=[],
     cmdclass = {
         "build_ext": PythranBuildExt, 
-        "build_docs": BuildDoc
     },
-    command_options = {
-        "build_docs": {
-            "project" : ("setup.py", name),
-            "version" : ("setup.py", version),
-            #"source_dir" : ("setup.py", "docs"),
-            "build_dir": ("setup.py", "build/docs")
-        }
-    }
+
 )
 

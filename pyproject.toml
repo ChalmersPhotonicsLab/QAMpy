@@ -3,8 +3,8 @@ requires = [
     "wheel",
     "setuptools",
     "pythran>=0.9.11",
-    "numpy>=0.12",
-    "sphinx"]
+    "numpy>=0.12"
+    ]
 
 [project]
     name = "qampy"
@@ -15,7 +15,7 @@ requires = [
     maintainers = [{name = "Jochen Schröder", email="jochen.schroeder@chalmers.se"}]
     requires-python = ">=3.7"
     license = {text="GPLv3"}
-    version = "0.4.0"
+    dynamic = ["version"]
     classifiers=[
         # How mature is this project? Common values are
         #   3 - Alpha
@@ -55,3 +55,5 @@ repository = "https://github.com/ChalmersPhotonicsLab/QAMpy"
 [project.optional-dependencies]
     test = ["pytest",
             ]
+[tool.setuptools.dynamic]
+version = {attr = "package.__version__"}
