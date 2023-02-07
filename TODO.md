@@ -1,5 +1,6 @@
 # Plans 
 
+- makefile with different wheel options
 - fix pilot dsp
 - intermediate phase recovery
 - write demo notebooks
