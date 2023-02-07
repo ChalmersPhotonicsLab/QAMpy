@@ -55,5 +55,6 @@ repository = "https://github.com/ChalmersPhotonicsLab/QAMpy"
 [project.optional-dependencies]
     test = ["pytest",
             ]
+    docs = ["sphinx"]
 [tool.setuptools.dynamic]
-version = {attr = "package.__version__"}
+version = {attr = "qampy.__version__"}
