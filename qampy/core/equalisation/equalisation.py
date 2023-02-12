@@ -317,10 +317,10 @@ def generate_partition_codes_complex(M):
 
     Returns
     -------
-    parts   : array_like
-        the boundaries between the different codes for parititioning
     codes   : array_like
         the nearest symbol radius 
+    parts   : array_like
+        the boundaries between the different codes for parititioning
     """
     syms = cal_symbols_qam(M)
     scale = cal_scaling_factor_qam(M)
@@ -331,7 +331,7 @@ def generate_partition_codes_complex(M):
     part_r = syms_r[:-1] + np.diff(syms_r)/2
     part_i = syms_i[:-1] + np.diff(syms_i)/2
     parts = part_r + 1.j*part_i
-    return np.hstack([parts, codes])
+    return np.hstack([codes, parts])
 
 def generate_partition_codes_radius(M):
     """
@@ -344,17 +344,17 @@ def generate_partition_codes_radius(M):
 
     Returns
     -------
+    codes   : array_like
+        the nearest symbol radius
     parts   : array_like
         the boundaries between the different codes for parititioning
-    codes   : array_like
-        the nearest symbol radius 
     """
     syms = cal_symbols_qam(M)
     scale = cal_scaling_factor_qam(M)
     syms /= np.sqrt(scale)
     codes = np.unique(abs(syms)**4/abs(syms)**2)
     parts = codes[:-1] + np.diff(codes)/2
-    return np.hstack([parts,codes])
+    return np.hstack([codes, parts])
 
 def _cal_training_symbol_len(os, ntaps, L):
     return int(L//os//ntaps-1)*int(ntaps)

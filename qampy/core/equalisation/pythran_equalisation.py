@@ -183,14 +183,14 @@ def mcma_error(Xest, s1, i):
     return dr*Xest.real + di*Xest.imag*J
 
 def rde_error(Xest, symbs, i):
-    partition, codebook = np.split(symbs, 2)
+    codebook, partition = np.array_split(symbs, 2)
     sq = abs(Xest)**2
     r = partition_value(sq, partition.real, codebook.real)
     return Xest*(r-sq)
 
 def mrde_error(Xest, symbs, i):
     J = Xest.dtype.type(1j)
-    partition, codebook = np.split(symbs, 2)
+    codebook, partition = np.array_split(symbs, 2)
     sq = Xest.real**2 + J*Xest.imag**2
     r = partition_value(sq.real, partition.real, codebook.real) + J * partition_value(sq.imag, partition.imag, codebook.imag)
     return (r.real - sq.real)*Xest.real + J*(r.imag - sq.imag)*Xest.imag
