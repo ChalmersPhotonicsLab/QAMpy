@@ -74,7 +74,7 @@ class RandomBits(np.ndarray):
     """
     def __new__(cls, N, nmodes=1, seed=None):
         R = np.random.RandomState(seed)
-        bitsq = R.randint(0, high=2, size=(nmodes, N)).astype(np.bool)
+        bitsq = R.randint(0, high=2, size=(nmodes, N)).astype(bool)
         obj = bitsq.view(cls)
         obj._rand_state = R
         obj._seed = seed
@@ -128,7 +128,7 @@ class PRBSBits(np.ndarray):
                     seed_n.append(s)
                 order = order_n
                 seed = seed_n
-        bits = np.empty((nmodes, N), dtype=np.bool)
+        bits = np.empty((nmodes, N), dtype=bool)
         for i in range(nmodes):
             bits[i][:] = make_prbs_extXOR(order[i], N, seed[i])
         obj = bits.view(cls)
@@ -493,7 +493,7 @@ class SignalBase(np.ndarray):
                 snr = np.ones(nmodes)*10**(snr/10)
             else:
                 snr = 10**(snr/10)
-        bits = self.demodulate(tx).astype(np.int)
+        bits = self.demodulate(tx).astype(int)
         bits = bits.reshape(nmodes, -1, self.Nbits)
         # For every mode present, calculate GMI based on SD-demapping
         for mode in range(nmodes):
@@ -838,9 +838,9 @@ class SignalQAMGrayCoded(SignalBase):
         u = np.zeros_like(_graycode)
         u[_graycode] = np.arange(u.size)
         coded_symbols = symbols[u]
-        encoding = np.zeros((_graycode.size, Nbits), np.bool)
+        encoding = np.zeros((_graycode.size, Nbits), bool)
         for i in range(_graycode.size):
-            encoding[i] = np.fromstring(np.binary_repr(i, width=Nbits), dtype="S1").astype(np.bool)
+            encoding[i] = np.fromstring(np.binary_repr(i, width=Nbits), dtype="S1").astype(bool)
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(np.arange(_graycode.size), encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
@@ -939,9 +939,9 @@ class SignalPSKGrayCoded(SignalQAMGrayCoded):
         u = np.zeros_like(_graycode)
         u[_graycode] = np.arange(u.size)
         coded_symbols = symbols[u]
-        encoding = np.zeros((_graycode.size, Nbits), np.bool)
+        encoding = np.zeros((_graycode.size, Nbits), bool)
         for i in range(_graycode.size):
-            encoding[i] = np.fromstring(np.binary_repr(i, width=Nbits), dtype="S1").astype(np.bool)
+            encoding[i] = np.fromstring(np.binary_repr(i, width=Nbits), dtype="S1").astype(bool)
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(np.arange(_graycode.size), encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 

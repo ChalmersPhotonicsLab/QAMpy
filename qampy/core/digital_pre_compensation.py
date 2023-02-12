@@ -166,7 +166,7 @@ def cal_lut(tx_sig, rx_sig, ref_sym, mem_len=3, idx_data=None, real_ptrns=True):
     assert tx_sig.ndim == 1 and rx_sig.ndim == 1, "Ony 1d signals are supported, loop if you need more dimensions"
     assert tx_sig.shape == rx_sig.shape, "Tx and Rx signal need to have the same shape"
     if idx_data is None:
-        idx_data = np.ones(tx_sig.shape[-1], dtype=np.bool)
+        idx_data = np.ones(tx_sig.shape[-1], dtype=bool)
     err = (tx_sig - rx_sig).flatten()
     idx = np.nonzero(idx_data)[0] - mem_len//2
     if real_ptrns:

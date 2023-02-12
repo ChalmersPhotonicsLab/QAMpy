@@ -412,7 +412,7 @@ def frame_sync(rx_signal, ref_symbs, os, frame_len=2 ** 16, M_pilot=4,
         symbs_out = phaserecovery.comp_freq_offset(symbs_out, foe_corse)
         # Check for pi/2 ambiguties and verify all
         max_phase_rot = np.zeros(nmodes, dtype=np.float64)
-        found_delay = np.zeros(nmodes, dtype=np.int)
+        found_delay = np.zeros(nmodes, dtype=np.int32)
         for ref_pol in not_found_modes:
             ix, dat, ii, ac = ber_functions.find_sequence_offset_complex(ref_symbs[ref_pol], symbs_out[l])
             found_delay[ref_pol] = -ix

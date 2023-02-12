@@ -41,8 +41,8 @@ def gen_dataframe_with_phasepilots(M,npols, frame_length = 2**18, pilot_seq_len 
             pilot_bits = make_prbs_extXOR(PRBSorder, N_pilot_bits, PRBSseed)
             data_bits = make_prbs_extXOR(PRBSorder, N_data_bits, PRBSseed)
         else:
-            pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(np.bool)
-            data_bits = np.random.randint(0, high=2, size=N_data_bits).astype(np.bool)
+            pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(bool)
+            data_bits = np.random.randint(0, high=2, size=N_data_bits).astype(bool)
 
         pilot_symbs[l,:] = pilot_modualtor.modulate(pilot_bits)
         data_symbs[l,:] = data_modulator.modulate(data_bits)
@@ -88,8 +88,8 @@ def gen_dataframe_without_phasepilots(M,npols, frame_length = 2**18, pilot_seq_l
             pilot_bits = make_prbs_extXOR(PRBSorder, N_pilot_bits, PRBSseed)
             data_bits = make_prbs_extXOR(PRBSorder, N_data_bits, PRBSseed)
         else:
-            pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(np.bool)
-            data_bits = np.random.randint(0, high=2, size=N_data_bits).astype(np.bool)
+            pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(bool)
+            data_bits = np.random.randint(0, high=2, size=N_data_bits).astype(bool)
 
         pilot_symbs[l,:] = pilot_modualtor.modulate(pilot_bits)
         data_symbs[l,:] = data_modulator.modulate(data_bits)
@@ -152,9 +152,9 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
                 else:
                     add_symbs = rem_symbs - sum(mod_ratio[:i])
 
-                tmp_bits = np.random.randint(0,high=2, size = (sub_blocks*mod_ratio[i]+add_symbs)*M[i]).astype(np.bool)
+                tmp_bits = np.random.randint(0,high=2, size = (sub_blocks*mod_ratio[i]+add_symbs)*M[i]).astype(bool)
             else:
-                tmp_bits = np.random.randint(0,high=2, size = sub_blocks*mod_ratio[i]*M[i]).astype(np.bool)
+                tmp_bits = np.random.randint(0,high=2, size = sub_blocks*mod_ratio[i]*M[i]).astype(bool)
 
             mod_symbs.append(data_modulators[i].modulate(tmp_bits)/norm_factors[i])
 
@@ -167,7 +167,7 @@ def gen_dataframe_with_phasepilots_hybridmodulation(M=(128,256),mod_ratio = (1,1
         data_symbs[l,:] = data_symbs[l,:]/np.sqrt(np.mean(np.abs(data_symbs[l,:])**2))
 
         # Modulate the pilot symbols
-        pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(np.bool)
+        pilot_bits = np.random.randint(0, high=2, size=N_pilot_bits).astype(bool)
         pilot_symbs[l,:] = pilot_modualtor.modulate(pilot_bits)
 
         # Insert pilot sequence

@@ -32,7 +32,7 @@ class TestBits(object):
     @pytest.mark.parametrize("ctype", [signals.PRBSBits, signals.RandomBits])
     def testtype(self, ctype):
         c = ctype(100, nmodes=1)
-        assert c.dtype == np.bool
+        assert c.dtype == bool
 
     @pytest.mark.parametrize("ctype", [signals.PRBSBits, signals.RandomBits])
     def testdist(self, ctype):
@@ -294,7 +294,7 @@ class TestQAMSymbolsGray(object):
         s2 = s.recreate_from_np_array(arr)
         assert s2.shape == (ndims, N)
 
-    @pytest.mark.parametrize("dtype", [np.float32, np.int, np.complex64, np.complex128])
+    @pytest.mark.parametrize("dtype", [np.float32, int, np.complex64, np.complex128])
     def test_recreate_from_np_array_dtype(self, dtype):
         N = 1000
         N2 = 2*N

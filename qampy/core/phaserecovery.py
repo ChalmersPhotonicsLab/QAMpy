@@ -83,7 +83,7 @@ def _bps_idx_py(E, angles, symbols, N):
     Blind phase search using Python. This is slow compared to the cython and arrayfire methods and should not be used.
     """
     EE = E[:,np.newaxis]*np.exp(1.j*angles)
-    idx = np.zeros(E.shape[0], dtype=np.int)
+    idx = np.zeros(E.shape[0], dtype=np.int32)
     dist = (abs(EE[:, :, np.newaxis]-symbols)**2).min(axis=2)
     csum = np.cumsum(dist, axis=0)
     mvg = csum[2*N:]-csum[:-2*N]
