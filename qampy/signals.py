@@ -1535,9 +1535,9 @@ class SignalWithPilots(SignalBase):
         return idx, idx_dat, idx_pil
 
     @classmethod
-    def from_symbol_array(cls, payload, frame_len, pilot_seq_len, pilot_ins_rat, pilots=None, nframes=1, pilot_scale=1, payload_is_frame=False,
-                          pilot_class = SignalQAMGrayCoded, pilot_kwargs={"M":4},
-                          payload_class=SignalQAMGrayCoded, payload_kwargs={}, **kwargs
+    def from_symbol_array(cls, payload, frame_len, pilot_seq_len, pilot_ins_rat, pilots=None, pilot_idx=None,
+                          nframes=1, pilot_scale=1, payload_is_frame=False, pilot_class = SignalQAMGrayCoded,
+                          pilot_kwargs={"M":4}, payload_class=SignalQAMGrayCoded, payload_kwargs={}, **kwargs
                           ):
         """
         Generate a pilot-bases signal from a provided payload symbol signal object.
@@ -1555,6 +1555,9 @@ class SignalWithPilots(SignalBase):
         pilots : SignalBase subclass or ndarray, optional
             use pilot signal object if given, otherwise generate pilots. If given the number of modes for the pilots needs
             to be one or the same as that of the data. If it is one pilots we extend along that dimension.
+        pilot_idx: array_like, optional
+            indices of the pilots. If this is given pilot_seq_len and pilot_ins_rat are ignored (default: None, means
+            use pilot_seq_len and pilot_ins_rat instead)
         nframes : int, optional
             how often to repeat the overall frame
         pilot_scale : float, optional
@@ -1578,7 +1581,14 @@ class SignalWithPilots(SignalBase):
             pilot-based signal of shape (nmodes, frame_len*nframes)
         """
         nmodes, N = payload.shape
-        idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
+        if pilot_idx is None:
+            idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
+        else:
+            idx = np.arange(frame_len)
+            pidx = np.zeros(idx.shape, dtype=bool)
+            pidx[pilot_idx] = True
+            idx_pil = idx[pidx]
+            idx_dat = idx[~pidx]
         assert np.count_nonzero(idx_dat) <= N, "data frame is to short for the given frame length"
         if "M" in kwargs:
             assert "M" not in payload_kwargs, "M can not be provided as a argument for payload and signal"

@@ -433,6 +433,14 @@ class TestPilotSignal(object):
         s = signals.SignalWithPilots.from_symbol_array(data, 2 ** 12, 128, p_ins)
         assert s.shape[1] == 2 ** 12
 
+    def test_from_data_symbols_pilot_idx(self):
+        pilot_idx = np.array([0, 1, 2, 3,5, 10, 18, 23, 50, 80])
+        pilots = signals.SignalQAMGrayCoded(4, len(pilot_idx), nmodes=2)
+        data = signals.SignalQAMGrayCoded(64, 100-len(pilot_idx), nmodes=2)
+        s = signals.SignalWithPilots.from_symbol_array(data, 100, 20, 2, pilots=pilots, pilot_idx=pilot_idx)
+        assert np.alltrue(np.equal(s[0,pilot_idx], pilots[0]))
+        assert np.alltrue(np.equal(s[1, pilot_idx], pilots[1]))
+
     @pytest.mark.parametrize("os", np.arange(2, 5))
     def test_resample(self, os):
         N = 2 ** 12 - 128
