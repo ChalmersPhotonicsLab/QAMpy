@@ -1,11 +1,13 @@
 import numpy as np
 
-def partition_value(signal, partitions, codebook):
+
+def partition_value(signal, partitions, codebook, fct):
     L = partitions.shape[0]
     index = 0
-    while index < L and signal > partitions[index]:
+    while index < L and signal > fct(partitions[index]):
         index += 1
-    return codebook[index]
+    return fct(codebook[index])
+
 
 def adapt_step(mu, err_p, err):
     if err.real*err_p.real > 0 and err.imag*err_p.imag > 0:
@@ -35,7 +37,7 @@ def apply_filter(E, wx):
 def apply_filter_to_signal(E, os, wx, modes=None):
     """
     Apply a filter to a signal 
-    
+
     Parameters
     ----------
     E : array_like
@@ -46,7 +48,7 @@ def apply_filter_to_signal(E, os, wx, modes=None):
         filter taps
     modes : array_like, optional
         mode numbers over which to apply the filters
-        
+
 
     Returns
     -------
@@ -115,7 +117,7 @@ def sgncma_error_real(Xest, s1, i):
 
 def dd_error_real(Xest, symbs, i):
     symbol, dist, i = det_symbol_argmin(Xest, symbs)
-    return (symbol - Xest)*abs(symbol) 
+    return (symbol - Xest)*abs(symbol)
 
 def dd_data_error_real(Xest, symbs, i):
     symbol = symbs[i]
@@ -185,15 +187,19 @@ def mcma_error(Xest, s1, i):
 def rde_error(Xest, symbs, i):
     codebook, partition = np.array_split(symbs, 2)
     sq = abs(Xest)**2
-    r = partition_value(sq, partition.real, codebook.real)
+    r = partition_value(sq, partition, codebook, np.real)
     return Xest*(r-sq)
+
 
 def mrde_error(Xest, symbs, i):
     J = Xest.dtype.type(1j)
     codebook, partition = np.array_split(symbs, 2)
-    sq = Xest.real**2 + J*Xest.imag**2
-    r = partition_value(sq.real, partition.real, codebook.real) + J * partition_value(sq.imag, partition.imag, codebook.imag)
-    return (r.real - sq.real)*Xest.real + J*(r.imag - sq.imag)*Xest.imag
+    sqr = Xest.real**2
+    sqi = Xest.imag**2
+    r = partition_value(sqr, partition, codebook, np.real) + \
+        J * partition_value(sqi, partition, codebook, np.imag)
+    return (r.real - sqr)*Xest.real + J*(r.imag - sqi)*Xest.imag
+
 
 def sbd_error(Xest, symbs, i):
     J = Xest.dtype.type(1j)
@@ -225,14 +231,14 @@ def det_symbol_argmin(X, symbs): # this version is about 1.5 times slower than t
 def det_symbol(X, symbs):
     """
     Decision operator function
-    
+
     Parameters
     ----------
     X : complex
         sample to make a decision on
     symbs: array_like
         symbol alphabet
-        
+
     Returns
     -------
     s : complex
@@ -291,7 +297,7 @@ def det_symbol_parallel(X, symbs): # this version can be much faster if not in a
 def make_decision(E, symbols):
     """
     Apply decision operator to input signal
-    
+
     Parameters
     ----------
     E : array_like
