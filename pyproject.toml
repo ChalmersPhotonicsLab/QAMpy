@@ -3,7 +3,8 @@ requires = [
     "wheel",
     "setuptools",
     "pythran>=0.9.11",
-    "numpy>=0.12"
+    "numpy>=0.12",
+    "matplotlib",
     ]
 
 [project]
@@ -54,6 +55,7 @@ repository = "https://github.com/ChalmersPhotonicsLab/QAMpy"
 
 [project.optional-dependencies]
     test = ["pytest",
+            "pytest-benchmark",
             ]
     docs = ["sphinx"]
 [tool.setuptools.dynamic]
