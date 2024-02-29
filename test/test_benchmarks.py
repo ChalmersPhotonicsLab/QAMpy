@@ -68,8 +68,6 @@ def test_equalisation_prec(dtype, method, benchmark, backend):
     #S = impairments.apply_phase_noise(S, 100e3)
     S = impairments.change_snr(S, snr)
     SS = impairments.apply_PMD(S, theta, t_pmd)
-    if backend=="pth":
-        method = method+"_pth"
     wxy, err = benchmark(equalisation.equalise_signal, SS, mu, Ntaps=ntaps, method=method, adaptive_stepsize=True, )
     #E = equalisation.apply_filter(SS,  wxy)
     #E = helpers.normalise_and_center(E)
