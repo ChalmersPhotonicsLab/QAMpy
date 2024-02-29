@@ -6,6 +6,7 @@ import matplotlib.pylab as plt
 from qampy import signals, impairments, equalisation, helpers, phaserec
 from qampy.core import resample
 from qampy.core.equalisation import pythran_equalisation
+from qampy.core.phaserecovery import _bps_idx_pyt
 from qampy.core.pythran_dsp import soft_l_value_demapper as soft_l_value_demapper_pyt
 from qampy.core.pythran_dsp import soft_l_value_demapper_minmax as soft_l_value_demapper_minmax_pyt
 from qampy.core import equalisation as cequalisation
@@ -163,12 +164,12 @@ def test_select_angles_benchmark(dtype, method, benchmark, M):
     NL = 40
     sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=1, dtype=dtype)
     sig = impairments.apply_phase_noise(sig, 40e3)
-    if dtype is np.dtype(np.complex64):
+    if dtype is np.complex64:
         fdtype = np.float32
     else:
         fdtype = np.float64
     angles = np.linspace(-np.pi/4, np.pi/4, M, endpoint=False, dtype=fdtype).reshape(1,-1)
-    idx = bps(sig[0], angles, sig.coded_symbols, NL)
+    idx = _bps_idx_pyt(sig[0], angles, sig.coded_symbols, NL)
     ph = np.array(benchmark(select_angles,  angles, idx)).reshape(1, -1)
     ph[:, NL:-NL] = np.unwrap(ph[:, NL:-NL]*4)/4
     sigo = sig*np.exp(1j*ph).astype(sig.dtype)
