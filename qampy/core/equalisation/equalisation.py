@@ -102,6 +102,8 @@ def generate_symbols_for_eq(method, M, dtype):
     #TODO: investigate if it makes sense to include the calculations of constants inside the methods
     if method in ["cma"]:
         return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
+    if method in ["cma2"]:
+        return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
     if method in ["sgncma"]:
         return np.atleast_2d(_cal_Rconstant(M) + 0j).astype(dtype)
     if method in ["mcma"]:
