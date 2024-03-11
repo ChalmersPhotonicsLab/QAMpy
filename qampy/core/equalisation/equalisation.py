@@ -87,7 +87,7 @@ from qampy.core.equalisation import pythran_equalisation
 DECISION_BASED = ("sbd", "mddma", "dd", "sbd_data", "dd_real", "dd_data_real")
 
 #: Non-decision based equalisation methods
-NONDECISION_BASED = ("cma", "mcma", "rde", "mrde", "cma_real", "sgncma_real", "sgncma")
+NONDECISION_BASED = ("cma", "cma2", "mcma", "rde", "mrde", "cma_real", "sgncma_real", "sgncma")
 
 #: Real-valued equalisation methods
 REAL_VALUED = ("cma_real", "dd_real", "dd_data_real" , "sgncma_real")
