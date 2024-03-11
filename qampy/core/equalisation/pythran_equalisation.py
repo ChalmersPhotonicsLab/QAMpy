@@ -132,6 +132,8 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
         errorfct = mcma_error
     elif method == "sgncma":
         errorfct = cma_error
+    elif method == "cma2":
+        errorfct = cma2_error
     elif method == "cma":
         errorfct = cma_error
     elif method == "sbd":
@@ -172,6 +174,10 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
 ######################################################
 def cma_error(Xest, s1, i):
     d = s1[0].real - abs(Xest)**2
+    return d*Xest
+
+def cma_error2(Xest, s1, i):
+    d = s1[0]- Xest**2
     return d*Xest
 
 def sgncma_error(Xest, s1, i):
