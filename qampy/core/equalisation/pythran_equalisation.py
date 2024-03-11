@@ -176,7 +176,7 @@ def cma_error(Xest, s1, i):
     d = s1[0].real - abs(Xest)**2
     return d*Xest
 
-def cma_error2(Xest, s1, i):
+def cma2_error(Xest, s1, i):
     d = s1[0]- Xest**2
     return d*Xest
 
