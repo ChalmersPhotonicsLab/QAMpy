@@ -5,10 +5,8 @@ import numpy.testing as npt
 import matplotlib.pylab as plt
 from qampy import signals, impairments, equalisation, helpers, phaserec
 from qampy.core import resample
-from qampy.core.equalisation import cython_equalisation
 from qampy.core.equalisation import pythran_equalisation
-from qampy.core.dsp_cython import soft_l_value_demapper as soft_l_value_demapper_pyx
-from qampy.core.dsp_cython import soft_l_value_demapper_minmax as soft_l_value_demapper_minmax_pyx
+from qampy.core.phaserecovery import _bps_idx_pyt
 from qampy.core.pythran_dsp import soft_l_value_demapper as soft_l_value_demapper_pyt
 from qampy.core.pythran_dsp import soft_l_value_demapper_minmax as soft_l_value_demapper_minmax_pyt
 from qampy.core import equalisation as cequalisation
@@ -23,13 +21,11 @@ def test_resampling_benchmark(arr, taps, fconv, benchmark):
     s = benchmark(resample.rrcos_resample, arr, 1, 3, 1, beta=0.1, taps=taps, fftconv=fconv )
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("backend", ["pyx", "pyt"])
+@pytest.mark.parametrize("backend", ["pyt"])
 def test_quantize_precision(dtype, benchmark, backend):
     benchmark.group = "quantize"
     s = signals.SignalQAMGrayCoded(128, 2**20, dtype=dtype)
-    if backend == "pyx":
-        o = benchmark(cython_equalisation.make_decision, s[0], s.coded_symbols)
-    elif backend == "pyt":
+    if backend == "pyt":
         o = benchmark(pythran_equalisation.make_decision, s[0], s.coded_symbols)
     npt.assert_array_almost_equal(s.symbols[0], o)
 
@@ -40,7 +36,7 @@ def test_quantize_precision(dtype, benchmark, backend):
     #npt.assert_array_almost_equal(s.symbols[0], o)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["pyx", "py", "af", "pyt"])
+@pytest.mark.parametrize("method", ["py", "af", "pyt"])
 def test_bps(dtype, method, benchmark):
         benchmark.group = "bps"
         angle = np.pi/5.1
@@ -52,7 +48,7 @@ def test_bps(dtype, method, benchmark):
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 @pytest.mark.parametrize("method", ["cma", "mcma", "sbd",  "mddma", "dd" ])
-@pytest.mark.parametrize("backend", ["pyx", "pth"])
+@pytest.mark.parametrize("backend", ["pth"])
 def test_equalisation_prec(dtype, method, benchmark, backend):
     benchmark.group = "equalisation " + method
     fb = 40.e9
@@ -72,8 +68,6 @@ def test_equalisation_prec(dtype, method, benchmark, backend):
     #S = impairments.apply_phase_noise(S, 100e3)
     S = impairments.change_snr(S, snr)
     SS = impairments.apply_PMD(S, theta, t_pmd)
-    if backend=="pth":
-        method = method+"_pth"
     wxy, err = benchmark(equalisation.equalise_signal, SS, mu, Ntaps=ntaps, method=method, adaptive_stepsize=True, )
     #E = equalisation.apply_filter(SS,  wxy)
     #E = helpers.normalise_and_center(E)
@@ -84,7 +78,6 @@ def test_equalisation_prec(dtype, method, benchmark, backend):
 
 @pytest.mark.skip()
 @pytest.mark.parametrize("dtype", [ np.complex64, np.complex128])
-#@pytest.m    npt.assert_allclose(0, ser, atol=3e-5)ark.parametrize("method", [cequalisation.apply_filter, cython_equalisation.apply_filter_signal, cython_equalisation.apply_filter_singal2 ])
 def test_apply_filter(dtype, benchmark):
     fb = 40.e9
     os = 2
@@ -102,7 +95,7 @@ def test_apply_filter(dtype, benchmark):
     S = impairments.change_snr(S, snr)
     SS = impairments.apply_PMD(S, theta, t_pmd)
     wxy, err = equalisation.equalise_signal(SS, mu, Ntaps=ntaps, method="mcma", adaptive_step=True)
-    E1 = equalisation.apply_filter(SS,  wxy, method="pyx")
+    E1 = equalisation.apply_filter(SS,  wxy, method="pyt")
     E2 = equalisation.apply_filter(SS, wxy, method="py")
     E2 = E1.recreate_from_np_array(E2)
     E1 = helpers.normalise_and_center(E1)
@@ -117,7 +110,7 @@ def test_apply_filter(dtype, benchmark):
     npt.assert_allclose(0, ser2, atol=3e-5)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["pyt", "pyx"])
+@pytest.mark.parametrize("method", ["pyt"])
 @pytest.mark.parametrize("type", ["log", "mm"])
 def test_soft_l_values_benchmark(dtype, method, benchmark, type):
     benchmark.group = "soft_l_value"
@@ -131,15 +124,9 @@ def test_soft_l_values_benchmark(dtype, method, benchmark, type):
             benchmark(soft_l_value_demapper_pyt, s[0], int(np.log2(M)), snr, s._bitmap_mtx)
         else:
             benchmark(soft_l_value_demapper_minmax_pyt, s[0], int(np.log2(M)), snr, s._bitmap_mtx)
-    else:
-        if type == "log":
-            benchmark(soft_l_value_demapper_pyx, s[0], M, snr, s._bitmap_mtx)
-        else:
-            benchmark(soft_l_value_demapper_minmax_pyx, s[0], M, snr, s._bitmap_mtx)
-
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["py", "pyx", "pth"])
+@pytest.mark.parametrize("method", ["py", "pth"])
 def test_apply_filter_benchmark(dtype, method, benchmark):
     benchmark.group = "apply filter "+str(dtype)
     fb = 40.e9
@@ -164,26 +151,23 @@ def test_apply_filter_benchmark(dtype, method, benchmark):
     npt.assert_allclose(0, ser, atol=3e-5)
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-@pytest.mark.parametrize("method", ["pyt", "pyx"])
+@pytest.mark.parametrize("method", ["pyt"])
 @pytest.mark.parametrize("M", [64, 128, 256])
 def test_select_angles_benchmark(dtype, method, benchmark, M):
     benchmark.group = "select_angle"
-    from qampy.core.dsp_cython import bps
-    if method == "pyx":
-        from qampy.core.dsp_cython import select_angles
-    elif method == "pyt":
+    if method == "pyt":
         from qampy.core.pythran_dsp import select_angles
     fb = 40.e9
     N = 2**17
     NL = 40
     sig = signals.SignalQAMGrayCoded(M, N, fb=fb, nmodes=1, dtype=dtype)
     sig = impairments.apply_phase_noise(sig, 40e3)
-    if dtype is np.dtype(np.complex64):
+    if dtype is np.complex64:
         fdtype = np.float32
     else:
         fdtype = np.float64
     angles = np.linspace(-np.pi/4, np.pi/4, M, endpoint=False, dtype=fdtype).reshape(1,-1)
-    idx = bps(sig[0], angles, sig.coded_symbols, NL)
+    idx = _bps_idx_pyt(sig[0], angles, sig.coded_symbols, NL)
     ph = np.array(benchmark(select_angles,  angles, idx)).reshape(1, -1)
     ph[:, NL:-NL] = np.unwrap(ph[:, NL:-NL]*4)/4
     sigo = sig*np.exp(1j*ph).astype(sig.dtype)

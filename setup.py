@@ -5,6 +5,7 @@ from os import path
 import sys
 import numpy as np
 from pythran.dist import PythranExtension, PythranBuildExt
+import platform
 
 def read(rel_path):
     here = path.abspath(path.dirname(__file__))
@@ -19,12 +20,20 @@ def get_version(rel_path):
     else:
         raise RuntimeError("Unable to find version string.")
 
-COMPILER_ARGS_PYT = ["-O3", "-ffast-math", "-mfpmath=sse", "-march=native",
+
+COMPILER_ARGS_PYT = ["-O3", "-ffast-math", "-march=native",
                      "-funroll-loops",
                       "-fopenmp", "-std=c++11", "-fno-math-errno", "-w",
                       "-fvisibility=hidden", "-fno-wrapv", "-DUSE_XSIMD",
                      "-DNDEBUG", "-finline-limit=100000"]
-LINK_ARGS = ["-fopenmp", "-lm", "-Wl,-strip-all"]
+# SSE not available on non-x86
+if platform.machine() == "x86_64":
+    COMPILER_ARGS_PYT += ["-mfpmath=sse"]
+
+LINK_ARGS = ["-fopenmp", "-lm"]
+# MacOS Linker does not support stripping symbols
+if platform.system() != "Darwin":
+    LINK_ARGS += ["-Wl,-strip-all"]
 
 WIN_LINK_ARGS = ["/openmp"]
 
