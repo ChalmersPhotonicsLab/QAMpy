@@ -840,7 +840,7 @@ class SignalQAMGrayCoded(SignalBase):
         coded_symbols = symbols[u]
         encoding = np.zeros((_graycode.size, Nbits), bool)
         for i in range(_graycode.size):
-            encoding[i] = np.fromstring(np.binary_repr(i, width=Nbits), dtype="S1").astype(bool)
+            encoding[i] = ((i & (1 << np.arange(Nbits))) > 0)[::-1] # this creates a Nbits long array of bools equivalent to the binary string of i
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(np.arange(_graycode.size), encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
@@ -941,7 +941,7 @@ class SignalPSKGrayCoded(SignalQAMGrayCoded):
         coded_symbols = symbols[u]
         encoding = np.zeros((_graycode.size, Nbits), bool)
         for i in range(_graycode.size):
-            encoding[i] = np.fromstring(np.binary_repr(i, width=Nbits), dtype="S1").astype(bool)
+            encoding[i] = ((i & (1 << np.arange(Nbits))) > 0)[::-1] # this creates a Nbits long array of bools equivalent to the binary string of i
         bitmap_mtx = generate_bitmapping_mtx(coded_symbols, cls._demodulate(np.arange(_graycode.size), encoding), M, dtype=dtype)
         return coded_symbols, _graycode, encoding, bitmap_mtx
 
@@ -1696,7 +1696,7 @@ class SignalWithPilots(SignalBase):
     def shiftfctrs(self, value):
         self._shiftfctrs = value
 
-    def sync2frame(self, returntaps=False, **kwargs):
+    def sync2frame(self, returntaps=False, usepilots=-1, **kwargs):
         """
         Synchronize the signal to the pilot frame, by finding the offsets
         into the frame where the sequence starts. This function rearranges
@@ -1718,7 +1718,7 @@ class SignalWithPilots(SignalBase):
         eqargs.update(kwargs)
         mu = eqargs.pop("mu")
         Ntaps = eqargs.pop("Ntaps")
-        shift_factors, coarse_foe, mode_alignment, wx1, sync_bool = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
+        shift_factors, coarse_foe, mode_alignment, wx1, sync_bool = pilotbased_receiver.frame_sync(self, self.pilot_seq[:usepilots], self.os,
                                                                               mu=mu,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
