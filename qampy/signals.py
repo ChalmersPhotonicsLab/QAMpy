@@ -1489,15 +1489,16 @@ class SignalWithPilots(SignalBase):
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
                 dataclass=SignalQAMGrayCoded, nmodes=1, dtype=np.complex128,  **kwargs):
-        out_symbs = np.empty((nmodes, frame_len), dtype=dtype)
+        out_symbs = np.empty((nmodes, frame_len*nframes), dtype=dtype)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
+        idx_pil = np.tile(idx_pil, nframes)
+        idx_dat = np.tile(idx_dat, nframes)
         pilots = SignalQAMGrayCoded(Mpilots, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * pilot_scale
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
         out_symbs[:, idx_pil] = pilots
         symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, dtype=dtype, **kwargs)
         out_symbs[:, idx_dat] = symbs
-        out_symbs = np.tile(out_symbs, nframes)
         obj = out_symbs.view(cls)
         if "fb" in kwargs:
             obj._fb = kwargs.pop("fb")
