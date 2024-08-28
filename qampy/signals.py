@@ -1458,6 +1458,10 @@ class SignalWithPilots(SignalBase):
         number of spatial modes
     dtype : np.dtype, optional
         numpy dtype currently np.complex128 and np.complex64 are supported
+    repeat_data: bool, optional
+        repeat the data  when generating nframes (all frames have the same data)
+    repeat_pilots: bool, optional
+        repeat the pilots when generating nframes (all frames have the same pilots)
     **kwargs
         keyword arguments to pass to the pilot and data generation classes
 
@@ -1488,17 +1492,22 @@ class SignalWithPilots(SignalBase):
                      "_idx_pil", "_foe"]
 
     def __new__(cls, M, frame_len, pilot_seq_len, pilot_ins_rat, nframes=1, pilot_scale=1, Mpilots=4,
-                dataclass=SignalQAMGrayCoded, nmodes=1, dtype=np.complex128,  **kwargs):
+                dataclass=SignalQAMGrayCoded, nmodes=1, dtype=np.complex128, repeat_data=True, repeat_pilots=True, **kwargs):
         out_symbs = np.empty((nmodes, frame_len*nframes), dtype=dtype)
         idx, idx_dat, idx_pil = cls._cal_pilot_idx(frame_len, pilot_seq_len, pilot_ins_rat)
-        idx_pil = np.tile(idx_pil, nframes)
-        idx_dat = np.tile(idx_dat, nframes)
-        pilots = SignalQAMGrayCoded(Mpilots, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * pilot_scale
+        if repeat_pilots:
+            pilots = np.tile(SignalQAMGrayCoded(Mpilots, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * pilot_scale, (1, nframes))
+        else:
+            pilots = SignalQAMGrayCoded(Mpilots, np.count_nonzero(idx_pil), nmodes=nmodes, dtype=dtype, **kwargs) * pilot_scale
+
         # Note that currently the phase pilots start one symbol after the sequence
         # TODO: we should probably fix this
-        out_symbs[:, idx_pil] = pilots
-        symbs = dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, dtype=dtype, **kwargs)
-        out_symbs[:, idx_dat] = symbs
+        out_symbs[:, np.tile(idx_pil, nframes)] = pilots
+        if repeat_data:
+            symbs = np.tile(dataclass(M, np.count_nonzero(idx_dat), nmodes=nmodes, dtype=dtype, **kwargs), (1, nframes))
+        else:
+            symbs = dataclass(M, np.count_nonzero(idx_dat)*nframes, nmodes=nmodes, dtype=dtype, **kwargs)
+        out_symbs[:, np.tile(idx_dat, nframes)] = symbs
         obj = out_symbs.view(cls)
         if "fb" in kwargs:
             obj._fb = kwargs.pop("fb")
@@ -1697,7 +1706,7 @@ class SignalWithPilots(SignalBase):
     def shiftfctrs(self, value):
         self._shiftfctrs = value
 
-    def sync2frame(self, returntaps=False, usepilots=-1, **kwargs):
+    def sync2frame(self, returntaps=False, **kwargs):
         """
         Synchronize the signal to the pilot frame, by finding the offsets
         into the frame where the sequence starts. This function rearranges
@@ -1719,7 +1728,7 @@ class SignalWithPilots(SignalBase):
         eqargs.update(kwargs)
         mu = eqargs.pop("mu")
         Ntaps = eqargs.pop("Ntaps")
-        shift_factors, coarse_foe, mode_alignment, wx1, sync_bool = pilotbased_receiver.frame_sync(self, self.pilot_seq[:usepilots], self.os,
+        shift_factors, coarse_foe, mode_alignment, wx1, sync_bool = pilotbased_receiver.frame_sync(self, self.pilot_seq, self.os,
                                                                               mu=mu,
                                                                               Ntaps=Ntaps,
                                                                               frame_len=self.frame_len,
