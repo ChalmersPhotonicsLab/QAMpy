@@ -1766,11 +1766,18 @@ class SignalWithPilots(SignalBase):
         """
         if frames is None:
             frames = np.arange(self.nframes)
+            nframes = self.nframes
         else:
             frames = np.atleast_1d(frames)
             nframes = np.max(frames)
             assert nframes <= self.nframes, "Signal object only contains {} frames can't extract more".format(self.nframes)
-        idx = np.hstack([np.nonzero(self._idx_dat)[0] + i * self._frame_len for i in frames] )
+        #idx = np.hstack([np.nonzero(self._idx_dat)[0] + i * self._frame_len for i in frames] )
+        if nframes < 1:
+            idx = self._idx_dat[:self.shape[-1]]
+        else:
+            idx = np.zeros(self.frame_len*nframes, dtype=bool)
+            for i in frames:
+                idx[i*self.frame_len:(i+1)*self.frame_len] = self._idx_dat
         return self.symbols.recreate_from_np_array(self[:, idx].copy()) # better save to make copy here
 
     def extract_pilots(self, frames=None):
