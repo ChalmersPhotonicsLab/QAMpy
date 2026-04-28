@@ -27,7 +27,7 @@ def apply_filter(E, wx):
     Xest = E.dtype.type(0)
     for k in range(pols):
         for i in range(Ntaps):
-            Xest += E[k, i]*np.conj(wx[k,i])
+            Xest += E[k, i]*wx[k,i]
     return Xest
 
 #pythran export apply_filter_to_signal(float64[:,:], int, float64[:,:,:], int[:] or None)
@@ -154,7 +154,9 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
     ntaps = wx.shape[-1]
     assert symbols.shape[0] == nmodes, "symbols must be at least size of modes"
     assert wx.shape[0] == nmodes, "wx needs to have at least as many dimensions as the maximum mode"
-    assert E.shape[1] > TrSyms*os+ntaps, "Field must be longer than the number of training symbols"
+    #assert E.shape[1] > TrSyms*os+ntaps, "Field must be longer than the number of training symbols"
+    if os == 1:
+        TrSyms == E.shape[1] - ntaps
     assert modes.max() < nmodes, "Maximum mode number must not be higher than number of modes"
     err = np.zeros((nmodes, TrSyms*Niter), dtype=E.dtype)
     #omp parallel for
@@ -164,7 +166,8 @@ def train_equaliser(E, TrSyms, Niter, os, mu, wx, modes, adaptive, symbols,  met
                 X = E[:, i * os:i * os + ntaps]
                 Xest = apply_filter(X,  wx[mode])
                 err[mode, it*TrSyms+i] = errorfct(Xest, symbols[mode], i)
-                wx[mode] += mu * np.conj(err[mode, it*TrSyms+i]) * X
+                #wx[mode] += mu * np.conj(err[mode, it*TrSyms+i]) * X
+                wx[mode] += mu * err[mode, it*TrSyms+i] * np.conj(X)
                 if adaptive and i > 0:
                     mu = adapt_step(mu, err[mode, it*TrSyms+i], err[mode, it*TrSyms+i-1])
     return err, wx, mu
