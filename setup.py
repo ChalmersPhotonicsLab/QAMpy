@@ -23,7 +23,7 @@ def get_version(rel_path):
 
 COMPILER_ARGS_PYT = ["-O3", "-ffast-math", "-march=native",
                      "-funroll-loops",
-                      "-fopenmp", "-std=c++11", "-fno-math-errno", "-w",
+                      "-fopenmp", "-fno-math-errno", "-w",
                       "-fvisibility=hidden", "-fno-wrapv", "-DUSE_XSIMD",
                      "-DNDEBUG", "-finline-limit=100000"]
 # SSE not available on non-x86
